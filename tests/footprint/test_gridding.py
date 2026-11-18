@@ -9,7 +9,7 @@ import pytest
 import xarray as xr
 
 from stilt.exceptions import EmptyFootprint
-from stilt.footprint import calc_footprint, gridding
+from stilt.footprint import calc_footprint, correct_near_field, gridding
 from stilt.footprint.config import FootprintConfig
 from stilt.footprint.gridding import (
     _compute_kernel_bandwidths,
@@ -24,7 +24,6 @@ from stilt.footprint.gridding import (
     _unwrap_around_cloud,
 )
 from stilt.footprint.io import read_footprint, write_footprint
-from stilt.particles import correct_near_field
 from stilt.receptors import MultiPointReceptor, PointReceptor
 from stilt.spatial import Grid
 
@@ -2017,7 +2016,7 @@ def test_calc_footprint_skips_the_near_field_correction_without_its_columns(capl
     )
     particles = _near_field_particles()
 
-    with caplog.at_level("WARNING", logger="stilt.particles.table"):
+    with caplog.at_level("WARNING", logger="stilt.footprint.foot"):
         skipped = calc_footprint(particles, receptor, _NEAR_GRID, smooth_factor=0)
     plain = calc_footprint(
         particles, receptor, _NEAR_GRID, smooth_factor=0, hnf_plume=False

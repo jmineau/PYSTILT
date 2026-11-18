@@ -1,5 +1,5 @@
 """
-``foot`` computed by PYSTILT (:func:`stilt.particles.add_foot`) against the ``foot`` HYSPLIT wrote.
+``foot`` computed by PYSTILT (:func:`stilt.footprint.add_foot`) against the ``foot`` HYSPLIT wrote.
 
 Both compute STILT's footprint: the minutes a particle spends below ``veght``
 (``footprint_depth`` for PYSTILT's) of the mixed layer, over the air below that height. HYSPLIT adds up the dry
@@ -27,8 +27,13 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from stilt.footprint import FootprintConfig, calc_footprint, footprint_particles
-from stilt.particles import PARTICLE_SCHEMA, add_foot
+from stilt.footprint import (
+    FootprintConfig,
+    add_foot,
+    calc_footprint,
+    footprint_particles,
+)
+from stilt.particles import PARTICLE_SCHEMA
 from stilt.receptors import PointReceptor
 from stilt.sampling import calc_pbl_height, sample_met
 from stilt.transport import ModelRun, run_model

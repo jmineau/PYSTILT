@@ -76,7 +76,7 @@ each a ``stilt run --task`` command line.
      - Implemented (the interface; HYSPLIT is the one model)
    * - Met columns (``mlht``, ``dens``, ``pres``, ``zsfc``) sampled at particle positions, for a model that writes only positions (``stilt.sampling.sample_met``)
      - Implemented (see the Meteorology guide for how closely ``pres`` and ``dens`` match HYSPLIT's)
-   * - ``foot`` computed from the met files for a model that writes only positions, so its particles make footprints (``stilt.particles.add_foot``)
+   * - ``foot`` computed from the met files for a model that writes only positions, so its particles make footprints (``stilt.footprint.add_foot``)
      - Implemented (no near-field correction for such a model; see Validation for how far a footprint moves)
    * - The mixed-layer height for a computed ``foot``: the met's ``PBLH``, HYSPLIT's Richardson-number method (``kmixd: 3``), or a fixed depth, with a minimum (``pbl_height``, ``pbl_height_min``)
      - Implemented (HYSPLIT's ``kmixd: 1`` and ``2`` are not ported)

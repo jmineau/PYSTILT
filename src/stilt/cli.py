@@ -1,11 +1,11 @@
 """
-The ``stilt`` command-line interface.
+The particle commands of the ``stilt`` command-line interface.
 
-Each command opens a :class:`~stilt.Project`, calls it, and
-prints a short summary. Examples::
+Each command opens a :class:`stilt.project.Project`, the particle part, calls
+it, and prints a short summary. The ``stilt`` command is these and
+``stilt init``, which starts a STILT project (:mod:`stilt.stilt_cli`).
+Examples::
 
-    stilt init                        # start a project in the current directory
-    stilt init ./my_project           # start a project in ./my_project
     stilt check                       # list what would stop a run, before any run
     stilt fetch                       # get the met files the runs need, once
     stilt run                         # run, and wait until done
@@ -131,10 +131,6 @@ _PROJECT_ARG = typer.Argument(
     None,
     help="Path of the STILT project. Defaults to the current directory.",
 )
-_NEW_PROJECT_ARG = typer.Argument(
-    None,
-    help="Directory for the new project. Defaults to the current directory.",
-)
 _NO_SKIP = typer.Option(
     False, "--no-skip", help="Run simulations again even if their outputs exist."
 )
@@ -235,32 +231,6 @@ def _require_met(project: Project) -> None:
 # ---------------------------------------------------------------------------
 # Commands
 # ---------------------------------------------------------------------------
-
-
-@app.command()
-def init(project: Path = _NEW_PROJECT_ARG) -> None:
-    """
-    Create a new project with a starter config.yaml and receptors.csv.
-
-    Edit both files before running stilt run. Stops if the directory
-    already has a config.yaml.
-    """
-    from stilt.stilt_project import Project as StiltProject
-
-    project = (project or Path.cwd()).resolve()
-    try:
-        StiltProject.init(project, starter=True)
-    except FileExistsError:
-        typer.echo(
-            f"Error: '{project}' already contains a config.yaml. Aborting.",
-            err=True,
-        )
-        raise typer.Exit(code=EXIT_USAGE) from None
-
-    typer.echo(f"Initialized STILT project at '{project}'")
-    typer.echo("  config.yaml    edit the met directory and footprint settings")
-    typer.echo("  receptors.csv  add receptor times and locations, one per line:")
-    typer.echo("                  2023-01-01 12:00:00,-111.85,40.77,5")
 
 
 #: Rows of each check ``stilt check`` prints; ``project.check()`` has them all.

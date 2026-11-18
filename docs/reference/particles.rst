@@ -59,7 +59,7 @@ Where ``foot`` comes from:
 - **Particles with no** ``foot``, such as those of a model that writes only
   positions, get it from the footprint stage when it makes the footprint
   (:func:`stilt.footprint.footprint_particles`, which calls
-  :func:`add_foot`), from ``zagl``, ``mlht``, the output step, and the
+  :func:`stilt.footprint.add_foot`), from ``zagl``, ``mlht``, the output step, and the
   pressure drop from the ground to the surface layer's top in the met files
   the run read. PYSTILT's log says so. A particle counts for the whole step
   when it ends the step inside the layer, where HYSPLIT counts the minutes
@@ -212,7 +212,7 @@ Some that PYSTILT reads:
        reads this name only: ``zfx1`` stops it, and the config refuses it.
 
 The near-field correction reads ``dens``, ``samt``, ``sigw``, ``tlgr``,
-``foot``, and ``mlht`` (:data:`HNF_PLUME_COLUMNS`). The plume it models
+``foot``, and ``mlht`` (:data:`stilt.footprint.HNF_PLUME_COLUMNS`). The plume it models
 grows from the release height above ground, so for a receptor above sea
 level it also reads ``zsfc``. Without it the run's log says the correction
 was skipped.
@@ -248,13 +248,13 @@ Columns PYSTILT adds
    X-STILT call it ``xhgt``.
 
 ``foot``
-   When the model wrote none, or ``pbl_height`` is set (:func:`add_foot`),
+   When the model wrote none, or ``pbl_height`` is set (:func:`stilt.footprint.add_foot`),
    as above: only to the particles a footprint is made from, never to a
    stored particle file.
 
 ``foot_no_hnf_dilution``
    ``foot`` before the near-field correction, added by
-   :func:`correct_near_field`. A stored particle file has none: it holds
+   :func:`stilt.footprint.correct_near_field`. A stored particle file has none: it holds
    ``foot`` uncorrected, and the footprint applies the correction.
 
 ``time``
@@ -271,7 +271,6 @@ Checking a table
 
    PARTICLE_SCHEMA
    FOOTPRINT_COLUMNS
-   HNF_PLUME_COLUMNS
    check_particles
 
 After a run
@@ -287,7 +286,7 @@ applies it when ``hnf_plume`` is set (the default), with the footprint's
 ``veght``. The transport error does the same, with the same ``foot``, so
 its enhancement is the footprint's. Anything else that reads ``foot`` from the
 stored particles, such as ``particles.stilt.enhancement``, reads it
-uncorrected: call :func:`correct_near_field` first to match the footprint.
+uncorrected: call :func:`stilt.footprint.correct_near_field` first to match the footprint.
 The correction reads ``samt``, ``sigw`` and ``tlgr``, which only HYSPLIT
 writes, so particles that lack them, including those whose ``foot`` came
 from PYSTILT, are not corrected, and a warning says so.
@@ -297,5 +296,19 @@ from PYSTILT, are not corrected, and a warning says so.
    :nosignatures:
 
    add_release_heights
+
+What the footprint stage computes from the particles before gridding them,
+``foot`` when it needs one and the near-field correction, is STILT's, in
+:mod:`stilt.footprint.foot`.
+
+.. currentmodule:: stilt.footprint
+
+.. autosummary::
+   :toctree: _api
+   :nosignatures:
+
    add_foot
    correct_near_field
+   HNF_PLUME_COLUMNS
+
+.. currentmodule:: stilt.particles

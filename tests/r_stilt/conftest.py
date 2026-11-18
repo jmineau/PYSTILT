@@ -11,7 +11,7 @@ import pandas as pd
 import pytest
 
 from stilt import Project
-from stilt.particles import correct_near_field
+from stilt.footprint import correct_near_field
 
 from ..fixtures.r_stilt_reference import (
     ALL_SCENARIOS,

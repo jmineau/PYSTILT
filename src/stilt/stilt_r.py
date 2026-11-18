@@ -4,9 +4,12 @@ STILT-R as a transport model that runs nothing: the settings of runs imported fr
 STILT-R (`uataq/stilt <https://github.com/uataq/stilt>`_) runs HYSPLIT from
 R. :func:`stilt.migration.import_stilt_r` writes the runs of a STILT-R or
 X-STILT project into an output directory, each with the settings STILT-R's
-files record. A variant with ``model: stilt-r`` names their folder, so
-``project.status``, ``project.particles``, and ``project.jacobian`` read
-them. PYSTILT cannot run STILT-R: a run of such a variant fails.
+files record. A ``models:`` block with ``class: stilt.stilt_r.StiltRModel``
+(:data:`STILT_R_MODEL`) names their folders, so ``project.status``,
+``project.particles``, and ``project.jacobian`` read them. It is PYSTILT's
+own model, named by its import path as any model of another package is; the
+transport registry has no entry for it. PYSTILT cannot run STILT-R: a run
+of such a variant fails.
 """
 
 from __future__ import annotations
@@ -23,6 +26,10 @@ from stilt.transport.hysplit.config import HysplitConfig
 
 if TYPE_CHECKING:
     from stilt.receptors import Receptor
+
+#: The import path of :class:`StiltRModel`, the ``class`` of the ``models:``
+#: block of imported STILT-R runs, as their run settings record it.
+STILT_R_MODEL = "stilt.stilt_r.StiltRModel"
 
 
 class StiltRConfig(HysplitConfig):
@@ -92,7 +99,7 @@ class StiltRMetConfig(BaseModel):
 
 class StiltRModel:
     """
-    The ``stilt-r`` transport model, which ``get_model("stilt-r")`` returns.
+    The ``stilt-r`` transport model of imported runs, named by its import path (:data:`STILT_R_MODEL`).
 
     It holds the settings of imported STILT-R runs and runs nothing.
     :meth:`run` fails, so a ``stilt run`` of a receptor STILT-R did not run
@@ -143,4 +150,4 @@ class StiltRModel:
         )
 
 
-__all__ = ["StiltRConfig", "StiltRMetConfig", "StiltRModel"]
+__all__ = ["STILT_R_MODEL", "StiltRConfig", "StiltRMetConfig", "StiltRModel"]

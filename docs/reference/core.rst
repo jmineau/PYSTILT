@@ -111,9 +111,10 @@ Particles and footprints
 ------------------------
 
 A simulation's particles are a pandas DataFrame and its footprint an xarray
-DataArray. PYSTILT's methods on them are under ``.stilt``
-(:class:`~stilt.particles.ParticlesAccessor`,
-:class:`~stilt.footprint.FootprintAccessor`). The functions below read and
+DataArray. PYSTILT's methods on them are under ``.stilt``:
+:class:`~stilt.stilt_particles.ParticlesAccessor` (the particle part's
+:class:`~stilt.particles.ParticlesAccessor` with ``enhancement`` added) and
+:class:`~stilt.footprint.FootprintAccessor`. The functions below read and
 write particle and footprint files without a project.
 
 .. autosummary::
@@ -127,6 +128,7 @@ write particle and footprint files without a project.
    footprint.write_footprint
    footprint.write_empty_footprint
    footprint.open_footprints
+   stilt_particles.ParticlesAccessor
    particles.ParticlesAccessor
    footprint.FootprintAccessor
 

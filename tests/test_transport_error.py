@@ -7,7 +7,7 @@ import xarray as xr
 
 from stilt import TransportError
 from stilt import transport_error as _transport_error
-from stilt.particles import correct_near_field
+from stilt.footprint import correct_near_field
 from stilt.receptors import PointReceptor
 from stilt.transforms import AveragingKernel
 

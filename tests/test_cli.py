@@ -17,12 +17,14 @@ import yaml
 from typer.testing import CliRunner
 
 import stilt.__main__
+import stilt.stilt_cli
 from stilt._transient import is_transient
-from stilt.cli import _resolve_project, app
+from stilt.cli import _resolve_project
 from stilt.config import ProjectConfig
 from stilt.execution.config import ExecutionConfig
 from stilt.project import Project
 from stilt.spatial import Grid
+from stilt.stilt_cli import app
 from stilt.stilt_project import STILT_R_HYSPLIT
 from tests.fixtures.factories import blocks
 
@@ -293,6 +295,18 @@ def test_cli_help_lists_current_commands():
         for cmd in app.registered_commands
     }
     assert registered == expected
+
+
+def test_the_particle_commands_are_the_stilt_commands_but_init():
+    # stilt init is STILT's: its starter config has STILT-R's values and the footprint.
+    from stilt import cli
+
+    particle = [c.callback for c in cli.app.registered_commands]
+    assert [c.callback for c in app.registered_commands] == [
+        stilt.stilt_cli.init,
+        *particle,
+    ]
+    assert stilt.stilt_cli.init not in particle
 
 
 # ---------------------------------------------------------------------------

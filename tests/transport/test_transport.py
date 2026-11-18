@@ -11,7 +11,7 @@ from stilt.meteorology import run_window
 from stilt.output import Output
 from stilt.particles import particles_metadata
 from stilt.simulation import Simulation
-from stilt.transport import ModelRun, TransportConfig, get_model
+from stilt.transport import MODELS, ModelRun, TransportConfig, get_model
 from stilt.transport.hysplit import HysplitConfig, HysplitModel, Met, MetConfig
 from tests.fixtures.factories import blocks
 
@@ -41,11 +41,18 @@ def test_get_model_names_the_models_it_knows():
         get_model("flexpart")
 
 
-def test_stilt_r_is_a_built_in_model_that_cannot_run(point_receptor):
-    from stilt.exceptions import SimulationError
-    from stilt.transport.stilt_r import StiltRMetConfig, StiltRModel
+def test_stilt_r_is_no_built_in_model():
+    # PYSTILT's model of imported runs is named by its import path.
+    assert list(MODELS) == ["hysplit"]
+    with pytest.raises(ValueError, match="Unknown transport model 'stilt-r'"):
+        get_model("stilt-r")
 
-    model = get_model("stilt-r")
+
+def test_stilt_r_is_a_model_named_by_import_path_that_cannot_run(point_receptor):
+    from stilt.exceptions import SimulationError
+    from stilt.stilt_r import STILT_R_MODEL, StiltRMetConfig, StiltRModel
+
+    model = get_model(STILT_R_MODEL)
     assert isinstance(model, StiltRModel)
     met = StiltRMetConfig(met_path="/data/hrrr")
     assert met.settings() == {"met_path": "/data/hrrr"}
@@ -56,7 +63,7 @@ def test_stilt_r_is_a_built_in_model_that_cannot_run(point_receptor):
 
 
 def test_stilt_r_settings_have_no_defaults():
-    from stilt.transport.stilt_r import StiltRConfig
+    from stilt.stilt_r import STILT_R_MODEL, StiltRConfig
 
     settings = HysplitConfig(n_hours=-24).settings()
     with pytest.raises(ValueError, match="missing: numpar"):
@@ -68,8 +75,8 @@ def test_stilt_r_settings_have_no_defaults():
         StiltRConfig.model_validate(["not", "settings"])
     # The version is a setting: it tells imports of two STILT-R versions apart.
     assert config.settings() == {**settings, "version": "1d936c1"}
-    assert get_model("stilt-r").version(config) == "1d936c1"
-    assert get_model("stilt-r").sha256(config) is None
+    assert get_model(STILT_R_MODEL).version(config) == "1d936c1"
+    assert get_model(STILT_R_MODEL).sha256(config) is None
     with pytest.raises(ValueError, match="missing: version"):
         StiltRConfig.model_validate(settings)
 

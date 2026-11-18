@@ -74,28 +74,30 @@ get the particle classes; nothing on disk names the subclasses.
 
 ```
 src/stilt/
-  cli.py          Typer CLI, a thin adapter over Project and execution
+  cli.py          Typer CLI, the particle commands;  stilt_cli.py  the stilt command, with stilt init
   project.py      Project, the particle part: inputs, the simulations table, run/submit, status
   stilt_project.py  stilt.Project: footprints, jacobian, transport_error; init with STILT-R's values
   check.py        check_project: what would stop a project's runs, from its inputs
   fetch.py        fetch_project: gets the met files the unfinished simulations need
   migration.py    read_stilt_r, import_stilt_r: STILT-R and X-STILT by-id output, read with rdata
+  stilt_r.py      StiltRModel, the stilt-r model of imported runs (runs nothing), named by import path
   output.py       Output: the output directory; `completed`, the completion rule
   simulation.py   Simulation, the particle part: a frozen (receptor, variant, output) value
   stilt_simulation.py  stilt.Simulation: footprint, calc_footprint, background, transport_error, plot
   config.py       ProjectConfig and Variant;  identity.py  settings records, hashes
   stages.py       the Stage protocol, get_stage, check_stage;  _plugins.py  a class by import path
   receptors/      receptor models, receptors.csv, shared validation
-  particles/      the particle table and files, release heights, foot, near-field correction
-  footprint/      FootprintConfig, FootprintStage, calc_footprint (gridding.py), aggregation, io, targets
+  particles/      the particle table and files, release heights;  stilt_particles.py  .stilt with enhancement
+  footprint/      FootprintConfig, FootprintStage, calc_footprint (gridding.py), foot (add_foot,
+                  the near-field correction), aggregation, io, targets
   transforms/     pre-footprint particle transforms, one module each
-  transport/      TransportModel/TransportConfig protocols, MODELS, get_model, run_model;
-                  stilt_r.py, the stilt-r model of imported runs (runs nothing)
+  transport/      TransportModel/TransportConfig protocols, MODELS (hysplit), get_model, run_model
     hysplit/      config, met, catalog, driver, CONTROL and SETUP.CFG writers, failures
   execution/      ExecutionConfig (a block per backend), runner (plan, local run, Slurm submit), worker
   observations/   the X-STILT port (readers, sounding selection, slant receptors, columns);
                   receptors along a moving platform's track (tracks.py)
-  background.py, transport_error.py, meteorology.py, sampling.py, spatial.py, visualization.py, exceptions.py, _paths.py
+  background.py, transport_error.py, meteorology.py, sampling.py, spatial.py, visualization.py
+  (stilt_visualization.py: footprint and simulation plots), exceptions.py, _paths.py
 ```
 
 **A run** (`stilt run`, `Project.run()`, `submit()`) happens in this process
@@ -111,8 +113,8 @@ soundings into receptors, then a run goes as usual. Keep it out of `project.py`.
 The import contracts in `pyproject.toml` (`just imports`) hold this shape: an
 exhaustive `layers` contract (a new top-level module fails until placed), only
 `stilt.transport` imports HYSPLIT's package, the project config reads no results
-and runs nothing, and the core imports STILT's side only where the contract
-lists it (the config, identity, check, output and worker nowhere). Slurm tasks rebuild the project in another process, so anything a worker
+and runs nothing, and the core imports none of STILT's side (its ignores are all
+within STILT's side; a module there over a core module is `stilt_<name>`). Slurm tasks rebuild the project in another process, so anything a worker
 needs must be in the project or the output directory.
 
 `ProjectConfig` is `config.yaml`'s blocks, and no setting sits outside one: `mets`,

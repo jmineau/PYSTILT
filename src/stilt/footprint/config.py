@@ -201,7 +201,7 @@ class FootprintConfig(BaseModel):
         description=(
             "Correct ``foot`` near the receptor with a vertical Gaussian plume "
             "model before the footprint is computed "
-            "(:func:`stilt.particles.correct_near_field`). Close to the "
+            "(:func:`stilt.footprint.correct_near_field`). Close to the "
             "receptor the plume is thinner than the layer surface fluxes are "
             "mixed through, so this raises the influence of nearby fluxes. "
             "Needs the particle columns ``dens``, ``tlgr``, ``sigw``, ``foot``, "

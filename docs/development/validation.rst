@@ -65,7 +65,7 @@ about 0.29 hPa at the 95th percentile with either.
 ------------------------------------------------
 
 The footprint stage computes ``foot`` for particles that have none
-(:func:`stilt.particles.add_foot`): the time below ``footprint_depth`` of the mixed
+(:func:`stilt.footprint.add_foot`): the time below ``footprint_depth`` of the mixed
 layer over the air below that depth, which it takes from the drop in
 pressure between the ground and the depth in the met files. HYSPLIT
 computes its own the same way in its turbulence steps, adding up the dry

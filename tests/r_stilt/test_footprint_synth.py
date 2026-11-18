@@ -37,7 +37,7 @@ import pytest
 import xarray as xr
 
 from stilt.exceptions import EmptyFootprint
-from stilt.footprint import calc_footprint
+from stilt.footprint import calc_footprint, correct_near_field
 from stilt.footprint.gridding import (
     _compute_kernel_bandwidths,
     _filter_and_rasterize_particles,
@@ -46,7 +46,6 @@ from stilt.footprint.gridding import (
     _padded_axes,
     _project_particles_to_crs,
 )
-from stilt.particles import correct_near_field
 from stilt.receptors import MultiPointReceptor, PointReceptor
 from stilt.spatial import Grid, _east_edge, _grid_cell_starts
 

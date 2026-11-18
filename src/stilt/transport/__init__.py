@@ -2,10 +2,10 @@
 The transport model interface.
 
 A transport model turns one receptor and one set of transport settings into
-a particle table. Each model is a subpackage or module here. HYSPLIT
-(:class:`stilt.transport.hysplit.HysplitModel`) is the one that runs;
-``stilt-r`` (:class:`stilt.transport.stilt_r.StiltRModel`) records the
-settings of runs imported from STILT-R and runs nothing. The worker reaches
+a particle table. HYSPLIT (:class:`stilt.transport.hysplit.HysplitModel`)
+is the one built in; a model in another package, or PYSTILT's model of runs
+imported from STILT-R (:class:`stilt.stilt_r.StiltRModel`), is named by its
+import path. The worker reaches
 a model through :func:`get_model` by the name a run's settings record, so
 another model needs no change to the worker.
 """
@@ -337,21 +337,13 @@ def _hysplit() -> TransportModel:
     return HysplitModel()
 
 
-def _stilt_r() -> TransportModel:
-    """Return the model of imported STILT-R runs, importing it only when it is asked for."""
-    from stilt.transport.stilt_r import StiltRModel
-
-    return StiltRModel()
-
-
-#: The transport models built into PYSTILT, by the name of their block under
-#: ``models:`` in ``config.yaml``: ``hysplit``, and ``stilt-r`` for runs
-#: imported from STILT-R (:func:`stilt.migration.import_stilt_r`), which
-#: cannot run. A model in its own package is named by its import path
-#: instead, the ``class`` of its block, as a transform's ``kind:`` is.
+#: The transport models built in, by the name of their block under
+#: ``models:`` in ``config.yaml``: ``hysplit``. Any other model, such as
+#: the one of runs imported from STILT-R (:class:`stilt.stilt_r.StiltRModel`),
+#: is named by its import path instead, the ``class`` of its block, as a
+#: transform's ``kind:`` is.
 MODELS: dict[str, Callable[[], TransportModel]] = {
     "hysplit": _hysplit,
-    "stilt-r": _stilt_r,
 }
 
 
@@ -567,7 +559,7 @@ def run_trajectories(
         :func:`stilt.calc_footprint` applies it (``hnf_plume``), given
         ``veght`` as its ``footprint_depth``. STILT-R's ``calc_trajectory``
         applies it here. A model that writes no ``foot`` returns none:
-        :func:`stilt.particles.add_foot` computes one.
+        :func:`stilt.footprint.add_foot` computes one.
 
     Raises
     ------

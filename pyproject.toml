@@ -145,6 +145,7 @@ containers = ["stilt"]
 exhaustive = true
 layers = [
     "__main__",
+    "stilt_cli",
     "cli",
     "observations | migration",
     "stilt_project",
@@ -156,8 +157,11 @@ layers = [
     "background",
     "output",
     "stages",
+    "stilt_r",
     "footprint : identity : meteorology : transport",
+    "stilt_particles",
     "particles",
+    "stilt_visualization",
     "receptors : visualization",
     "transforms",
     "sampling",
@@ -182,7 +186,7 @@ ignore_imports = [
     "stilt.migration -> stilt.transport.hysplit.config",
     "stilt.migration -> stilt.transport.hysplit.control",
     "stilt.migration -> stilt.transport.hysplit.namelist",
-    "stilt.transport.stilt_r -> stilt.transport.hysplit.config",
+    "stilt.stilt_r -> stilt.transport.hysplit.config",
 ]
 allow_indirect_imports = true
 
@@ -208,17 +212,18 @@ allow_indirect_imports = true
 # The core that makes particle runs (receptors and variants, settings
 # folders, completion by file, run and submit, the met catalog, the transport
 # models) is kept apart from what STILT adds on top of the particles:
-# footprints, transforms, observations, sampling fields at particles,
-# background, transport error, and the STILT-R model. Nothing is moved here:
-# the crossings below are the work a code boundary would leave, and a new one
-# fails this contract. Not seen: a package's __init__ importing its own module
-# (the transport registry imports the STILT-R model), and the near-field
-# correction (which the footprint step calls) and add_foot, functions in
-# stilt.particles.table. The package's __init__ re-exports the public names,
-# so it is not a source. A stage is named in config.yaml by the import path of
-# its class (stilt.stages), so the config, the settings records, the check
-# before a run, the output directory and the worker reach the footprint stage
-# without importing it. Imports used only for type hints do not count.
+# footprints (foot and the near-field correction among them), transforms,
+# observations, sampling fields at particles, background, transport error,
+# the STILT-R model and reader, and the classes and commands a STILT user
+# holds (stilt.Project, stilt.Simulation, the particle accessor with its
+# enhancement, the footprint and simulation plots, stilt init and python -m
+# stilt). The core
+# imports none of it: a stage and a model are named in config.yaml by the
+# import path of their class, so the config, the settings records, the check,
+# the output directory and the worker reach them without an import. The only
+# ignored imports are those within STILT's side. The package's __init__
+# re-exports the public names, so it is not a source. Imports used only for
+# type hints do not count.
 [[tool.importlinter.contracts]]
 name = "The particle-run core does not import what STILT adds on top"
 type = "forbidden"
@@ -228,41 +233,29 @@ forbidden_modules = [
     "stilt.transforms",
     "stilt.observations",
     "stilt.sampling",
-    "stilt.transport.stilt_r",
     "stilt.background",
     "stilt.transport_error",
+    "stilt.migration",
+    "stilt.stilt_r",
     "stilt.stilt_project",
     "stilt.stilt_simulation",
+    "stilt.stilt_particles",
+    "stilt.stilt_visualization",
+    "stilt.stilt_cli",
+    "stilt.__main__",
 ]
 ignore_imports = [
-    # Imports within STILT's side. The observation layer sits above
-    # everything (the layers contract holds that); the STILT-R reader reads
-    # imported runs' footprints and records them under the STILT-R model;
-    # background and transport error weight particles as the footprint does.
-    "stilt.footprint.** -> stilt.footprint.**",
-    "stilt.footprint.** -> stilt.transforms",
-    "stilt.footprint.** -> stilt.sampling",
-    "stilt.transforms.** -> stilt.transforms.**",
-    "stilt.transforms.oxidation -> stilt.sampling",
+    "stilt.footprint.** -> stilt.**",
+    "stilt.transforms.** -> stilt.**",
     "stilt.observations.** -> stilt.**",
-    "stilt.background -> stilt.sampling",
-    "stilt.background -> stilt.transforms",
-    "stilt.transport_error -> stilt.background",
-    "stilt.transport_error -> stilt.transforms",
-    "stilt.migration -> stilt.footprint.config",
-    "stilt.migration -> stilt.footprint.io",
-    "stilt.migration -> stilt.footprint.stage",
-    "stilt.migration -> stilt.transport.stilt_r",
-    # Sampling fields at particles: add_foot reads the met with sample_met,
-    # and the particle accessor samples a field.
-    "stilt.particles.table -> stilt.sampling",
-    "stilt.particles.accessor -> stilt.sampling",
-    # stilt.Simulation: sim.footprint, sim.background and sim.transport_error.
-    "stilt.stilt_simulation -> stilt.**",
-    # stilt.Project: footprints(), jacobian() and transport_error().
+    "stilt.background -> stilt.**",
+    "stilt.transport_error -> stilt.**",
+    "stilt.migration -> stilt.**",
     "stilt.stilt_project -> stilt.**",
-    # stilt init writes a starter config with the footprint stage.
-    "stilt.cli -> stilt.stilt_project",
+    "stilt.stilt_simulation -> stilt.**",
+    "stilt.stilt_particles -> stilt.**",
+    "stilt.stilt_cli -> stilt.**",
+    "stilt.__main__ -> stilt.**",
 ]
 allow_indirect_imports = true
 
@@ -351,7 +344,7 @@ convention = "numpy"
 known-first-party = ["stilt"]
 
 [project.scripts]
-stilt = "stilt.cli:app"
+stilt = "stilt.stilt_cli:app"
 
 [tool.setuptools.packages.find]
 where = ["src"]

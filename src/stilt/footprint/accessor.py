@@ -24,7 +24,7 @@ from .io import _naive_utc, _with_cf_metadata
 from .targets import Geometry
 
 if TYPE_CHECKING:
-    from stilt.visualization import FootprintPlotAccessor
+    from stilt.stilt_visualization import FootprintPlotAccessor
 
 
 def _spacing(values: np.ndarray) -> float | None:
@@ -144,7 +144,7 @@ class FootprintAccessor:
     @property
     def plot(self) -> FootprintPlotAccessor:
         """Plotting methods, such as ``foot.stilt.plot.map()``."""
-        from stilt.visualization import FootprintPlotAccessor
+        from stilt.stilt_visualization import FootprintPlotAccessor
 
         return FootprintPlotAccessor(self._foot)
 
