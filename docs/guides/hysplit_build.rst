@@ -19,6 +19,13 @@ as HYSPLIT's download is: ``exec/hycs_std``, and the data tables in
      hysplit:
        directory: /path/to/hysplit
 
+Each of NOAA's Linux downloads is built for one operating system release.
+Choose yours (a Rocky Linux 8 cluster takes the RHEL 8 build), or the one
+built for all Linux distributions: a download built for a newer system
+stops on an older one with an error that names ``GLIBC``. Unpacked on
+Windows and copied over, ``exec/hycs_std`` loses its permission to run;
+``chmod +x exec/hycs_std`` gives it back.
+
 ``directory`` is a HYSPLIT setting, so a variant can set its own and
 compare two builds on the same receptors:
 
