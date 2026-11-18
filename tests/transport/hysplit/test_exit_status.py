@@ -6,10 +6,10 @@ from pathlib import Path
 
 import pytest
 
+from stilt import Project
 from stilt.config import ProjectConfig
 from stilt.exceptions import SimulationError
 from stilt.meteorology import run_window
-from stilt.project import Project
 from stilt.receptors import PointReceptor
 from stilt.transport.hysplit import FailureReason, HysplitConfig, HysplitModel
 from tests.fixtures.factories import blocks

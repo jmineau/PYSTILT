@@ -57,6 +57,19 @@ data. ``Output`` has no folder classes: its methods (``path``,
 failure records) take the kind of result (``"particles"``, or the name of a
 stage such as ``"footprint"``), the variant, and receptor ids.
 
+The classes a STILT user holds, ``stilt.Project`` and ``stilt.Simulation``,
+are the particle part's ``stilt.project.Project`` and
+``stilt.simulation.Simulation`` with STILT's reads added
+(``stilt.stilt_project``, ``stilt.stilt_simulation``): ``footprints``,
+``jacobian`` and ``transport_error`` on the project; ``footprint``,
+``has_footprint``, ``calc_footprint``, ``background``, ``transport_error``
+and ``plot`` on a simulation. They change nothing they inherit, which a test
+holds, with two exceptions: ``simulation_class``, the one hook, makes
+``stilt.Project.simulation`` return a ``stilt.Simulation``, and
+``stilt.Project.init`` writes STILT-R's HYSPLIT values into a new project.
+The workers and the stages use the particle part, and nothing on disk names
+the subclasses, so ``stilt.project.Project(path)`` opens the same project.
+
 ``stilt.__all__``, plus the ``__all__`` of each subpackage, is the public
 surface. Everything else is internal and can change.
 
@@ -67,9 +80,11 @@ Module map
 
    src/stilt/
      cli.py             Typer CLI; a thin adapter over Project and execution
-     project.py         Project: the project directory, its receptors and
-                        simulations (DataFrames), run/submit, and a
-                        selection's status, particles, footprints, Jacobian
+     project.py         Project, the particle part: the project directory,
+                        its receptors and simulations (DataFrames),
+                        run/submit, and a selection's status and particles
+     stilt_project.py   stilt.Project: adds a selection's footprints, Jacobian
+                        and transport error; init writes STILT-R's values
      check.py           check_project: what would stop a project's runs,
                         found from its inputs before any run (Project.check,
                         stilt check); a transport model's check_met finds the
@@ -90,8 +105,11 @@ Module map
                         receptors, particle tables, and footprints;
                         import_stilt_r writes it into an output directory
                         with the settings its files record
-     simulation.py      Simulation: a frozen value (receptor, variant, output)
-                        that knows where its results are and whether they exist
+     simulation.py      Simulation, the particle part: a frozen value
+                        (receptor, variant, output) that knows where its
+                        results are and whether they exist (path, has)
+     stilt_simulation.py stilt.Simulation: adds the footprint, calc_footprint,
+                        the background, the transport error, and plot
      background.py      background: the mole fraction at a receptor from a
                         field sampled where the particles end (sim.background)
      transport_error.py transport_error: the transport error of the
@@ -419,8 +437,8 @@ there is refused with a message naming its block.
   ``FIXED_SETUP`` sets. The settings HYSPLIT decides after reading
   ``SETUP.CFG`` (``capemin``, ``kblt``, ``kmixd``, ``krand``, ``vscales``)
   default to unset and are then not written. STILT-R's values are PYSTILT's
-  side: ``stilt.config.STILT_R_HYSPLIT``, which ``stilt init`` (the starter
-  config) and ``Project.init`` write into the ``hysplit`` block where it
+  side: ``stilt.stilt_project.STILT_R_HYSPLIT``, which ``stilt init`` (the starter
+  config) and ``stilt.Project.init`` write into the ``hysplit`` block where it
   gives none, so what a project runs is in its file. ``run_trajectories``
   and a hand-written config get HYSPLIT's. A run records the resolved
   values, so a config that gives STILT-R's values names the same settings

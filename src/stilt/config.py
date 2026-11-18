@@ -851,111 +851,6 @@ class ProjectConfig(BaseModel):
         return cls.model_validate(raw)
 
 
-#: STILT-R's HYSPLIT settings where they differ from what HYSPLIT does on its
-#: own: ``Project.init`` and ``stilt init`` write them into a new project's
-#: ``models: hysplit:`` block, so it runs HYSPLIT as STILT-R does. The values
-#: are those of STILT-R's ``run_stilt.r``. ``kblt``, ``kmixd`` and ``vscales``
-#: are what HYSPLIT chooses itself in STILT mode, and are written so that
-#: ``SETUP.CFG`` matches STILT-R's line for line. ``varsiwant`` is STILT-R's
-#: list with ``pres`` added, for pressure weighting.
-STILT_R_HYSPLIT: dict[str, Any] = {
-    "numpar": 1000,
-    "capemin": -1.0,
-    "kblt": 5,
-    "kmixd": 3,
-    "krand": 4,
-    "vscales": -1.0,
-    "wvert": False,
-    "varsiwant": [
-        "time",
-        "indx",
-        "long",
-        "lati",
-        "zagl",
-        "foot",
-        "mlht",
-        "pres",
-        "dens",
-        "samt",
-        "sigw",
-        "tlgr",
-    ],
-}
-
-#: The commented ``config.yaml`` that ``Project.init(path, starter=True)`` and
-#: ``stilt init`` write, to edit by hand.
-STARTER_CONFIG = """# PYSTILT project configuration
-# See docs for details: https://jmineau.github.io/PYSTILT
-
-
-# Meteorology, by name: the folder of your ARL files. To download them from NOAA
-# instead, write hrrr: {download: hrrr, directory: /path/to/keep/them}.
-mets:
-  hrrr: /path/to/arl/meteorology
-
-
-# Transport models, by name, each with its settings: the defaults of every
-# variant that runs it. Negative n_hours means backward in time.
-models:
-  hysplit:
-    n_hours: -24
-    # STILT-R's values where HYSPLIT's own defaults differ. A setting left
-    # out runs with HYSPLIT's default.
-    numpar: 1000
-    capemin: -1     # no convection
-    kblt: 5         # Hanna turbulence
-    kmixd: 3        # mixed-layer height from the bulk Richardson number
-    krand: 4        # random numbers seeded from the clock
-    vscales: -1     # Hanna timescale in a stable boundary layer
-    wvert: false
-    varsiwant: [time, indx, long, lati, zagl, foot, mlht, pres, dens, samt, sigw, tlgr]
-
-
-# Stages, by name: what is made from each simulation's particles. The footprint
-# stage grids them. Remove the stages block to make particles only.
-stages:
-  footprint:
-    class: stilt.footprint.FootprintStage
-    grid:
-      xmin: -113.0
-      xmax: -110.5
-      ymin: 40.0
-      ymax: 42.0
-      xres: 0.01
-      yres: 0.01
-    hnf_plume: true  # correct foot for the thin plume near the receptor before gridding
-
-
-# Variants. Every receptor runs once per variant, with the blocks above as
-# the defaults. An entry with no overrides runs the defaults as they are; add
-# others to run the same receptors under other settings, e.g. a mixed-layer
-# bracket or a wind-error ensemble (see the docs). A variant changes a
-# footprint setting under its own stages: key. Only the variants listed here
-# run.
-variants:
-  hrrr: {}
-#  hrrr-zi08: {ziscale: 0.8}
-#  hrrr-coarse: {stages: {footprint: {grid: {xres: 0.05, yres: 0.05}}}}
-
-
-# Results go to this directory, relative to the project unless absolute.
-# Several projects can name the same directory and share runs.
-output: ./output
-
-
-# Execution is optional. Local execution is the default. Each backend's
-# settings are in the block of its name, and only the backend's block is read.
-# execution:
-#   backend: local    # or "slurm"
-#   local:
-#     cpus: 1         # receptors at once
-#   slurm:
-#     n_workers: 1    # array tasks
-#     cpus: 1         # receptors at once in each task
-#     time: "02:00:00"
-"""
-
-
 def _model_blocks(
     models: dict[str, dict[str, Any] | None], stages: Any = None
 ) -> dict[str, tuple[str, dict[str, Any]]]:
@@ -1299,8 +1194,6 @@ def _check_keys(
 
 __all__ = [
     "FOOTPRINT_STAGE",
-    "STARTER_CONFIG",
-    "STILT_R_HYSPLIT",
     "VARIANT_NAME_RE",
     "ProjectConfig",
     "Variant",

@@ -4,11 +4,11 @@ import pandas as pd
 import pytest
 import xarray as xr
 
+from stilt import Simulation
 from stilt.config import Variant
 from stilt.footprint.config import FootprintConfig
 from stilt.output import Output
 from stilt.particles import particles_metadata
-from stilt.simulation import Simulation
 from stilt.spatial import Grid
 from stilt.transforms import FirstOrderLifetime, transform_kind
 from stilt.transport.hysplit import MetConfig

@@ -9,9 +9,10 @@ from pathlib import Path
 
 import pytest
 
-from stilt.config import STILT_R_HYSPLIT, ProjectConfig
+from stilt.config import ProjectConfig
 from stilt.receptors import ColumnReceptor, MultiPointReceptor
 from stilt.spatial import Grid
+from stilt.stilt_project import STILT_R_HYSPLIT
 from stilt.transport.hysplit import MetConfig
 from tests.fixtures.factories import blocks
 

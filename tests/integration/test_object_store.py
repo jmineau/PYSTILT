@@ -133,7 +133,7 @@ def test_a_project_runs_with_its_output_on_an_object_store(
     """A run writes to S3, and status, the footprints, and the Jacobian read it back."""
     import pandas as pd
 
-    from stilt.project import Project
+    from stilt import Project
 
     config = wbb_config.model_copy(update={"output": f"{store}/output"})
     project = Project.init(

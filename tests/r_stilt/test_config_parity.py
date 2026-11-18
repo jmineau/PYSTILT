@@ -20,7 +20,7 @@ import pandas as pd
 import pytest
 import yaml
 
-from stilt.config import STARTER_CONFIG
+from stilt.stilt_project import STARTER_CONFIG
 from stilt.transport.hysplit import HysplitConfig
 from stilt.transport.hysplit.driver import setup_entries, winderrtf
 from stilt.transport.hysplit.namelist import NameList, read_namelist

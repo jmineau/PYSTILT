@@ -11,15 +11,15 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from stilt import transport_error
-from stilt.config import STILT_R_HYSPLIT, ProjectConfig
+from stilt import Project, transport_error
+from stilt.config import ProjectConfig
 from stilt.execution.config import ExecutionConfig
 from stilt.execution.runner import resolve_compute_root
 from stilt.footprint.stage import store_empty_footprint, store_footprint
 from stilt.output import Output
-from stilt.project import Project
 from stilt.receptors import ColumnReceptor, PointReceptor
 from stilt.spatial import Grid
+from stilt.stilt_project import STILT_R_HYSPLIT
 from stilt.transport.hysplit import MetConfig
 from stilt.transport.hysplit.driver import winderrtf
 from tests.fixtures.factories import blocks
@@ -241,7 +241,7 @@ def test_init_takes_a_config_or_keywords_not_both(tmp_path):
 
 
 def test_init_writes_the_commented_starter_config(tmp_path):
-    from stilt.config import STARTER_CONFIG
+    from stilt.stilt_project import STARTER_CONFIG
 
     project = Project.init(tmp_path / "proj", starter=True)
 
