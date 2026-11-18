@@ -162,7 +162,7 @@ def test_a_variant_uses_every_stage_in_the_order_they_run(tmp_path):
     assert variant.stage_classes == {"count": COUNT, "double": DOUBLE}
     assert isinstance(variant.stage("double"), DoubleStage)
     assert variant.stage_settings == {
-        "count": {"scale": 2, "fail": False},
+        "count": {"scale": 2, "fail": False, "silent": False},
         "double": {"add": 0},
     }
 
@@ -207,7 +207,10 @@ def test_a_stages_hash_takes_the_particles_and_what_it_reads(tmp_path):
     resolved = _config(tmp_path, stages=chain(), variants=variants).resolve()
     hrrr, tripled = resolved["hrrr"], resolved["tripled"]
     assert hrrr.stage_hashes["count"] == settings_hash(
-        {"particles": hrrr.particles_hash, "count": {"scale": 1, "fail": False}}
+        {
+            "particles": hrrr.particles_hash,
+            "count": {"scale": 1, "fail": False, "silent": False},
+        }
     )
     assert hrrr.stage_hashes["double"] == stage_hash(
         "double",

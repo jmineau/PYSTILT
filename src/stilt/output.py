@@ -1,9 +1,10 @@
 """
-The output directory, where particles and footprints are kept.
+The output directory, where particles and the files of each stage are kept.
 
 A project's results live in an output directory that several projects can
-share. It has one tree per kind of result, and inside each a folder per set
-of settings, in hive form so every tree reads as one dataset::
+share. It has one tree per kind of result, ``particles`` and one named for
+each stage (the footprint's is ``footprint``), and inside each a folder per
+set of settings, in hive form so every tree reads as one dataset::
 
     <output>/
       particles/
@@ -12,7 +13,7 @@ of settings, in hive form so every tree reads as one dataset::
           date=2024-07-01/<receptor>.parquet
         settings=hrrr-err-7be104/        an ensemble: one folder, a partition per realization
           realization=0/date=2024-07-01/<receptor>.parquet
-      footprints/
+      footprint/
         settings=hrrr-93278c/            variant name + short hash of transport + footprint settings
           _settings.yaml                 names the particles folder it was made from
           date=2024-07-01/<receptor>.parquet
@@ -28,25 +29,28 @@ A folder is found by the hash of its settings, so two projects that run the
 same settings share one folder, and a changed setting lands in a new folder
 beside the old one instead of overwriting it. ``pyarrow.dataset``, DuckDB,
 polars, and R's arrow read ``settings`` and ``date`` as columns of the whole
-tree. Particles are one Parquet file per receptor. Footprints are sparse
-tables of the non-zero cells, in float32 as STILT-R writes them; an empty
-footprint is a file with no rows, marked ``stilt:empty`` in its metadata.
+tree. Particles are one Parquet file per receptor. A stage writes its own
+file per receptor, with the extension it declares
+(:attr:`stilt.stages.Stage.suffix`), at the path this module gives it, and
+this module never looks inside one. The footprint's are sparse tables of
+the non-zero cells; an empty footprint is a file with no rows, marked
+``stilt:empty`` in its metadata.
 
 Logs, failure records, and kept workdirs are in trees of their own
 (``logs/``, ``scratch/``) rather than beside the results, so that each
-results tree holds Parquet files only and reads as one dataset. Whether a
-simulation is complete is read from the results trees alone; the logs only
-explain the ones that are not.
+results tree holds result files only and reads as one dataset. Whether a
+simulation is complete is read from the results trees alone
+(:func:`completed`); the logs only explain the ones that are not.
 
 Start from :class:`Output` and a resolved variant (``project.variants``).
-Every function takes the kind of result, ``"particles"`` or
-``"footprints"``, and the variant::
+Every function takes the kind of result, ``"particles"`` or a stage's name,
+and the variant::
 
     out = Output("output")
     out.write_particles(variant, receptor, frame, met_files)
     out.path("particles", variant, receptor.id)  # one receptor's file
-    out.present("footprints", variant, receptor_ids)  # which have a footprint
-    out.table("footprints", variant)  # many footprints as one table
+    out.present("footprint", variant, receptor_ids)  # which have a footprint
+    out.make_path("footprint", variant, receptor.id)  # where a stage writes
 """
 
 from __future__ import annotations
@@ -60,25 +64,19 @@ import warnings
 from collections.abc import Iterable, Mapping
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 import pyarrow as pa
 import pyarrow.dataset as pads
 import pyarrow.parquet as pq
-import xarray as xr
 import yaml
 
 from stilt._paths import atomic_path, location, readable
-from stilt.footprint import (
-    FOOTPRINT_SCHEMA,
-    write_empty_footprint,
-    write_footprint,
-)
 from stilt.identity import canonical, read_run_settings, settings_hash, stage_hash
 from stilt.particles import write_particles
 from stilt.receptors import Receptor, parse_receptor_id
-from stilt.stages import get_stage
+from stilt.stages import get_stage, reads
 
 if TYPE_CHECKING:
     from upath import UPath
@@ -143,7 +141,7 @@ def _names(folder: Location) -> list[str]:
             return [entry.name for entry in os.scandir(folder)]
         folder.fs.invalidate_cache(folder.path)
         listed = folder.fs.ls(folder.path, detail=False)
-    except FileNotFoundError:
+    except (FileNotFoundError, NotADirectoryError):
         return []
     return [str(item).rstrip("/").rsplit("/", 1)[-1] for item in listed]
 
@@ -220,6 +218,25 @@ def _pystilt_version() -> str:
         return "0+unknown"
 
 
+@functools.cache
+def _versions(stage_class: str) -> dict[str, str]:
+    """
+    Return the versions a stage folder records: PYSTILT's, and the package of the stage's class.
+
+    They say what made the folder and are not part of its hash.
+    """
+    from importlib.metadata import PackageNotFoundError, packages_distributions, version
+
+    versions = {"pystilt": _pystilt_version()}
+    package = stage_class.partition(".")[0]
+    for distribution in packages_distributions().get(package, ()):
+        try:
+            versions.setdefault(distribution, version(distribution))
+        except PackageNotFoundError:
+            continue
+    return versions
+
+
 def _read_stage_settings(
     stage_class: str, stored: Mapping[str, Any], source: str
 ) -> dict[str, Any]:
@@ -261,30 +278,19 @@ def _stamp(digest: str, realization: int | None = None) -> dict[bytes, bytes]:
     return stamp
 
 
-def _footprint_stamp(
-    digest: str, variant: Variant, realization: int | None = None
-) -> dict[bytes, bytes]:
-    """Return what a footprint file records besides its contents: :func:`_stamp`, and its particles' hash."""
-    return {
-        **_stamp(digest, realization),
-        b"stilt:particles_hash": variant.particles_hash.encode(),
-    }
-
-
 # -- the output directory -----------------------------------------------------
 
-#: The import path of the stage whose results the ``footprints`` tree holds.
-_FOOTPRINT = "stilt.footprint.FootprintStage"
+#: A kind of result, and the tree it is kept in: ``particles``, or the name of a stage.
+Kind = str
 
-#: A kind of result, and the tree it is kept in.
-Kind = Literal["particles", "footprints"]
-KINDS: tuple[Kind, ...] = ("particles", "footprints")
+#: The trees of an output directory that hold no results.
+_OTHER_TREES = ("logs", "scratch")
 
-#: What :meth:`Output.table` returns when no file is read, by kind.
-_EMPTY: dict[str, pa.Table] = {
-    "particles": pa.table({"receptor": pa.array([], pa.string())}),
-    "footprints": FOOTPRINT_SCHEMA.append(pa.field("date", pa.date32())).empty_table(),
-}
+#: What :meth:`Output.table` returns when no file is read: for particles, and for a stage.
+_NO_PARTICLES = pa.table({"receptor": pa.array([], pa.string())})
+_NO_STAGE_FILES = pa.table(
+    {"receptor": pa.array([], pa.string()), "date": pa.array([], pa.date32())}
+)
 
 #: The ``date=YYYY-MM-DD`` folders, read as a ``date32`` column.
 _DATE_PARTITIONING = pads.partitioning(
@@ -308,24 +314,33 @@ def _receptor_file(
     return folder / _date_dir(receptor_id) / f"{receptor_id}{suffix}"
 
 
-def completed(
-    particles: frozenset[str], footprints: frozenset[str] | None
-) -> frozenset[str]:
+def completed(particles: frozenset[str], *stages: frozenset[str]) -> frozenset[str]:
     """
-    Return the receptors that are complete, from the ones with particles and with a footprint.
+    Return the receptors that are complete, from the ones with particles and the ones with each stage's file.
 
-    The one definition of done: the particles exist, and the footprint
-    too when the variant makes one (*footprints* is ``None`` when it does
-    not). An empty footprint is complete.
+    The one definition of done. A simulation is complete when the model's
+    output file exists, and so does the file of every stage its variant
+    uses. *stages* is one set of receptors for each stage the variant uses,
+    none for a variant that makes particles only. A stage's file is a file
+    whatever it holds, so an empty footprint is complete.
     """
-    return particles if footprints is None else particles & footprints
+    return particles.intersection(*stages)
 
 
 def _count_files(folder: Location) -> int:
     """Return how many result files a settings folder holds, in every ``realization=k`` partition."""
     parts = [n for n in _names(folder) if n.startswith("realization=")]
     roots = [folder / n for n in parts] if parts else [folder]
-    return sum(len(_list_receptor_files(root, ".parquet")) for root in roots)
+    days = [
+        root / name
+        for root in roots
+        for name in _names(root)
+        if name.startswith("date=")
+    ]
+    with ThreadPoolExecutor(max_workers=16) as pool:
+        listed = list(pool.map(_names, days))
+    # A file being written has a name that starts with a dot.
+    return sum(not name.startswith(".") for names in listed for name in names)
 
 
 def _short(value: Any) -> str:
@@ -356,14 +371,16 @@ def _differences(
         # What can be read here: the met's files or the build may be missing.
         readable = variant.readable_run_settings
         stored = _like(read_run_settings(record["settings"]), readable)
-        current: Mapping[str, Any] | None = readable
+        current: Mapping[str, Any] = readable
     else:
-        stored = _read_stage_settings(_FOOTPRINT, record["settings"], str(path))
-        current = variant.stage_settings.get("footprint")
-    if current is None:
-        return "the variant makes no footprints"
+        if kind not in variant.stage_settings:
+            return f"the variant has no {kind} stage"
+        current = variant.stage_settings[kind]
+        stored = _read_stage_settings(
+            str(record.get("class", "")), record["settings"], str(path)
+        )
     found = _diff(stored, current)
-    if kind == "footprints" and not found:
+    if kind != "particles" and not found:
         return "made from other particles"
     if len(found) > 4:
         found = [*found[:4], f"and {len(found) - 4} more"]
@@ -392,20 +409,21 @@ def _check_realization(variant: Variant, realization: int | None) -> None:
 
 
 def _check_kind(kind: str) -> None:
-    if kind not in KINDS:
-        raise ValueError(f"kind is 'particles' or 'footprints', not {kind!r}.")
+    """Raise for a kind that names one of the trees that hold no results."""
+    if kind in _OTHER_TREES:
+        raise ValueError(f"kind is 'particles' or a stage's name, not {kind!r}.")
 
 
 class Output:
     """
-    An output directory: particles and footprints, by their settings.
+    An output directory: particles and the files of each stage, by their settings.
 
     Each kind of result has a tree, and in it a folder per set of settings,
     named ``settings=<variant>-<hash>``. A variant's folder is found by the
     hash of its settings, whatever name it was created under, so projects
     that run the same settings share it. Every method takes the kind of
-    result (``"particles"`` or ``"footprints"``) and the variant, resolved
-    (``project.variants``).
+    result (``"particles"``, or the name of a stage such as
+    ``"footprint"``) and the variant, resolved (``project.variants``).
 
     Parameters
     ----------
@@ -421,7 +439,7 @@ class Output:
         # Each folder's settings hash, by kind and folder name. Reading one
         # means reading its _settings.yaml and hashing it again, so each is
         # read once; a lookup that misses lists the tree again.
-        self._hashes: dict[str, dict[str, str]] = {"particles": {}, "footprints": {}}
+        self._hashes: dict[str, dict[str, str]] = {}
 
     def __repr__(self) -> str:
         return f"Output({str(self.directory)!r})"
@@ -444,12 +462,23 @@ class Output:
         written, with a default, still matches.
         """
         _check_kind(kind)
-        known = self._hashes[kind]
         names = _settings_folders(self.directory / kind)
-        for name in names:
-            if name not in known:
-                known[name] = self._read_hash(kind, name)
-        return {name: known[name] for name in names}
+        return {name: self._folder_hash(kind, name) for name in names}
+
+    def kinds(self) -> list[Kind]:
+        """
+        Return the kinds of result the directory holds a tree for: ``particles``, then the others in name order.
+
+        Every tree but ``logs`` and ``scratch`` is a kind, whether or not a
+        stage of that name is installed here.
+        """
+        trees = sorted(
+            name
+            for name in _names(self.directory)
+            if name not in ("particles", *_OTHER_TREES)
+            and not name.startswith((".", "_"))
+        )
+        return ["particles", *trees]
 
     def folders(self, variants: Mapping[str, Variant] | None = None) -> pd.DataFrame:
         """
@@ -468,7 +497,7 @@ class Output:
         Returns
         -------
         pandas.DataFrame
-            ``kind`` (``particles`` or ``footprints``), ``folder`` (the
+            ``kind`` (``particles`` or a stage's name), ``folder`` (the
             ``settings=`` value), ``name`` (the variant that made it), and
             ``files`` (the result files it holds, every realization of an
             ensemble counted). With *variants*, also ``variant``, the
@@ -481,7 +510,7 @@ class Output:
         >>> project.output.folders(project.variants)  # doctest: +SKIP
         """
         rows = []
-        for kind in KINDS:
+        for kind in self.kinds():
             for folder, digest in self.hashes(kind).items():
                 path = self._dir(kind, folder)
                 record = _read_yaml(path / SETTINGS_FILE)
@@ -510,35 +539,57 @@ class Output:
             columns += ["variant", "differs"]
         return pd.DataFrame(rows, columns=columns)
 
+    def _folder_hash(self, kind: Kind, name: str) -> str:
+        """Return the settings hash of the folder *name* of *kind*, read once."""
+        known = self._hashes.setdefault(kind, {})
+        if name not in known:
+            known[name] = self._read_hash(kind, name)
+        return known[name]
+
     def _read_hash(self, kind: Kind, name: str) -> str:
-        """Return the settings hash of one folder, from its ``_settings.yaml``."""
+        """
+        Return the settings hash of one folder, from its ``_settings.yaml``.
+
+        A stage's folder is hashed with the hash of each folder its record
+        says it was made from, read the same way. A stage folder whose
+        record names no stage class was not written by this layout, and
+        keeps the hash it recorded.
+        """
         path = self._dir(kind, name) / SETTINGS_FILE
         record = _read_yaml(path)
         if kind == "particles":
             return settings_hash(read_run_settings(record["settings"]))
-        settings = _read_stage_settings(_FOOTPRINT, record["settings"], str(path))
-        particles = record["particles"]
-        if particles not in self._hashes["particles"]:
-            self._hashes["particles"][particles] = self._read_hash(
-                "particles", particles
-            )
-        return stage_hash("footprint", settings, self._hashes["particles"][particles])
+        made_from = record.get("reads")
+        if (
+            "class" not in record
+            or not isinstance(made_from, Mapping)
+            or "particles" not in made_from
+        ):
+            return str(record.get("hash", ""))
+        settings = _read_stage_settings(record["class"], record["settings"], str(path))
+        hashes = {}
+        for what, folder in made_from.items():
+            try:
+                hashes[what] = self._folder_hash(what, folder["folder"])
+            except FileNotFoundError:
+                hashes[what] = folder["hash"]  # its folder is gone: as recorded
+        return stage_hash(kind, settings, hashes.pop("particles"), hashes)
 
     @staticmethod
     def _variant_hash(kind: Kind, variant: Variant) -> str | None:
-        """Return the hash that names *variant*'s folder of *kind*, ``None`` for footprints without a grid."""
+        """Return the hash that names *variant*'s folder of *kind*, ``None`` for a stage the variant does not use."""
         _check_kind(kind)
         if kind == "particles":
             return variant.particles_hash
-        return variant.stage_hashes.get("footprint")
+        return variant.stage_hashes.get(kind)
 
     def _lookup_hash(self, kind: Kind, variant: Variant) -> str | None:
         """
         Return the hash that finds *variant*'s folder of *kind*, or ``None`` when no folder can be its.
 
-        ``None`` for footprints without a grid. When the settings cannot all
-        be read here, the particles folders are compared on what can be
-        (:meth:`_readable_matches`):
+        ``None`` for a stage the variant does not use. When the settings
+        cannot all be read here, the particles folders are compared on what
+        can be (:meth:`_readable_matches`):
 
         - The met's files cannot be read: ``None`` when no folder has the
           variant's other settings, since then no folder has its results.
@@ -570,7 +621,7 @@ class Output:
                 return None
             if kind == "particles":
                 return mine[0]
-            return variant.stage_hashes_on(mine[0]).get("footprint")
+            return variant.stage_hashes_on(mine[0]).get(kind)
 
     def _readable_matches(self, variant: Variant) -> list[tuple[str, str]]:
         """
@@ -578,9 +629,9 @@ class Output:
 
         The settings of :attr:`Variant.readable_run_settings`: without the
         met's when its files cannot be read, and without the build's
-        checksums when the model's executable cannot be found. Footprints
-        come from particles with the same hash, so when no particles folder
-        can hold the variant's results, no footprints folder can either.
+        checksums when the model's executable cannot be found. A stage's
+        files come from particles with the same hash, so when no particles
+        folder can hold the variant's results, no stage's folder can either.
         """
         wanted = variant.readable_run_settings
         digest = settings_hash(wanted)
@@ -597,7 +648,7 @@ class Output:
         digest = self._lookup_hash(kind, variant)
         if digest is None:
             return None
-        for name, folder_hash in self._hashes[kind].items():
+        for name, folder_hash in self._hashes.get(kind, {}).items():
             if folder_hash == digest:
                 return name
         # A miss lists the tree again: another worker may have made the folder.
@@ -610,7 +661,7 @@ class Output:
         """
         Return *variant*'s folder of *kind*, or ``None`` before it exists.
 
-        ``None`` too for the footprints of a variant without a grid.
+        ``None`` too for a stage the variant does not use.
         """
         name = self._name(kind, variant)
         return None if name is None else self._dir(kind, name)
@@ -620,7 +671,19 @@ class Output:
         return self.directory / tree / f"settings={name}"
 
     def _create(self, kind: Kind, variant: Variant) -> str:
-        """Return the name of *variant*'s folder of *kind*, writing its settings file on first use."""
+        """
+        Return the name of *variant*'s folder of *kind*, writing its settings file on first use.
+
+        A stage's record names the stage and its class, the folder and hash
+        of each thing its files are made from (the particles, then each
+        stage it reads), the versions of PYSTILT and of the stage's package,
+        and the stage's settings.
+
+        Raises
+        ------
+        ValueError
+            If *kind* is a stage the variant does not use.
+        """
         name = self._name(kind, variant)
         if name is not None:
             return name
@@ -634,24 +697,31 @@ class Output:
                 "settings": variant.run_settings,
             }
         else:
-            if "footprint" not in variant.stages:
-                raise ValueError(
-                    f"Variant {variant.name!r} makes no footprints (no grid)."
-                )
-            particles = self._create("particles", variant)
-            settings = variant.stage_settings["footprint"]
-            digest = variant.stage_hashes["footprint"]
+            if kind not in variant.stages:
+                raise ValueError(f"Variant {variant.name!r} has no {kind} stage.")
+            digest = variant.stage_hashes[kind]
+            made_from = {"particles": variant.particles_hash}
+            made_from.update(
+                {
+                    read: variant.stage_hashes[read]
+                    for read in reads(variant.stage(kind))
+                }
+            )
             record = {
                 "name": variant.name,
                 "hash": digest,
-                "particles": particles,
-                "particles_hash": variant.particles_hash,
-                "pystilt": _pystilt_version(),
-                "settings": settings,
+                "stage": kind,
+                "class": variant.stage_classes[kind],
+                "reads": {
+                    what: {"folder": self._create(what, variant), "hash": made_hash}
+                    for what, made_hash in made_from.items()
+                },
+                "versions": _versions(variant.stage_classes[kind]),
+                "settings": variant.stage_settings[kind],
             }
         name = f"{variant.name}-{digest[:HASH_CHARS]}"
         _write_settings(self._dir(kind, name) / SETTINGS_FILE, record)
-        self._hashes[kind][name] = digest
+        self._hashes.setdefault(kind, {})[name] = digest
         return name
 
     def _part(
@@ -695,11 +765,40 @@ class Output:
         """
         Return the file of one receptor's result, whether or not it exists.
 
-        ``None`` before the variant's folder of *kind* exists. An ensemble's
-        results are in a ``realization=k`` partition of its folder.
+        ``None`` before the variant's folder of *kind* exists, and for a
+        stage the variant does not use. An ensemble's results are in a
+        ``realization=k`` partition of its folder.
         """
         folder = self._found(kind, kind, variant, realization)
-        return None if folder is None else _receptor_file(folder, receptor_id)
+        if folder is None:
+            return None
+        return _receptor_file(folder, receptor_id, self._suffix(kind, variant))
+
+    def make_path(
+        self,
+        kind: Kind,
+        variant: Variant,
+        receptor_id: str,
+        realization: int | None = None,
+    ) -> Location:
+        """
+        Return where one receptor's result of *kind* is written, making the variant's settings folder on first use.
+
+        What :meth:`path` returns once the folder exists. The worker hands
+        it to a stage, which writes its own file there.
+
+        Raises
+        ------
+        ValueError
+            If *kind* is a stage the variant does not use.
+        """
+        folder = self._made(kind, kind, variant, realization)
+        return _receptor_file(folder, receptor_id, self._suffix(kind, variant))
+
+    @staticmethod
+    def _suffix(kind: Kind, variant: Variant) -> str:
+        """Return the extension of *variant*'s files of *kind*: ``.parquet`` for particles, a stage's own for its files."""
+        return ".parquet" if kind == "particles" else variant.stage(kind).suffix
 
     def read(
         self,
@@ -719,8 +818,9 @@ class Output:
 
         Parameters
         ----------
-        kind : {"particles", "footprints"}
-            Which result.
+        kind : str
+            Which result: ``"particles"``, or a stage whose files are
+            Parquet, as the footprint's are.
         variant : Variant
             Whose result.
         receptor_id : str
@@ -775,7 +875,8 @@ class Output:
         folder = self._found(kind, kind, variant, realization)
         if folder is None:
             return frozenset()
-        return frozenset(_list_receptor_files(folder, ".parquet", receptor_ids))
+        suffix = self._suffix(kind, variant)
+        return frozenset(_list_receptor_files(folder, suffix, receptor_ids))
 
     def complete(
         self,
@@ -786,13 +887,15 @@ class Output:
         """
         Return the receptors whose simulations under *variant* are complete (:func:`completed`).
 
-        Only the receptors with particles are looked for in the footprints.
+        Only the receptors with particles are looked for in each stage's
+        folder.
         """
         particles = self.present("particles", variant, receptor_ids, realization)
-        if "footprint" not in variant.stages:
-            return completed(particles, None)
-        footprints = self.present("footprints", variant, particles, realization)
-        return completed(particles, footprints)
+        stages = [
+            self.present(name, variant, particles, realization)
+            for name in variant.stage_order
+        ]
+        return completed(particles, *stages)
 
     def table(
         self,
@@ -810,8 +913,9 @@ class Output:
 
         Parameters
         ----------
-        kind : {"particles", "footprints"}
-            Which results.
+        kind : str
+            Which results: ``"particles"``, or a stage whose files are
+            Parquet, as the footprint's are.
         variant : Variant
             Whose results.
         receptor_ids : iterable of str, optional
@@ -830,15 +934,19 @@ class Output:
             If a column in *columns* is not in the files.
         """
         _check_kind(kind)
+        nothing = _NO_PARTICLES if kind == "particles" else _NO_STAGE_FILES
         folder = self._found(kind, kind, variant, realization)
         if folder is None:
-            return _EMPTY[kind]
+            return nothing
+        suffix = self._suffix(kind, variant)
         if receptor_ids is None:
-            paths = list(_list_receptor_files(folder, ".parquet").values())
+            paths = list(_list_receptor_files(folder, suffix).values())
         else:
-            paths = [_receptor_file(folder, r) for r in dict.fromkeys(receptor_ids)]
+            paths = [
+                _receptor_file(folder, r, suffix) for r in dict.fromkeys(receptor_ids)
+            ]
         if not paths:
-            return _EMPTY[kind]
+            return nothing
         if isinstance(folder, Path):
             dataset = pads.dataset(
                 [str(p) for p in paths],
@@ -877,9 +985,9 @@ class Output:
         """
         Return why a receptor's result of *kind* failed, as the worker recorded it, or ``None``.
 
-        A record holds ``step``, ``reason``, ``message``, and ``time``, and a
-        ``traceback`` for an unexpected error. It is removed when the result
-        is written.
+        A record holds ``stage`` (``particles``, or the stage that failed),
+        ``reason``, ``message``, and ``time``, and a ``traceback`` for an
+        unexpected error. It is removed when the result is written.
         """
         logs = self._found(kind, "logs", variant, realization)
         if logs is None:
@@ -920,8 +1028,8 @@ class Output:
         Write why a receptor's result of *kind* failed, replacing an earlier record.
 
         It goes in the logs of the folder whose result failed: a particles
-        failure covers every variant on those particles, a footprint failure
-        is the variant's own.
+        failure covers every variant on those particles, a stage's failure
+        every variant with that stage's settings on them.
         """
         logs = self._made(kind, "logs", variant, realization)
         _write_yaml(_receptor_file(logs, receptor_id, FAILURE_SUFFIX), record)
@@ -1039,49 +1147,5 @@ class Output:
                 )
         return kept
 
-    def write_footprint(
-        self, variant: Variant, foot: xr.DataArray, realization: int | None = None
-    ) -> Location:
-        """
-        Write one receptor's footprint (:func:`stilt.footprint.write_footprint`).
 
-        The footprint must be on the variant's grid. The file records the
-        footprint settings, the folder's hash, and the hash of the particles
-        it was made from, so it reads alone.
-        """
-        path, config, digest = self._footprint_file(
-            variant, str(foot.stilt.receptor.id), realization
-        )
-        return write_footprint(
-            path, foot, config, _footprint_stamp(digest, variant, realization)
-        )
-
-    def write_empty_footprint(
-        self,
-        variant: Variant,
-        receptor: Receptor,
-        realization: int | None = None,
-    ) -> Location:
-        """Record that a receptor's footprint is empty: no particle reached the grid."""
-        path, config, digest = self._footprint_file(
-            variant, str(receptor.id), realization
-        )
-        return write_empty_footprint(
-            path,
-            receptor,
-            config,
-            variant.name,
-            _footprint_stamp(digest, variant, realization),
-        )
-
-    def _footprint_file(
-        self, variant: Variant, receptor_id: str, realization: int | None
-    ) -> tuple[Location, Any, str]:
-        """Return a receptor's footprint file, the settings, and the folder's hash, making the folder on first use."""
-        name = self._create("footprints", variant)
-        folder = self._part("footprints", name, variant, realization)
-        path = _receptor_file(folder, receptor_id)
-        return path, variant.stages["footprint"], self._hashes["footprints"][name]
-
-
-__all__ = ["KINDS", "Kind", "Output", "completed"]
+__all__ = ["Kind", "Output", "completed"]

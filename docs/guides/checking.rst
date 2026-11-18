@@ -145,8 +145,8 @@ failed ones by reason:
    Project: /data/my_project  total=1200  complete=1150  failed=42  interrupted=0  pending=8
    failed: MET_COVERAGE 34, TIMEOUT 8  (why: each one's .failure.yaml, under /data/output/logs)
    Output: /data/output
-     particles   settings=hrrr-5d01e7  1,150 files  hrrr
-     footprints  settings=hrrr-93278c  1,150 files  hrrr
+     particles  settings=hrrr-5d01e7  1,150 files  hrrr
+     footprint  settings=hrrr-93278c  1,150 files  hrrr
 
 In Python, ``project.status()`` has one row per simulation, so you can
 select the failures and read why:
@@ -199,11 +199,11 @@ record beside the run's log and goes on, and ``sim.failure`` reads it:
 
    >>> sim = project.simulation(receptor_id, "hrrr")
    >>> sim.failure
-   {'step': 'particles', 'reason': 'MET_COVERAGE',
+   {'stage': 'particles', 'reason': 'MET_COVERAGE',
     'message': 'HYSPLIT: start point not within (x,y,t) any data file',
     'time': '2026-10-03T21:14:05+00:00'}
 
-``step`` says whether the transport model failed (``particles``, which fails
+``stage`` says whether the transport model failed (``particles``, which fails
 every variant that shares those particles) or only this variant's footprint
 (``footprint``). ``message`` is the line of the log that says what went
 wrong. Three reasons cover most failures:

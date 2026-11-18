@@ -47,7 +47,7 @@ The workflow side by side
      - ``stilt run my_project``
    * - Outputs
      - ``out/by-id/<id>/``, ``_traj.rds`` and ``_foot.nc``
-     - the output directory: ``particles/`` and ``footprints/`` Parquet files
+     - the output directory: ``particles/`` and ``footprint/`` Parquet files
        by variant settings and day (:doc:`../projects`)
 
 ``run_stilt.r`` settings in PYSTILT

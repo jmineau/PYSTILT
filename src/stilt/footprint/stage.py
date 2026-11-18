@@ -14,13 +14,16 @@ import functools
 import os
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
+import xarray as xr
 from pydantic import TypeAdapter
 
 from stilt._paths import absolute
+from stilt.exceptions import EmptyFootprint
 from stilt.particles import HNF_PLUME_COLUMNS
+from stilt.receptors import Receptor
 from stilt.spatial import Grid
 
 from .config import (
@@ -29,7 +32,15 @@ from .config import (
     GeometrySpec,
     footprint_settings,
 )
+from .gridding import calc_footprint
+from .io import write_empty_footprint, write_footprint
 from .targets import Mesh
+
+if TYPE_CHECKING:
+    from stilt._paths import Location
+    from stilt.config import Variant
+    from stilt.output import Output
+    from stilt.simulation import Simulation
 
 #: One thing :meth:`FootprintStage.check` found: the check, the receptor it is about (or ``None``), and what is wrong.
 _Finding = tuple[str, str | None, str]
@@ -151,6 +162,93 @@ class FootprintStage:
             ]
         return found
 
+    def run(self, config: FootprintConfig, sim: Simulation, path: Location) -> None:
+        """
+        Calculate a simulation's footprint from its particles and write it at *path*.
+
+        The near-field correction reads the run's ``footprint_depth``. A
+        relative file name in a transform's settings starts from the
+        project directory (``sim.directory``). When no particle reaches the
+        grid, the file written has no rows and is marked ``stilt:empty``: a
+        finished result, which ``sim.footprint`` reads as ``None``.
+        :meth:`stilt.Simulation.calc_footprint` makes footprints with other
+        settings, without writing them.
+        """
+        if config.grid is None:  # resolve gives every footprint its grid
+            raise ValueError(f"The footprint of {sim} has no grid.")
+        try:
+            foot = calc_footprint(
+                sim.particles,
+                sim.receptor,
+                config.grid,
+                smooth_factor=config.smooth_factor,
+                tres=config.tres,
+                hnf_plume=config.hnf_plume,
+                footprint_depth=sim.variant.transport.footprint_depth,
+                transforms=config.transforms,
+                name=sim.variant.name,
+                directory=sim.directory,
+                geometry_hash=config.geometry_hash,
+            )
+        except EmptyFootprint:
+            foot = None
+        _write(path, sim.variant, sim.receptor, foot, sim.realization)
+
+
+def store_footprint(
+    output: Output, variant: Variant, foot: xr.DataArray, realization: int | None = None
+) -> Location:
+    """
+    Write a footprint into *variant*'s footprint folder of an output directory, without calculating it.
+
+    For a footprint made elsewhere, as one imported from STILT-R is; a run
+    calculates its own (:meth:`FootprintStage.run`). The footprint must be
+    on the variant's grid. The file records the footprint settings, the
+    folder's hash, and the hash of the particles it was made from, so it
+    reads alone.
+    """
+    receptor = foot.stilt.receptor
+    path = output.make_path("footprint", variant, str(receptor.id), realization)
+    return _write(path, variant, receptor, foot, realization)
+
+
+def store_empty_footprint(
+    output: Output, variant: Variant, receptor: Receptor, realization: int | None = None
+) -> Location:
+    """Record in *variant*'s footprint folder that a receptor's footprint is empty: no particle reached the grid."""
+    path = output.make_path("footprint", variant, str(receptor.id), realization)
+    return _write(path, variant, receptor, None, realization)
+
+
+def _write(
+    path: Location,
+    variant: Variant,
+    receptor: Receptor,
+    foot: xr.DataArray | None,
+    realization: int | None,
+) -> Location:
+    """Write a receptor's footprint under *variant*'s settings at *path*, the empty one when *foot* is ``None``."""
+    from importlib.metadata import PackageNotFoundError, version
+
+    config = variant.stages["footprint"]
+    try:
+        pystilt = version("pystilt")
+    except PackageNotFoundError:
+        pystilt = "0+unknown"
+    # What a footprint file records besides its contents: its folder's
+    # settings hash, the PYSTILT version, the hash of the particles it was
+    # made from, and its realization in an ensemble.
+    stamp = {
+        b"stilt:hash": variant.stage_hashes["footprint"].encode(),
+        b"stilt:pystilt": pystilt.encode(),
+        b"stilt:particles_hash": variant.particles_hash.encode(),
+    }
+    if realization is not None:
+        stamp[b"stilt:realization"] = str(realization).encode()
+    if foot is None:
+        return write_empty_footprint(path, receptor, config, variant.name, stamp)
+    return write_footprint(path, foot, config, stamp)
+
 
 def _mesh(spec: GeometrySpec, directory: Path | None) -> Mesh:
     """
@@ -195,4 +293,4 @@ def _outside(rows: pd.DataFrame, grid: Grid) -> list[_Finding]:
     ]
 
 
-__all__ = ["FootprintStage"]
+__all__ = ["FootprintStage", "store_empty_footprint", "store_footprint"]

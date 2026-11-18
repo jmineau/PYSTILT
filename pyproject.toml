@@ -214,9 +214,9 @@ allow_indirect_imports = true
 # correction (which the footprint step calls) and add_foot, functions in
 # stilt.particles.table. The package's __init__ re-exports the public names,
 # so it is not a source. A stage is named in config.yaml by the import path of
-# its class (stilt.stages), so the config, the settings records and the check
-# before a run reach the footprint stage without importing it. Imports used
-# only for type hints do not count.
+# its class (stilt.stages), so the config, the settings records, the check
+# before a run, the output directory and the worker reach the footprint stage
+# without importing it. Imports used only for type hints do not count.
 [[tool.importlinter.contracts]]
 name = "The particle-run core does not import what STILT adds on top"
 type = "forbidden"
@@ -247,21 +247,18 @@ ignore_imports = [
     "stilt.transport_error -> stilt.transforms",
     "stilt.migration -> stilt.footprint.config",
     "stilt.migration -> stilt.footprint.io",
+    "stilt.migration -> stilt.footprint.stage",
     "stilt.migration -> stilt.transport.stilt_r",
     # Sampling fields at particles: add_foot reads the met with sample_met,
     # and the particle accessor samples a field.
     "stilt.particles.table -> stilt.sampling",
     "stilt.particles.accessor -> stilt.sampling",
-    # Writing and listing footprint files; completion counts them.
-    "stilt.output -> stilt.footprint",
     # sim.footprint, sim.background and sim.transport_error.
     "stilt.simulation -> stilt.footprint.config",
     "stilt.simulation -> stilt.footprint.gridding",
     "stilt.simulation -> stilt.footprint.io",
     "stilt.simulation -> stilt.background",
     "stilt.simulation -> stilt.transport_error",
-    # The footprint step after the particles.
-    "stilt.execution.worker -> stilt.footprint",
     # Project.footprints(), Project.jacobian() and Project.transport_error().
     "stilt.project -> stilt.footprint",
     "stilt.project -> stilt.footprint.aggregation",

@@ -39,7 +39,8 @@ import yaml
 from stilt.config import FOOTPRINT_STAGE, VARIANT_NAME_RE, Variant
 from stilt.footprint.config import FootprintConfig, footprint_settings
 from stilt.footprint.io import _footprint_array
-from stilt.output import Kind, Output
+from stilt.footprint.stage import store_empty_footprint, store_footprint
+from stilt.output import Output
 from stilt.particles import check_particles
 from stilt.receptors import Receptor
 from stilt.spatial import Grid
@@ -720,8 +721,8 @@ def import_stilt_r(
                 folder,
             )
             with_foot = _with_footprint(base, first_foot[0])
-            if _missing(output, "footprints", with_foot, receptor.id):
-                output.write_footprint(with_foot, foot)
+            if _missing(output, "footprint", with_foot, receptor.id):
+                store_footprint(output, with_foot, foot)
         elif log.is_file() and _EMPTY_FOOTPRINT in log.read_text(errors="replace"):
             empty.append(receptor)
 
@@ -750,8 +751,8 @@ def import_stilt_r(
     if first_foot is not None:
         printed[0] = _with_footprint(printed[0], first_foot[0])
         for receptor in empty:
-            if _missing(output, "footprints", printed[0], receptor.id):
-                output.write_empty_footprint(printed[0], receptor)
+            if _missing(output, "footprint", printed[0], receptor.id):
+                store_empty_footprint(output, printed[0], receptor)
     if f"{name}-err" in made:
         printed.append(made[f"{name}-err"][0])
     config: dict[str, Any] = {
@@ -946,7 +947,7 @@ def _agree(
         )
 
 
-def _missing(output: Output, kind: Kind, variant: Variant, receptor_id: str) -> bool:
+def _missing(output: Output, kind: str, variant: Variant, receptor_id: str) -> bool:
     """Whether a receptor's result of *kind* is not in the output directory yet."""
     path = output.path(kind, variant, receptor_id)
     return path is None or not path.exists()

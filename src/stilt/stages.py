@@ -2,7 +2,7 @@
 The stage interface: what is made from each simulation's results after the transport model runs.
 
 A stage makes one file per receptor from the particles, from the files of
-other stages, or both. The footprint is one
+other stages, or both, and writes that file itself. The footprint is one
 (:class:`stilt.footprint.FootprintStage`). A project lists its stages under
 ``stages:`` in ``config.yaml``, each block naming the stage's class by its
 import path, so the worker runs a stage without importing it by name and a
@@ -36,6 +36,9 @@ from stilt.identity import canonical
 
 if TYPE_CHECKING:
     import pandas as pd
+
+    from stilt._paths import Location
+    from stilt.simulation import Simulation
 
 
 #: Pattern for a stage's name, which is a folder in the output directory and a column of ``project.status()``.
@@ -159,6 +162,44 @@ class Stage(Protocol):
         """
         ...
 
+    def run(self, config: Any, sim: Simulation, path: Location) -> None:
+        """
+        Make the stage's file for one simulation, and write it at *path*.
+
+        The worker calls it for each simulation whose file is missing, after
+        the particles and the files of the stages in :attr:`reads` exist.
+        Read the particles from ``sim.particles`` (a pandas DataFrame, which
+        simulations that share it hold in common: do not change it in
+        place), and another stage's file from ``sim.path("<its name>")``
+        with that stage's own reader. Write one file at *path* and nothing
+        else, whatever there is to say: a result with nothing in it is still
+        a file, as an empty footprint is. *path* is a temporary name beside
+        the file's own, which the worker moves into place when this
+        returns, so a run cut off part-way leaves no file that counts as
+        complete.
+
+        Parameters
+        ----------
+        config : config_class
+            The variant's settings of this stage, as :meth:`resolve`
+            returned them.
+        sim : Simulation
+            The simulation: its receptor, its variant, its particles, and
+            the project directory (``sim.directory``), where a relative file
+            name in the settings starts.
+        path : Path or UPath
+            Where to write the file.
+
+        Raises
+        ------
+        Exception
+            Any error fails the simulation at this stage: the worker records
+            it (:attr:`stilt.Simulation.failure`) and goes on. Raise a
+            :class:`~stilt.exceptions.SimulationError` with a ``reason`` for
+            a failure you expect.
+        """
+        ...
+
 
 @functools.cache
 def get_stage(path: str) -> Stage:
@@ -179,7 +220,7 @@ def get_stage(path: str) -> Stage:
             f"stilt.footprint.FootprintStage, not {path!r}."
         )
     stage = import_class(path)()
-    members = ("name", "config_class", "suffix", "resolve", "settings", "check")
+    members = ("name", "config_class", "suffix", "resolve", "settings", "check", "run")
     missing = [member for member in members if not hasattr(stage, member)]
     if missing:
         raise ValueError(

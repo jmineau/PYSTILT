@@ -4,8 +4,11 @@ Worker functions that run one receptor, or many receptors.
 Workers are handed receptors. :func:`run_receptor` runs every variant of
 one receptor. Variants with the same transport settings share one set of
 particles, so it groups them: the transport model runs once per group where the
-particles are missing (:func:`run_particles`), then each variant's
-footprint is made from the particles in memory (:func:`make_footprint`).
+particles are missing (:func:`run_particles`), then each variant's stages
+make their files from the particles in memory (:func:`run_stages`). A stage
+is the class its ``stages`` block of ``config.yaml`` names
+(:class:`stilt.stages.Stage`), the footprint among them, so this module
+imports none.
 A failure is recorded with the simulation and the worker goes on, except
 a connection or I/O error that a retry may get past, which is not recorded as a
 failure: the simulation stays unfinished and the next run does it again.
@@ -30,17 +33,16 @@ import uuid
 from concurrent.futures import FIRST_COMPLETED, Future, ProcessPoolExecutor, wait
 from concurrent.futures.process import BrokenProcessPool
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
-import xarray as xr
 
+from stilt._paths import atomic_path
 from stilt._transient import is_transient
-from stilt.exceptions import EmptyFootprint, SimulationError, WorkerDied
+from stilt.exceptions import SimulationError, WorkerDied
 from stilt.execution.config import ExecutionConfig
-from stilt.footprint import calc_footprint
-from stilt.output import Kind
 from stilt.simulation import Simulation
+from stilt.stages import reads
 from stilt.transport import get_model, run_model, run_model_many
 
 if TYPE_CHECKING:
@@ -88,24 +90,19 @@ def _sigterm_as_interrupt():
         signal.signal(signal.SIGTERM, previous)
 
 
-#: The step of a simulation that failed, its particles or its footprint.
-Step = Literal["particles", "footprint"]
-
-#: The output folder each step writes to.
-_KIND: dict[Step, Kind] = {"particles": "particles", "footprint": "footprints"}
-
-
 # -- failure records ---------------------------------------------------------
 
 
-def _failed(sim: Simulation, step: Step, error: Exception) -> str:
+def _failed(sim: Simulation, stage: str, error: Exception) -> str:
     """
-    Record why *sim* failed at *step*, and return one line saying so.
+    Record why *sim* failed at *stage*, and return one line saying so.
 
-    The record goes in the logs of the folder whose result failed
-    (:meth:`stilt.output.Output.record_failure`): a particles failure
-    covers every variant on those particles, a footprint failure is the
-    variant's own. ``reason`` is the error's short cause, or its class
+    *stage* is ``particles`` for the transport model run, or the name of
+    the stage that failed. The record goes in the logs of the folder whose
+    result failed (:meth:`stilt.output.Output.record_failure`): a particles
+    failure covers every variant on those particles, a stage's failure
+    every variant with that stage's settings on them. ``reason`` is the
+    error's short cause, or its class
     for an error without one. An expected failure (a
     :class:`~stilt.exceptions.SimulationError`) logs one line; any other
     error logs, and records, its traceback.
@@ -116,17 +113,17 @@ def _failed(sim: Simulation, step: Step, error: Exception) -> str:
     nothing is recorded (:func:`_unfinished`). A ``SimulationError`` always is one.
     """
     if not isinstance(error, SimulationError) and is_transient(error):
-        return _unfinished(sim, step, error)
+        return _unfinished(sim, stage, error)
     expected = isinstance(error, SimulationError)
     reason = getattr(error, "reason", None) or type(error).__name__
     if expected:
         logger.warning(
-            "simulation %s failed during %s (%s): %s", sim, step, reason, error
+            "simulation %s failed during %s (%s): %s", sim, stage, reason, error
         )
     else:
-        logger.exception("simulation %s failed during %s: %s", sim, step, error)
+        logger.exception("simulation %s failed during %s: %s", sim, stage, error)
     record: dict[str, Any] = {
-        "step": step,
+        "stage": stage,
         "reason": str(reason),
         "message": str(error),
         "time": dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat(),
@@ -135,16 +132,16 @@ def _failed(sim: Simulation, step: Step, error: Exception) -> str:
         record["traceback"] = traceback.format_exc()
     try:
         sim.output.record_failure(
-            _KIND[step], sim.variant, sim.receptor.id, record, sim.realization
+            stage, sim.variant, sim.receptor.id, record, sim.realization
         )
     except Exception:
         logger.exception("simulation %s: could not record the failure", sim)
-    return f"{sim.variant.name} failed during {step} ({reason}): {error}"
+    return f"{sim.variant.name} failed during {stage} ({reason}): {error}"
 
 
-def _unfinished(sim: Simulation, step: Step, error: Exception) -> str:
+def _unfinished(sim: Simulation, stage: str, error: Exception) -> str:
     """
-    Leave *sim* unfinished after a connection or I/O error at *step*, and return one line saying so.
+    Leave *sim* unfinished after a connection or I/O error at *stage*, and return one line saying so.
 
     No failure record is written, so the simulation is ``pending``, or
     ``interrupted`` once its particles run started, and ``stilt run`` exits
@@ -156,13 +153,13 @@ def _unfinished(sim: Simulation, step: Step, error: Exception) -> str:
     logger.warning(
         "simulation %s did not finish during %s, a retry may finish it: %s: %s",
         sim,
-        step,
+        stage,
         name,
         error,
     )
     logger.debug("simulation %s: the error", sim, exc_info=error)
     try:
-        _succeeded(sim, step)
+        _succeeded(sim, stage)
     except Exception as cleanup:
         logger.warning(
             "simulation %s: could not remove its earlier failure record: %s: %s",
@@ -170,12 +167,12 @@ def _unfinished(sim: Simulation, step: Step, error: Exception) -> str:
             type(cleanup).__name__,
             cleanup,
         )
-    return f"{sim.variant.name} did not finish during {step} ({name}), a retry may finish it: {error}"
+    return f"{sim.variant.name} did not finish during {stage} ({name}), a retry may finish it: {error}"
 
 
-def _succeeded(sim: Simulation, step: Step) -> None:
-    """Remove *sim*'s failure record for *step*, whose result is now written."""
-    sim.output.clear_failure(_KIND[step], sim.variant, sim.receptor.id, sim.realization)
+def _succeeded(sim: Simulation, stage: str) -> None:
+    """Remove *sim*'s failure record for *stage*, whose result is now written."""
+    sim.output.clear_failure(stage, sim.variant, sim.receptor.id, sim.realization)
 
 
 def run_particles(
@@ -340,45 +337,107 @@ def run_particles_batch(
     return written, failed
 
 
-def make_footprint(sim: Simulation, particles: pd.DataFrame) -> xr.DataArray | None:
+def run_stage(sim: Simulation, name: str) -> None:
     """
-    Calculate a simulation's footprint from *particles* and write it to its folder.
+    Run one stage of a simulation, which writes its file to the output directory.
 
-    The settings are the variant's own, and the near-field correction
-    reads the run's ``footprint_depth``. A relative file name in a
-    transform's settings starts from the project directory
-    (``sim.directory``). When no particle reaches the grid,
-    an empty footprint is recorded, marked empty, and ``None`` is returned.
-    :meth:`stilt.Simulation.calc_footprint` makes footprints with other
-    settings, without writing them.
+    The stage is the one the variant's ``stages`` block names
+    (:meth:`stilt.stages.Stage.run`), run with the variant's settings of
+    it. It writes under a temporary name beside the file's own, which is
+    moved into place when the stage returns, so a stage cut off part-way
+    leaves no file that would count as complete.
 
     Raises
     ------
     ValueError
-        If the variant has no grid.
+        If the variant does not use a stage of that name.
+    RuntimeError
+        If the stage returned without writing its file.
     """
-    config = sim.variant.stages.get("footprint")
-    if config is None or config.grid is None:
-        raise ValueError(f"Variant {sim.variant.name!r} makes no footprints (no grid).")
-    try:
-        foot = calc_footprint(
-            particles,
-            sim.receptor,
-            config.grid,
-            smooth_factor=config.smooth_factor,
-            tres=config.tres,
-            hnf_plume=config.hnf_plume,
-            footprint_depth=sim.variant.transport.footprint_depth,
-            transforms=config.transforms,
-            name=sim.variant.name,
-            directory=sim.directory,
-            geometry_hash=config.geometry_hash,
-        )
-    except EmptyFootprint:
-        sim.output.write_empty_footprint(sim.variant, sim.receptor, sim.realization)
-        return None
-    sim.output.write_footprint(sim.variant, foot, sim.realization)
-    return foot
+    variant = sim.variant
+    path = sim.output.make_path(name, variant, sim.receptor.id, sim.realization)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with atomic_path(path) as target:
+        variant.stage(name).run(variant.stages[name], sim, target)
+        if not target.exists():
+            raise RuntimeError(
+                f"The {name} stage returned without writing its file for {sim}. "
+                "A stage writes one file at the path it is given, whatever it "
+                "has to say."
+            )
+
+
+def run_stages(
+    sims: list[Simulation],
+    particles: pd.DataFrame | None = None,
+    *,
+    remade: bool = False,
+    skip_existing: bool = True,
+) -> list[str]:
+    """
+    Run the stages of the simulations of one receptor that share particles, and return what failed.
+
+    Each variant's stages run in the order :attr:`stilt.config.Variant.stage_order`
+    gives, a stage after the ones it reads. A stage file that exists is
+    kept, unless something it is made from was made again in this call:
+    the particles (*remade*), or the file of a stage it reads. Variants
+    with equal settings of a stage, and of what it reads, share its file,
+    so it is made once. A failure is recorded with the simulation, and the
+    stages that read the failed one are left for the next run.
+
+    Parameters
+    ----------
+    sims : list of Simulation
+        One receptor under each variant that shares its particles, as one
+        realization.
+    particles : pandas.DataFrame, optional
+        The particles, when they are in memory. Without them a stage reads
+        the stored ones, once for all the simulations.
+    remade : bool, default False
+        Whether the particles were just made, so every stage file is made
+        again.
+    skip_existing : bool, default True
+        Keep the stage files that already exist.
+
+    Returns
+    -------
+    list of str
+        One line per failure.
+    """
+    problems: list[str] = []
+    seen: set[tuple[str, str]] = set()  # each (stage, hash) is looked at once
+    made: set[tuple[str, str]] = set()  # the files written in this call
+    failed: set[tuple[str, str]] = set()  # and those that could not be
+    for sim in sims:
+        variant = sim.variant
+        for name in variant.stage_order:
+            key = (name, variant.stage_hashes[name])
+            if key in seen:
+                continue
+            seen.add(key)
+            read = [(r, variant.stage_hashes[r]) for r in reads(variant.stage(name))]
+            if any(r in failed for r in read):
+                failed.add(key)  # nothing to read; the failure above is recorded
+                continue
+            again = remade or any(r in made for r in read)
+            if not again and skip_existing and sim.has(name):
+                continue
+            if particles is not None:
+                # Give the simulation the particles in memory, so that the
+                # stage's sim.particles reads no file (a cached property).
+                sim.__dict__.setdefault("particles", particles)
+            try:
+                run_stage(sim, name)
+            except Exception as error:
+                problems.append(_failed(sim, name, error))
+                failed.add(key)
+                continue
+            finally:
+                # What this stage read from the file serves the next one.
+                particles = sim.__dict__.get("particles", particles)
+            _succeeded(sim, name)
+            made.add(key)
+    return problems
 
 
 def run_receptor(
@@ -398,8 +457,9 @@ def run_receptor(
     (per realization), so they run as a group: the transport model runs
     once for the group when the
     particles are missing (or always, without ``skip_existing``), and each
-    variant's footprint is made from those particles in memory. A footprint
-    is made again whenever its particles were, so it always matches them.
+    variant's stages make their files from those particles in memory
+    (:func:`run_stages`), the footprint among them. A stage's file is made
+    again whenever what it is made from was, so it always matches it.
     A failure is recorded with the simulation (:attr:`stilt.Simulation.failure`)
     and does not stop the others; a failed transport model run fails every variant
     of its group. A ``KeyboardInterrupt``, such as a preempted job, stops
@@ -418,7 +478,7 @@ def run_receptor(
         Execution settings, for ``timeout`` and ``keep_workdir``. Defaults
         to the project's.
     skip_existing : bool, default True
-        Keep particles and footprints that already exist.
+        Keep particles and stage files that already exist.
     batched : bool, default True
         Also run the variants of a batched transport model, one receptor
         per call. :func:`run_receptors` runs those for all its receptors at
@@ -452,8 +512,8 @@ def _groups(project: Project) -> dict[tuple[str, int | None], list[str]]:
     Return the variants that share particles, by particles hash and realization.
 
     Each group's transport model runs once per receptor (or once for many
-    receptors, when it is batched), and each variant in it makes its own
-    footprint from those particles.
+    receptors, when it is batched), and each variant in it runs its stages
+    on those particles.
     """
     groups: dict[tuple[str, int | None], list[str]] = {}
     for name, variant in project.variants.items():
@@ -480,8 +540,8 @@ def _run_batched(
 
     For each group of variants that share particles, the receptors whose
     particles are missing (all of them, without *skip_existing*) run in one
-    call (:func:`run_particles_batch`); then each variant's footprint is
-    made per receptor. Returns the failures by receptor id.
+    call (:func:`run_particles_batch`); then each variant's stages run
+    per receptor. Returns the failures by receptor id.
     """
     problems: dict[str, list[str]] = {rid: [] for rid in receptor_ids}
     for (_, k), names in _groups(project).items():
@@ -497,10 +557,10 @@ def _run_batched(
         ran = {s.receptor.id for s in todo}
         for rid in receptor_ids:
             if rid in ran and rid not in written:
-                continue  # its particles failed, and so did every footprint
+                continue  # its particles failed, so no stage has any to read
             sims = [project.simulation(rid, n, k) for n in names]
-            problems[rid] += _make_footprints(
-                sims, written.get(rid), rerun=rid in ran, skip_existing=skip_existing
+            problems[rid] += run_stages(
+                sims, written.get(rid), remade=rid in ran, skip_existing=skip_existing
             )
     return problems
 
@@ -525,7 +585,7 @@ def _run_group(
     execution: ExecutionConfig,
     skip_existing: bool,
 ) -> list[str]:
-    """Run the simulations of one receptor that share particles: the transport model at most once, then each footprint."""
+    """Run the simulations of one receptor that share particles: the transport model at most once, then each variant's stages."""
     first = sims[0]
     particles: pd.DataFrame | None = None
     rerun = not (skip_existing and first.has_particles)
@@ -540,38 +600,7 @@ def _run_group(
         except Exception as error:
             return [_failed(first, "particles", error)]
         _succeeded(first, "particles")
-    return _make_footprints(sims, particles, rerun=rerun, skip_existing=skip_existing)
-
-
-def _make_footprints(
-    sims: list[Simulation],
-    particles: pd.DataFrame | None,
-    *,
-    rerun: bool,
-    skip_existing: bool,
-) -> list[str]:
-    """
-    Make the footprint of each simulation that shares *particles*, and return what failed.
-
-    *particles* are the ones just made (*rerun*), or ``None`` to read the
-    stored ones once, when a footprint needs them.
-    """
-    first = sims[0]
-    problems: list[str] = []
-    for sim in sims:
-        if "footprint" not in sim.variant.stages or (
-            not rerun and skip_existing and sim.has_footprint
-        ):
-            continue
-        try:
-            if particles is None:
-                particles = first.particles  # read once for the group
-            make_footprint(sim, particles)
-        except Exception as error:
-            problems.append(_failed(sim, "footprint", error))
-            continue
-        _succeeded(sim, "footprint")
-    return problems
+    return run_stages(sims, particles, remade=rerun, skip_existing=skip_existing)
 
 
 def _log_progress(receptor_id: str, problems: list[str], done: int, total: int) -> None:
@@ -846,7 +875,7 @@ def run_receptors(
         runs in this process), and ``timeout`` and ``keep_workdir`` apply
         to each run. Defaults to the project's.
     skip_existing : bool, default True
-        Keep particles and footprints that already exist.
+        Keep particles and stage files that already exist.
     """
     if not receptor_ids:
         return
@@ -896,9 +925,10 @@ def run_receptors(
 
 
 __all__ = [
-    "make_footprint",
     "run_particles",
     "run_particles_batch",
     "run_receptor",
     "run_receptors",
+    "run_stage",
+    "run_stages",
 ]

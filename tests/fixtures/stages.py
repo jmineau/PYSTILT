@@ -30,6 +30,7 @@ class CountConfig(BaseModel):
 
     scale: int = 1
     fail: bool = False
+    silent: bool = False
 
 
 class CountStage:
@@ -67,9 +68,17 @@ class CountStage:
         ]
 
     def run(self, config: CountConfig, sim: Any, path: Any) -> None:
-        """Write the count of *sim*'s particle rows to *path*."""
+        """
+        Write the count of *sim*'s particle rows to *path*.
+
+        With ``fail`` it writes half a file and raises; with ``silent`` it
+        returns without writing one.
+        """
         RUNS.append((self.name, sim.receptor.id, sim.variant.name))
+        if config.silent:
+            return
         if config.fail:
+            path.write_text("half a")
             raise RuntimeError("the count was told to fail")
         path.write_text(str(len(sim.particles) * config.scale))
 

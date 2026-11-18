@@ -15,6 +15,7 @@ from stilt import transport_error
 from stilt.config import STILT_R_HYSPLIT, ProjectConfig
 from stilt.execution.config import ExecutionConfig
 from stilt.execution.runner import resolve_compute_root
+from stilt.footprint.stage import store_empty_footprint, store_footprint
 from stilt.output import Output
 from stilt.project import Project
 from stilt.receptors import ColumnReceptor, PointReceptor
@@ -112,7 +113,7 @@ def _write_footprint(
     sim = project.simulation(receptor.id, variant, realization)
     assert sim.variant.stages.get("footprint") is not None
     if empty:
-        return sim.output.write_empty_footprint(sim.variant, sim.receptor, realization)
+        return store_empty_footprint(sim.output, sim.variant, sim.receptor, realization)
     grid = sim.variant.stages.get("footprint").grid
     assert grid is not None
     x_axis, y_axis = grid.axes
@@ -125,7 +126,7 @@ def _write_footprint(
     foot = as_footprint(
         data, sim.receptor, sim.variant.stages.get("footprint"), sim.variant.name
     )
-    return sim.output.write_footprint(sim.variant, foot, realization)
+    return store_footprint(sim.output, sim.variant, foot, realization)
 
 
 def _pairs(frame: pd.DataFrame) -> list[tuple[str, str]]:
@@ -742,9 +743,9 @@ def test_folders_say_which_the_config_no_longer_uses(tmp_path, point_receptor):
     stale = folders[folders["variant"] == ""]
     by_kind = {
         k: sorted(stale.loc[stale.kind == k, "name"])
-        for k in ("particles", "footprints")
+        for k in ("particles", "footprint")
     }
-    assert by_kind == {"particles": ["zi08"], "footprints": ["hrrr", "zi08"]}
+    assert by_kind == {"particles": ["zi08"], "footprint": ["hrrr", "zi08"]}
     # Nothing was deleted.
     assert project.simulation(point_receptor.id, "zi08").is_complete
 
@@ -787,7 +788,7 @@ def test_status_marks_outputs_a_variant_does_not_produce(tmp_path, point_recepto
         "particles",
         "footprint",
         "state",
-        "step",
+        "stage",
         "reason",
         "message",
     ]
@@ -1792,17 +1793,17 @@ def test_status_says_why_the_failed_simulations_failed(tmp_path, point_receptor)
         "particles",
         sim.variant,
         sim.receptor.id,
-        {"step": "particles", "reason": "MET_COVERAGE", "message": "m"},
+        {"stage": "particles", "reason": "MET_COVERAGE", "message": "m"},
     )
 
     status = project.status()
     failed = status[status.state == "failed"]
 
-    assert failed[["receptor", "variant", "step", "reason"]].to_dict("records") == [
+    assert failed[["receptor", "variant", "stage", "reason"]].to_dict("records") == [
         {
             "receptor": str(point_receptor.id),
             "variant": "traj",
-            "step": "particles",
+            "stage": "particles",
             "reason": "MET_COVERAGE",
         }
     ]

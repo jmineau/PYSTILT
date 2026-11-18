@@ -48,10 +48,13 @@ v1.0**, so prefer the clean design over a compatibility shim.
 inputs (`Project`: `config.yaml`, `receptors.csv`) and an output directory
 (`Output`) that `config.yaml` names and several projects can share. Its
 simulations are **receptors × variants** (at least one variant). Each `Variant` (`stilt.config`) has
-run settings, whose hash names its particles folder, and optional footprint
-settings (`stilt.identity`); variants with equal run settings share one run
-per receptor, and a changed setting hashes to a new folder
-(`docs/reference/layout.rst`).
+run settings, whose hash names its particles folder, and the settings of each
+stage it uses, hashed with what the stage reads (`stilt.identity`); variants
+with equal run settings share one run per receptor, and a changed setting
+hashes to a new folder (`docs/reference/layout.rst`). **A stage** makes one
+file per receptor after the model runs; the footprint is one. `config.yaml`
+names its class by import path and the class provides `stilt.stages.Stage`,
+so the core handles any stage and imports none (`CONTRIBUTING.md`, "Adding a stage").
 
 **`Project` reads; the workers write results.** `Project` writes only its
 inputs (`config.yaml` once, at `Project.init`; `add_receptors` appends to
@@ -61,7 +64,8 @@ workers. **Tables are plain DataFrames; the verbs are on `Project`**: a
 selection of `project.simulations` (any table with `receptor` and `variant`
 columns, or a mask) goes to `status`, `incomplete`, `particles`, `footprints`,
 `jacobian`, or `transport_error`. Do not wrap the table in a class again. `Output` has no folder
-classes. `stilt.__all__` (and each subpackage's) is the public surface.
+classes: its methods take the kind (`particles` or a stage's name).
+`stilt.__all__` (and each subpackage's) is the public surface.
 
 ```
 src/stilt/
@@ -73,6 +77,7 @@ src/stilt/
   output.py       Output: the output directory; `completed`, the completion rule
   simulation.py   Simulation: a frozen (receptor, variant, output) value
   config.py       ProjectConfig and Variant;  identity.py  settings records, hashes
+  stages.py       the Stage protocol, get_stage, check_stage;  _plugins.py  a class by import path
   receptors/      receptor models, receptors.csv, shared validation
   particles/      the particle table and files, release heights, foot, near-field correction
   footprint/      FootprintConfig, FootprintStage, calc_footprint (gridding.py), aggregation, io, targets
@@ -89,7 +94,9 @@ src/stilt/
 **A run** (`stilt run`, `Project.run()`, `submit()`) happens in this process
 or as a Slurm job array whose tasks each run `stilt run --task i/N`. The unit
 of work is a receptor: the worker runs the model once per run-settings hash,
-then makes every footprint that shares the particles (`run_receptor`); a batched model
+then each missing stage file of the variants that share the particles, a
+stage after the ones it `reads` and again when one of those was remade
+(`run_receptor`, `run_stages`); a batched model
 (`batched = True`) first runs a variant group's receptors in one call.
 **Observation-driven** work sits above the core: `stilt.observations` turns
 soundings into receptors, then a run goes as usual. Keep it out of `project.py`.
@@ -98,7 +105,7 @@ The import contracts in `pyproject.toml` (`just imports`) hold this shape: an
 exhaustive `layers` contract (a new top-level module fails until placed), only
 `stilt.transport` imports HYSPLIT's package, the project config reads no results
 and runs nothing, and the core imports STILT's side only where the contract
-lists it. Slurm tasks rebuild the project in another process, so anything a worker
+lists it (the config, identity, check, output and worker nowhere). Slurm tasks rebuild the project in another process, so anything a worker
 needs must be in the project or the output directory.
 
 `ProjectConfig` is `config.yaml`'s blocks, and no setting sits outside one: `mets`,
@@ -114,8 +121,9 @@ geometries and asks the model its version. `HysplitConfig` has HYSPLIT's own def
   (`docs/development/stilt_r_parity.rst`). Run the `fidelity` suite before merging a change to
   trajectory or footprint math. NetCDF output is CF-1.8, deliberately not
   byte-compatible with STILT-R.
-- **Completion is by file.** A simulation is complete iff its files exist in
-  the output directory; `stilt.output.completed` is the one rule. Never add
+- **Completion is by file.** A simulation is complete when the model's
+  output file exists, and so does the file of every stage its variant uses;
+  `stilt.output.completed` is the one rule, over folder listings. Never add
   another, a completion registry, or a manifest.
 - **Bulk methods work from listings** and receptor ids, never a `Simulation`
   per row; they open a file per row only when its contents are the answer
@@ -253,11 +261,15 @@ The reasons are in `docs/development/architecture.rst` ("Implementation notes").
 - **`project.simulations` is built once and copied** on each access; a
   hand-edited `config.yaml` needs a new `Project`.
 - **Empty footprints are successes.** `calc_footprint` raises `EmptyFootprint`
-  and the worker writes a no-row file marked `stilt:empty`: complete, with
+  and the footprint stage writes a no-row file marked `stilt:empty`: complete, with
   `sim.footprint` `None` and a listing in `project.footprints().attrs["empty"]`.
   Never synthesize a zero footprint for it.
-- **A failure record is a note** (`<receptor id>.failure.yaml` in the logs),
-  removed when the result is written and never read by completion.
+- **A failure record is a note** (`<receptor id>.failure.yaml` in the logs, its
+  `stage` `particles` or a stage's name), removed when the result is written
+  and never read by completion.
+- **A stage's `config_class` reads back what its `settings` wrote**: a stored
+  folder is found that way (`stilt.stages.check_stage` in the stage's tests).
+  A stage writes its file under the temporary path `run` is given.
 - **Met that ran out is a failure; a domain exit is not.** HYSPLIT's warnings
   are unreliable, so `Met.files_for` and `Met.check` stop a run on missing or
   damaged met before it starts (`FAILURE_PHRASES` maps the log afterwards),

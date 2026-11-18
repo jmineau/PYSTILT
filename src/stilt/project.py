@@ -36,7 +36,7 @@ from stilt.footprint import Geometry, Jacobian
 from stilt.footprint.aggregation import _jacobian
 from stilt.footprint.config import FootprintConfig
 from stilt.footprint.io import _threads, open_footprints
-from stilt.output import Kind, Output, completed
+from stilt.output import Output, completed
 from stilt.particles import particles_from_table, read_particles
 from stilt.receptors import Receptor, read_receptors
 from stilt.receptors.table import (
@@ -100,8 +100,8 @@ def _as_receptors(
 
 #: A variant and a realization, how the bulk methods group a selection.
 _Key = tuple[str, int | None]
-#: The receptors with particles, and with a footprint (``None`` when the variant makes none).
-_Present = tuple[frozenset[str], frozenset[str] | None]
+#: The receptors with each kind of result a variant makes: ``particles`` first, then each stage in the order they run.
+_Present = dict[str, frozenset[str]]
 
 
 def _realization(value: Any) -> int | None:
@@ -672,7 +672,8 @@ class Project:
         Returns
         -------
         pandas.DataFrame
-            ``kind`` (``particles`` or ``footprints``), ``folder`` (the
+            ``kind`` (``particles``, or a stage's name such as
+            ``footprint``), ``folder`` (the
             ``settings=`` value), ``name`` (the variant that made it),
             ``files`` (the result files it holds), ``variant`` (the variants
             here that use it, empty when none does), and ``differs`` (how an
@@ -751,28 +752,27 @@ class Project:
 
     def _present(self, frame: pd.DataFrame) -> dict[_Key, _Present]:
         """
-        Return, per variant and realization, the selected receptors with particles and with a footprint.
+        Return, per variant and realization, the selected receptors with particles and with each stage's file.
 
         Read from a listing of the date folders the selection falls in
         (:meth:`stilt.output.Output.present`), in place of a file check per
-        simulation: on a large project the checks are the slow part. The
-        footprint set is ``None`` for a variant that makes no footprint.
+        simulation: on a large project the checks are the slow part. A
+        variant has a set for ``particles`` and one for each stage it uses.
         """
         present: dict[_Key, _Present] = {}
         for name, k, rows in _groups(frame):
             variant = self.variants[name]
             among = set(rows["receptor"])
-            particles = self.output.present("particles", variant, among, k)
-            footprints = None
-            if "footprint" in variant.stages:
-                footprints = self.output.present("footprints", variant, among, k)
-            present[(name, k)] = (particles, footprints)
+            present[(name, k)] = {
+                kind: self.output.present(kind, variant, among, k)
+                for kind in ("particles", *variant.stage_order)
+            }
         return present
 
     @staticmethod
     def _complete(frame: pd.DataFrame, present: dict[_Key, _Present]) -> np.ndarray:
         """Return whether each row is complete (:func:`stilt.output.completed`), from :meth:`_present`."""
-        done = {key: completed(*sets) for key, sets in present.items()}
+        done = {key: completed(*sets.values()) for key, sets in present.items()}
         return np.array([r in done[(v, k)] for r, v, k in _rows(frame)], dtype=bool)
 
     def status(self, sel: Any = None) -> pd.DataFrame:
@@ -794,16 +794,19 @@ class Project:
         Returns
         -------
         pandas.DataFrame
-            The selection with six more columns. ``particles`` and
-            ``footprint`` are ``True`` when the result exists, ``False``
-            when it is missing, and ``NA`` when the variant does not make
-            it. ``state`` is ``complete`` when every expected result exists
+            The selection with more columns. ``particles``, and one
+            column named for each stage the project has (``footprint``),
+            are ``True`` when the result exists, ``False`` when it is
+            missing, and ``NA`` when the variant does not make it. ``state``
+            is ``complete`` when every expected result exists
             (:attr:`stilt.Simulation.is_complete`), ``failed`` when the last
             run failed, ``interrupted`` when a run of its particles started
             and stopped before it finished (a time limit, preemption, or a
-            killed process), and ``pending`` when nothing has run. ``step``, ``reason``, and ``message`` say
-            why a failed simulation failed (:attr:`stilt.Simulation.failure`),
-            and are ``NA`` for the others.
+            killed process), and ``pending`` when nothing has run.
+            ``stage`` (``particles``, or the stage that failed), ``reason``,
+            and ``message`` say why a failed simulation failed
+            (:attr:`stilt.Simulation.failure`), and are ``NA`` for the
+            others.
 
         Notes
         -----
@@ -822,11 +825,20 @@ class Project:
         frame = self._selected(sel)
         present = self._present(frame)
         rows = _rows(frame)
-        particles = [r in present[(v, k)][0] for r, v, k in rows]
-        feet = [
-            None if (have := present[(v, k)][1]) is None else r in have
-            for r, v, k in rows
-        ]
+        # One column for each kind of result any variant of the project makes.
+        kinds = dict.fromkeys(
+            ["particles", *(s for v in self.variants.values() for s in v.stage_order)]
+        )
+        has = {
+            kind: pd.array(
+                [
+                    None if (have := present[(v, k)].get(kind)) is None else r in have
+                    for r, v, k in rows
+                ],
+                dtype="boolean",
+            )
+            for kind in kinds
+        }
         complete = self._complete(frame, present)
         found = self._failure_records(frame, present)
         records = [found.get(row, {}) for row in rows]
@@ -842,12 +854,11 @@ class Project:
             for done, record, row in zip(complete, records, rows, strict=True)
         ]
         return frame.assign(
-            particles=pd.array(particles, dtype="boolean"),
-            footprint=pd.array(feet, dtype="boolean"),
+            **has,
             state=pd.Categorical(state, categories=STATES),
             **{
                 column: pd.array([r.get(column) for r in records], dtype="string")
-                for column in ("step", "reason", "message")
+                for column in ("stage", "reason", "message")
             },
         )
 
@@ -857,27 +868,22 @@ class Project:
         """
         Return the failure record of each selected simulation missing a result, by ``(receptor, variant, realization)``.
 
-        A simulation without particles is explained by its particles'
-        record, one with particles but no footprint by its footprint's
-        (:attr:`stilt.Simulation.failure`). Only those receptors' date
+        A simulation is explained by the record of the first result it is
+        missing: its particles', or else that of the first stage without a
+        file (:attr:`stilt.Simulation.failure`). Only those receptors' date
         folders are listed, and only the records found are read.
         """
         found: dict[tuple[str, str, int | None], dict[str, Any]] = {}
         for name, k, rows in _groups(frame):
             variant = self.variants[name]
-            particles, feet = present[(name, k)]
-            receptors = set(rows["receptor"])
-            no_particles = receptors - particles
-            no_footprint = set() if feet is None else (receptors & particles) - feet
-            missing: list[tuple[Kind, set[str]]] = [
-                ("particles", no_particles),
-                ("footprints", no_footprint),
-            ]
-            for kind, among in missing:
-                if among:
-                    failures = self.output.failures(kind, variant, among, k)
+            so_far = set(rows["receptor"])  # the receptors with every result before
+            for kind, have in present[(name, k)].items():
+                missing = so_far - have
+                if missing:
+                    failures = self.output.failures(kind, variant, missing, k)
                     for rid, record in failures.items():
                         found[(rid, name, k)] = record
+                so_far &= have
         return found
 
     def _started(
@@ -894,7 +900,7 @@ class Project:
         """
         started: set[tuple[str, str, int | None]] = set()
         for name, k, rows in _groups(frame):
-            missing = set(rows["receptor"]) - present[(name, k)][0]
+            missing = set(rows["receptor"]) - present[(name, k)]["particles"]
             if not missing:
                 continue
             logged = self.output.logged(self.variants[name], missing, k)
@@ -1029,12 +1035,12 @@ class Project:
         if "footprint" not in variant.stages:
             raise ValueError(f"Variant {name!r} makes no footprints (no grid).")
         requested = list(dict.fromkeys(frame["receptor"]))
-        found = self.output.present("footprints", variant, requested, k)
+        found = self.output.present("footprint", variant, requested, k)
         paths = [
             path
             for r in requested
             if r in found
-            and (path := self.output.path("footprints", variant, r, k)) is not None
+            and (path := self.output.path("footprint", variant, r, k)) is not None
         ]
         if not paths:
             raise ValueError(
@@ -1120,13 +1126,13 @@ class Project:
         variant = self.variants[name]
         if "footprint" not in variant.stages:
             raise ValueError(f"Variant {name!r} makes no footprints (no grid).")
-        if self.output.folder("footprints", variant) is None:
+        if self.output.folder("footprint", variant) is None:
             raise ValueError(f"Variant {name!r} has no footprints yet.")
         requested = list(dict.fromkeys(frame["receptor"]))
-        found = self.output.present("footprints", variant, requested, k)
+        found = self.output.present("footprint", variant, requested, k)
         return _jacobian(
             lambda r: self.output.read(
-                "footprints", variant, r, k, columns=["hour", "y", "x", "foot"]
+                "footprint", variant, r, k, columns=["hour", "y", "x", "foot"]
             ),
             [r for r in requested if r in found],
             variant.stages["footprint"],
@@ -1401,7 +1407,7 @@ class Project:
             return frame
         present = self._present(frame)
         has = np.array(
-            [r in present[(v, k)][0] for r, v, k in _rows(frame)], dtype=bool
+            [r in present[(v, k)]["particles"] for r, v, k in _rows(frame)], dtype=bool
         )
         return frame.loc[~has]
 
