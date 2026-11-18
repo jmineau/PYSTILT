@@ -122,7 +122,7 @@ def test_the_functions_make_what_a_project_stores(tmp_path, wbb_receptor, wbb_co
         stored[columns].reset_index(drop=True),
         check_dtype=False,
     )
-    grid = project.variants["hrrr"].footprint.grid
+    grid = project.variants["hrrr"].stages.get("footprint").grid
     foot = stilt.calc_footprint(particles, wbb_receptor, grid)
     assert sim.footprint is not None
     np.testing.assert_allclose(foot.values, sim.footprint.values, rtol=1e-6)
@@ -743,10 +743,10 @@ def test_geometry_footprint(tmp_path, wbb_receptor, met_dir):
         )
     )
     variant = next(iter(config.resolve().values()))
-    fc = variant.footprint
+    fc = variant.stages.get("footprint")
     assert fc is not None
     assert fc.grid.xres == fc.grid.yres == 0.05  # 0.5 / 10
-    assert variant.geometry_hash
+    assert variant.stages["footprint"].geometry_hash
 
     model = Project.init(tmp_path / "geom", config=config, receptors=[wbb_receptor])
     model.run()
@@ -757,7 +757,7 @@ def test_geometry_footprint(tmp_path, wbb_receptor, met_dir):
     assert foot is not None
     assert foot.stilt.config.grid == fc.grid
     assert foot.stilt.config.geometry == fc.geometry
-    assert foot.stilt.geometry_hash == variant.geometry_hash
+    assert foot.stilt.geometry_hash == variant.stages["footprint"].geometry_hash
 
     assert fc.geometry is not None
     mesh = Mesh.from_spec(fc.geometry)

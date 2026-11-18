@@ -226,9 +226,19 @@ def make_variant(
         met_config=met_config if met_config is not None else MET,
         transport=transport,
         model="hysplit",
-        footprint=footprint,
         realizations=realizations,
+        **with_footprint(footprint),
     )
+
+
+def with_footprint(footprint: FootprintConfig | None) -> dict[str, Any]:
+    """Return the ``stages`` and ``stage_classes`` of a variant with the footprint stage under *footprint*, or without it."""
+    if footprint is None:
+        return {"stages": {}, "stage_classes": {}}
+    return {
+        "stages": {"footprint": footprint},
+        "stage_classes": {"footprint": FOOTPRINT_STAGE},
+    }
 
 
 def make_receptor(

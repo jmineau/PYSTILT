@@ -8,9 +8,13 @@ import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from stilt.config import FOOTPRINT_STAGE, ProjectConfig
-from stilt.footprint.config import FootprintConfig
+from stilt.exceptions import MissingClass
+from stilt.footprint.config import (
+    FootprintConfig,
+    footprint_settings,
+    read_footprint_settings,
+)
 from stilt.footprint.targets import Mesh
-from stilt.identity import footprint_settings, read_footprint_settings
 from stilt.spatial import Grid
 from stilt.transforms import AveragingKernel, FirstOrderLifetime, PressureWeighting
 from stilt.transport.hysplit.driver import winderrtf
@@ -62,9 +66,11 @@ def test_a_config_is_blocks(tmp_path, grid):
     assert variants["hrrr"].transport.seed == 42
     assert variants["hrrr-long"].transport.n_hours == -72
     assert variants["hrrr-long"].transport.numpar == 100
-    assert variants["hrrr"].footprint.grid == grid
-    assert variants["hrrr"].footprint.smooth_factor == 0.5
-    assert variants["hrrr-long"].footprint == variants["hrrr"].footprint
+    assert variants["hrrr"].stages.get("footprint").grid == grid
+    assert variants["hrrr"].stages.get("footprint").smooth_factor == 0.5
+    assert variants["hrrr-long"].stages.get("footprint") == variants["hrrr"].stages.get(
+        "footprint"
+    )
 
 
 @pytest.mark.parametrize(
@@ -169,12 +175,20 @@ def test_a_stage_block_names_the_footprint_stage_as_its_class(tmp_path, grid):
             variants={"hrrr": {}},
         )
     with pytest.raises(
-        ValueError, match="stages: wind: 'mypkg.WindRose' is not a stage"
+        MissingClass,
+        match="config.yaml names mypkg.WindRose, but mypkg is not installed here",
     ):
         ProjectConfig(
             models={"hysplit": {"n_hours": -24}},
             mets=mets,
             stages={"wind": {"class": "mypkg.WindRose"}},
+            variants={"hrrr": {}},
+        )
+    with pytest.raises(ValueError, match="stages: wind: A stage is named by the"):
+        ProjectConfig(
+            models={"hysplit": {"n_hours": -24}},
+            mets=mets,
+            stages={"wind": {"class": "WindRose"}},
             variants={"hrrr": {}},
         )
     stage = {"class": FOOTPRINT_STAGE, "grid": grid}
@@ -204,10 +218,10 @@ def test_a_stage_blocks_name_is_what_a_variant_calls_it(tmp_path, grid):
         },
     )
     variants = config.resolve()
-    assert variants["hrrr"].footprint.smooth_factor == 1
-    assert variants["smooth"].footprint.smooth_factor == 2
-    assert variants["smooth"].footprint.grid == grid
-    assert variants["particles"].footprint is None
+    assert variants["hrrr"].stages.get("footprint").smooth_factor == 1
+    assert variants["smooth"].stages.get("footprint").smooth_factor == 2
+    assert variants["smooth"].stages.get("footprint").grid == grid
+    assert variants["particles"].stages.get("footprint") is None
     with pytest.raises(
         ValueError,
         match=r"Variant 'hrrr' names the stage 'footprint', which stages: does "
@@ -323,7 +337,7 @@ def test_a_config_loads_and_resolves_without_its_hysplit_build(tmp_path):
 
 def _default_footprint(cfg):
     """The footprint settings of the first variant, which inherits the defaults."""
-    return next(iter(cfg.resolve().values())).footprint
+    return next(iter(cfg.resolve().values())).stages.get("footprint")
 
 
 def test_without_a_stages_block_a_project_makes_particles_only(tmp_path, grid):
@@ -592,16 +606,21 @@ def test_model_config_yaml_roundtrip_with_footprint(tmp_path, grid):
     )
 
 
-@pytest.mark.parametrize("where", ["top", "variant"])
+@pytest.mark.parametrize("where", ["block", "variant"])
 def test_time_integrate_is_refused_saying_what_to_do_instead(tmp_path, grid, where):
-    footprint = {"time_integrate": True}
-    top = footprint if where == "top" else {}
-    variant = {} if where == "top" else footprint
+    """The footprint's config class refuses the setting it once had, wherever its settings are written."""
+    stage = {"class": FOOTPRINT_STAGE, "grid": grid}
+    own = {}
+    if where == "block":
+        stage["time_integrate"] = True
+    else:
+        own = {"stages": {"footprint": {"time_integrate": True}}}
     with pytest.raises(ValueError, match=r"time_integrate was removed.*sum\('time'\)"):
         ProjectConfig(
-            **blocks(
-                mets=_met_config(tmp_path), grid=grid, variants={"hrrr": variant}, **top
-            )
+            mets=_met_config(tmp_path),
+            models={"hysplit": {"n_hours": -24}},
+            stages={"footprint": stage},
+            variants={"hrrr": own},
         )
 
 
@@ -630,19 +649,25 @@ def test_footprint_depth_goes_to_hysplit_as_veght(tmp_path):
 
 def test_hnf_plume_needs_its_columns_in_varsiwant_only_with_a_footprint(tmp_path, grid):
     varsiwant = ["time", "indx", "long", "lati", "zagl", "foot"]
-    with pytest.raises(ValueError, match=r"near-field correction \(hnf_plume\) reads"):
-        ProjectConfig(
-            **blocks(
-                mets=_met_config(tmp_path),
-                grid=grid,
-                varsiwant=varsiwant,
-                variants={"hrrr": {}},
-            )
+    # The stage finds that it does not fit the model when the variants are resolved.
+    config = ProjectConfig(
+        **blocks(
+            mets=_met_config(tmp_path),
+            grid=grid,
+            varsiwant=varsiwant,
+            variants={"hrrr": {}},
         )
+    )
+    with pytest.raises(
+        ValueError,
+        match=r"Variant 'hrrr', stages: footprint: the near-field correction "
+        r"\(hnf_plume\) reads",
+    ):
+        config.resolve()
     # Without a footprint, or with the correction off, nothing reads them.
     ProjectConfig(
         **blocks(mets=_met_config(tmp_path), varsiwant=varsiwant, variants={"hrrr": {}})
-    )
+    ).resolve()
     ProjectConfig(
         **blocks(
             mets=_met_config(tmp_path),
@@ -651,7 +676,7 @@ def test_hnf_plume_needs_its_columns_in_varsiwant_only_with_a_footprint(tmp_path
             hnf_plume=False,
             variants={"hrrr": {}},
         )
-    )
+    ).resolve()
 
 
 def test_a_variant_turns_the_footprint_off_with_null(tmp_path, grid):
@@ -668,23 +693,25 @@ def test_a_variant_turns_the_footprint_off_with_null(tmp_path, grid):
         variants={"hrrr": {}, "hrrr-err": {"stages": {"footprint": None}}},
     )
     variants = config.resolve()
-    assert variants["hrrr"].footprint is not None
-    assert variants["hrrr-err"].footprint is None
+    assert variants["hrrr"].stages.get("footprint") is not None
+    assert variants["hrrr-err"].stages.get("footprint") is None
     # A footprint with its grid taken away has nothing to grid on: say how to turn it off.
+    without_grid = ProjectConfig(
+        models={"hysplit": {"n_hours": -24}},
+        mets=_met_config(tmp_path),
+        stages={"footprint": stage},
+        variants={
+            "hrrr": {},
+            "hrrr-err": {"stages": {"footprint": {"grid": None}}},
+        },
+    )
     with pytest.raises(
         ValueError,
-        match=r"Variant 'hrrr-err': its footprint has no grid. [\s\S]*"
-        r"stages: \{footprint: null\} to make particles only",
+        match=r"Variant 'hrrr-err', stages: footprint: the footprint has no grid. "
+        r"[\s\S]*set the stage to null under the variant's stages: to make "
+        "particles only",
     ):
-        ProjectConfig(
-            models={"hysplit": {"n_hours": -24}},
-            mets=_met_config(tmp_path),
-            stages={"footprint": stage},
-            variants={
-                "hrrr": {},
-                "hrrr-err": {"stages": {"footprint": {"grid": None}}},
-            },
-        )
+        without_grid.resolve()
 
 
 def test_a_stored_record_with_time_integrate_true_is_refused():
@@ -721,13 +748,13 @@ def test_model_config_yaml_roundtrip_with_footprint_transforms(tmp_path, grid):
     path = tmp_path / "config.yaml"
     cfg.to_yaml(path)
     loaded = ProjectConfig.from_yaml(path)
-    transforms = loaded.resolve()["hrrr"].footprint.transforms
+    transforms = loaded.resolve()["hrrr"].stages.get("footprint").transforms
     assert len(transforms) == 3
     assert transforms == given
     assert isinstance(transforms[0], AveragingKernel)
     assert isinstance(transforms[1], PressureWeighting)
     assert isinstance(transforms[2], FirstOrderLifetime)
-    assert loaded.resolve()["hrrr"].footprint.transforms == given
+    assert loaded.resolve()["hrrr"].stages.get("footprint").transforms == given
 
 
 def test_model_config_yaml_roundtrip_with_user_transform(tmp_path, grid):
@@ -747,7 +774,7 @@ def test_model_config_yaml_roundtrip_with_user_transform(tmp_path, grid):
     assert "factor: 2.5" in text
 
     loaded = ProjectConfig.from_yaml(path)
-    transforms = loaded.resolve()["hrrr"].footprint.transforms
+    transforms = loaded.resolve()["hrrr"].stages.get("footprint").transforms
     assert transforms == [ScaleFoot(factor=2.5)]
 
 
@@ -783,9 +810,9 @@ def test_model_config_variant_grid_in_yaml(tmp_path):
     path = tmp_path / "config.yaml"
     path.write_text(yaml_text)
     variants = ProjectConfig.from_yaml(path).resolve()
-    assert variants["hrrr"].footprint.grid.xres == 0.01
-    assert variants["coarse"].footprint.grid.xres == 0.05
-    assert variants["coarse"].footprint.grid.xmin == -114.0
+    assert variants["hrrr"].stages.get("footprint").grid.xres == 0.01
+    assert variants["coarse"].stages.get("footprint").grid.xres == 0.05
+    assert variants["coarse"].stages.get("footprint").grid.xmin == -114.0
 
 
 def test_model_config_inline_grid_in_yaml(tmp_path):
@@ -814,7 +841,7 @@ def test_model_config_inline_grid_in_yaml(tmp_path):
     """)
     path = tmp_path / "config.yaml"
     path.write_text(yaml_text)
-    footprint = ProjectConfig.from_yaml(path).resolve()["hrrr"].footprint
+    footprint = ProjectConfig.from_yaml(path).resolve()["hrrr"].stages.get("footprint")
     assert footprint.grid.xres == 0.05
     assert footprint.grid.xmin == -114.0
     assert footprint.smooth_factor == 0.75
@@ -848,8 +875,8 @@ def test_model_config_null_grid_means_trajectory_only(tmp_path):
     path = tmp_path / "config.yaml"
     path.write_text(yaml_text)
     variants = ProjectConfig.from_yaml(path).resolve()
-    assert variants["hrrr"].footprint is not None
-    assert variants["traj"].footprint is None
+    assert variants["hrrr"].stages.get("footprint") is not None
+    assert variants["traj"].stages.get("footprint") is None
 
 
 def test_model_config_loads_footprint_transforms_from_yaml(tmp_path):
@@ -888,7 +915,7 @@ def test_model_config_loads_footprint_transforms_from_yaml(tmp_path):
     path.write_text(yaml_text)
 
     loaded = ProjectConfig.from_yaml(path)
-    transforms = loaded.resolve()["hrrr"].footprint.transforms
+    transforms = loaded.resolve()["hrrr"].stages.get("footprint").transforms
 
     assert len(transforms) == 4
     assert isinstance(transforms[0], AveragingKernel)
@@ -966,8 +993,8 @@ def _resolved_footprint(tmp_path, **footprint) -> FootprintConfig:
             )
         )
     ).resolve()["hrrr"]
-    assert variant.footprint is not None
-    return variant.footprint
+    assert variant.stages.get("footprint") is not None
+    return variant.stages.get("footprint")
 
 
 def test_footprint_grid_is_derived_from_windows_geometry(tmp_path):
@@ -1053,7 +1080,7 @@ def test_model_config_yaml_roundtrip_with_geometry(tmp_path):
             variants={"hrrr": {}},
         )
     )
-    fc = next(iter(config.resolve().values())).footprint
+    fc = next(iter(config.resolve().values())).stages.get("footprint")
     assert fc is not None
     assert fc.grid.xres == pytest.approx(0.02)  # 0.1 / 4 -> 0.025 -> 0.02
     assert fc.geometry is not None and fc.geometry.kind == "file"
@@ -1061,7 +1088,7 @@ def test_model_config_yaml_roundtrip_with_geometry(tmp_path):
     path = tmp_path / "config.yaml"
     config.to_yaml(path)
     loaded = ProjectConfig.from_yaml(path)
-    lfc = next(iter(loaded.resolve().values())).footprint
+    lfc = next(iter(loaded.resolve().values())).stages.get("footprint")
     assert lfc is not None
     assert lfc.grid == fc.grid
     assert lfc.geometry == fc.geometry
@@ -1100,13 +1127,16 @@ def _variant_config(tmp_path, **kwargs):
 def test_a_footprint_without_a_grid_is_an_error(tmp_path, grid):
     """A footprint with nothing to grid on is refused, for the variant that has none."""
     stage = {"class": FOOTPRINT_STAGE, "smooth_factor": 2}
-    with pytest.raises(ValueError, match="Variant 'hrrr': its footprint has no grid"):
-        ProjectConfig(
-            models={"hysplit": {"n_hours": -24}},
-            mets=_met_config(tmp_path),
-            stages={"footprint": stage},
-            variants={"hrrr": {}},
-        )
+    config = ProjectConfig(
+        models={"hysplit": {"n_hours": -24}},
+        mets=_met_config(tmp_path),
+        stages={"footprint": stage},
+        variants={"hrrr": {}},
+    )
+    with pytest.raises(
+        ValueError, match="Variant 'hrrr', stages: footprint: the footprint has no grid"
+    ):
+        config.resolve()
     # The block may leave the grid to each variant.
     config = ProjectConfig(
         models={"hysplit": {"n_hours": -24}},
@@ -1114,7 +1144,7 @@ def test_a_footprint_without_a_grid_is_an_error(tmp_path, grid):
         stages={"footprint": stage},
         variants={"hrrr": {"stages": {"footprint": {"grid": grid}}}},
     )
-    footprint = config.resolve()["hrrr"].footprint
+    footprint = config.resolve()["hrrr"].stages.get("footprint")
     assert footprint.grid == grid and footprint.smooth_factor == 2
 
 
@@ -1143,7 +1173,9 @@ def test_variant_overrides_merge_onto_the_defaults(tmp_path):
     zi08 = variants["zi08"].transport.model_dump()
     hrrr = variants["hrrr"].transport.model_dump()
     assert sorted(k for k in zi08 if zi08[k] != hrrr[k]) == ["ziscale"]
-    assert variants["zi08"].footprint == variants["hrrr"].footprint
+    assert variants["zi08"].stages.get("footprint") == variants["hrrr"].stages.get(
+        "footprint"
+    )
 
 
 def test_variant_grid_override_merges_field_by_field(tmp_path):
@@ -1165,10 +1197,10 @@ def test_variant_grid_override_merges_field_by_field(tmp_path):
         },
     )
     variants = cfg.resolve()
-    assert variants["coarse"].footprint is not None
-    assert variants["coarse"].footprint.grid.xres == 0.1
-    assert variants["coarse"].footprint.grid.xmin == -114
-    assert variants["none"].footprint is None
+    assert variants["coarse"].stages.get("footprint") is not None
+    assert variants["coarse"].stages.get("footprint").grid.xres == 0.1
+    assert variants["coarse"].stages.get("footprint").grid.xmin == -114
+    assert variants["none"].stages.get("footprint") is None
 
 
 def _all_keys(node) -> set[str]:
@@ -1208,7 +1240,7 @@ def test_to_yaml_writes_only_what_was_set(tmp_path, grid):
     assert "kind: first_order_lifetime" in text  # nested objects are written in full
     loaded = ProjectConfig.from_yaml(path).resolve()
     assert loaded["zi08"].transport.ziscale == 0.8
-    assert loaded["decay"].footprint.transforms[0].lifetime_hours == 1.0
+    assert loaded["decay"].stages.get("footprint").transforms[0].lifetime_hours == 1.0
 
 
 def test_variant_must_name_its_met_when_there_are_several(tmp_path):
@@ -1310,7 +1342,10 @@ def test_variants_that_differ_only_in_footprint_fields_keep_the_transport(
     s2 = variants["s2"]
     assert s2.met == "hrrr"
     assert s2.transport.ziscale == 0.8
-    assert s2.footprint is not None and s2.footprint.smooth_factor == 2
+    assert (
+        s2.stages.get("footprint") is not None
+        and s2.stages.get("footprint").smooth_factor == 2
+    )
     assert s2.transport == variants["hrrr"].transport
     assert s2.particles_hash == variants["hrrr"].particles_hash
 
@@ -1384,12 +1419,12 @@ def test_variant_geometry_derives_its_own_grid_and_hash(tmp_path, grid, defaults
         },
     )
     variants = cfg.resolve()
-    mesh = Mesh.from_spec(variants["src"].footprint.geometry)
+    mesh = Mesh.from_spec(variants["src"].stages.get("footprint").geometry)
     expected = mesh.to_grid()
     for name in ("src", "src-run"):
-        assert variants[name].footprint.grid == expected
-        assert variants[name].geometry_hash == mesh.hash
-    assert variants["hrrr"].footprint.grid != expected
+        assert variants[name].stages.get("footprint").grid == expected
+        assert variants[name].stages["footprint"].geometry_hash == mesh.hash
+    assert variants["hrrr"].stages.get("footprint").grid != expected
 
 
 def _count_builds(monkeypatch):
@@ -1433,7 +1468,7 @@ def test_each_geometry_is_built_once_and_not_on_load(tmp_path, monkeypatch):
 
     variants = cfg.resolve()
     assert len(calls) == 2  # the default geometry and the one of "src"
-    inherited = [variants[n].footprint for n in ("hrrr", "np50", "err")]
+    inherited = [variants[n].stages.get("footprint") for n in ("hrrr", "np50", "err")]
     assert all(f is not None and f.grid == inherited[0].grid for f in inherited)
     assert len(calls) == 2
 
@@ -1456,8 +1491,9 @@ def test_stored_footprint_settings_never_read_the_geometry(monkeypatch):
         grid=explicit,
         geometry={"kind": "windows", "coords": [(0.5, 0.5)], "size": 0.1},
     )
-    stored = footprint_settings(config, "deadbeef00")
-    assert read_footprint_settings(stored) == (config, "deadbeef00")
+    config = config.model_copy(update={"geometry_hash": "deadbeef00"})
+    stored = footprint_settings(config)
+    assert read_footprint_settings(stored) == config
     assert calls == []
 
 
@@ -1471,7 +1507,10 @@ def test_to_yaml_does_not_write_the_derived_grid(tmp_path):
 
 
 def test_partial_grid_over_a_derived_grid_is_an_error(tmp_path):
-    with pytest.raises(ValueError, match="'coarse' changes part of a grid"):
+    with pytest.raises(
+        ValueError,
+        match="Variant 'coarse', stages: footprint: it changes part of a grid",
+    ):
         _variant_config(
             tmp_path,
             geometry=_WINDOWS,
@@ -1572,9 +1611,12 @@ def test_a_relative_geometry_file_starts_from_the_project_directory(
     )
     monkeypatch.chdir(tmp_path)  # not the project
     variant = config.resolve(project)["hrrr"]
-    assert variant.footprint is not None and variant.geometry_hash is not None
+    assert (
+        variant.stages.get("footprint") is not None
+        and variant.stages["footprint"].geometry_hash is not None
+    )
     # The settings keep the path as written, so moving the project changes no hash.
-    assert variant.footprint.geometry.path == "cells.geojson"
+    assert variant.stages.get("footprint").geometry.path == "cells.geojson"
 
 
 def test_a_met_may_be_only_its_folder(tmp_path):

@@ -56,6 +56,7 @@ import functools
 import logging
 import os
 import shutil
+import warnings
 from collections.abc import Iterable, Mapping
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -71,19 +72,13 @@ import yaml
 from stilt._paths import atomic_path, location, readable
 from stilt.footprint import (
     FOOTPRINT_SCHEMA,
-    FootprintConfig,
     write_empty_footprint,
     write_footprint,
 )
-from stilt.identity import (
-    footprint_hash,
-    footprint_settings,
-    read_footprint_settings,
-    read_run_settings,
-    settings_hash,
-)
+from stilt.identity import canonical, read_run_settings, settings_hash, stage_hash
 from stilt.particles import write_particles
 from stilt.receptors import Receptor, parse_receptor_id
+from stilt.stages import get_stage
 
 if TYPE_CHECKING:
     from upath import UPath
@@ -225,6 +220,31 @@ def _pystilt_version() -> str:
         return "0+unknown"
 
 
+def _read_stage_settings(
+    stage_class: str, stored: Mapping[str, Any], source: str
+) -> dict[str, Any]:
+    """
+    Return the settings a stage folder's ``_settings.yaml`` records, read through the stage's current config class.
+
+    The class reads the record and the stage writes it again
+    (:meth:`stilt.stages.Stage.settings`), so a setting added since the
+    folder was written, with a default, still matches. A record that cannot
+    be read here is returned as written, with a warning naming *source*: a
+    stage that is not installed, or settings its class no longer takes, as
+    in another project's folder of a shared output directory.
+    """
+    try:
+        stage = get_stage(stage_class)
+        return canonical(stage.settings(stage.config_class.model_validate(stored)))
+    except Exception as error:
+        warnings.warn(
+            f"{source}: the settings of a stored {stage_class} could not be "
+            f"read ({error}). They are kept as written.",
+            stacklevel=2,
+        )
+        return canonical(stored)
+
+
 def _stamp(digest: str, realization: int | None = None) -> dict[bytes, bytes]:
     """
     Return what every result file records besides its contents.
@@ -252,6 +272,9 @@ def _footprint_stamp(
 
 
 # -- the output directory -----------------------------------------------------
+
+#: The import path of the stage whose results the ``footprints`` tree holds.
+_FOOTPRINT = "stilt.footprint.FootprintStage"
 
 #: A kind of result, and the tree it is kept in.
 Kind = Literal["particles", "footprints"]
@@ -335,9 +358,8 @@ def _differences(
         stored = _like(read_run_settings(record["settings"]), readable)
         current: Mapping[str, Any] | None = readable
     else:
-        config, geometry_hash = read_footprint_settings(record["settings"], str(path))
-        stored = footprint_settings(config, geometry_hash)
-        current = variant.footprint_settings
+        stored = _read_stage_settings(_FOOTPRINT, record["settings"], str(path))
+        current = variant.stage_settings.get("footprint")
     if current is None:
         return "the variant makes no footprints"
     found = _diff(stored, current)
@@ -494,22 +516,21 @@ class Output:
         record = _read_yaml(path)
         if kind == "particles":
             return settings_hash(read_run_settings(record["settings"]))
-        config, geometry_hash = read_footprint_settings(record["settings"], str(path))
+        settings = _read_stage_settings(_FOOTPRINT, record["settings"], str(path))
         particles = record["particles"]
         if particles not in self._hashes["particles"]:
             self._hashes["particles"][particles] = self._read_hash(
                 "particles", particles
             )
-        return footprint_hash(
-            self._hashes["particles"][particles],
-            footprint_settings(config, geometry_hash),
-        )
+        return stage_hash("footprint", settings, self._hashes["particles"][particles])
 
     @staticmethod
     def _variant_hash(kind: Kind, variant: Variant) -> str | None:
         """Return the hash that names *variant*'s folder of *kind*, ``None`` for footprints without a grid."""
         _check_kind(kind)
-        return variant.particles_hash if kind == "particles" else variant.footprint_hash
+        if kind == "particles":
+            return variant.particles_hash
+        return variant.stage_hashes.get("footprint")
 
     def _lookup_hash(self, kind: Kind, variant: Variant) -> str | None:
         """
@@ -549,8 +570,7 @@ class Output:
                 return None
             if kind == "particles":
                 return mine[0]
-            settings = variant.footprint_settings
-            return None if settings is None else footprint_hash(mine[0], settings)
+            return variant.stage_hashes_on(mine[0]).get("footprint")
 
     def _readable_matches(self, variant: Variant) -> list[tuple[str, str]]:
         """
@@ -614,13 +634,13 @@ class Output:
                 "settings": variant.run_settings,
             }
         else:
-            if variant.footprint is None:
+            if "footprint" not in variant.stages:
                 raise ValueError(
                     f"Variant {variant.name!r} makes no footprints (no grid)."
                 )
             particles = self._create("particles", variant)
-            settings = footprint_settings(variant.footprint, variant.geometry_hash)
-            digest = footprint_hash(variant.particles_hash, settings)
+            settings = variant.stage_settings["footprint"]
+            digest = variant.stage_hashes["footprint"]
             record = {
                 "name": variant.name,
                 "hash": digest,
@@ -769,7 +789,7 @@ class Output:
         Only the receptors with particles are looked for in the footprints.
         """
         particles = self.present("particles", variant, receptor_ids, realization)
-        if variant.footprint is None:
+        if "footprint" not in variant.stages:
             return completed(particles, None)
         footprints = self.present("footprints", variant, particles, realization)
         return completed(particles, footprints)
@@ -1033,11 +1053,7 @@ class Output:
             variant, str(foot.stilt.receptor.id), realization
         )
         return write_footprint(
-            path,
-            foot,
-            config,
-            _footprint_stamp(digest, variant, realization),
-            geometry_hash=variant.geometry_hash,
+            path, foot, config, _footprint_stamp(digest, variant, realization)
         )
 
     def write_empty_footprint(
@@ -1056,19 +1072,16 @@ class Output:
             config,
             variant.name,
             _footprint_stamp(digest, variant, realization),
-            geometry_hash=variant.geometry_hash,
         )
 
     def _footprint_file(
         self, variant: Variant, receptor_id: str, realization: int | None
-    ) -> tuple[Location, FootprintConfig, str]:
+    ) -> tuple[Location, Any, str]:
         """Return a receptor's footprint file, the settings, and the folder's hash, making the folder on first use."""
         name = self._create("footprints", variant)
-        if variant.footprint is None:  # _create has raised already
-            raise ValueError(f"Variant {variant.name!r} makes no footprints.")
         folder = self._part("footprints", name, variant, realization)
         path = _receptor_file(folder, receptor_id)
-        return path, variant.footprint, self._hashes["footprints"][name]
+        return path, variant.stages["footprint"], self._hashes["footprints"][name]
 
 
 __all__ = ["KINDS", "Kind", "Output", "completed"]

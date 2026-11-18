@@ -414,6 +414,72 @@ def test_check_exits_2_when_the_project_files_are_invalid(tmp_path):
     assert "nonsense" in result.output
 
 
+@pytest.mark.parametrize("command", ["check", "status", "run", "submit", "fetch"])
+@pytest.mark.parametrize(
+    ("block", "message"),
+    [
+        (
+            {"stages": {"wind": {"class": "nopkg_for_this_test.stages.WindRose"}}},
+            "Error: config.yaml names nopkg_for_this_test.stages.WindRose, but "
+            "nopkg_for_this_test is not installed here. Install "
+            "nopkg_for_this_test and run this again.",
+        ),
+        (
+            {"models": {"wind": {"class": "nopkg_for_this_test.models.Wind"}}},
+            "Error: config.yaml names nopkg_for_this_test.models.Wind, but "
+            "nopkg_for_this_test is not installed here.",
+        ),
+    ],
+)
+def test_a_class_that_is_not_installed_exits_2_naming_its_package(
+    tmp_path, command, block, message
+):
+    """A project does not open where a class its config names cannot be imported."""
+    import yaml
+
+    _write_checkable_config(tmp_path)
+    config = tmp_path / "config.yaml"
+    settings = yaml.safe_load(config.read_text())
+    settings.update(block)
+    config.write_text(yaml.safe_dump(settings))
+
+    result = runner.invoke(app, [command, str(tmp_path)])
+
+    assert result.exit_code == 2, result.output
+    assert message in result.output
+    assert "Traceback" not in result.output
+
+
+@pytest.mark.parametrize("command", ["check", "status", "run"])
+def test_a_stage_that_does_not_fit_its_model_exits_2(tmp_path, command):
+    """What a stage refuses when the variants are resolved stops every command the same way."""
+    import yaml
+
+    _write_checkable_config(tmp_path)
+    config = tmp_path / "config.yaml"
+    settings = yaml.safe_load(config.read_text())
+    settings["models"]["hysplit"]["varsiwant"] = [
+        "time",
+        "indx",
+        "long",
+        "lati",
+        "zagl",
+    ]
+    settings["stages"] = _footprint_block(
+        {"xmin": -113, "xmax": -110, "ymin": 39, "ymax": 42, "xres": 0.1, "yres": 0.1}
+    )
+    config.write_text(yaml.safe_dump(settings))
+
+    result = runner.invoke(app, [command, str(tmp_path)])
+
+    assert result.exit_code == 2, result.output
+    assert (
+        "Error: Variant 'hrrr', stages: footprint: the near-field correction "
+        "(hnf_plume) reads the particle columns"
+    ) in result.output
+    assert "Traceback" not in result.output
+
+
 @pytest.mark.parametrize(
     ("setting", "message"),
     [

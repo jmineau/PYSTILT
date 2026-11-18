@@ -2,21 +2,24 @@
 The project config: what ``config.yaml`` holds, and the variants it declares.
 
 ``config.yaml`` is blocks: ``mets`` names the meteorology, ``models`` the
-transport models, ``stages`` what is made from each simulation's particles
+transport models, ``stages`` what is made from each simulation's results
 (the footprint), and ``variants`` the settings every receptor runs under.
 A model's or a stage's block holds its settings, the defaults of every
 variant that uses it, and no setting sits at the top level. Each part has
 its own config class, next to the code that uses it: the transport model's
 and its met config (such as :class:`~stilt.transport.hysplit.HysplitConfig`
-and :class:`~stilt.transport.hysplit.MetConfig`),
-:class:`~stilt.footprint.config.FootprintConfig`, and
-:class:`~stilt.execution.ExecutionConfig`. :class:`ProjectConfig` reads the
-file and checks it without reading any other file, so a ``config.yaml``
-loads offline. :meth:`ProjectConfig.resolve` turns each declared variant
-into a :class:`Variant`, what its simulations run with; that reads each
-footprint geometry and asks the transport model for its build. Which
-weather each met is, read from its files, is read when a variant's
-hash is first needed.
+and :class:`~stilt.transport.hysplit.MetConfig`), a stage's (the
+footprint's :class:`~stilt.footprint.config.FootprintConfig`), and
+:class:`~stilt.execution.ExecutionConfig`. A stage is named by the import
+path of its class (:mod:`stilt.stages`), so this module imports none.
+:class:`ProjectConfig` reads the file and checks it without reading any
+other file, so a ``config.yaml`` loads offline.
+:meth:`ProjectConfig.resolve` turns each declared variant into a
+:class:`Variant`, what its simulations run with; that has each stage read
+the files its settings name (a footprint geometry) and check that it fits
+the variant's model, and asks the transport model for its build. Which
+weather each met is, read from its files, is read when a variant's hash is
+first needed.
 """
 
 from __future__ import annotations
@@ -24,7 +27,7 @@ from __future__ import annotations
 import difflib
 import re
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import cached_property
 from pathlib import Path, PurePath
 from typing import Any, NamedTuple, Self
@@ -43,19 +46,8 @@ from pydantic import (
 
 from stilt._paths import absolute
 from stilt.execution.config import ExecutionConfig
-from stilt.footprint.config import (
-    TIME_INTEGRATE_REMOVED,
-    FileGeometrySpec,
-    FootprintConfig,
-)
-from stilt.footprint.targets import Mesh
-from stilt.identity import (
-    footprint_hash,
-    footprint_settings,
-    run_settings,
-    settings_hash,
-)
-from stilt.particles import HNF_PLUME_COLUMNS
+from stilt.identity import canonical, run_settings, settings_hash, stage_hash
+from stilt.stages import Stage, get_stage, ordered, reads
 from stilt.transport import (
     MODELS,
     VEGHT_RENAMED,
@@ -69,9 +61,6 @@ VARIANT_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 
 #: The import path of the footprint stage, the ``class`` of its ``stages:`` block.
 FOOTPRINT_STAGE = "stilt.footprint.FootprintStage"
-
-#: The settings of the footprint stage.
-_FOOTPRINT_FIELDS = frozenset(FootprintConfig.model_fields)
 
 #: Writes a block of settings given in Python (a path, a config object) as YAML can hold it.
 _JSON = TypeAdapter(dict[str, Any])
@@ -109,7 +98,15 @@ class _Declared(NamedTuple):
     model: str  # the model, as stilt.transport.get_model names it
     realizations: int | None
     transport: dict[str, Any]
-    footprint: FootprintConfig | None
+    stages: dict[str, Any]  # each stage's checked settings, by the stage's name
+
+
+class _StageBlock(NamedTuple):
+    """One ``stages`` block of ``config.yaml``: the stage its ``class`` names, and its settings, checked."""
+
+    path: str  # the import path of the stage's class, as written
+    stage: Stage
+    config: BaseModel
 
 
 @dataclass(frozen=True)
@@ -123,9 +120,10 @@ class Variant:
     results share one folder, a ``realization=k`` partition each.
 
     Variants with equal :attr:`particles_hash` share one run of the
-    transport model per receptor (and realization) and differ only in their
-    footprints. The hashes are computed once. Change a variant with
-    :func:`dataclasses.replace`, which computes them again.
+    transport model per receptor (and realization) and differ only in what
+    their stages make of it, such as their footprints. The hashes are
+    computed once. Change a variant with :func:`dataclasses.replace`, which
+    computes them again.
 
     Attributes
     ----------
@@ -145,11 +143,13 @@ class Variant:
         Its build is :attr:`build`.
     realizations : int or None
         Number of realizations of an ensemble, or ``None`` for a single run.
-    footprint : FootprintConfig or None
-        Footprint config, with its grid, or ``None`` for particles only.
-    geometry_hash : str or None
-        Hash of the geometry the footprint grid was derived for
-        (``Mesh.hash``), or ``None`` when the footprint has no geometry.
+    stages : dict
+        The settings of each stage the variant uses, by the stage's name, as
+        the stage resolved them: ``stages["footprint"]`` is a
+        :class:`~stilt.footprint.FootprintConfig` with its grid. Empty for a
+        variant that makes particles only.
+    stage_classes : dict of str to str
+        The import path of each stage's class, by the stage's name.
     """
 
     name: str
@@ -158,8 +158,8 @@ class Variant:
     transport: TransportConfig
     model: str
     realizations: int | None = None
-    footprint: FootprintConfig | None = None
-    geometry_hash: str | None = None
+    stages: dict[str, Any] = field(default_factory=dict)
+    stage_classes: dict[str, str] = field(default_factory=dict)
 
     @property
     def realization_numbers(self) -> list[int | None]:
@@ -276,19 +276,56 @@ class Variant:
         """Hash of :attr:`run_settings`, which finds the particles folder."""
         return settings_hash(self.run_settings)
 
-    @cached_property
-    def footprint_settings(self) -> dict[str, Any] | None:
-        """The settings that identify this variant's footprints, or ``None`` for particles only."""
-        if self.footprint is None:
-            return None
-        return footprint_settings(self.footprint, self.geometry_hash)
+    def stage(self, name: str) -> Stage:
+        """
+        Return the stage called *name*, one of :attr:`stages`.
+
+        Raises
+        ------
+        KeyError
+            If the variant does not use a stage of that name.
+        """
+        return get_stage(self.stage_classes[name])
 
     @cached_property
-    def footprint_hash(self) -> str | None:
-        """Hash of the particles and :attr:`footprint_settings`, which finds the footprint folder."""
-        if self.footprint_settings is None:
-            return None
-        return footprint_hash(self.particles_hash, self.footprint_settings)
+    def stage_order(self) -> list[str]:
+        """The names of the variant's stages in the order they run, each after the stages it reads."""
+        return ordered({name: self.stage(name) for name in self.stages})
+
+    @cached_property
+    def stage_settings(self) -> dict[str, dict[str, Any]]:
+        """The settings that identify each stage's results, by the stage's name, as its ``_settings.yaml`` records them."""
+        return {
+            name: canonical(self.stage(name).settings(self.stages[name]))
+            for name in self.stage_order
+        }
+
+    @cached_property
+    def stage_hashes(self) -> dict[str, str]:
+        """
+        The hash that finds each stage's settings folder, by the stage's name.
+
+        A stage's hash is of the particles' hash, the hash of each stage it
+        reads, and its own settings (:func:`stilt.identity.stage_hash`).
+        """
+        return self.stage_hashes_on(self.particles_hash)
+
+    def stage_hashes_on(self, particles_hash: str) -> dict[str, str]:
+        """
+        Return the hash of each stage's settings folder for particles hashed *particles_hash*.
+
+        :attr:`stage_hashes` for the variant's own particles. Given the hash
+        of a stored particles folder, it finds the stage folders made from
+        it where :attr:`particles_hash` cannot be computed, as on a machine
+        without the model's executable.
+        """
+        hashes: dict[str, str] = {}
+        for name in self.stage_order:
+            read = {r: hashes[r] for r in reads(self.stage(name))}
+            hashes[name] = stage_hash(
+                name, self.stage_settings[name], particles_hash, read
+            )
+        return hashes
 
 
 class _UniqueKeyLoader(yaml.SafeLoader):
@@ -320,7 +357,7 @@ class ProjectConfig(BaseModel):
 
     The file is blocks. ``mets`` names the meteorology, ``models`` the
     transport models, ``stages`` what is made from each simulation's
-    particles (the footprint), and ``variants`` what runs. A model's or a
+    results (the footprint), and ``variants`` what runs. A model's or a
     stage's block holds its settings, checked by its own config class: the
     defaults of every variant that uses it. Each variant names a met and a
     model, when there are several, and overrides some of the defaults; only
@@ -378,13 +415,14 @@ class ProjectConfig(BaseModel):
     stages: dict[str, dict[str, Any]] = Field(
         default_factory=dict,
         description=(
-            "What is made from each simulation's particles, by name, each a "
-            "block that gives the stage's import path as ``class`` and then "
-            "its settings. The footprint is ``class: "
-            "stilt.footprint.FootprintStage``, with the footprint settings "
-            "(:class:`~stilt.footprint.FootprintConfig`). A stage runs for "
-            "every variant, unless the variant sets it to null. Left out, the "
-            "project makes particles only."
+            "What is made from each simulation's results after the transport "
+            "model runs, by name, each a block that gives the stage's import "
+            "path as ``class`` and then its settings. The footprint is "
+            "``class: stilt.footprint.FootprintStage``, with the footprint "
+            "settings (:class:`~stilt.footprint.FootprintConfig`). A stage "
+            "runs for every variant, unless the variant sets it to null. A "
+            "stage class has one block. Left out, the project makes "
+            "particles only."
         ),
     )
     variants: dict[str, dict[str, Any] | None] = Field(
@@ -423,8 +461,8 @@ class ProjectConfig(BaseModel):
     # Each models: block by its name: the model, as get_model names it, and
     # the block's settings.
     _models: dict[str, tuple[str, dict[str, Any]]] = PrivateAttr(default_factory=dict)
-    # The name of the footprint's stages: block and its checked settings.
-    _footprint: tuple[str, FootprintConfig] | None = PrivateAttr(None)
+    # Each stages: block by its name, in the order the stages run.
+    _stages: dict[str, _StageBlock] = PrivateAttr(default_factory=dict)
     # Each met checked by the met config of a model that reads it, by
     # (met, model).
     _met_configs: dict[tuple[str, str], Any] = PrivateAttr(default_factory=dict)
@@ -438,7 +476,7 @@ class ProjectConfig(BaseModel):
                 data,
                 "config",
                 allowed=dict.fromkeys(cls.model_fields, "a config key"),
-                elsewhere=_blocks_of_settings(data.get("models")),
+                elsewhere=_blocks_of_settings(data.get("models"), data.get("stages")),
             )
         return data
 
@@ -492,8 +530,8 @@ class ProjectConfig(BaseModel):
                 f"to run the defaults with met {first}, and more entries for "
                 "other settings."
             )
-        self._models = _model_blocks(self.models)
-        self._footprint = _footprint_block(self.stages, self._models)
+        self._models = _model_blocks(self.models, self.stages)
+        self._stages = _stage_blocks(self.stages, self._models)
         used = set()
         for group in self.variants:
             declared = self._declared(group)
@@ -546,7 +584,7 @@ class ProjectConfig(BaseModel):
 
     def _declared(self, group: str) -> _Declared:
         """
-        Return one declared variant merged with the defaults of its model's block and the footprint's.
+        Return one declared variant merged with the defaults of its model's block and of each stage's.
 
         Its transport fields are merged but not validated.
 
@@ -555,7 +593,7 @@ class ProjectConfig(BaseModel):
         ValueError
             For a bad name, an unknown met, model or stage, a bad
             ``realizations``, ``from:``, a setting written outside its
-            block, or a footprint without a grid.
+            block, or a stage set to null that another of its stages reads.
         """
         if not VARIANT_NAME_RE.fullmatch(group):
             raise ValueError(
@@ -573,7 +611,6 @@ class ProjectConfig(BaseModel):
         met = _met_name(group, spec, self.mets)
         block = _model_name(group, spec, self._models)
         model, defaults = self._models[block]
-        stage = self._footprint[0] if self._footprint else "footprint"
         _check_keys(
             spec,
             where,
@@ -581,84 +618,90 @@ class ProjectConfig(BaseModel):
                 **_model_settings(model),
                 **dict.fromkeys(_VARIANT_KEYS, "a variant key"),
             },
-            elsewhere=dict.fromkeys(
-                _FOOTPRINT_FIELDS,
-                f"a footprint setting. Write it under the variant's stages: {stage}:.",
-            ),
+            elsewhere={
+                setting: f"a {name} setting. Write it under the variant's "
+                f"stages: {handle or name}:."
+                for setting, (name, handle) in _stage_settings(self.stages).items()
+            },
         )
         realizations = spec.pop("realizations", None)
         if realizations is not None:
             realizations = int(realizations)
             if realizations < 1:
                 raise ValueError(f"{where}: realizations must be >= 1")
-        footprint = self._variant_footprint(group, spec.pop("stages", None))
+        stages = self._variant_stages(group, spec.pop("stages", None))
         transport = {**defaults, **spec}
-        _check_near_field_columns(group, transport, footprint)
         return _Declared(
             met=met,
             block=block,
             model=model,
             realizations=realizations,
             transport=transport,
-            footprint=footprint,
+            stages=stages,
         )
 
-    def _variant_footprint(self, group: str, stages: Any) -> FootprintConfig | None:
+    def _variant_stages(self, group: str, own: Any) -> dict[str, Any]:
         """
-        Return the footprint settings of a variant: the footprint's block with the variant's ``stages`` overrides.
+        Return the settings of each stage a variant uses, by the stage's name, in the order the stages run.
 
-        ``None`` when the config has no footprint stage, or the variant sets
-        it to null.
+        Each is the stage's block with the variant's ``stages`` overrides:
+        the variant's keys replace the block's, unless the stage's config
+        class merges them itself (its ``override``, as the footprint's does
+        for a grid). A stage the variant sets to null is left out.
 
         Raises
         ------
         ValueError
             If the variant names a stage the config does not have, sets what
-            is no footprint setting, or ends with neither a grid nor a
-            geometry.
+            is no setting of a stage, or sets a stage to null that another
+            of its stages reads.
         """
         where = f"Variant {group!r}"
-        stages = {} if stages is None else stages
-        if not isinstance(stages, dict):
+        own = {} if own is None else own
+        if not isinstance(own, dict):
             raise ValueError(
                 f"{where}: stages must map a stage's name to the settings it "
                 "changes, or to null."
             )
-        for name in stages:
+        for name in own:
             if name not in self.stages:
                 raise ValueError(
                     f"{where} names the stage {name!r}, which stages: does not "
                     f"have (it has {sorted(self.stages)})."
                 )
-        if self._footprint is None:
-            return None
-        name, defaults = self._footprint
-        fields = defaults.model_dump()
-        if name in stages:
-            own = stages[name]
-            if own is None:
-                return None
-            _check_keys(
-                own,
-                f"{where}, stages: {name}",
-                allowed=dict.fromkeys(_FOOTPRINT_FIELDS, "a footprint setting"),
-                elsewhere={
-                    "class": "the stage itself, set in the stages: block and "
-                    "not by a variant."
-                },
-            )
-            fields = _override(group, fields, dict(own))
-        try:
-            config = FootprintConfig(**fields)
-        except ValidationError as error:
-            raise ValueError(f"{where}, stages: {name}: {error}") from None
-        if config.grid is None and config.geometry is None:
-            raise ValueError(
-                f"{where}: its footprint has no grid. Give stages: {name}: a "
-                f"grid or a geometry, or set the variant's stages: {{{name}: null}} "
-                "to make particles only."
-            )
-        return config
+        configs: dict[str, Any] = {}
+        for handle, block in self._stages.items():
+            config = block.config
+            if handle in own:
+                changes = own[handle]
+                if changes is None:
+                    continue
+                if not isinstance(changes, dict):
+                    raise ValueError(
+                        f"{where}, stages: {handle}: give the settings the "
+                        "variant changes as a mapping, or null for a variant "
+                        "without the stage."
+                    )
+                config = _stage_config(
+                    block.stage,
+                    _overridden(block, dict(changes), f"{where}, stages: {handle}"),
+                    f"{where}, stages: {handle}",
+                    elsewhere={
+                        "class": "the stage itself, set in the stages: block and "
+                        "not by a variant."
+                    },
+                )
+            configs[block.stage.name] = config
+        for block in self._stages.values():
+            name = block.stage.name
+            for read in reads(block.stage):
+                if name in configs and read not in configs:
+                    raise ValueError(
+                        f"{where} sets the stage {read!r} to null, and its stage "
+                        f"{name!r} reads that stage's files. Set {name!r} to "
+                        f"null too, or keep {read!r}."
+                    )
+        return configs
 
     def resolve(self, directory: str | Path | None = None) -> dict[str, Variant]:
         """
@@ -668,9 +711,11 @@ class ProjectConfig(BaseModel):
         class, as are its realizations (``realizations: N`` runs it N
         times, realization ``k`` with ``seed + k``). Each met's directories
         are made absolute; what a run records of the met is read on first
-        use (:attr:`Variant.met_settings`). Each geometry is read
-        once, however many variants use it, and the grid of a footprint
-        given only by a geometry is derived from it
+        use (:attr:`Variant.met_settings`). Each stage resolves the settings
+        a variant gives it (:meth:`stilt.stages.Stage.resolve`): it reads the
+        files they name and checks that they fit the variant's model. The
+        footprint stage reads each geometry once, however many variants use
+        it, and derives the grid of a footprint given only by a geometry
         (:meth:`stilt.Mesh.to_grid`). The transport model's build is read
         on first use too (:attr:`Variant.build`).
         ``project.variants`` holds the result.
@@ -684,10 +729,13 @@ class ProjectConfig(BaseModel):
         Raises
         ------
         ValueError
-            If a variant's transport settings are invalid for its model, or its
-            realizations would repeat one another.
+            If a variant's transport settings are invalid for its model, its
+            realizations would repeat one another, or a stage's settings do
+            not fit the variant's model.
         """
-        meshes: dict[str, Mesh] = {}
+        start = None if directory is None else Path(directory)
+        paths = {block.stage.name: block.path for block in self._stages.values()}
+        handles = {block.stage.name: handle for handle, block in self._stages.items()}
         mets: dict[tuple[str, str], Any] = {}
         variants: dict[str, Variant] = {}
         for group in self.variants:
@@ -697,13 +745,17 @@ class ProjectConfig(BaseModel):
                 declared.transport,
                 f"Variant {group!r} ({declared.model})",
             )
-            footprint, geometry_hash = declared.footprint, None
-            if footprint is not None and footprint.geometry is not None:
-                mesh = _mesh(footprint.geometry, directory, meshes)
-                geometry_hash = mesh.hash
-                if footprint.grid is None:
-                    grid = mesh.to_grid(cells_per_target=footprint.cells_per_target)
-                    footprint = footprint.model_copy(update={"grid": grid})
+            stages: dict[str, Any] = {}
+            for name, config in declared.stages.items():
+                stage = self._stages[handles[name]].stage
+                try:
+                    stages[name] = stage.resolve(
+                        config, declared.model, transport.settings(), start
+                    )
+                except ValueError as error:
+                    raise ValueError(
+                        f"Variant {group!r}, stages: {handles[name]}: {error}"
+                    ) from None
             if declared.realizations is not None:
                 try:
                     transport.realizations(declared.realizations)
@@ -721,8 +773,8 @@ class ProjectConfig(BaseModel):
                 transport=transport,
                 model=declared.model,
                 realizations=declared.realizations,
-                footprint=footprint,
-                geometry_hash=geometry_hash,
+                stages=stages,
+                stage_classes={name: paths[name] for name in stages},
             )
         return variants
 
@@ -741,11 +793,16 @@ class ProjectConfig(BaseModel):
         # A block's settings as its class writes them (a transform by its kind).
         if "models" in given:
             data["models"] = _JSON.dump_python(self.models, mode="json")
-        if "stages" in given and self._footprint is not None:
-            name, config = self._footprint
-            block = self.stages[name]
-            written = config.model_dump(mode="json", include=set(block) - {"class"})
-            data["stages"] = {name: {"class": block["class"], **written}}
+        if "stages" in given:
+            data["stages"] = {
+                name: {
+                    "class": self._stages[name].path,
+                    **self._stages[name].config.model_dump(
+                        mode="json", include=set(block) - {"class"}
+                    ),
+                }
+                for name, block in self.stages.items()
+            }
         if "execution" in data:
             data["execution"] = self.execution.model_dump(
                 mode="json", exclude_unset=True
@@ -897,10 +954,13 @@ output: ./output
 
 
 def _model_blocks(
-    models: dict[str, dict[str, Any] | None],
+    models: dict[str, dict[str, Any] | None], stages: Any = None
 ) -> dict[str, tuple[str, dict[str, Any]]]:
     """
     Return each ``models`` block's model and settings, by the block's name.
+
+    *stages* is the ``stages`` block as written, to say where a stage's
+    setting belongs.
 
     The model is as :func:`stilt.transport.get_model` names it: the block's
     ``class``, or the block's own name for a built-in model. The settings
@@ -949,37 +1009,38 @@ def _model_blocks(
             settings,
             where,
             allowed=_model_settings(model),
-            elsewhere=dict.fromkeys(
-                _FOOTPRINT_FIELDS,
-                "a footprint setting. Write it under stages:, in the footprint's block.",
-            ),
+            elsewhere=_stage_places(stages),
         )
         blocks[name] = (model, settings)
     return blocks
 
 
-def _footprint_block(
+def _stage_blocks(
     stages: dict[str, dict[str, Any]], models: dict[str, tuple[str, dict[str, Any]]]
-) -> tuple[str, FootprintConfig] | None:
+) -> dict[str, _StageBlock]:
     """
-    Return the name of the footprint's ``stages`` block and its checked settings, or ``None`` without one.
+    Return each ``stages`` block's stage and checked settings, by the block's name, in the order the stages run.
 
-    The footprint is the one stage there is, so each block must name it as
-    its ``class`` (:data:`FOOTPRINT_STAGE`), and only one can. *models* are
-    the ``models`` blocks, to say where a model's setting belongs.
+    A block names its stage by the import path of the stage's class
+    (``class``), which is imported here. *models* are the ``models`` blocks,
+    to say where a model's setting belongs.
 
     Raises
     ------
+    MissingClass
+        If a block's class cannot be imported on this machine.
     ValueError
-        If a block names no class or another one, two blocks name one
-        class, or a block holds a wrong setting.
+        If a block names no class or one that is not a stage, two blocks
+        name one class or two stages of one name, a block holds a wrong
+        setting, or a stage reads one the config does not have.
     """
     elsewhere = {
-        field: f"a {model} setting. Write it under models: {name}:."
+        setting: f"a {model} setting. Write it under models: {name}:."
         for name, (model, _) in models.items()
-        for field in _model_settings(model)
+        for setting in _model_settings(model)
     }
-    found: tuple[str, FootprintConfig] | None = None
+    blocks: dict[str, _StageBlock] = {}
+    block_of: dict[str, str] = {}
     for name, block in stages.items():
         if not VARIANT_NAME_RE.fullmatch(name):
             raise ValueError(
@@ -987,33 +1048,122 @@ def _footprint_block(
             )
         where = f"stages: {name}"
         settings = dict(block or {})
-        stage = settings.pop("class", None)
-        if stage is None:
+        path = settings.pop("class", None)
+        if path is None:
             raise ValueError(
                 f"{where} names no class. The footprint is class: {FOOTPRINT_STAGE}."
             )
-        if stage != FOOTPRINT_STAGE:
-            raise ValueError(
-                f"{where}: {stage!r} is not a stage. The one stage is the "
-                f"footprint, class: {FOOTPRINT_STAGE}."
-            )
-        if found is not None:
-            raise ValueError(
-                f"stages: {found[0]} and {name} are both {stage}. A stage has "
-                "one block, its defaults: write a second variant for a second "
-                "footprint."
-            )
-        _check_keys(
-            settings,
-            where,
-            allowed=dict.fromkeys(_FOOTPRINT_FIELDS, "a footprint setting"),
-            elsewhere=elsewhere,
-        )
         try:
-            found = (name, FootprintConfig.model_validate(settings))
-        except ValidationError as error:
+            stage = get_stage(str(path))
+        except ValueError as error:
             raise ValueError(f"{where}: {error}") from None
+        for other, known in blocks.items():
+            if known.path == path:
+                raise ValueError(
+                    f"stages: {other} and {name} are both {path}. A stage has "
+                    "one block, its defaults: write a second variant to run "
+                    "it with other settings."
+                )
+        if stage.name in block_of:
+            raise ValueError(
+                f"stages: {block_of[stage.name]} and {name} are both stages "
+                f"named {stage.name!r}, so their results would share a folder. "
+                "Keep one of them."
+            )
+        block_of[stage.name] = name
+        blocks[name] = _StageBlock(
+            str(path), stage, _stage_config(stage, settings, where, elsewhere)
+        )
+    order = ordered({block.stage.name: block.stage for block in blocks.values()})
+    return {block_of[name]: blocks[block_of[name]] for name in order}
+
+
+def _stage_config(
+    stage: Stage, settings: dict[str, Any], where: str, elsewhere: dict[str, str]
+) -> Any:
+    """
+    Return *settings* checked by the config class of *stage*.
+
+    The class checks the values first, so that it can refuse a setting it
+    once had with what to do instead; then a key that is no setting of the
+    stage is refused, saying where it belongs (*elsewhere*) or naming the
+    nearest setting.
+
+    Raises
+    ------
+    ValueError
+        If a setting is unknown to the stage or invalid.
+    """
+    try:
+        config = stage.config_class.model_validate(settings)
+    except ValidationError as error:
+        raise ValueError(f"{where}: {error}") from None
+    fields = stage.config_class.model_fields
+    _check_keys(
+        settings,
+        where,
+        allowed=dict.fromkeys(fields, f"a {stage.name} setting"),
+        elsewhere=elsewhere,
+    )
+    return config
+
+
+def _overridden(block: _StageBlock, own: dict[str, Any], where: str) -> dict[str, Any]:
+    """
+    Return a variant's settings of a stage: the block's, changed by the variant's *own*.
+
+    The variant's keys replace the block's. A stage whose config class has
+    an ``override(block, own)`` classmethod merges them itself: the
+    footprint's changes a grid field by field.
+
+    Raises
+    ------
+    ValueError
+        If the config class refuses the variant's changes.
+    """
+    base = block.config.model_dump()
+    override = getattr(block.stage.config_class, "override", None)
+    if override is None:
+        return {**base, **own}
+    try:
+        return override(base, own)
+    except ValueError as error:
+        raise ValueError(f"{where}: {error}") from None
+
+
+def _stage_settings(stages: Any) -> dict[str, tuple[str, str | None]]:
+    """
+    Return each stage setting a config could hold, with its stage's name and the name of its block.
+
+    *stages* is the ``stages`` block as written, not checked yet. A config
+    without one gets the footprint's settings, with no block name, so that
+    a footprint setting written elsewhere is still recognized. A stage that
+    cannot be imported names none: its own block reports that.
+    """
+    written = stages if isinstance(stages, dict) and stages else None
+    blocks = written or {None: {"class": FOOTPRINT_STAGE}}
+    found: dict[str, tuple[str, str | None]] = {}
+    for handle, block in blocks.items():
+        try:
+            stage = get_stage(str(block["class"]))
+        except (ImportError, KeyError, TypeError, ValueError):
+            continue
+        for setting in stage.config_class.model_fields:
+            found.setdefault(setting, (stage.name, handle))
     return found
+
+
+def _stage_places(stages: Any) -> dict[str, str]:
+    """Return where each stage setting is written, as a sentence, by the setting's name."""
+    return {
+        setting: (
+            f"a {name} setting. Write it under stages: {handle}:."
+            if handle is not None
+            else f"a {name} setting. Write it under stages:, in the {name}'s "
+            f"block (class: {FOOTPRINT_STAGE})."
+        )
+        for setting, (name, handle) in _stage_settings(stages).items()
+    }
 
 
 def _model_settings(model: str) -> dict[str, str]:
@@ -1022,12 +1172,13 @@ def _model_settings(model: str) -> dict[str, str]:
     return dict.fromkeys(fields, f"a {model} setting")
 
 
-def _blocks_of_settings(models: Any) -> dict[str, str]:
+def _blocks_of_settings(models: Any, stages: Any = None) -> dict[str, str]:
     """
     Return where each setting that may not sit at the top of the config is written, by the setting's name.
 
-    *models* is the ``models`` block as written, not checked yet; HYSPLIT's
-    settings are named when it gives no model that can be read.
+    *models* and *stages* are those blocks as written, not checked yet;
+    HYSPLIT's settings are named when the config gives no model that can be
+    read, and the footprint's when it gives no stage.
     """
     blocks = models if isinstance(models, dict) and models else {"hysplit": {}}
     places: dict[str, str] = {}
@@ -1037,17 +1188,11 @@ def _blocks_of_settings(models: Any) -> dict[str, str]:
             fields = _model_settings(str(model))
         except (ImportError, ValueError):
             continue  # reported when the models block itself is checked
-        for field in fields:
+        for setting in fields:
             places.setdefault(
-                field, f"a {model} setting. Write it under models: {name}:."
+                setting, f"a {model} setting. Write it under models: {name}:."
             )
-    places.update(
-        dict.fromkeys(
-            _FOOTPRINT_FIELDS,
-            "a footprint setting. Write it under stages:, in the footprint's "
-            f"block (class: {FOOTPRINT_STAGE}).",
-        )
-    )
+    places.update(_stage_places(stages))
     places["model"] = (
         "no longer a key. Name each transport model as a block under "
         "models:, such as models: {hysplit: {}}."
@@ -1105,81 +1250,6 @@ def _located(met: Any, directory: str | Path | None) -> Any:
     return met.model_copy(update=paths)
 
 
-def _override(group: str, base: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:
-    """
-    Apply a variant's overrides to ``base``.
-
-    *base* is the footprint's block and *spec* what the variant changes of
-    it. A ``grid`` mapping updates the base grid field by field, so a
-    variant can change only the resolution. A variant that sets its own
-    ``geometry`` drops the inherited ``grid`` unless it sets ``grid`` too,
-    so the grid is derived from its geometry.
-
-    Raises
-    ------
-    ValueError
-        If a variant changes part of a grid that is derived from the
-        default ``geometry``. That grid is not known until the geometry is
-        built.
-    """
-    merged = {**base, **spec}
-    if isinstance(spec.get("grid"), dict):
-        if isinstance(base.get("grid"), dict):
-            merged["grid"] = {**base["grid"], **spec["grid"]}
-        elif base.get("geometry") is not None and "geometry" not in spec:
-            raise ValueError(
-                f"Variant {group!r} changes part of a grid that is derived from "
-                "the default geometry. Give a full grid, or set cells_per_target "
-                "to change its resolution."
-            )
-    if spec.get("geometry") is not None and "grid" not in spec:
-        merged.pop("grid", None)
-    return merged
-
-
-def _check_near_field_columns(
-    name: str, transport: dict[str, Any], footprint: FootprintConfig | None
-) -> None:
-    """
-    Refuse a variant whose footprint has the near-field correction and whose model is not asked for its columns.
-
-    Only a model with ``varsiwant`` (HYSPLIT's list of particle columns) is
-    checked; another model's particles are checked when the footprint is
-    made.
-
-    Raises
-    ------
-    ValueError
-        If ``hnf_plume`` is set and ``varsiwant`` lacks a column it reads.
-    """
-    varsiwant = transport.get("varsiwant")
-    if footprint is None or not footprint.hnf_plume or varsiwant is None:
-        return
-    missing = sorted(set(HNF_PLUME_COLUMNS) - set(varsiwant))
-    if missing:
-        raise ValueError(
-            f"Variant {name!r}: the near-field correction (hnf_plume) reads the "
-            f"particle columns {missing}. Add them to varsiwant, or set "
-            "hnf_plume: false."
-        )
-
-
-def _mesh(spec: Any, directory: str | Path | None, meshes: dict[str, Mesh]) -> Mesh:
-    """
-    Return the mesh a geometry spec describes, reading each spec once.
-
-    A relative file starts from *directory*. The spec in the settings keeps
-    the path as written, and a mesh's hash is of its polygons, so moving
-    the project changes no hash.
-    """
-    key = spec.model_dump_json()
-    if key not in meshes:
-        if isinstance(spec, FileGeometrySpec) and directory is not None:
-            spec = spec.model_copy(update={"path": str(absolute(spec.path, directory))})
-        meshes[key] = Mesh.from_spec(spec)
-    return meshes[key]
-
-
 def _check_keys(
     keys: Iterable[str], where: str, allowed: dict[str, str], elsewhere: dict[str, str]
 ) -> None:
@@ -1198,8 +1268,6 @@ def _check_keys(
     for key in keys:
         if key in allowed or key == "from":  # "from:" has its own message
             continue
-        if key == "time_integrate":
-            raise ValueError(f"{where}: {TIME_INTEGRATE_REMOVED}")
         if key == "veght":
             raise ValueError(f"{where}: {VEGHT_RENAMED}")
         if key in elsewhere:

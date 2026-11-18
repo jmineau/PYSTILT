@@ -10,6 +10,7 @@ from stilt.exceptions import (
     EmptyFootprint,
     HYSPLITNotFoundError,
     MeteorologyError,
+    MissingClass,
     SimulationError,
     StiltError,
     WorkerDied,
@@ -22,6 +23,7 @@ PARENTS = {
     SimulationError: (StiltError, RuntimeError),
     MeteorologyError: (SimulationError,),
     HYSPLITNotFoundError: (StiltError, FileNotFoundError),
+    MissingClass: (StiltError, ImportError),
     EmptyFootprint: (StiltError,),
     WorkerDied: (StiltError, RuntimeError),
 }

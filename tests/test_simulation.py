@@ -85,7 +85,7 @@ def test_simulation_is_a_frozen_value(point_receptor, tmp_path):
     assert a.id == (point_receptor.id, "hrrr", None)
     assert str(a) == f"{point_receptor.id}/hrrr"
     assert a.variant.transport.numpar == 10
-    assert a.variant.footprint == FOOT
+    assert a.variant.stages.get("footprint") == FOOT
     assert not (tmp_path / "output").exists()  # building one creates nothing
 
 
@@ -191,7 +191,7 @@ def test_completion_needs_particles_and_the_footprint_when_configured(
 
 def test_particles_only_variant_is_complete_with_particles(point_receptor, tmp_path):
     sim = _sim(tmp_path, point_receptor)
-    assert sim.variant.footprint is None
+    assert sim.variant.stages.get("footprint") is None
     _write_particles(sim)
     assert sim.is_complete
 

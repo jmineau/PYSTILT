@@ -477,7 +477,10 @@ def test_imported_runs_are_the_results_of_the_printed_variants(tmp_path, capsys)
         sim.particles["foot"].to_numpy(), particles["foot_no_hnf_dilution"].to_numpy()
     )
     assert "foot_no_hnf_dilution" not in sim.particles.columns
-    assert sim.variant.footprint is not None and sim.variant.footprint.hnf_plume
+    assert (
+        sim.variant.stages.get("footprint") is not None
+        and sim.variant.stages.get("footprint").hnf_plume
+    )
     assert foot is not None
     np.testing.assert_allclose(sim.footprint.to_numpy(), foot.to_numpy(), rtol=1e-6)
     ((_, perturbed, _),) = list(read_stilt_r(by_id, error=True))

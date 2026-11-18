@@ -11,9 +11,9 @@ import yaml
 from scipy import sparse
 
 from stilt.footprint import Jacobian, jacobian, open_footprints
-from stilt.footprint.config import FootprintConfig
+from stilt.footprint.config import FootprintConfig, footprint_settings
 from stilt.footprint.targets import Mesh
-from stilt.identity import footprint_hash, footprint_settings, settings_hash
+from stilt.identity import settings_hash, stage_hash
 from stilt.output import Output
 from stilt.particles import particles_metadata, write_particles
 from stilt.spatial import Grid
@@ -37,16 +37,13 @@ from .fixtures.output import (
 
 def test_footprint_files_record_the_geometry_hash(tmp_path):
     """A footprint read back from its folder knows the geometry its grid was derived for."""
-    from dataclasses import replace
-
     from stilt.footprint import read_footprint
 
     out = Output(tmp_path / "output")
     spec = {"kind": "windows", "coords": [(-111.85, 40.77)], "size": 0.2}
-    variant = replace(
-        VARIANT,
-        footprint=FootprintConfig(grid=GRID, geometry=spec),
-        geometry_hash="deadbeef00",
+    config = FootprintConfig(grid=GRID, geometry=spec)
+    variant = output_variant(
+        footprint=config.model_copy(update={"geometry_hash": "deadbeef00"})
     )
     receptor = receptor_at()
     path = out.write_footprint(variant, fake_footprint(receptor))
@@ -56,7 +53,7 @@ def test_footprint_files_record_the_geometry_hash(tmp_path):
     record = yaml.safe_load((folder / "_settings.yaml").read_text())
     assert record["settings"]["geometry_hash"] == "deadbeef00"
     # The same footprint config without the geometry hash is another folder.
-    assert out.folder("footprints", replace(variant, geometry_hash=None)) is None
+    assert out.folder("footprints", output_variant(footprint=config)) is None
 
 
 def test_run_folder_is_name_and_hash_with_settings_file(tmp_path):
@@ -228,7 +225,7 @@ def test_footprint_folder_is_variant_name_and_combined_hash(tmp_path):
     variant = output_variant(footprint=config)
     receptor = receptor_at()
     out.write_footprint(variant, fake_footprint(receptor))
-    digest = footprint_hash(VARIANT.particles_hash, footprint_settings(config, None))
+    digest = stage_hash("footprint", footprint_settings(config), VARIANT.particles_hash)
     assert digest == settings_hash(
         {
             "particles": VARIANT.particles_hash,
@@ -437,7 +434,9 @@ def test_jacobian_matches_footprint_aggregate(written_footprints, target):
     out, feet_by_id, empty_id = written_footprints
     bins = _bins()
     table = out.table("footprints", FEET)
-    H = jacobian(table, FEET.footprint, target, bins, [*feet_by_id, empty_id])
+    H = jacobian(
+        table, FEET.stages.get("footprint"), target, bins, [*feet_by_id, empty_id]
+    )
 
     assert list(H.receptors) == list(feet_by_id)
     assert H.empty == [empty_id]
@@ -469,7 +468,7 @@ def test_jacobian_of_fifteen_minute_layers_matches_footprint_aggregate(tmp_path)
 
     H = jacobian(
         out.table("footprints", QUARTERS),
-        QUARTERS.footprint,
+        QUARTERS.stages.get("footprint"),
         target,
         bins,
         [str(receptor.id)],
@@ -489,9 +488,13 @@ def test_jacobian_sparse_row_matches_dense(written_footprints, monkeypatch):
     out, feet_by_id, empty_id = written_footprints
     target = Mesh.from_windows([(-111.85, 40.75), (-111.65, 40.9)], (0.3, 0.3))
     table = out.table("footprints", FEET)
-    dense = jacobian(table, FEET.footprint, target, _bins(), [*feet_by_id, empty_id])
+    dense = jacobian(
+        table, FEET.stages.get("footprint"), target, _bins(), [*feet_by_id, empty_id]
+    )
     monkeypatch.setattr(aggregation, "_DENSE_ROW_MAX", 0)
-    sparse = jacobian(table, FEET.footprint, target, _bins(), [*feet_by_id, empty_id])
+    sparse = jacobian(
+        table, FEET.stages.get("footprint"), target, _bins(), [*feet_by_id, empty_id]
+    )
 
     assert list(sparse.receptors) == list(dense.receptors)
     assert sparse.empty == dense.empty == [empty_id]
@@ -512,8 +515,8 @@ def test_jacobian_takes_a_plain_receptor_column(written_footprints):
         table.column("receptor").cast(pa.string()),
     )
     ids = list(feet_by_id)
-    H = jacobian(table, FEET.footprint, GRID, _bins(), ids)
-    H_plain = jacobian(plain, FEET.footprint, GRID, _bins(), ids)
+    H = jacobian(table, FEET.stages.get("footprint"), GRID, _bins(), ids)
+    H_plain = jacobian(plain, FEET.stages.get("footprint"), GRID, _bins(), ids)
     assert list(H_plain.receptors) == ids
     np.testing.assert_array_equal(H_plain.data.toarray(), H.data.toarray())
 
@@ -555,10 +558,12 @@ def test_jacobian_rows_are_the_requested_receptors(written_footprints):
     ids = list(feet_by_id)
     target = Grid(xmin=-112.0, xmax=-111.5, ymin=40.5, ymax=41.0, xres=0.25, yres=0.25)
     table = out.table("footprints", FEET)
-    H = jacobian(table, FEET.footprint, target, _bins(), [ids[1], empty_id])
+    H = jacobian(
+        table, FEET.stages.get("footprint"), target, _bins(), [ids[1], empty_id]
+    )
     alone = jacobian(
         out.table("footprints", FEET, [ids[1]]),
-        FEET.footprint,
+        FEET.stages.get("footprint"),
         target,
         _bins(),
         [ids[1]],
@@ -576,12 +581,14 @@ def test_jacobian_rejects_bins_not_closed_on_the_left(written_footprints, closed
     left = _bins()
     bins = pd.IntervalIndex.from_arrays(left.left, left.right, closed=closed)
     with pytest.raises(ValueError, match="closed on the left"):
-        jacobian(out.table("footprints", FEET), FEET.footprint, GRID, bins, [])
+        jacobian(
+            out.table("footprints", FEET), FEET.stages.get("footprint"), GRID, bins, []
+        )
 
 
 def test_jacobian_with_no_footprints_is_empty(tmp_path):
     table = Output(tmp_path / "output").table("footprints", FEET)
-    H = jacobian(table, FEET.footprint, GRID, _bins(), [])
+    H = jacobian(table, FEET.stages.get("footprint"), GRID, _bins(), [])
     assert H.data.shape == (0, len(_bins()) * len(GRID.index))
     assert list(H.receptors) == []
 
@@ -592,7 +599,7 @@ def test_jacobian_to_xarray_holds_the_matrix(written_footprints):
     bins = _bins()
     H = jacobian(
         out.table("footprints", FEET),
-        FEET.footprint,
+        FEET.stages.get("footprint"),
         target,
         bins,
         [*feet_by_id, empty_id],
@@ -621,7 +628,11 @@ def test_a_grid_jacobian_names_its_cell_levels(written_footprints):
     target = Grid(xmin=-112.0, xmax=-111.5, ymin=40.5, ymax=41.0, xres=0.25, yres=0.25)
     bins = _bins()
     H = jacobian(
-        out.table("footprints", FEET), FEET.footprint, target, bins, list(feet_by_id)
+        out.table("footprints", FEET),
+        FEET.stages.get("footprint"),
+        target,
+        bins,
+        list(feet_by_id),
     )
 
     assert H.columns.names == ["time", "lon", "lat"]
@@ -929,7 +940,7 @@ def test_each_result_file_names_its_settings_and_the_version_that_wrote_it(tmp_p
     assert meta[b"stilt:pystilt"].decode() == stilt.__version__
     for path in (footprint, empty):
         meta = pq.read_schema(path).metadata
-        assert meta[b"stilt:hash"].decode() == FEET.footprint_hash
+        assert meta[b"stilt:hash"].decode() == FEET.stage_hashes.get("footprint")
         assert meta[b"stilt:pystilt"].decode() == stilt.__version__
 
 

@@ -10,8 +10,11 @@ the model build (for HYSPLIT, the SHA-256 of ``hycs_std``, not the version
 it prints), and whether it is an ensemble (the realizations of one
 share a folder, a ``realization=k`` partition each, so the number is not
 in the hash). A
-footprint's settings are its footprint config, with the grid it is
-computed on, and the hash of the geometry the grid was derived for.
+stage's settings are the record the stage itself writes
+(:meth:`stilt.stages.Stage.settings`), hashed with the particles' hash and
+the hash of each stage it reads (:func:`stage_hash`); the footprint's are
+its footprint config, with the grid it is computed on, and the hash of the
+geometry the grid was derived for.
 
 The hash depends on what the settings mean rather than how they were
 written. A stored record is read back through the current config classes,
@@ -28,8 +31,6 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from stilt.footprint.config import FootprintConfig
-from stilt.transforms import dump_transform, load_transform, transform_kind
 from stilt.transport import ModelInfo, TransportConfig, get_model
 
 
@@ -140,76 +141,40 @@ def read_run_settings(stored: Mapping[str, Any]) -> dict[str, Any]:
     return record
 
 
-# -- footprints ---------------------------------------------------------------
+# -- stages -------------------------------------------------------------------
 
 
-def _record_transform(transform: Any) -> dict[str, Any]:
-    """Return a transform as recorded, its ``kind`` alone if it has no settings to write."""
-    try:
-        return dump_transform(transform)
-    except TypeError:
-        return {"kind": transform_kind(transform)}
-
-
-def _read_transform(spec: dict[str, Any], source: str) -> Any:
-    """Return a recorded transform, or its mapping when it cannot be rebuilt here."""
-    try:
-        return load_transform(spec)
-    except (ImportError, TypeError, ValueError) as exc:
-        warnings.warn(
-            f"{source}: transform {spec.get('kind')!r} could not be rebuilt "
-            f"({exc}). It is kept as its settings and cannot be applied.",
-            stacklevel=3,
-        )
-        return spec
-
-
-def footprint_settings(
-    footprint: FootprintConfig, geometry_hash: str | None
-) -> dict[str, Any]:
+def stage_hash(
+    name: str,
+    settings: Mapping[str, Any],
+    particles_hash: str,
+    reads: Mapping[str, str] | None = None,
+) -> str:
     """
-    Return the settings that identify a footprint, besides its particles, in canonical form.
+    Return the hash of the results of the stage *name* with *settings*.
 
-    The same record goes in a footprint folder's ``_settings.yaml`` and in
-    each footprint file and array. A transform that is not a pydantic model
-    is recorded by its ``kind`` alone.
+    A stage's results are named by what they were made from and with: the
+    particles' hash (*particles_hash*), the hash of each stage it reads
+    (*reads*, by the stage's name), and the stage's own settings record
+    (:meth:`stilt.stages.Stage.settings`). So results made from other
+    particles, or from another stage's results under other settings, never
+    share a folder.
+
+    Examples
+    --------
+    >>> stage_hash("footprint", {"tres": "1h"}, "a3f9c2") == settings_hash(
+    ...     {"particles": "a3f9c2", "footprint": {"tres": "1h"}}
+    ... )
+    True
     """
-    data = footprint.model_dump(mode="json", exclude={"transforms"})
-    data["transforms"] = [_record_transform(t) for t in footprint.transforms]
-    data["geometry_hash"] = geometry_hash
-    return canonical(data)
-
-
-def read_footprint_settings(
-    stored: Mapping[str, Any], source: str = "footprint settings"
-) -> tuple[FootprintConfig, str | None]:
-    """
-    Return the footprint config and geometry hash that :func:`footprint_settings` recorded.
-
-    A transform whose class cannot be imported here is kept as its mapping,
-    with a warning naming *source*, so the record still reads.
-    """
-    data = dict(stored)
-    geometry_hash = data.pop("geometry_hash", None)
-    specs = data.pop("transforms", [])
-    config = FootprintConfig.model_validate(data)
-    # model_copy skips validation, so a mapping stays a mapping.
-    config = config.model_copy(
-        update={"transforms": [_read_transform(s, source) for s in specs]}
-    )
-    return config, geometry_hash
-
-
-def footprint_hash(particles_hash: str, settings: Mapping[str, Any]) -> str:
-    """Return the hash of footprints with *settings*, made from the particles hashed *particles_hash*."""
-    return settings_hash({"particles": particles_hash, "footprint": settings})
+    return settings_hash({"particles": particles_hash, **(reads or {}), name: settings})
 
 
 __all__ = [
-    "footprint_settings",
-    "read_footprint_settings",
+    "canonical",
     "read_run_settings",
     "run_settings",
-    "transport_from_settings",
     "settings_hash",
+    "stage_hash",
+    "transport_from_settings",
 ]

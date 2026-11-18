@@ -191,7 +191,7 @@ def background(
         ``field.rename(level="pres")``. A field with a ``time`` dimension is
         sampled at the endpoint's ``time``.
     transforms : sequence, optional
-        The footprint's particle transforms (``sim.variant.footprint.transforms``), so
+        The footprint's particle transforms (``sim.variant.stages["footprint"].transforms``), so
         the background is weighted like the footprint and adds to its
         enhancement. A tower receptor has none.
     receptor : Receptor, optional

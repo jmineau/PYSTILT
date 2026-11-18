@@ -147,7 +147,7 @@ def test_a_project_runs_with_its_output_on_an_object_store(
     assert sim.log  # the run's log, read back from the store
     ds = project.footprints()
     assert ds.sizes["receptor"] == 1
-    grid = project.variants["hrrr"].footprint.grid
+    grid = project.variants["hrrr"].stages.get("footprint").grid
     bins = pd.IntervalIndex.from_breaks(
         pd.date_range(
             wbb_receptor.time - pd.Timedelta("1D"),

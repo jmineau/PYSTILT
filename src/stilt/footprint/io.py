@@ -24,8 +24,11 @@ import pyarrow as pa
 import xarray as xr
 
 from stilt._paths import location, readable, write_parquet
-from stilt.footprint.config import FootprintConfig
-from stilt.identity import footprint_settings, read_footprint_settings
+from stilt.footprint.config import (
+    FootprintConfig,
+    footprint_settings,
+    read_footprint_settings,
+)
 from stilt.receptors import Receptor
 from stilt.spatial import Grid, _with_cf_grid, horizontal_dims
 
@@ -53,7 +56,6 @@ def _footprint_array(
     name: str,
     x: np.ndarray,
     y: np.ndarray,
-    geometry_hash: str | None = None,
 ) -> xr.DataArray:
     """
     Return a footprint: *values* in ``(time, y, x)`` order, at cell centers *x* and *y*.
@@ -74,7 +76,7 @@ def _footprint_array(
         dims=["time", y_dim, x_dim],
         coords={"time": times, y_dim: y, x_dim: x},
     )
-    return _describe(data, receptor, config, name, geometry_hash)
+    return _describe(data, receptor, config, name)
 
 
 def _with_cf_metadata(ds: xr.Dataset, *, grid: Grid) -> xr.Dataset:
@@ -90,9 +92,9 @@ def _with_cf_metadata(ds: xr.Dataset, *, grid: Grid) -> xr.Dataset:
 UNITS = "ppm m2 s umol-1"
 
 
-def _settings_json(config: FootprintConfig, geometry_hash: str | None) -> str:
-    """Return a footprint's settings as JSON (:func:`stilt.identity.footprint_settings`)."""
-    return json.dumps(footprint_settings(config, geometry_hash))
+def _settings_json(config: FootprintConfig) -> str:
+    """Return a footprint's settings as JSON (:func:`stilt.footprint.config.footprint_settings`)."""
+    return json.dumps(footprint_settings(config))
 
 
 def _describe(
@@ -100,7 +102,6 @@ def _describe(
     receptor: Receptor,
     config: FootprintConfig,
     name: str,
-    geometry_hash: str | None = None,
 ) -> xr.DataArray:
     """
     Name a footprint array and attach what it belongs to.
@@ -118,15 +119,13 @@ def _describe(
                 "long_name": "footprint",
                 "stilt_name": name,
                 "stilt_receptor": receptor.to_json(),
-                "stilt_footprint": _settings_json(config, geometry_hash),
+                "stilt_footprint": _settings_json(config),
             }
         )
     )
 
 
-def _from_sparse_table(
-    table: Any, config: FootprintConfig, geometry_hash: str | None = None
-) -> xr.DataArray | None:
+def _from_sparse_table(table: Any, config: FootprintConfig) -> xr.DataArray | None:
     """Return the dense footprint of a stored sparse table, or ``None`` when it is empty."""
     meta = table.schema.metadata or {}
     if _is_empty(meta):
@@ -151,9 +150,7 @@ def _from_sparse_table(
             "foot"
         ].to_numpy()
 
-    return _footprint_array(
-        values, hours, receptor, config, name, x_axis, y_axis, geometry_hash
-    )
+    return _footprint_array(values, hours, receptor, config, name, x_axis, y_axis)
 
 
 def read_footprint(
@@ -212,8 +209,8 @@ def read_footprint(
     stored = (table.schema.metadata or {}).get(b"stilt:footprint")
     if stored is None:
         raise ValueError(f"{path} does not record its footprint settings.")
-    config, geometry_hash = read_footprint_settings(json.loads(stored), path.name)
-    foot = _from_sparse_table(table, config, geometry_hash)
+    config = read_footprint_settings(json.loads(stored), path.name)
+    foot = _from_sparse_table(table, config)
     if foot is not None:
         meta = table.schema.metadata or {}
         made = {
@@ -348,9 +345,7 @@ def open_footprints(
             "These footprints were made with different settings. Open one "
             "variant's footprints at a time."
         )
-    config, geometry_hash = read_footprint_settings(
-        json.loads(stored.pop() or b"{}"), located[0].name
-    )
+    config = read_footprint_settings(json.loads(stored.pop() or b"{}"), located[0].name)
     grid = config.grid
     if grid is None:
         raise ValueError("Stored footprints need settings with a grid.")
@@ -405,7 +400,7 @@ def open_footprints(
     ds.attrs.update(
         {
             "stilt_name": footers[0].get(b"stilt:name", b"").decode(),
-            "stilt_footprint": _settings_json(config, geometry_hash),
+            "stilt_footprint": _settings_json(config),
             "empty": [
                 str(r.id) for r, empty in zip(receptors, is_empty, strict=True) if empty
             ],
@@ -449,7 +444,6 @@ def _file_metadata(
     hours: list[int],
     empty: bool,
     metadata: dict[bytes, bytes] | None,
-    geometry_hash: str | None = None,
 ) -> dict[bytes, bytes]:
     """Return what a footprint file records so that it reads alone."""
     return {
@@ -457,7 +451,7 @@ def _file_metadata(
         b"stilt:name": name.encode(),
         b"stilt:hours": json.dumps(hours).encode(),
         b"stilt:empty": b"true" if empty else b"false",
-        b"stilt:footprint": _settings_json(config, geometry_hash).encode(),
+        b"stilt:footprint": _settings_json(config).encode(),
         **(metadata or {}),
     }
 
@@ -467,7 +461,6 @@ def write_footprint(
     foot: xr.DataArray,
     config: FootprintConfig | None = None,
     metadata: dict[bytes, bytes] | None = None,
-    geometry_hash: str | None = None,
 ) -> Location:
     """
     Write a footprint to a Parquet file that :func:`read_footprint` reads alone.
@@ -490,9 +483,6 @@ def write_footprint(
         the footprint's own, ``foot.stilt.config``.
     metadata : dict, optional
         More file metadata, such as the settings hash.
-    geometry_hash : str, optional
-        Hash of the geometry the grid was derived for. Defaults to the
-        footprint's own, ``foot.stilt.geometry_hash``.
 
     Returns
     -------
@@ -559,7 +549,6 @@ def write_footprint(
         hours.tolist(),
         False,
         metadata,
-        foot.stilt.geometry_hash if geometry_hash is None else geometry_hash,
     )
     return write_parquet(table.replace_schema_metadata(meta), location(path))
 
@@ -570,7 +559,6 @@ def write_empty_footprint(
     config: FootprintConfig,
     name: str = "",
     metadata: dict[bytes, bytes] | None = None,
-    geometry_hash: str | None = None,
 ) -> Location:
     """
     Record in a footprint file that a receptor's footprint is empty: no particle reached the grid.
@@ -578,6 +566,6 @@ def write_empty_footprint(
     The file has no rows and is marked ``stilt:empty``;
     :func:`read_footprint` returns ``None`` for it.
     """
-    meta = _file_metadata(receptor, config, name, [], True, metadata, geometry_hash)
+    meta = _file_metadata(receptor, config, name, [], True, metadata)
     table = FOOTPRINT_SCHEMA.empty_table().replace_schema_metadata(meta)
     return write_parquet(table, location(path))

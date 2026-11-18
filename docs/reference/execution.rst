@@ -98,3 +98,22 @@ of the run are a complete run.
    stilt.transport.stilt_r.StiltRModel
    stilt.transport.stilt_r.StiltRConfig
    stilt.transport.stilt_r.StiltRMetConfig
+
+Stages
+------
+
+A stage makes one file per receptor from a simulation's results, after the
+transport model runs. The footprint is one
+(:class:`stilt.footprint.FootprintStage`). A ``stages`` block of
+``config.yaml`` names its stage's class by import path, so a stage in a
+package of your own needs no registration, and CONTRIBUTING describes how to
+write one. Use :func:`~stilt.stages.check_stage` in its tests.
+
+.. autosummary::
+   :toctree: _api
+   :nosignatures:
+
+   stilt.stages.Stage
+   stilt.stages.get_stage
+   stilt.stages.ordered
+   stilt.stages.check_stage
