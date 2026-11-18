@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=73b264a4"></script>
+    <script src="../_static/documentation_options.js?v=01b04606"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev3+g750b010b5" />
+  <meta name="docsearch:version" content="0.1.0a30.dev8+g049832498" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -720,8 +720,8 @@ cuts a multipoint release short fails as <code class="docutils literal notransla
 <p>Vertical weighting needs each particle’s release height, the
 <code class="docutils literal notranslate"><span class="pre">release_height</span></code> column of the particles. HYSPLIT does not record which
 release point a particle came from, so PYSTILT works it out from the first
-row HYSPLIT writes for the particle. With the bundled
-HYSPLIT build, that row comes one timestep after release. By then the wind
+row HYSPLIT writes for the particle. With HYSPLIT 5.1.0, STILT-R’s
+build, that row comes one timestep after release. By then the wind
 has moved the particle a few hundred meters, which can be more than the
 spacing between the points of a slant column.</p>
 <p>PYSTILT recovers release heights in this order:</p>
@@ -740,11 +740,12 @@ release time (<a class="reference internal" href="hysplit_build.html"><span clas
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="c1"># config.yaml</span>
 <span class="nt">models</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">hysplit</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">exe_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/path/to/hysplit/exec</span><span class="w">    </span><span class="c1"># directory containing hycs_std</span>
+<span class="w">    </span><span class="nt">directory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/path/to/hysplit</span><span class="w">    </span><span class="c1"># holds exec/hycs_std</span>
 </pre></div>
 </div>
-<p>The build’s version is saved with the particles, so you can tell which
-build made them.</p>
+<p>The checksum of the build’s <code class="docutils literal notranslate"><span class="pre">hycs_std</span></code> is part of the particles’
+settings, and the version it prints is recorded beside them, so you can
+tell which build made them.</p>
 </section>
 <section id="working-with-receptors-in-code">
 <h2>Working with receptors in code<a class="headerlink" href="#working-with-receptors-in-code" title="Link to this heading">#</a></h2>

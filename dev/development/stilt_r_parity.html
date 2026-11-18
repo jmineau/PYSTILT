@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=73b264a4"></script>
+    <script src="../_static/documentation_options.js?v=01b04606"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev3+g750b010b5" />
+  <meta name="docsearch:version" content="0.1.0a30.dev8+g049832498" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -505,6 +505,11 @@ STILT-R” covers and how to move to a newer STILT-R commit.</p>
 </div>
 <p>When the fidelity tests pass, PYSTILT matches STILT-R at this commit. It
 says nothing about STILT-R’s current <code class="docutils literal notranslate"><span class="pre">main</span></code> branch.</p>
+<p>Both sides run the same <code class="docutils literal notranslate"><span class="pre">hycs_std</span></code>: STILT-R’s <code class="docutils literal notranslate"><span class="pre">bin/linux_x64/hycs_std</span></code>
+at the pin, HYSPLIT 5.1.0. PYSTILT includes no HYSPLIT, so CI puts that
+file on <code class="docutils literal notranslate"><span class="pre">PATH</span></code> for PYSTILT’s runs, and for the integration tests and the
+docs build too (<code class="docutils literal notranslate"><span class="pre">.github/scripts/install_hysplit.sh</span></code>). The fidelity tests check that
+the <code class="docutils literal notranslate"><span class="pre">hycs_std</span></code> PYSTILT finds and STILT-R’s are the same file.</p>
 </section>
 <section id="what-matches">
 <h2>What matches<a class="headerlink" href="#what-matches" title="Link to this heading">#</a></h2>

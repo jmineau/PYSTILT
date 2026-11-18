@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=73b264a4"></script>
+    <script src="../../_static/documentation_options.js?v=01b04606"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -59,12 +59,12 @@
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="stilt.config.Variant.footprint_hash" href="stilt.config.Variant.footprint_hash.html" />
+    <link rel="next" title="stilt.config.Variant.build" href="stilt.config.Variant.build.html" />
     <link rel="prev" title="stilt.Simulation.transport_error" href="stilt.Simulation.transport_error.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev3+g750b010b5" />
+  <meta name="docsearch:version" content="0.1.0a30.dev8+g049832498" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -497,13 +497,14 @@
 </ul>
 </details></li>
 <li class="toctree-l2 current active has-children"><a aria-current="page" class="current reference internal" href="#">stilt.config.Variant</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.build.html">stilt.config.Variant.build</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.footprint_hash.html">stilt.config.Variant.footprint_hash</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.footprint_settings.html">stilt.config.Variant.footprint_settings</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.met_settings.html">stilt.config.Variant.met_settings</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.particles_hash.html">stilt.config.Variant.particles_hash</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.readable_run_settings.html">stilt.config.Variant.readable_run_settings</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.realization_numbers.html">stilt.config.Variant.realization_numbers</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.run_settings.html">stilt.config.Variant.run_settings</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.run_settings_without_met.html">stilt.config.Variant.run_settings_without_met</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.transport_for.html">stilt.config.Variant.transport_for</a></li>
 </ul>
 </details></li>
@@ -690,6 +691,7 @@
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.TransportModel.met_config_class.html">stilt.transport.TransportModel.met_config_class</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.TransportModel.data_files.html">stilt.transport.TransportModel.data_files</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.TransportModel.run.html">stilt.transport.TransportModel.run</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.transport.TransportModel.sha256.html">stilt.transport.TransportModel.sha256</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.TransportModel.version.html">stilt.transport.TransportModel.version</a></li>
 </ul>
 </details></li>
@@ -716,6 +718,7 @@
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.downloads_met.html">stilt.transport.hysplit.HysplitModel.downloads_met</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.fetch_met.html">stilt.transport.hysplit.HysplitModel.fetch_met</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.run.html">stilt.transport.hysplit.HysplitModel.run</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.sha256.html">stilt.transport.hysplit.HysplitModel.sha256</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.version.html">stilt.transport.hysplit.HysplitModel.version</a></li>
 </ul>
 </details></li>
@@ -723,6 +726,7 @@
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.stilt_r.StiltRModel.needs_workdir.html">stilt.transport.stilt_r.StiltRModel.needs_workdir</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.stilt_r.StiltRModel.data_files.html">stilt.transport.stilt_r.StiltRModel.data_files</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.stilt_r.StiltRModel.run.html">stilt.transport.stilt_r.StiltRModel.run</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.transport.stilt_r.StiltRModel.sha256.html">stilt.transport.stilt_r.StiltRModel.sha256</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.stilt_r.StiltRModel.version.html">stilt.transport.stilt_r.StiltRModel.version</a></li>
 </ul>
 </details></li>
@@ -841,6 +845,8 @@
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitConfig.realizations.html">stilt.transport.hysplit.HysplitConfig.realizations</a></li>
 </ul>
 </details></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.transport.hysplit.find_hycs_std.html">stilt.transport.hysplit.find_hycs_std</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.transport.hysplit.data_tables.html">stilt.transport.hysplit.data_tables</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.transport.hysplit.write_inputs.html">stilt.transport.hysplit.write_inputs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.transport.hysplit.run_hycs_std.html">stilt.transport.hysplit.run_hycs_std</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.transport.hysplit.read_particle_dat.html">stilt.transport.hysplit.read_particle_dat</a></li>
@@ -923,8 +929,8 @@
 <h1>stilt.config.Variant<a class="headerlink" href="#stilt-config-variant" title="Link to this heading">#</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="stilt.config.Variant">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">stilt.config.</span></span><span class="sig-name descname"><span class="pre">Variant</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'str'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">met</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'str'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">met_config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'Any'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">transport</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'TransportConfig'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'ModelInfo'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">realizations</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'int</span> <span class="pre">|</span> <span class="pre">None'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">footprint</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'FootprintConfig</span> <span class="pre">|</span> <span class="pre">None'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geometry_hash</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'str</span> <span class="pre">|</span> <span class="pre">None'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/stilt/config.html#Variant"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.config.Variant" title="Link to this definition">#</a></dt>
-<dd><p>One variant, resolved: its configs, its met, the model build, and its hashes.</p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">stilt.config.</span></span><span class="sig-name descname"><span class="pre">Variant</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'str'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">met</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'str'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">met_config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'Any'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">transport</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'TransportConfig'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'str'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">realizations</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'int</span> <span class="pre">|</span> <span class="pre">None'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">footprint</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'FootprintConfig</span> <span class="pre">|</span> <span class="pre">None'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geometry_hash</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'str</span> <span class="pre">|</span> <span class="pre">None'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/stilt/config.html#Variant"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.config.Variant" title="Link to this definition">#</a></dt>
+<dd><p>One variant, resolved: its configs, its met, its transport model, and its hashes.</p>
 <p>Get one from <code class="docutils literal notranslate"><span class="pre">project.variants</span></code> or <code class="docutils literal notranslate"><span class="pre">sim.variant</span></code>. A variant with
 <code class="docutils literal notranslate"><span class="pre">realizations:</span> <span class="pre">N</span></code> is an ensemble: its simulations run N times,
 realization <code class="docutils literal notranslate"><span class="pre">k</span></code> with <code class="docutils literal notranslate"><span class="pre">seed</span> <span class="pre">+</span> <span class="pre">k</span></code> (<a class="reference internal" href="stilt.config.Variant.transport_for.html#stilt.config.Variant.transport_for" title="stilt.config.Variant.transport_for"><code class="xref py py-meth docutils literal notranslate"><span class="pre">transport_for()</span></code></a>), and its
@@ -939,26 +945,29 @@ footprints. The hashes are computed once. Change a variant with
 <h2>Attributes<a class="headerlink" href="#attributes" title="Link to this heading">#</a></h2>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="stilt.config.Variant.footprint_hash.html#stilt.config.Variant.footprint_hash" title="stilt.config.Variant.footprint_hash"><code class="xref py py-obj docutils literal notranslate"><span class="pre">footprint_hash</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="stilt.config.Variant.build.html#stilt.config.Variant.build" title="stilt.config.Variant.build"><code class="xref py py-obj docutils literal notranslate"><span class="pre">build</span></code></a></p></td>
+<td><p>The transport model build that runs it.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="stilt.config.Variant.footprint_hash.html#stilt.config.Variant.footprint_hash" title="stilt.config.Variant.footprint_hash"><code class="xref py py-obj docutils literal notranslate"><span class="pre">footprint_hash</span></code></a></p></td>
 <td><p>Hash of the particles and <code class="xref py py-attr docutils literal notranslate"><span class="pre">footprint_settings</span></code>, which finds the footprint folder.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="stilt.config.Variant.footprint_settings.html#stilt.config.Variant.footprint_settings" title="stilt.config.Variant.footprint_settings"><code class="xref py py-obj docutils literal notranslate"><span class="pre">footprint_settings</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="stilt.config.Variant.footprint_settings.html#stilt.config.Variant.footprint_settings" title="stilt.config.Variant.footprint_settings"><code class="xref py py-obj docutils literal notranslate"><span class="pre">footprint_settings</span></code></a></p></td>
 <td><p>The settings that identify this variant's footprints, or <code class="docutils literal notranslate"><span class="pre">None</span></code> for particles only.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="stilt.config.Variant.met_settings.html#stilt.config.Variant.met_settings" title="stilt.config.Variant.met_settings"><code class="xref py py-obj docutils literal notranslate"><span class="pre">met_settings</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="stilt.config.Variant.met_settings.html#stilt.config.Variant.met_settings" title="stilt.config.Variant.met_settings"><code class="xref py py-obj docutils literal notranslate"><span class="pre">met_settings</span></code></a></p></td>
 <td><p>What a run records of the met, its config's <code class="docutils literal notranslate"><span class="pre">settings()</span></code>.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="stilt.config.Variant.particles_hash.html#stilt.config.Variant.particles_hash" title="stilt.config.Variant.particles_hash"><code class="xref py py-obj docutils literal notranslate"><span class="pre">particles_hash</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="stilt.config.Variant.particles_hash.html#stilt.config.Variant.particles_hash" title="stilt.config.Variant.particles_hash"><code class="xref py py-obj docutils literal notranslate"><span class="pre">particles_hash</span></code></a></p></td>
 <td><p>Hash of <code class="xref py py-attr docutils literal notranslate"><span class="pre">run_settings</span></code>, which finds the particles folder.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="stilt.config.Variant.readable_run_settings.html#stilt.config.Variant.readable_run_settings" title="stilt.config.Variant.readable_run_settings"><code class="xref py py-obj docutils literal notranslate"><span class="pre">readable_run_settings</span></code></a></p></td>
+<td><p>The settings that identify this variant's particles, without what cannot be read here.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="stilt.config.Variant.realization_numbers.html#stilt.config.Variant.realization_numbers" title="stilt.config.Variant.realization_numbers"><code class="xref py py-obj docutils literal notranslate"><span class="pre">realization_numbers</span></code></a></p></td>
 <td><p>The realizations its simulations run as, from <code class="docutils literal notranslate"><span class="pre">0</span></code> to <code class="docutils literal notranslate"><span class="pre">N</span> <span class="pre">-</span> <span class="pre">1</span></code>, or <code class="docutils literal notranslate"><span class="pre">[None]</span></code> for a single run.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="stilt.config.Variant.run_settings.html#stilt.config.Variant.run_settings" title="stilt.config.Variant.run_settings"><code class="xref py py-obj docutils literal notranslate"><span class="pre">run_settings</span></code></a></p></td>
 <td><p>The settings that identify this variant's particles, as <code class="docutils literal notranslate"><span class="pre">_settings.yaml</span></code> records them.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="stilt.config.Variant.run_settings_without_met.html#stilt.config.Variant.run_settings_without_met" title="stilt.config.Variant.run_settings_without_met"><code class="xref py py-obj docutils literal notranslate"><span class="pre">run_settings_without_met</span></code></a></p></td>
-<td><p>The settings that identify this variant's particles, except the met's.</p></td>
 </tr>
 </tbody>
 </table>
@@ -997,11 +1006,11 @@ footprints. The hashes are computed once. Change a variant with
       </div>
     </a>
     <a class="right-next"
-       href="stilt.config.Variant.footprint_hash.html"
+       href="stilt.config.Variant.build.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">stilt.config.Variant.footprint_hash</p>
+        <p class="prev-next-title">stilt.config.Variant.build</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>

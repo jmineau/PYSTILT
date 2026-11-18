@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=73b264a4"></script>
+    <script src="../../../_static/documentation_options.js?v=01b04606"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev3+g750b010b5" />
+  <meta name="docsearch:version" content="0.1.0a30.dev8+g049832498" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -826,8 +826,8 @@
 <span class="sd">    point's altitude. For a column receptor it is inside one of the</span>
 <span class="sd">    ``numpar`` slabs the column is split into, and ``release_height`` is that slab's</span>
 <span class="sd">    center: the slab is what the particle stands for, not the random</span>
-<span class="sd">    height inside it. A model that writes no release row, such as the</span>
-<span class="sd">    bundled HYSPLIT, falls back to matching: a column's particles are</span>
+<span class="sd">    height inside it. A model that writes no release row, such as HYSPLIT</span>
+<span class="sd">    5.1.0 (STILT-R's build), falls back to matching: a column's particles are</span>
 <span class="sd">    released bottom to top in ``particle`` order, and a multipoint receptor's</span>
 <span class="sd">    are matched to the nearest point from their first row.</span>
 
@@ -870,8 +870,8 @@
 
 <span class="sd">    The column is split into ``numpar`` slabs of equal depth. With release</span>
 <span class="sd">    rows, a particle's slab is the one its release height falls in;</span>
-<span class="sd">    without them, particle ``particle`` is in slab ``particle``, as the bundled</span>
-<span class="sd">    HYSPLIT releases them.</span>
+<span class="sd">    without them, particle ``particle`` is in slab ``particle``, as HYSPLIT</span>
+<span class="sd">    releases them.</span>
 <span class="sd">    """</span>
     <span class="n">numpar</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">())</span>
     <span class="n">step</span> <span class="o">=</span> <span class="p">(</span><span class="n">receptor</span><span class="o">.</span><span class="n">top</span> <span class="o">-</span> <span class="n">receptor</span><span class="o">.</span><span class="n">bottom</span><span class="p">)</span> <span class="o">/</span> <span class="n">numpar</span>
@@ -934,7 +934,7 @@
                     <span class="s2">"model writes no t=0 row, so particles cannot be "</span>
                     <span class="s2">"reliably matched to their release points; 'release_height' may be wrong. "</span>
                     <span class="s2">"Use a HYSPLIT build that writes release-time rows "</span>
-                    <span class="s2">"(HysplitConfig.exe_dir) or space the points more than "</span>
+                    <span class="s2">"(HysplitConfig.directory) or space the points more than "</span>
                     <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">_MIN_RELIABLE_SPACING_M</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> m apart."</span><span class="p">,</span>
                     <span class="n">stacklevel</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
                 <span class="p">)</span>

@@ -113,12 +113,12 @@ A model should write each particle's release as a row at ``age = 0``, with
 ``foot = 0``: a positive ``foot`` there would add a layer at hour 0 to the
 footprint. That row is where the particle started, so it says which release point of a
 multipoint receptor the particle left from, and which slab of a column
-receptor (:func:`add_release_heights`). The HYSPLIT build bundled with
-PYSTILT writes no such row: its first row is one time step after release.
+receptor (:func:`add_release_heights`). HYSPLIT 5.1.0, STILT-R's build,
+writes no such row: its first row is one time step after release.
 For it, PYSTILT matches each particle to a release point from its first
 position, and takes a column's particles to be released bottom to top in
 ``particle`` order. A HYSPLIT build patched to write the release rows
-(``exe_dir``) makes the matching exact.
+(``directory``) makes the matching exact.
 
 Columns the model adds
 ----------------------

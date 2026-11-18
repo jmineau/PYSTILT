@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="_static/documentation_options.js?v=73b264a4"></script>
+    <script src="_static/documentation_options.js?v=01b04606"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev3+g750b010b5" />
+  <meta name="docsearch:version" content="0.1.0a30.dev8+g049832498" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -526,6 +526,8 @@
 </li>
       <li><a href="reference/_api/stilt.Mesh.bounds.html#stilt.Mesh.bounds">bounds (stilt.Mesh property)</a>
 </li>
+      <li><a href="reference/_api/stilt.config.Variant.build.html#stilt.config.Variant.build">build (stilt.config.Variant property)</a>
+</li>
   </ul></td>
 </tr></table>
 
@@ -620,6 +622,8 @@
         <li><a href="reference/_api/stilt.transport.TransportModel.data_files.html#stilt.transport.TransportModel.data_files">(stilt.transport.TransportModel method)</a>
 </li>
       </ul></li>
+      <li><a href="reference/_api/stilt.transport.hysplit.data_tables.html#stilt.transport.hysplit.data_tables">data_tables() (in module stilt.transport.hysplit)</a>
+</li>
       <li><a href="getting_started/glossary.html#term-defaults"><strong>defaults</strong></a>
 </li>
       <li><a href="reference/_api/stilt.observations.plumes.density_polygon.html#stilt.observations.plumes.density_polygon">density_polygon() (in module stilt.observations.plumes)</a>
@@ -695,6 +699,8 @@
       <li><a href="reference/_api/stilt.footprint.config.FileGeometrySpec.html#stilt.footprint.config.FileGeometrySpec">FileGeometrySpec (class in stilt.footprint.config)</a>
 </li>
       <li><a href="reference/_api/stilt.transport.hysplit.Met.files_for.html#stilt.transport.hysplit.Met.files_for">files_for() (stilt.transport.hysplit.Met method)</a>
+</li>
+      <li><a href="reference/_api/stilt.transport.hysplit.find_hycs_std.html#stilt.transport.hysplit.find_hycs_std">find_hycs_std() (in module stilt.transport.hysplit)</a>
 </li>
       <li><a href="reference/_api/stilt.transforms.FirstOrderLifetime.html#stilt.transforms.FirstOrderLifetime">FirstOrderLifetime (class in stilt.transforms)</a>
 </li>
@@ -1142,6 +1148,8 @@
 </li>
       <li><a href="reference/_api/stilt.transport.hysplit.Met.readable.html#stilt.transport.hysplit.Met.readable">readable() (stilt.transport.hysplit.Met method)</a>
 </li>
+      <li><a href="reference/_api/stilt.config.Variant.readable_run_settings.html#stilt.config.Variant.readable_run_settings">readable_run_settings (stilt.config.Variant property)</a>
+</li>
       <li><a href="reference/_api/stilt.transforms.PressureWeighting.reads_zsfc.html#stilt.transforms.PressureWeighting.reads_zsfc">reads_zsfc (stilt.transforms.PressureWeighting attribute)</a>
 </li>
       <li><a href="getting_started/glossary.html#term-realization"><strong>realization</strong></a>
@@ -1162,10 +1170,10 @@
 </li>
       <li><a href="getting_started/glossary.html#term-receptor-id"><strong>receptor id</strong></a>
 </li>
-      <li><a href="reference/_api/stilt.Project.receptor.html#stilt.Project.receptor">receptor() (stilt.Project method)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/_api/stilt.Project.receptor.html#stilt.Project.receptor">receptor() (stilt.Project method)</a>
+</li>
       <li><a href="reference/_api/stilt.Project.receptors.html#stilt.Project.receptors">receptors (stilt.Project property)</a>
 </li>
       <li><a href="reference/_api/stilt.receptors.receptors_from_frame.html#stilt.receptors.receptors_from_frame">receptors_from_frame() (in module stilt.receptors)</a>
@@ -1218,8 +1226,6 @@
 </li>
       <li><a href="reference/_api/stilt.identity.run_settings.html#stilt.identity.run_settings">run_settings() (in module stilt.identity)</a>
 </li>
-      <li><a href="reference/_api/stilt.config.Variant.run_settings_without_met.html#stilt.config.Variant.run_settings_without_met">run_settings_without_met (stilt.config.Variant property)</a>
-</li>
       <li><a href="reference/_api/stilt.run_trajectories.html#stilt.run_trajectories">run_trajectories() (in module stilt)</a>
 </li>
       <li><a href="reference/_api/stilt.meteorology.run_window.html#stilt.meteorology.run_window">run_window() (in module stilt.meteorology)</a>
@@ -1252,14 +1258,22 @@
       </ul></li>
       <li><a href="reference/_api/stilt.identity.settings_hash.html#stilt.identity.settings_hash">settings_hash() (in module stilt.identity)</a>
 </li>
+      <li><a href="reference/_api/stilt.transport.hysplit.HysplitModel.sha256.html#stilt.transport.hysplit.HysplitModel.sha256">sha256() (stilt.transport.hysplit.HysplitModel method)</a>
+
+      <ul>
+        <li><a href="reference/_api/stilt.transport.stilt_r.StiltRModel.sha256.html#stilt.transport.stilt_r.StiltRModel.sha256">(stilt.transport.stilt_r.StiltRModel method)</a>
+</li>
+        <li><a href="reference/_api/stilt.transport.TransportModel.sha256.html#stilt.transport.TransportModel.sha256">(stilt.transport.TransportModel method)</a>
+</li>
+      </ul></li>
       <li><a href="getting_started/glossary.html#term-simulation"><strong>simulation</strong></a>
 </li>
       <li><a href="reference/_api/stilt.Simulation.html#stilt.Simulation">Simulation (class in stilt)</a>
 </li>
-      <li><a href="reference/_api/stilt.Project.simulation.html#stilt.Project.simulation">simulation() (stilt.Project method)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/_api/stilt.Project.simulation.html#stilt.Project.simulation">simulation() (stilt.Project method)</a>
+</li>
       <li><a href="reference/_api/stilt.exceptions.SimulationError.html#stilt.exceptions.SimulationError">SimulationError</a>
 </li>
       <li><a href="reference/_api/stilt.Project.simulations.html#stilt.Project.simulations">simulations (stilt.Project property)</a>

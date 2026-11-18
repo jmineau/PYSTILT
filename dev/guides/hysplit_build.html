@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=73b264a4"></script>
+    <script src="../_static/documentation_options.js?v=01b04606"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev3+g750b010b5" />
+  <meta name="docsearch:version" content="0.1.0a30.dev8+g049832498" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -513,49 +513,59 @@
                   
   <section id="your-own-hysplit-build-and-data-tables">
 <h1>Your Own HYSPLIT Build And Data Tables<a class="headerlink" href="#your-own-hysplit-build-and-data-tables" title="Link to this heading">#</a></h1>
-<p>PYSTILT runs the copy of HYSPLIT that pip installs with it, and reads
-HYSPLIT’s data tables from the same place. You can replace either: a
-newer HYSPLIT, a build with a fix the bundled one lacks, or a
-higher-resolution land use.</p>
+<p>PYSTILT runs the HYSPLIT you give it (<a class="reference internal" href="../getting_started/installation.html"><span class="doc">Installation</span></a>):
+a newer HYSPLIT, a build with a fix STILT-R’s lacks, or your own data
+tables, such as a higher-resolution land use.</p>
 <section id="a-hysplit-build">
 <h2>A HYSPLIT build<a class="headerlink" href="#a-hysplit-build" title="Link to this heading">#</a></h2>
-<p>Compile <code class="docutils literal notranslate"><span class="pre">hycs_std</span></code> from NOAA’s HYSPLIT source. Beside it, put a file
-named <code class="docutils literal notranslate"><span class="pre">version</span></code> that holds the build’s version, such as <code class="docutils literal notranslate"><span class="pre">v5.3.2</span></code> or
-<code class="docutils literal notranslate"><span class="pre">v5.3.2+t0-rows</span></code> for a patched build. Then point <code class="docutils literal notranslate"><span class="pre">exe_dir</span></code> at that
-folder:</p>
+<p>Get HYSPLIT from NOAA’s download, a cluster’s HYSPLIT module, or by
+compiling NOAA’s source. Then point <code class="docutils literal notranslate"><span class="pre">directory</span></code> at the folder, laid out
+as HYSPLIT’s download is: <code class="docutils literal notranslate"><span class="pre">exec/hycs_std</span></code>, and the data tables in
+<code class="docutils literal notranslate"><span class="pre">bdyfiles/</span></code>:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">models</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">hysplit</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">exe_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/path/to/hysplit/exec</span>
+<span class="w">    </span><span class="nt">directory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/path/to/hysplit</span>
 </pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">exe_dir</span></code> is a HYSPLIT setting, so a variant can set its own and
+<p><code class="docutils literal notranslate"><span class="pre">directory</span></code> is a HYSPLIT setting, so a variant can set its own and
 compare two builds on the same receptors:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">variants</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">hrrr</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span>
-<span class="w">  </span><span class="nt">hrrr-v532</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">exe_dir</span><span class="p">:</span><span class="w"> </span><span class="nv">/path/to/hysplit-5.3.2/exec</span><span class="p p-Indicator">}</span>
+<span class="w">  </span><span class="nt">hrrr-v532</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">directory</span><span class="p">:</span><span class="w"> </span><span class="nv">/path/to/hysplit-5.3.2</span><span class="p p-Indicator">}</span>
 </pre></div>
 </div>
+<p>Without <code class="docutils literal notranslate"><span class="pre">directory</span></code>, PYSTILT runs the first <code class="docutils literal notranslate"><span class="pre">hycs_std</span></code> on <code class="docutils literal notranslate"><span class="pre">PATH</span></code>, with
+the tables of a <code class="docutils literal notranslate"><span class="pre">bdyfiles/</span></code> folder beside the folder it is in.</p>
 <p>Two builds can give different particles from the same settings, so a run
-records the build’s version and runs of different builds go to different
-settings folders (<a class="reference internal" href="projects.html"><span class="doc">Projects And Variants</span></a>). The folder itself is not recorded:
-moving a build keeps its results. A build without a <code class="docutils literal notranslate"><span class="pre">version</span></code> file is
-refused, since its runs could not be told apart from another build’s.</p>
+records the SHA-256 of the <code class="docutils literal notranslate"><span class="pre">hycs_std</span></code> it ran, and runs of different
+builds go to different settings folders (<a class="reference internal" href="projects.html"><span class="doc">Projects And Variants</span></a>). A rebuilt or
+updated <code class="docutils literal notranslate"><span class="pre">hycs_std</span></code> starts new folders even when it behaves the same. The
+folder <code class="docutils literal notranslate"><span class="pre">hycs_std</span></code> is in is not recorded: moving a build keeps its results.</p>
+<p>A run also records the version <code class="docutils literal notranslate"><span class="pre">hycs_std</span></code> prints when it starts, such as
+<code class="docutils literal notranslate"><span class="pre">hysplit.v5.1.0</span></code>, as <code class="docutils literal notranslate"><span class="pre">model_version</span></code> in the settings folder’s
+<code class="docutils literal notranslate"><span class="pre">_settings.yaml</span></code> (<a class="reference internal" href="../reference/layout.html"><span class="doc">Output Layout</span></a>). The version does not tell
+builds apart: two builds of one release print the same, and some builds
+print an older release than they are.</p>
+<p>A machine without <code class="docutils literal notranslate"><span class="pre">hycs_std</span></code>, such as one that only reports status,
+still opens a project. <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span></code> finds each variant’s folder by the
+variant’s name and its other settings, and exits with 2 when the variant
+has folders from two builds.</p>
 <p>A build that writes each particle’s release as a row at <code class="docutils literal notranslate"><span class="pre">age</span> <span class="pre">=</span> <span class="pre">0</span></code> gives
-exact release heights for multipoint and slant receptors. The bundled
-build writes its first row one time step after release, and PYSTILT
-matches each particle to its release point from that first position
+exact release heights for multipoint and slant receptors. HYSPLIT 5.1.0
+writes its first row one time step after release, and PYSTILT matches
+each particle to its release point from that first position
 (<a class="reference internal" href="../reference/particles.html"><span class="doc">The Particle Table</span></a>).</p>
 </section>
 <section id="what-a-build-reads-from-pystilt">
 <h2>What a build reads from PYSTILT<a class="headerlink" href="#what-a-build-reads-from-pystilt" title="Link to this heading">#</a></h2>
 <p>PYSTILT writes HYSPLIT’s <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code> file with the met files as one grid,
 listed in time. HYSPLIT reads at most 128 files of one grid (<code class="docutils literal notranslate"><span class="pre">mtim</span></code> in
-its <code class="docutils literal notranslate"><span class="pre">DEFGRID.INC</span></code>), in the bundled build and in NOAA’s, so a run can
+its <code class="docutils literal notranslate"><span class="pre">DEFGRID.INC</span></code>), in STILT-R’s build and in NOAA’s, so a run can
 read at most 128 met files: 32 days of 6-hour files, or about 5 days of
 hourly ones. A run that needs more stops with <code class="docutils literal notranslate"><span class="pre">Numb</span> <span class="pre">meteo</span> <span class="pre">times</span> <span class="pre">exceed</span>
 <span class="pre">DEFGRID</span> <span class="pre">limit</span></code> in its log.</p>
 <p>STILT-R lists each file as its own grid instead, which NOAA’s builds limit
-to 12 files a run and the bundled build to 99 (<code class="docutils literal notranslate"><span class="pre">mgrd</span></code>). The particles
+to 12 files a run and STILT-R’s build to 99 (<code class="docutils literal notranslate"><span class="pre">mgrd</span></code>). The particles
 are the same either way.</p>
 <p>To rerun a kept workdir by hand, you can edit its <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code> file. A
 <code class="docutils literal notranslate"><span class="pre">#</span></code> starts a comment on the start time, the starting locations, and the
@@ -566,23 +576,18 @@ file lines whole, so a <code class="docutils literal notranslate"><span class="p
 <h2>Data tables<a class="headerlink" href="#data-tables" title="Link to this heading">#</a></h2>
 <p>HYSPLIT’s data tables (<code class="docutils literal notranslate"><span class="pre">ASCDATA.CFG</span></code>, <code class="docutils literal notranslate"><span class="pre">LANDUSE.ASC</span></code>, <code class="docutils literal notranslate"><span class="pre">ROUGLEN.ASC</span></code>,
 <code class="docutils literal notranslate"><span class="pre">TERRAIN.ASC</span></code>) set the land use, roughness, and terrain under the
-particles. To use your own, put them in a folder and set <code class="docutils literal notranslate"><span class="pre">data_dir</span></code>. A
-table the folder does not hold comes from the bundled set:</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">models</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">hysplit</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">data_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/path/to/hysplit/bdyfiles</span>
-</pre></div>
-</div>
-<p>The tables change the particles, so a run records the checksum of each
-table that differs from the bundled one, and such runs are kept apart from
-the others. A folder whose tables match the bundled ones changes nothing.</p>
-</section>
-<section id="platforms-without-a-bundled-build">
-<h2>Platforms without a bundled build<a class="headerlink" href="#platforms-without-a-bundled-build" title="Link to this heading">#</a></h2>
-<p>pip installs a HYSPLIT build on Linux (x86_64) and Intel macOS. On any
-other platform, such as an Apple Silicon Mac with an arm64 Python, PYSTILT
-reads results but a run stops with an error until <code class="docutils literal notranslate"><span class="pre">exe_dir</span></code> points at a
-build (<a class="reference internal" href="../getting_started/installation.html"><span class="doc">Installation</span></a>).</p>
+particles. PYSTILT reads them from the <code class="docutils literal notranslate"><span class="pre">bdyfiles/</span></code> folder of
+<code class="docutils literal notranslate"><span class="pre">directory</span></code>, or, without <code class="docutils literal notranslate"><span class="pre">directory</span></code>, from a <code class="docutils literal notranslate"><span class="pre">bdyfiles/</span></code> beside the
+folder of the <code class="docutils literal notranslate"><span class="pre">hycs_std</span></code> on <code class="docutils literal notranslate"><span class="pre">PATH</span></code>. It includes none, and a run stops
+before it starts when one of the four is missing. To use your own, put them
+there.</p>
+<p>HYSPLIT’s own <code class="docutils literal notranslate"><span class="pre">ASCDATA.CFG</span></code> says the tables are in <code class="docutils literal notranslate"><span class="pre">../bdyfiles/</span></code>.
+PYSTILT links them into each run’s workdir instead, so it writes
+<code class="docutils literal notranslate"><span class="pre">ASCDATA.CFG</span></code> there with that line set to <code class="docutils literal notranslate"><span class="pre">./</span></code> and the rest as yours.</p>
+<p>The tables change the particles, so a run records the checksum of each,
+and runs with other tables are kept apart from the others. The checksum of
+<code class="docutils literal notranslate"><span class="pre">ASCDATA.CFG</span></code> is of the file the run reads, so where a HYSPLIT folder says
+its tables are changes nothing.</p>
 </section>
 </section>
 
@@ -636,7 +641,6 @@ build (<a class="reference internal" href="../getting_started/installation.html"
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#a-hysplit-build">A HYSPLIT build</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-a-build-reads-from-pystilt">What a build reads from PYSTILT</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#data-tables">Data tables</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#platforms-without-a-bundled-build">Platforms without a bundled build</a></li>
 </ul>
   </nav></div>
 

@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=73b264a4"></script>
+    <script src="../../../_static/documentation_options.js?v=01b04606"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev3+g750b010b5" />
+  <meta name="docsearch:version" content="0.1.0a30.dev8+g049832498" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -492,16 +492,16 @@
 <span class="sd">    ``config.yaml`` variant the import prints gives them all.</span>
 <span class="sd">    """</span>
 
-    <span class="c1">#: Fields left out of a run's recorded settings. ``version`` is recorded</span>
-    <span class="c1">#: as the transport model's version instead, as HYSPLIT's build is.</span>
-    <span class="n">UNRECORDED</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="s2">"exe_dir"</span><span class="p">,</span> <span class="s2">"data_dir"</span><span class="p">,</span> <span class="s2">"version"</span><span class="p">})</span>
+    <span class="c1">#: Fields left out of a run's recorded settings. ``version`` is recorded:</span>
+    <span class="c1">#: it is what tells imported runs of two STILT-R versions apart.</span>
+    <span class="n">UNRECORDED</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="s2">"directory"</span><span class="p">})</span>
 
     <span class="n">version</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="kc">None</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="p">(</span>
             <span class="s2">"The STILT-R version that made the runs, such as a commit of "</span>
             <span class="s2">"uataq/stilt. No STILT-R file records it, so the import is given "</span>
-            <span class="s2">"it. Recorded as the transport model's version."</span>
+            <span class="s2">"it. Recorded with the runs' settings."</span>
         <span class="p">),</span>
     <span class="p">)</span>
 
@@ -576,21 +576,16 @@
 
 <div class="viewcode-block" id="StiltRModel.version">
 <a class="viewcode-back" href="../../../reference/_api/stilt.transport.stilt_r.StiltRModel.version.html#stilt.transport.stilt_r.StiltRModel.version">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">version</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">StiltRConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Return the STILT-R version of *config*.</span>
-
-<span class="sd">        Raises</span>
-<span class="sd">        ------</span>
-<span class="sd">        ValueError</span>
-<span class="sd">            If *config* gives none.</span>
-<span class="sd">        """</span>
-        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">version</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s2">"A stilt-r variant needs version: the STILT-R version given to "</span>
-                <span class="s2">"stilt.migration.import_stilt_r, as it printed the variant."</span>
-            <span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">version</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">StiltRConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Return the STILT-R version of *config*, which its settings record too."""</span>
         <span class="k">return</span> <span class="n">config</span><span class="o">.</span><span class="n">version</span></div>
+
+
+<div class="viewcode-block" id="StiltRModel.sha256">
+<a class="viewcode-back" href="../../../reference/_api/stilt.transport.stilt_r.StiltRModel.sha256.html#stilt.transport.stilt_r.StiltRModel.sha256">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">sha256</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">StiltRConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Return ``None``: nothing runs, and the build is fixed by the STILT-R version in the settings."""</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
 
 
 <div class="viewcode-block" id="StiltRModel.data_files">

@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=73b264a4"></script>
+    <script src="../_static/documentation_options.js?v=01b04606"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev3+g750b010b5" />
+  <meta name="docsearch:version" content="0.1.0a30.dev8+g049832498" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -622,8 +622,8 @@ surface. Everything else is internal and can change.</p>
                      (driver.py: write_inputs, read_particle_dat); the
                      CONTROL file (control.py) and SETUP.CFG namelist
                      (namelist.py) writers and readers; failure reasons read from its
-                     log (failures.py); the bundled binaries (bin/, Linux
-                     and macOS x86-64) and data tables (data/)
+                     log (failures.py). No HYSPLIT file: find_hycs_std
+                     and data_tables take directory, else PATH
 
 tests/               pytest; folders follow src/stilt (execution/,
                      footprint/, observations/, particles/,
@@ -839,8 +839,9 @@ each variant into <code class="docutils literal notranslate"><span class="pre">V
 settings with its model’s config class once, keeps <code class="docutils literal notranslate"><span class="pre">realizations:</span> <span class="pre">N</span></code> as
 one ensemble variant (realization <code class="docutils literal notranslate"><span class="pre">k</span></code> runs with <code class="docutils literal notranslate"><span class="pre">seed</span> <span class="pre">+</span> <span class="pre">k</span></code>), reads each
 geometry once (a relative file from the project directory) to derive the
-grid, and asks the transport model its version once per build.
-<code class="docutils literal notranslate"><span class="pre">Project.init</span></code> resolves before it writes <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>.</p></li>
+grid. The transport model’s build is read on first use
+(<code class="docutils literal notranslate"><span class="pre">Variant.build</span></code>). <code class="docutils literal notranslate"><span class="pre">Project.init</span></code> resolves before it writes
+<code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>.</p></li>
 <li><p>Each part owns its config. <code class="docutils literal notranslate"><span class="pre">FootprintConfig</span></code> is in
 <code class="docutils literal notranslate"><span class="pre">stilt.footprint.config</span></code>, <code class="docutils literal notranslate"><span class="pre">ExecutionConfig</span></code> in
 <code class="docutils literal notranslate"><span class="pre">stilt.execution.config</span></code>, and a model’s config and met config in its
@@ -853,11 +854,15 @@ name). With several models, a met no variant uses is not checked. <code class="d
 rasters. <code class="docutils literal notranslate"><span class="pre">stilt.config</span></code> composes them, so nothing below the project’s
 layer imports <code class="docutils literal notranslate"><span class="pre">stilt.config</span></code>.</p></li>
 <li><p>Config classes do no I/O when they validate, so a <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> loads
-offline. Reading a geometry or asking a model its build happens in
-<code class="docutils literal notranslate"><span class="pre">ProjectConfig.resolve</span></code>, and reading which weather a met holds happens
-when a variant’s hash is first needed (<code class="docutils literal notranslate"><span class="pre">Variant.met_settings</span></code>).</p></li>
+offline. Reading a geometry happens in <code class="docutils literal notranslate"><span class="pre">ProjectConfig.resolve</span></code>; reading
+which weather a met holds (<code class="docutils literal notranslate"><span class="pre">Variant.met_settings</span></code>) and asking the model
+its build (<code class="docutils literal notranslate"><span class="pre">Variant.build</span></code>: for HYSPLIT, the SHA-256 of <code class="docutils literal notranslate"><span class="pre">hycs_std</span></code> and
+the version it prints) happen when a variant’s hash is first needed. So a
+project opens on a machine without the met’s files or <code class="docutils literal notranslate"><span class="pre">hycs_std</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">Output</span></code> compares stored folders on what can be read
+(<code class="docutils literal notranslate"><span class="pre">Variant.readable_run_settings</span></code>).</p></li>
 <li><p>A transport config’s fields that change no result are listed in its
-<code class="docutils literal notranslate"><span class="pre">UNRECORDED</span></code> class variable (HYSPLIT’s: <code class="docutils literal notranslate"><span class="pre">exe_dir</span></code> and <code class="docutils literal notranslate"><span class="pre">data_dir</span></code>) and
+<code class="docutils literal notranslate"><span class="pre">UNRECORDED</span></code> class variable (HYSPLIT’s: <code class="docutils literal notranslate"><span class="pre">directory</span></code>) and
 left out of the settings records. A met’s record is built, not dumped: its
 config’s <code class="docutils literal notranslate"><span class="pre">settings()</span></code>, which for HYSPLIT is the source id in the ARL
 headers (from the first file under <code class="docutils literal notranslate"><span class="pre">directory</span></code>, or the archive’s
@@ -1031,7 +1036,7 @@ mapping.</p>
 same latitude and longitude become one vertical line source, and only the
 last pair is released. That is how <code class="docutils literal notranslate"><span class="pre">ColumnReceptor</span></code> works (two lines:
 bottom and top), and why a <code class="docutils literal notranslate"><span class="pre">MultiPointReceptor</span></code> may not repeat a horizontal
-location (the constructor raises). The bundled build releases column
+location (the constructor raises). HYSPLIT 5.1.0 releases column
 particles bottom to top in <code class="docutils literal notranslate"><span class="pre">indx</span></code> order (the table’s <code class="docutils literal notranslate"><span class="pre">particle</span></code>), which
 <code class="docutils literal notranslate"><span class="pre">add_release_heights</span></code> falls back to when a model writes no <code class="docutils literal notranslate"><span class="pre">age</span> <span class="pre">=</span> <span class="pre">0</span></code>
 release row.</p>
@@ -1075,8 +1080,8 @@ altitude or that slab’s center, never the random height inside the slab.</p>
 <p>For a multipoint or slant receptor, <code class="docutils literal notranslate"><span class="pre">_multipoint_release_heights</span></code> uses, in
 order: <code class="docutils literal notranslate"><span class="pre">age</span> <span class="pre">=</span> <span class="pre">0</span></code> rows when present (exact); a match on height when every
 release altitude differs; then horizontal position, with a warning when
-points are closer than 1 km. The bundled HYSPLIT v5.1.0 writes no <code class="docutils literal notranslate"><span class="pre">age</span> <span class="pre">=</span> <span class="pre">0</span></code>
-row. A build that does can be used through <code class="docutils literal notranslate"><span class="pre">exe_dir</span></code>, and nothing in
+points are closer than 1 km. HYSPLIT 5.1.0, STILT-R’s build, writes no <code class="docutils literal notranslate"><span class="pre">age</span> <span class="pre">=</span> <span class="pre">0</span></code>
+row. A build that does can be used through <code class="docutils literal notranslate"><span class="pre">directory</span></code>, and nothing in
 PYSTILT changes. <code class="docutils literal notranslate"><span class="pre">tests/transport/hysplit/test_release_assignment.py</span></code>
 covers closely spaced slant points.</p>
 </section>

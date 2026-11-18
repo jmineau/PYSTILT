@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=73b264a4"></script>
+    <script src="../_static/documentation_options.js?v=01b04606"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev3+g750b010b5" />
+  <meta name="docsearch:version" content="0.1.0a30.dev8+g049832498" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -560,59 +560,65 @@ stop on it.</p>
 only its header, as <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">init</span></code> writes it.</p></td>
 <td><p>Add receptors (<a class="reference internal" href="receptors.html"><span class="doc">Receptors</span></a>).</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">met_directory</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">model</span></code></p></td>
+<td><p>No <code class="docutils literal notranslate"><span class="pre">exec/hycs_std</span></code> in <code class="docutils literal notranslate"><span class="pre">directory</span></code>, or one that is not
+executable; without <code class="docutils literal notranslate"><span class="pre">directory</span></code>, no <code class="docutils literal notranslate"><span class="pre">hycs_std</span></code> on <code class="docutils literal notranslate"><span class="pre">PATH</span></code>.</p></td>
+<td><p>Get HYSPLIT and set <code class="docutils literal notranslate"><span class="pre">directory</span></code> or <code class="docutils literal notranslate"><span class="pre">PATH</span></code>
+(<a class="reference internal" href="../getting_started/installation.html"><span class="doc">Installation</span></a>).</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">met_directory</span></code></p></td>
 <td><p>A met’s <code class="docutils literal notranslate"><span class="pre">directory</span></code> does not exist or holds no ARL file.</p></td>
 <td><p>Correct <code class="docutils literal notranslate"><span class="pre">directory</span></code> under <code class="docutils literal notranslate"><span class="pre">mets:</span></code>. A met with <code class="docutils literal notranslate"><span class="pre">download</span></code> makes
 its folder when a run needs it, so it is not checked.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">met_files</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">met_files</span></code></p></td>
 <td><p>A receptor’s run needs a met file that is not there, or files of two
 products hold one of its times. The message names the hours or the
 two files.</p></td>
 <td><p>Add the files, or keep each product in its own folder
 (<a class="reference internal" href="meteorology.html"><span class="doc">Meteorology</span></a>).</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">met_domain</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">met_domain</span></code></p></td>
 <td><p>With the crop off, a receptor lies outside the grid of the met files
 its run starts in, where HYSPLIT cannot start particles (“source
 point off grid”). The grid is read from a file’s header.</p></td>
 <td><p>Use met files whose domain holds the receptor, or move the receptor.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">met_crop</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">met_crop</span></code></p></td>
 <td><p>With <code class="docutils literal notranslate"><span class="pre">subgrid_enable</span></code> on, a receptor lies outside
 <code class="docutils literal notranslate"><span class="pre">subgrid_bounds</span></code>, where HYSPLIT cannot start particles.</p></td>
 <td><p>Widen <code class="docutils literal notranslate"><span class="pre">subgrid_bounds</span></code> to hold the whole run, not only the
 footprint grid.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">met_periods</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">met_periods</span></code></p></td>
 <td><p>A file the receptors need holds one time period, which HYSPLIT
 cannot read.</p></td>
 <td><p>Use files that each hold at least two time periods.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">met_cut</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">met_cut</span></code></p></td>
 <td><p>A file the receptors need ends partway through a time step, so it
 is damaged.</p></td>
 <td><p>Download or crop the file again.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">grid</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">grid</span></code></p></td>
 <td><p>A receptor lies outside the variant’s footprint grid, so only
 particles that travel into the grid add to its footprint.</p></td>
 <td><p>Widen the grid. A receptor meant to lie outside it, such as one far
 downwind, is still listed.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">kernel_table</span></code>, <code class="docutils literal notranslate"><span class="pre">kernel_missing</span></code>, <code class="docutils literal notranslate"><span class="pre">kernel_unused</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">kernel_table</span></code>, <code class="docutils literal notranslate"><span class="pre">kernel_missing</span></code>, <code class="docutils literal notranslate"><span class="pre">kernel_unused</span></code></p></td>
 <td><p>The <code class="docutils literal notranslate"><span class="pre">averaging_kernel</span></code> table is missing, lacks a column, has no
 kernel for a receptor, or has one for an id that is no receptor.</p></td>
 <td><p>Make the table with <code class="docutils literal notranslate"><span class="pre">project.add_table(&quot;kernels&quot;,</span> <span class="pre">table)</span></code>
 (<a class="reference internal" href="../reference/_api/stilt.transforms.averaging_kernel_table.html#stilt.transforms.averaging_kernel_table" title="stilt.transforms.averaging_kernel_table"><code class="xref py py-func docutils literal notranslate"><span class="pre">averaging_kernel_table()</span></code></a>). Ids that differ
 from the receptors’ in a digit were made from other coordinates.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">oxidant_file</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">oxidant_file</span></code></p></td>
 <td><p>The <code class="docutils literal notranslate"><span class="pre">oxidation</span></code> transform’s <code class="docutils literal notranslate"><span class="pre">oxidant</span></code> file does not exist, cannot
 be read, or lacks the variable it names.</p></td>
 <td><p>Correct the path (relative to the project folder) or <code class="docutils literal notranslate"><span class="pre">variable</span></code>.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">zsfc</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">zsfc</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">varsiwant</span></code> lacks <code class="docutils literal notranslate"><span class="pre">zsfc</span></code>, the terrain height, and a receptor
 given above sea level (<code class="docutils literal notranslate"><span class="pre">altitude_ref=&quot;msl&quot;</span></code>) needs it for the
 near-field correction, the release heights of a multipoint

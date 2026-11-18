@@ -157,8 +157,8 @@ Module map
                         (driver.py: write_inputs, read_particle_dat); the
                         CONTROL file (control.py) and SETUP.CFG namelist
                         (namelist.py) writers and readers; failure reasons read from its
-                        log (failures.py); the bundled binaries (bin/, Linux
-                        and macOS x86-64) and data tables (data/)
+                        log (failures.py). No HYSPLIT file: find_hycs_std
+                        and data_tables take directory, else PATH
 
    tests/               pytest; folders follow src/stilt (execution/,
                         footprint/, observations/, particles/,
@@ -396,8 +396,9 @@ there is refused with a message naming its block.
   settings with its model's config class once, keeps ``realizations: N`` as
   one ensemble variant (realization ``k`` runs with ``seed + k``), reads each
   geometry once (a relative file from the project directory) to derive the
-  grid, and asks the transport model its version once per build.
-  ``Project.init`` resolves before it writes ``config.yaml``.
+  grid. The transport model's build is read on first use
+  (``Variant.build``). ``Project.init`` resolves before it writes
+  ``config.yaml``.
 - Each part owns its config. ``FootprintConfig`` is in
   ``stilt.footprint.config``, ``ExecutionConfig`` in
   ``stilt.execution.config``, and a model's config and met config in its
@@ -410,11 +411,15 @@ there is refused with a message naming its block.
   rasters. ``stilt.config`` composes them, so nothing below the project's
   layer imports ``stilt.config``.
 - Config classes do no I/O when they validate, so a ``config.yaml`` loads
-  offline. Reading a geometry or asking a model its build happens in
-  ``ProjectConfig.resolve``, and reading which weather a met holds happens
-  when a variant's hash is first needed (``Variant.met_settings``).
+  offline. Reading a geometry happens in ``ProjectConfig.resolve``; reading
+  which weather a met holds (``Variant.met_settings``) and asking the model
+  its build (``Variant.build``: for HYSPLIT, the SHA-256 of ``hycs_std`` and
+  the version it prints) happen when a variant's hash is first needed. So a
+  project opens on a machine without the met's files or ``hycs_std``, and
+  ``Output`` compares stored folders on what can be read
+  (``Variant.readable_run_settings``).
 - A transport config's fields that change no result are listed in its
-  ``UNRECORDED`` class variable (HYSPLIT's: ``exe_dir`` and ``data_dir``) and
+  ``UNRECORDED`` class variable (HYSPLIT's: ``directory``) and
   left out of the settings records. A met's record is built, not dumped: its
   config's ``settings()``, which for HYSPLIT is the source id in the ARL
   headers (from the first file under ``directory``, or the archive's
@@ -604,7 +609,7 @@ In HYSPLIT's ``emspnt.f``, consecutive ``CONTROL`` starting locations at the
 same latitude and longitude become one vertical line source, and only the
 last pair is released. That is how ``ColumnReceptor`` works (two lines:
 bottom and top), and why a ``MultiPointReceptor`` may not repeat a horizontal
-location (the constructor raises). The bundled build releases column
+location (the constructor raises). HYSPLIT 5.1.0 releases column
 particles bottom to top in ``indx`` order (the table's ``particle``), which
 ``add_release_heights`` falls back to when a model writes no ``age = 0``
 release row.
@@ -653,7 +658,7 @@ altitude or that slab's center, never the random height inside the slab.
 For a multipoint or slant receptor, ``_multipoint_release_heights`` uses, in
 order: ``age = 0`` rows when present (exact); a match on height when every
 release altitude differs; then horizontal position, with a warning when
-points are closer than 1 km. The bundled HYSPLIT v5.1.0 writes no ``age = 0``
-row. A build that does can be used through ``exe_dir``, and nothing in
+points are closer than 1 km. HYSPLIT 5.1.0, STILT-R's build, writes no ``age = 0``
+row. A build that does can be used through ``directory``, and nothing in
 PYSTILT changes. ``tests/transport/hysplit/test_release_assignment.py``
 covers closely spaced slant points.

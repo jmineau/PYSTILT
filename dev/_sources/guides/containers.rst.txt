@@ -21,7 +21,12 @@ line. With ``--task`` too, the task takes its share of that list.
 What every container needs
 --------------------------
 
-- PYSTILT installed (``pip install pystilt``).
+- PYSTILT installed (``pip install pystilt``), and HYSPLIT's ``hycs_std``
+  on ``PATH`` or in the HYSPLIT folder ``directory`` names
+  (:doc:`../getting_started/installation`). Every container needs the same
+  ``hycs_std``: its checksum is part of each run's settings, so another
+  build writes to another settings folder. A container that only reports
+  status needs none.
 - The project folder (``config.yaml`` and ``receptors.csv``), the
   meteorology, and the output directory, on a volume all the containers
   share. Results are written there, one file per simulation, so the

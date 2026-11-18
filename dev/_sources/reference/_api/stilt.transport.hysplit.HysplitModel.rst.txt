@@ -35,6 +35,7 @@ Methods
    ~HysplitModel.downloads_met
    ~HysplitModel.fetch_met
    ~HysplitModel.run
+   ~HysplitModel.sha256
    ~HysplitModel.version
 
 

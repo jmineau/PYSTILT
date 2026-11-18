@@ -30,6 +30,6 @@ Inherited
 ---------
 
 
-From :class:`~.TransportModel`: :py:obj:`~.TransportModel.config_class`, :py:obj:`~.TransportModel.data_files`, :py:obj:`~.TransportModel.met_config_class`, :py:obj:`~.TransportModel.run`, :py:obj:`~.TransportModel.version`
+From :class:`~.TransportModel`: :py:obj:`~.TransportModel.config_class`, :py:obj:`~.TransportModel.data_files`, :py:obj:`~.TransportModel.met_config_class`, :py:obj:`~.TransportModel.run`, :py:obj:`~.TransportModel.sha256`, :py:obj:`~.TransportModel.version`
 
 

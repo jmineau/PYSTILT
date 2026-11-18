@@ -1,0 +1,6 @@
+stilt.transport.stilt\_r.StiltRModel.sha256
+===========================================
+
+.. currentmodule:: stilt.transport.stilt_r
+
+.. automethod:: StiltRModel.sha256

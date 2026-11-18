@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=73b264a4"></script>
+    <script src="../../_static/documentation_options.js?v=01b04606"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev3+g750b010b5" />
+  <meta name="docsearch:version" content="0.1.0a30.dev8+g049832498" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -497,13 +497,14 @@
 </ul>
 </details></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.config.Variant.html">stilt.config.Variant</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.build.html">stilt.config.Variant.build</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.footprint_hash.html">stilt.config.Variant.footprint_hash</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.footprint_settings.html">stilt.config.Variant.footprint_settings</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.met_settings.html">stilt.config.Variant.met_settings</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.particles_hash.html">stilt.config.Variant.particles_hash</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.readable_run_settings.html">stilt.config.Variant.readable_run_settings</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.realization_numbers.html">stilt.config.Variant.realization_numbers</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.run_settings.html">stilt.config.Variant.run_settings</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.run_settings_without_met.html">stilt.config.Variant.run_settings_without_met</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.transport_for.html">stilt.config.Variant.transport_for</a></li>
 </ul>
 </details></li>
@@ -690,6 +691,7 @@
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.TransportModel.met_config_class.html">stilt.transport.TransportModel.met_config_class</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.TransportModel.data_files.html">stilt.transport.TransportModel.data_files</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.TransportModel.run.html">stilt.transport.TransportModel.run</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.transport.TransportModel.sha256.html">stilt.transport.TransportModel.sha256</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.TransportModel.version.html">stilt.transport.TransportModel.version</a></li>
 </ul>
 </details></li>
@@ -716,6 +718,7 @@
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.downloads_met.html">stilt.transport.hysplit.HysplitModel.downloads_met</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.fetch_met.html">stilt.transport.hysplit.HysplitModel.fetch_met</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.run.html">stilt.transport.hysplit.HysplitModel.run</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.sha256.html">stilt.transport.hysplit.HysplitModel.sha256</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.version.html">stilt.transport.hysplit.HysplitModel.version</a></li>
 </ul>
 </details></li>
@@ -723,6 +726,7 @@
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.stilt_r.StiltRModel.needs_workdir.html">stilt.transport.stilt_r.StiltRModel.needs_workdir</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.stilt_r.StiltRModel.data_files.html">stilt.transport.stilt_r.StiltRModel.data_files</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.stilt_r.StiltRModel.run.html">stilt.transport.stilt_r.StiltRModel.run</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.transport.stilt_r.StiltRModel.sha256.html">stilt.transport.stilt_r.StiltRModel.sha256</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.stilt_r.StiltRModel.version.html">stilt.transport.stilt_r.StiltRModel.version</a></li>
 </ul>
 </details></li>
@@ -841,6 +845,8 @@
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitConfig.realizations.html">stilt.transport.hysplit.HysplitConfig.realizations</a></li>
 </ul>
 </details></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.transport.hysplit.find_hycs_std.html">stilt.transport.hysplit.find_hycs_std</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.transport.hysplit.data_tables.html">stilt.transport.hysplit.data_tables</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.transport.hysplit.write_inputs.html">stilt.transport.hysplit.write_inputs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.transport.hysplit.run_hycs_std.html">stilt.transport.hysplit.run_hycs_std</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.transport.hysplit.read_particle_dat.html">stilt.transport.hysplit.read_particle_dat</a></li>
@@ -955,7 +961,7 @@ is staged per run.</p>
 <td><p>Return what would stop HYSPLIT from running <em>receptors</em> with <em>met</em>, found before any run.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.data_files.html#stilt.transport.hysplit.HysplitModel.data_files" title="stilt.transport.hysplit.HysplitModel.data_files"><code class="xref py py-obj docutils literal notranslate"><span class="pre">data_files</span></code></a>(config)</p></td>
-<td><p>Return the SHA-256 of each table in <code class="docutils literal notranslate"><span class="pre">config.data_dir</span></code> that differs from the bundled one.</p></td>
+<td><p>Return the SHA-256 of each data table a run uses, by name.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.downloads_met.html#stilt.transport.hysplit.HysplitModel.downloads_met" title="stilt.transport.hysplit.HysplitModel.downloads_met"><code class="xref py py-obj docutils literal notranslate"><span class="pre">downloads_met</span></code></a>(met)</p></td>
 <td><p>Whether <em>met</em> downloads its files from an ARL archive (<code class="docutils literal notranslate"><span class="pre">download</span></code> is set).</p></td>
@@ -966,8 +972,11 @@ is staged per run.</p>
 <tr class="row-odd"><td><p><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.run.html#stilt.transport.hysplit.HysplitModel.run" title="stilt.transport.hysplit.HysplitModel.run"><code class="xref py py-obj docutils literal notranslate"><span class="pre">run</span></code></a>(receptor, config, met, window[, ...])</p></td>
 <td><p>Run HYSPLIT for one receptor in <em>workdir</em> and return its particles.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.version.html#stilt.transport.hysplit.HysplitModel.version" title="stilt.transport.hysplit.HysplitModel.version"><code class="xref py py-obj docutils literal notranslate"><span class="pre">version</span></code></a>(config)</p></td>
-<td><p>Return the version of the bundled build, or of the one in <code class="docutils literal notranslate"><span class="pre">config.exe_dir</span></code>.</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.sha256.html#stilt.transport.hysplit.HysplitModel.sha256" title="stilt.transport.hysplit.HysplitModel.sha256"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sha256</span></code></a>(config)</p></td>
+<td><p>Return the SHA-256 of the <code class="docutils literal notranslate"><span class="pre">hycs_std</span></code> <em>config</em> runs, which tells its build from any other.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.version.html#stilt.transport.hysplit.HysplitModel.version" title="stilt.transport.hysplit.HysplitModel.version"><code class="xref py py-obj docutils literal notranslate"><span class="pre">version</span></code></a>(config)</p></td>
+<td><p>Return the version the <code class="docutils literal notranslate"><span class="pre">hycs_std</span></code> <em>config</em> runs prints when it starts (<code class="xref py py-func docutils literal notranslate"><span class="pre">hysplit_version()</span></code>).</p></td>
 </tr>
 </tbody>
 </table>

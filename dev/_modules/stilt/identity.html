@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=73b264a4"></script>
+    <script src="../../_static/documentation_options.js?v=01b04606"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev3+g750b010b5" />
+  <meta name="docsearch:version" content="0.1.0a30.dev8+g049832498" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -453,9 +453,10 @@
 <span class="sd">Every folder in an output directory holds the results of one set of</span>
 <span class="sd">settings, recorded in its ``_settings.yaml``. This module writes those</span>
 <span class="sd">records and hashes them. A run's settings are its transport config without</span>
-<span class="sd">the fields that change no particle (``exe_dir``, ``data_dir``), its met as</span>
+<span class="sd">the fields that change no particle (HYSPLIT's ``directory``), its met as</span>
 <span class="sd">the met config records it (for HYSPLIT, the weather product and the crop),</span>
-<span class="sd">the model build, and whether it is an ensemble (the realizations of one</span>
+<span class="sd">the model build (for HYSPLIT, the SHA-256 of ``hycs_std``, not the version</span>
+<span class="sd">it prints), and whether it is an ensemble (the realizations of one</span>
 <span class="sd">share a folder, a ``realization=k`` partition each, so the number is not</span>
 <span class="sd">in the hash). A</span>
 <span class="sd">footprint's settings are its footprint config, with the grid it is</span>
@@ -527,7 +528,7 @@
 
 <span class="sd">    The transport model's settings (``transport.settings()``) sit at the top</span>
 <span class="sd">    level, beside ``met`` (what the met config's ``settings()`` returns)</span>
-<span class="sd">    and ``model``. An ensemble records ``ensemble: true`` and its base</span>
+<span class="sd">    and ``model`` (the build, without the version it reports). An ensemble records ``ensemble: true`` and its base</span>
 <span class="sd">    seed; its realization ``k`` runs with ``seed + k`` in the folder's</span>
 <span class="sd">    ``realization=k`` partition.</span>
 <span class="sd">    """</span>
@@ -555,7 +556,7 @@
 
 <span class="sd">    ``model.name`` says which model's config class reads it. Settings this</span>
 <span class="sd">    version does not have are dropped. The fields a record leaves out</span>
-<span class="sd">    (``exe_dir`` and ``data_dir`` for HYSPLIT) come back unset.</span>
+<span class="sd">    (``directory`` for HYSPLIT) come back unset.</span>
 <span class="sd">    """</span>
     <span class="n">config_class</span> <span class="o">=</span> <span class="n">get_model</span><span class="p">(</span><span class="n">_model_info</span><span class="p">(</span><span class="n">stored</span><span class="p">)</span><span class="o">.</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">config_class</span>
     <span class="n">fields</span> <span class="o">=</span> <span class="n">config_class</span><span class="o">.</span><span class="n">model_fields</span>

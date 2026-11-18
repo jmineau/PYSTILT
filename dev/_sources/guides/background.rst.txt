@@ -129,7 +129,7 @@ there too when the table has it.
   modulo 360.
 - A particle whose first row is already outside the grid has no row inside
   to interpolate from. It is reported at that row, on the edge it is
-  farthest beyond. The HYSPLIT build bundled with PYSTILT writes no row at
+  farthest beyond. HYSPLIT 5.1.0, STILT-R's build, writes no row at
   the release, so a receptor next to the edge can give such a particle.
 
 With transport error

@@ -1,6 +1,0 @@
-stilt.config.Variant.run\_settings\_without\_met
-================================================
-
-.. currentmodule:: stilt.config
-
-.. autoproperty:: Variant.run_settings_without_met

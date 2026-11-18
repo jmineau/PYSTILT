@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=73b264a4"></script>
+    <script src="../../_static/documentation_options.js?v=01b04606"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev3+g750b010b5" />
+  <meta name="docsearch:version" content="0.1.0a30.dev8+g049832498" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -518,7 +518,15 @@
 <div class="viewcode-block" id="ModelInfo">
 <a class="viewcode-back" href="../../reference/_api/stilt.transport.ModelInfo.html#stilt.ModelInfo">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">ModelInfo</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""The transport model build a run was made with, recorded in the run's settings."""</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    The transport model build a run was made with.</span>
+
+<span class="sd">    Its name, the SHA-256 of its executable, and the SHA-256 of each data</span>
+<span class="sd">    file it reads are part of the run's settings, so two builds</span>
+<span class="sd">    never share a settings folder. The version the build reports is</span>
+<span class="sd">    recorded beside the settings (``model_version`` in ``_settings.yaml``),</span>
+<span class="sd">    not in them: two builds of one release report the same version.</span>
+<span class="sd">    """</span>
 
     <span class="n">model_config</span> <span class="o">=</span> <span class="n">ConfigDict</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">extra</span><span class="o">=</span><span class="s2">"forbid"</span><span class="p">)</span>
 
@@ -530,14 +538,26 @@
             <span class="s2">"model class (the block's ``class``)."</span>
         <span class="p">),</span>
     <span class="p">)</span>
-    <span class="n">version</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
-        <span class="o">...</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Version string of the build, such as ``v5.1.0``."</span>
+    <span class="n">sha256</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="kc">None</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"SHA-256 of the executable the model runs, such as HYSPLIT's "</span>
+            <span class="s2">"``hycs_std``. ``None`` for a model that runs none."</span>
+        <span class="p">),</span>
     <span class="p">)</span>
     <span class="n">data_files</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="kc">None</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="p">(</span>
-            <span class="s2">"SHA-256 of each data file the run used in place of the model's "</span>
-            <span class="s2">"own, by file name. ``None`` when it used the model's own."</span>
+            <span class="s2">"SHA-256 of each data file the run read, by file name, such as "</span>
+            <span class="s2">"HYSPLIT's tables. ``None`` for a model whose build fixes them."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">version</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="kc">None</span><span class="p">,</span>
+        <span class="n">exclude</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"The version the build reports, such as ``hysplit.v5.1.0``. "</span>
+            <span class="s2">"Recorded beside the run's settings and left out of them."</span>
         <span class="p">),</span>
     <span class="p">)</span></div>
 
@@ -753,10 +773,24 @@
 <span class="sd">        """</span>
         <span class="o">...</span>
 
+<div class="viewcode-block" id="TransportModel.sha256">
+<a class="viewcode-back" href="../../reference/_api/stilt.transport.TransportModel.sha256.html#stilt.TransportModel.sha256">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">sha256</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Return the SHA-256 of the executable *config* would run, ``None`` for a model that runs none.</span>
+
+<span class="sd">        Part of the run's identity: another build gives another settings</span>
+<span class="sd">        folder. Raises ``FileNotFoundError`` when the executable cannot be</span>
+<span class="sd">        found here; a project still opens, and its status compares stored</span>
+<span class="sd">        folders without the build.</span>
+<span class="sd">        """</span>
+        <span class="o">...</span></div>
+
+
 <div class="viewcode-block" id="TransportModel.version">
 <a class="viewcode-back" href="../../reference/_api/stilt.transport.TransportModel.version.html#stilt.TransportModel.version">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">version</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Return the version of the build *config* would run, recorded with the run."""</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">version</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Return the version the build *config* would run reports, recorded with the run but not part of its identity."""</span>
         <span class="o">...</span></div>
 
 
@@ -764,10 +798,10 @@
 <a class="viewcode-back" href="../../reference/_api/stilt.transport.TransportModel.data_files.html#stilt.TransportModel.data_files">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">data_files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Return the checksum of each data file *config* replaces, by file name.</span>
+<span class="sd">        Return the checksum of each data file a run with *config* reads, by file name.</span>
 
-<span class="sd">        ``None`` when the run uses the model's own data files. These are part</span>
-<span class="sd">        of the run's identity, since the data change the particles.</span>
+<span class="sd">        ``None`` for a model whose build fixes its data. These are part of</span>
+<span class="sd">        the run's identity, since the data change the particles.</span>
 <span class="sd">        """</span>
         <span class="o">...</span></div>
 
