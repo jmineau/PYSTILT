@@ -44,6 +44,10 @@ jobs:
       - name: Unit tests
         run: uv run just cov
 
+      # A job that runs tests this one skips (say, one with optional extras
+      # installed) should upload its own coverage.xml the same way: Codecov merges
+      # the uploads, and a line run in either job counts as covered. Without it,
+      # the modules behind the extras show as untested.
       - name: Upload coverage to Codecov
         if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11' && !cancelled() }}
         uses: codecov/codecov-action@v7
@@ -58,6 +62,31 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: junit.xml
           report_type: test_results
+
+  # The lowest versions pyproject.toml allows, on the oldest Python. Every
+  # direct dependency needs a minimum: without one, uv picks its oldest release.
+  floors:
+    name: minimum dependencies / Python 3.11
+    runs-on: ubuntu-latest
+    env:
+      UV_NO_SYNC: "1"  # `just` recipes run in the environment installed below
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0  # setuptools-scm reads the version from tags
+
+      - uses: astral-sh/setup-uv@v10.3.2
+        with:
+          version: "0.12.23"
+          python-version: "3.11"
+
+      - name: Install
+        run: uvx --from rust-just just sync-floors
+
+      - name: Test
+        run: uv run just test
 
   integration:
     name: Integration tests

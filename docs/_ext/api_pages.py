@@ -18,6 +18,18 @@ instead, in its Parameters or Attributes section: a dataclass field, an
 attribute set in ``__init__``, a property documented only there. Its page
 would be empty. The Attributes entries of the members that do get a row
 are dropped, so nothing is described twice.
+
+A constant a class sets again in its body, which a base class of the package
+declares, always gets a row and a page, so the page shows the value that
+class gives it (``BB_205.model = '2b_205'``). The description is the base
+class's ``#:`` comment, which autodoc inherits. Where there is none, the
+class docstring's Attributes entry stays beside the row.
+
+A variable the class declares with an annotation (a dataclass field) is data
+even when its default is a function (``logger: Callable = print``): it is
+documented as the field, with its ``#:`` comment, and never by the function's
+signature and docstring. Described only in the class docstring, it gets no
+row, like any other field.
 """
 
 import enum
@@ -48,6 +60,28 @@ def _owner(cls: type, name: str) -> type | None:
     return None
 
 
+def _is_method(owner: type, name: str) -> bool:
+    """
+    Whether *owner*'s member *name* is a method or property, rather than data.
+
+    A variable the class declares with an annotation is data, even when its
+    default is a function (a dataclass field such as ``logger: Callable =
+    print``): the function is the value, not the member's own definition.
+    """
+    value = vars(owner).get(name)
+    if not (callable(value) or isinstance(value, ROUTINES)):
+        return False
+    return not any(_annotated(klass, name) for klass in owner.__mro__)
+
+
+def _annotated(klass: type, name: str) -> bool:
+    """Whether *klass* annotates *name* in its own body."""
+    try:
+        return name in inspect.get_annotations(klass)
+    except Exception:  # an annotation that cannot be evaluated
+        return False
+
+
 def _defined_here(cls: type, name: str) -> bool:
     """
     Whether *cls*'s package defines its member *name*.
@@ -59,8 +93,7 @@ def _defined_here(cls: type, name: str) -> bool:
     owner = _owner(cls, name)
     if owner is None or _package(owner) != _package(cls):
         return False
-    value = vars(owner).get(name)
-    if callable(value) or isinstance(value, ROUTINES):
+    if _is_method(owner, name):
         return True
     return not any(name in vars(b) for b in cls.__mro__ if _package(b) != _package(cls))
 
@@ -79,17 +112,39 @@ def _has_own_doc(cls: type, name: str) -> bool:
     owner = _owner(cls, name)
     if owner is None:
         return False
-    value = vars(owner).get(name)
-    if callable(value) or isinstance(value, ROUTINES):
-        return bool(getattr(value, "__doc__", None))
+    if _is_method(owner, name):
+        return bool(getattr(vars(owner)[name], "__doc__", None))
     return (owner.__qualname__, name) in _attr_docs(owner.__module__)
 
 
 def _is_routine(cls: type, name: str) -> bool:
     """Whether member *name* is a method or property, rather than data."""
     owner = _owner(cls, name)
-    value = vars(owner).get(name) if owner else None
-    return callable(value) or isinstance(value, ROUTINES)
+    return owner is not None and _is_method(owner, name)
+
+
+def _declared(klass: type, name: str) -> bool:
+    """Whether *klass* declares *name*, with a value or an annotation alone."""
+    try:
+        return name in vars(klass) or name in inspect.get_annotations(klass)
+    except Exception:  # an annotation that cannot be evaluated
+        return name in vars(klass)
+
+
+def _is_override(cls: type, name: str) -> bool:
+    """
+    Whether *cls* sets the constant *name* again, one a base of the package declares.
+
+    That is data assigned in the class body (not a method or property) that
+    another class of the package, earlier in the MRO than any other package,
+    also declares.
+    """
+    if name not in vars(cls) or _is_method(cls, name):
+        return False
+    return any(
+        _package(base) == _package(cls) and _declared(base, name)
+        for base in cls.__mro__[1:]
+    )
 
 
 def _is_underline(line: str) -> bool:
@@ -134,11 +189,28 @@ def _has_page(cls: type, name: str) -> bool:
     """Whether the class page lists *name* in a table, with its own page."""
     if name.startswith("_") and name != "__call__" or not _defined_here(cls, name):
         return False
-    if _has_own_doc(cls, name):
+    owner = _owner(cls, name)
+    if _has_own_doc(cls, name) or (owner and _is_override(owner, name)):
         return True
     # Undocumented: a row only for a method or property the class docstring
     # does not describe either.
     return _is_routine(cls, name) and name not in _described_attributes(cls)
+
+
+def _page_describes(cls: type, name: str) -> bool:
+    """
+    Whether the page of member *name* has a description of its own.
+
+    That is a docstring or ``#:`` comment on the member itself or, for a
+    constant the class sets again, on the base class's declaration, which
+    autodoc inherits.
+    """
+    if _has_own_doc(cls, name):
+        return True
+    owner = _owner(cls, name)
+    return bool(owner and _is_override(owner, name)) and any(
+        _has_own_doc(base, name) for base in owner.__mro__[1:] if _declared(base, name)
+    )
 
 
 def _link_name(cls: type) -> str | None:
@@ -213,6 +285,28 @@ class ClassPage:
                 found.append((path, [f"{path}.{name}" for name in members]))
         return found
 
+    def fields(self, fullname: str, names: list[str]) -> list[str]:
+        """
+        Return the names in *names* that are fields with a function as default.
+
+        autosummary lists such a member among the methods, because its value is
+        a function. The class page lists it among the attributes, and
+        ``_templates/autosummary/method.rst`` documents it as the attribute it is.
+        """
+        cls = _import_class(fullname)
+        if cls is None:
+            return []
+        return [
+            name
+            for name in names
+            if (owner := _owner(cls, name)) and not _is_method(owner, name)
+        ]
+
+    def is_field(self, fullname: str) -> bool:
+        """Whether member *fullname* is a field with a function as default."""
+        cls_name, _, name = fullname.rpartition(".")
+        return name in self.fields(cls_name, [name])
+
     def has_bases(self, fullname: str) -> bool:
         """Whether the class has a base other than ``object``."""
         cls = _import_class(fullname)
@@ -243,7 +337,7 @@ def drop_member_sections(app, what, name, obj, options, lines) -> None:
         kept = [
             line
             for attr, entry in _entries(lines[start + 2 : end])
-            if not _has_page(obj, attr)
+            if not (_has_page(obj, attr) and _page_describes(obj, attr))
             for line in entry
         ]
         if any(line.strip() for line in kept):

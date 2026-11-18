@@ -66,9 +66,17 @@ exclude_patterns = [
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = "pydata_sphinx_theme"
-html_title = f"PYSTILT {version_match}"
+html_title = f"{project} {version_match}"  # the site title (tab, search); not the full dev version
 html_static_path = ["_static"]
 html_css_files = ["custom.css"]
+
+# Optional branding: drop files in docs/_static/ and the site uses them.
+#   logo.svg (logo_dark.svg for the dark theme), favicon.ico, social-preview.png
+# The preview image is the picture Slack, Discord and the like show for a link;
+# they need a full URL, so it is read from the main branch on GitHub.
+_static = Path(__file__).parent / "_static"
+if (_static / "favicon.ico").exists():
+    html_favicon = "_static/favicon.ico"
 
 html_theme_options = {
     "announcement": (
@@ -80,6 +88,10 @@ html_theme_options = {
     "navigation_depth": 3,
     "secondary_sidebar_items": ["page-toc", "edit-this-page", "sourcelink"],
     "header_links_before_dropdown": 6,
+    # The navbar shows the name alone (it defaults to html_title); the version
+    # switcher already says which version this is.
+    # Text only here; the image is added below when docs/_static/logo.svg exists.
+    "logo": {"text": project},
     "navbar_end": ["version-switcher", "theme-switcher", "navbar-icon-links"],
     # The version dropdown. The Documentation workflow publishes dev/ (main),
     # one folder per release and stable/, and writes switcher.json listing them.
@@ -98,7 +110,18 @@ html_context = {
     "github_repo": "PYSTILT",
     "github_version": "main",
     "doc_path": "docs",
+    "og_description": "A Python implementation of the STILT Lagrangian atmospheric transport model.",
+    "og_image": (
+        "https://raw.githubusercontent.com/jmineau/PYSTILT/main/docs/_static/social-preview.png"
+        if (_static / "social-preview.png").exists()
+        else ""
+    ),
 }
+
+if (_static / "logo.svg").exists():
+    html_theme_options["logo"]["image_light"] = "_static/logo.svg"
+    _dark = "logo_dark.svg" if (_static / "logo_dark.svg").exists() else "logo.svg"
+    html_theme_options["logo"]["image_dark"] = f"_static/{_dark}"
 
 # -- Extension configuration -------------------------------------------------
 

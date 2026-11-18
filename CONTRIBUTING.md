@@ -34,6 +34,7 @@ relies on.
    ```bash
    just quality-check   # ruff, pyrefly, the import contracts, docstrings, and the unit tests (with the docstring examples)
    just pre-commit      # all pre-commit hooks
+   just sync-floors     # optional, then `just test`: every dependency at its minimum, as CI's "minimum dependencies" job does
    ```
 4. Commit with a [Conventional Commits](https://www.conventionalcommits.org/)
    message (`fix(slurm): ...`, `docs: ...`), push to your fork, and open a

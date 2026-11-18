@@ -1,0 +1,13 @@
+# Codecov reports coverage but never blocks or comments on a pull request.
+# The coverage numbers stay on codecov.io and in the README badge.
+comment: false
+
+coverage:
+  status:
+    # The checks still show on a pull request but always pass.
+    project:
+      default:
+        informational: true
+    patch:
+      default:
+        informational: true

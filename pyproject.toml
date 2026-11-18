@@ -29,8 +29,8 @@ dependencies = [
     "arlmet>=0.1.0b10",
     "dask[array]>=2023.6",
     "netcdf4>=1.6.5",
-    "numpy>=1.24",
-    "pandas>=2.0",
+    "numpy>=1.26",  # cartopy 0.26 needs it
+    "pandas>=2.1",  # xarray 2024.10 needs it
     "pyarrow>=14.0",
     "pyproj>=3.5",
     "pydantic>=2.1.0",  # 2.0 fails the receptor tests (unhashable dict)
@@ -39,7 +39,7 @@ dependencies = [
     "shapely>=2.0",
     "typer>=0.15.4",  # older ones fail with click 8.2 and later (make_metavar)
     "universal-pathlib>=0.3.0",  # 0.2.x warns on S3 paths (PendingDeprecationWarning)
-    "xarray>=2023.9.0",  # 2023.8 and earlier fail Jacobian.to_xarray
+    "xarray>=2024.10.0",  # earlier ones fail to decode the CF trajectory export's time axis (2023.8 and earlier fail Jacobian.to_xarray)
 ]
 
 [project.optional-dependencies]
@@ -49,7 +49,7 @@ geometry = [
     "h3>=4.0",
 ]
 visualization = [
-    "cartopy>=0.23",
+    "cartopy>=0.26",  # earlier ones give a projection across 180 without the prime meridian parameter the map tests check
     "matplotlib>=3.7",
 ]
 download = [
@@ -99,7 +99,7 @@ dev = [
     # The object-store tests run against a moto server.
     "flask>=3.0",
     "flask-cors>=4.0",
-    "moto[s3]>=5.0",
+    "moto[s3]>=5.1",
     "s3fs>=2024.2",
 ]
 
@@ -291,7 +291,8 @@ filterwarnings = [
     # numpy ignores this one itself (compiled packages such as netCDF4 raise it on
     # import); pytest's "error" filter would bring it back.
     "ignore:numpy.ndarray size changed:RuntimeWarning",
-    # matplotlib before 3.10.7 calls pyparsing methods that pyparsing 3.3 deprecates.
+    # matplotlib before 3.10.7 calls pyparsing methods that pyparsing 3.3 deprecates;
+    # the floors job installs matplotlib 3.8.
     "ignore::pyparsing.warnings.PyparsingDeprecationWarning",
 ]
 markers = [
