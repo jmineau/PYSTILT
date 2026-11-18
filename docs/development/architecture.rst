@@ -12,15 +12,15 @@ The design in brief
 -------------------
 
 There is no index, manifest, or registry. A project is a directory of inputs
-(:class:`stilt.Project`: ``config.yaml`` and ``receptors.csv``) and an output
+(:class:`stilt.Project`: ``config.yaml`` and ``releases.csv``) and an output
 directory (``stilt.output.Output``) that ``config.yaml`` names and that
 several projects can share. The simulations a project defines are its
-receptors crossed with the named variants in ``config.yaml``, which must
+releases crossed with the named variants in ``config.yaml``, which must
 declare at least one.
 
 Each variant resolves into a ``Variant`` (``stilt.config``) with two records
 of settings (``stilt.identity``), and their hashes name its folders.
-Variants with equal run settings share one run per receptor and differ only
+Variants with equal run settings share one run per release and differ only
 in the footprint made from it. Changing a setting never overwrites a result:
 it hashes to a new folder. :doc:`../reference/layout` describes the files.
 
@@ -31,13 +31,13 @@ footprint when the variant has a grid. ``Output.complete``,
 :ref:`finished-work` explains the consequences.
 
 ``Project`` reads, and the workers write results. ``Project(path)`` opens a
-project directory: its config, its receptors, the simulations they define,
+project directory: its config, its releases, the simulations they define,
 and a view of their results. Its only writes are to its inputs.
 ``Project.init`` (or ``stilt init``) writes ``config.yaml`` once and PYSTILT
-never rewrites it, ``add_receptors`` appends to ``receptors.csv``, and
+never rewrites it, ``add_releases`` appends to ``releases.csv``, and
 ``add_table`` writes ``tables/<name>.parquet``. It knows no scheduler or
 compute root. ``stilt.execution.run`` and ``submit``, which ``Project.run()``
-and ``Project.submit()`` call, find the receptors with missing results,
+and ``Project.submit()`` call, find the releases with missing results,
 resolve the compute root, and start the workers. The workers are the only
 code that writes results.
 
@@ -47,15 +47,15 @@ it as in pandas (``sims[sims.variant == "hrrr"]``) and pass the selection to
 the project: ``status``, ``incomplete``, ``particles`` (one long table),
 ``footprints`` (one lazy dataset stacked on the hour), ``jacobian``, or
 ``transport_error`` (the selection with the estimate's columns). A
-selection is any table with ``receptor`` and ``variant`` columns (pandas,
+selection is any table with ``release`` and ``variant`` columns (pandas,
 polars, pyarrow) or a boolean mask over ``project.simulations``, and the
-methods read only those two columns. ``project.receptors`` is a plain
-DataFrame too. ``project.receptor(id)`` and ``project.simulation(id,
+methods read only those two columns. ``project.releases`` is a plain
+DataFrame too. ``project.release(id)`` and ``project.simulation(id,
 variant)`` return values, and ``sim.particles`` and ``sim.footprint`` are
 data. ``Output`` has no folder classes: its methods (``path``,
 ``make_path``, ``read``, ``present``, ``complete``, ``table``, and the
 failure records) take the kind of result (``"particles"``, or the name of a
-stage such as ``"footprint"``), the variant, and receptor ids.
+stage such as ``"footprint"``), the variant, and release ids.
 
 The classes a STILT user holds, ``stilt.Project`` and ``stilt.Simulation``,
 are the particle part's ``stilt.project.Project`` and
@@ -87,7 +87,7 @@ Module map
      stilt_cli.py       the stilt command: stilt init, which writes the
                         starter config, and cli.py's commands
      project.py         Project, the particle part: the project directory,
-                        its receptors and simulations (DataFrames),
+                        its releases and simulations (DataFrames),
                         run/submit, and a selection's status and particles
      stilt_project.py   stilt.Project: adds a selection's footprints, Jacobian
                         and transport error; init writes STILT-R's values
@@ -101,27 +101,27 @@ Module map
      output.py          Output: the output directory, a tree per kind of
                         result (particles, and each stage by its name) and a
                         folder per settings hash; finding a variant's folder,
-                        which receptors have results (present, complete),
+                        which releases have results (present, complete),
                         where a file is and where a stage writes it (path,
                         make_path), failure records, writing particles
      stages.py          the Stage protocol: what a class named under stages:
                         provides; get_stage, the order stages run in, and
                         check_stage for the tests of a stage of your own
      migration.py       read_stilt_r: STILT-R and X-STILT by-id output as
-                        receptors, particle tables, and footprints;
+                        releases, particle tables, and footprints;
                         import_stilt_r writes it into an output directory
                         with the settings its files record
      stilt_r.py         StiltRModel, the stilt-r model of imported STILT-R
                         runs, named by its import path; it runs nothing
      simulation.py      Simulation, the particle part: a frozen value
-                        (receptor, variant, output) that knows where its
+                        (release, variant, output) that knows where its
                         results are and whether they exist (path, has)
      stilt_simulation.py stilt.Simulation: adds the footprint, calc_footprint,
                         the background, the transport error, and plot
-     background.py      background: the mole fraction at a receptor from a
+     background.py      background: the mole fraction at a release from a
                         field sampled where the particles end (sim.background)
      transport_error.py transport_error: the transport error of the
-                        enhancement, one receptor or a selection in threads
+                        enhancement, one release or a selection in threads
      config.py          ProjectConfig: reads config.yaml's blocks (mets, models,
                         stages, variants), refuses a setting outside its
                         block and an unknown key naming the nearest setting,
@@ -132,13 +132,13 @@ Module map
      identity.py        settings records and their hashes: what a run was
                         made with, in _settings.yaml, and how a stage's
                         record is hashed with what it reads
-     receptors/
-       models.py        receptor types (frozen pydantic models: point, column,
+     releases/
+       models.py        release types (frozen pydantic models: point, column,
                         multipoint), their times, and their ids
-       table.py         the receptor table behind the CSV reader, writer, and
-                        appender: receptor_rows checks it once, and
-                        receptors_from_rows builds receptors from checked rows
-       validation.py    the checks a receptor must pass, written once for many
+       table.py         the release table behind the CSV reader, writer, and
+                        appender: release_rows checks it once, and
+                        releases_from_rows builds releases from checked rows
+       validation.py    the checks a release must pass, written once for many
                         points and shared by the models and the table
      particles/         the particle table (a DataFrame)
        table.py         its columns, particle files, release heights
@@ -171,7 +171,7 @@ Module map
                         (averaging_kernel, pressure_weighting, lifetime); the
                         loader, YAML I/O, and apply_transforms in __init__.py
      exceptions.py      every exception class, all under StiltError
-     visualization.py   matplotlib plots of particles, receptors and
+     visualization.py   matplotlib plots of particles, releases and
                         projects, and their helpers (optional dependency)
      stilt_visualization.py the plots of a footprint and of a simulation
      _paths.py          local paths and object-store paths behind one interface
@@ -183,8 +183,8 @@ Module map
                         then each stage, for one or many simulations)
      observations/      the X-STILT port: product readers and SOUNDING_SCHEMA,
                         overpass grouping and sounding selection, slant
-                        geometry and receptors_from_soundings, modelled_column,
-                        plume backgrounds; receptors_from_track for the
+                        geometry and releases_from_soundings, modelled_column,
+                        plume backgrounds; releases_from_track for the
                         track of a moving platform; arrays in, plain
                         values out
      transport/         the TransportModel and TransportConfig protocols,
@@ -212,24 +212,24 @@ How a run goes
 --------------
 
 A run starts from ``Project.run()``, ``Project.submit()``, or ``stilt run``.
-``stilt.execution.run`` finds the receptors with missing results and either
+``stilt.execution.run`` finds the releases with missing results and either
 runs them in this process (``backend: local``) or submits them as one Slurm
 job array (``backend: slurm``).
 
 For Slurm, ``submit`` writes
-``_slurm/<stamp>/{receptors.txt,receptors.parquet,execution.yaml,job.sh}`` in
-the project and calls ``sbatch``. Each task runs ``stilt run --receptors
-receptors.parquet --task $SLURM_ARRAY_TASK_ID/N --execution execution.yaml
+``_slurm/<stamp>/{releases.txt,releases.parquet,execution.yaml,job.sh}`` in
+the project and calls ``sbatch``. Each task runs ``stilt run --releases
+releases.parquet --task $SLURM_ARRAY_TASK_ID/N --execution execution.yaml
 --cpus <cpus>``: a task runs its share in its own process, as a local run
 does, so the script hands it the array's ``cpus``.
-The parquet file holds the submitted receptors' checked rows, which the
-task's project takes in place of ``receptors.csv``. ``submit`` returns the job
+The parquet file holds the submitted releases' checked rows, which the
+task's project takes in place of ``releases.csv``. ``submit`` returns the job
 id at once, and ``run`` waits by polling ``sacct``.
 
 When a simulation whose particles are missing uses a met that downloads
 (the transport model's ``downloads_met``), ``submit`` first submits
-``fetch.sh`` (``fetch_script``), one task of ``stilt fetch --receptors
-receptors.parquet`` with the resources of ``execution.slurm.fetch``, and gives the
+``fetch.sh`` (``fetch_script``), one task of ``stilt fetch --releases
+releases.parquet`` with the resources of ``execution.slurm.fetch``, and gives the
 array ``--dependency=afterany:<fetch job>``. ``afterany`` because Slurm
 cannot tell ``stilt fetch``'s exit 1 (some files missing) from 3 (stopped,
 archive unreachable), and in both cases the runs whose met is there should
@@ -245,19 +245,19 @@ so a preempted task may never get SIGUSR1. A task stopped by ``scancel`` is
 not requeued, and a task stops for good after ``MAX_REQUEUES`` requeues.
 
 ``run(task=(i, n))`` (``stilt run --task i/n``) runs one share here, whatever
-the backend. The share is taken from all the receptors before the complete
+the backend. The share is taken from all the releases before the complete
 ones are dropped (``task_share``), so tasks that start at different times
 never overlap. Any scheduler that can start a command line with an index can
 run a project this way.
 
-The unit of work is a receptor. ``run_receptor`` runs the transport model
+The unit of work is a release. ``run_release`` runs the transport model
 once per distinct run-settings hash, then runs the stages of every variant
 that shares those particles (``run_stages``). A worker handles the variants
-of its receptor in config order. A variant whose particles are missing runs
+of its release in config order. A variant whose particles are missing runs
 the model, and the variants that share those particles reuse them.
 
 A stage is what is made from a simulation's results after the model runs:
-one file per receptor, from the particles, from the files of other stages,
+one file per release, from the particles, from the files of other stages,
 or both. The footprint is the one stage PYSTILT has
 (``stilt.footprint.FootprintStage``). A ``stages`` block of ``config.yaml``
 names its stage's class by import path, and the class provides the members
@@ -276,13 +276,13 @@ itself, under a temporary name the worker moves into place, and the worker
 never looks inside. The stage's earlier file is removed before it runs, so
 a stage that fails leaves none, old or half-written. A stage whose input
 failed is left for the next run. A batched model (``batched = True``,
-with ``run_many``) is the exception: ``run_receptors`` first runs each of its
-variant groups once for all the receptors that need particles, then the
-per-receptor loop does the rest. HYSPLIT is not batched.
+with ``run_many``) is the exception: ``run_releases`` first runs each of its
+variant groups once for all the releases that need particles, then the
+per-release loop does the rest. HYSPLIT is not batched.
 
 HYSPLIT has to run in a local folder that holds its input files, the run's
 workdir. Each run's workdir is a new path in the compute root
-(``_new_workdir`` in the worker: the receptor id, the variant, the
+(``_new_workdir`` in the worker: the release id, the variant, the
 realization in an ensemble, and a random part, as in
 ``202301011200_-111.85_40.77_5_hrrr_3f9a1c2e``), so projects can share a
 compute root and two runs never clear each other's files. A simulation that
@@ -301,7 +301,7 @@ killed outright (``SIGKILL``, or a node that fails) cannot clean up, and its
 workdir stays in the compute root until that folder is cleaned.
 
 Files are written through a temporary name and renamed into place, so a reader
-never sees a partial file, and two workers that run the same receptor by
+never sees a partial file, and two workers that run the same release by
 accident produce equivalent files with the last rename winning. Each of them
 runs in its own workdir. No lock is needed.
 
@@ -311,8 +311,8 @@ directory, never only in memory.
 
 The observation-driven path sits above this. A reader yields a DataFrame of
 soundings, ``stilt.observations`` helpers thin and group it, and each row
-becomes a receptor (``receptors_from_soundings``, which also gives the kernel
-table, kept with ``project.add_table``). Then ``add_receptors`` and a run go
+becomes a release (``releases_from_soundings``, which also gives the kernel
+table, kept with ``project.add_table``). Then ``add_releases`` and a run go
 as usual. Observation logic stays out of ``project.py``.
 
 .. _finished-work:
@@ -334,7 +334,7 @@ every stage its variant uses (:attr:`stilt.Simulation.is_complete`;
 many). For a variant with a footprint that is:
 
 - the particle file,
-  ``particles/settings=<variant>-<hash>/date=<day>/<receptor>.parquet``
+  ``particles/settings=<variant>-<hash>/date=<day>/<release>.parquet``
 - the footprint file in the variant's ``footprint/`` folder. A footprint
   that no particle reached is a file with no rows, marked
   ``stilt:empty: true`` in its metadata, and it counts.
@@ -345,13 +345,13 @@ variant that sets a stage to null needs no file of it.
 Each result has one expected path, so checking one simulation is a file
 lookup. For many simulations (``stilt status``, or planning a run) PYSTILT
 lists the date folders the selection falls in, once each, and reads the
-answer for every receptor from that. That keeps a project of a hundred
-thousand receptors quick to check, and a few simulations of it cheap.
+answer for every release from that. That keeps a project of a hundred
+thousand releases quick to check, and a few simulations of it cheap.
 A notebook, a Slurm task, and another project sharing the directory all see
 the same files, so they agree on what's finished without talking to each
 other. Deleting a result file makes that simulation unfinished again.
 
-A project's simulations are its receptors (``receptors.csv``) run under each
+A project's simulations are its releases (``releases.csv``) run under each
 of its variants (``config.yaml``), and ``project.simulations`` is exactly that
 set, one row per simulation. Both files are in the project folder before
 anything runs, so any worker on any machine can open the project from the
@@ -375,7 +375,7 @@ folder in the stage's tree (``footprint/``). Each folder holds a
 ``_settings.yaml`` with the settings written out in full.
 
 That is how PYSTILT knows a setting changed: the variant now hashes to a
-folder that does not exist yet, so its receptors run again into it. The old
+folder that does not exist yet, so its releases run again into it. The old
 folder is untouched. It is also how two variants come to share particles:
 if only their footprint fields differ, their transport settings hash the
 same and they resolve to one ``particles/`` folder.
@@ -530,7 +530,7 @@ there is refused with a message naming its block.
   ``CONTRIBUTING.md`` explains how a HYSPLIT field is routed to
   ``SETUP.CFG``, ``CONTROL``, ``WINDERR``, or ``ZIERR``.
 - ``ExecutionConfig`` (``execution:`` in ``config.yaml``) says where
-  receptors run. ``backend`` names the place, and each backend's settings
+  releases run. ``backend`` names the place, and each backend's settings
   are in the block of its name (``LocalConfig``, ``SlurmConfig``), ``cpus``
   included; only ``timeout`` and ``keep_workdir`` sit beside ``backend``.
   ``ExecutionConfig.cpus`` and ``.fetch`` read the block ``backend`` names.
@@ -549,9 +549,9 @@ Results are plain data
 
 ``sim.particles`` is a pandas DataFrame and ``sim.footprint`` an xarray
 DataArray. PYSTILT's methods on them live in ``.stilt`` accessors. A
-footprint carries its receptor id as a scalar coordinate (kept through
-arithmetic) and the full receptor and settings as attributes
-(``stilt_receptor``, ``stilt_footprint``), which the accessor reads. Every
+footprint carries its release id as a scalar coordinate (kept through
+arithmetic) and the full release and settings as attributes
+(``stilt_release``, ``stilt_footprint``), which the accessor reads. Every
 result file records what it needs to be read alone (``read_particles``,
 ``read_footprint``).
 
@@ -563,18 +563,18 @@ grid, an empty footprint). Use ``has_particles`` and ``has_footprint`` to
 test presence; never write to a simulation's ``__dict__``.
 
 ``project.simulations`` is built once, and each access returns a copy, so a
-user's new column stays theirs. ``add_receptors`` drops the cache. A
+user's new column stays theirs. ``add_releases`` drops the cache. A
 ``config.yaml`` edited by hand needs a new ``Project(path)``.
 
 Bulk methods and listings
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 A method of ``Project`` that takes a selection works from folder listings and
-receptor ids. It never builds a ``Simulation`` per row, which costs
+release ids. It never builds a ``Simulation`` per row, which costs
 milliseconds each and adds up to many minutes on tens of thousands of
 footprints. It opens a file per row only when the file's contents are the
-answer (``footprints``, ``jacobian``, ``transport_error``), and builds receptors together
-(``Project._receptors``) when it needs them.
+answer (``footprints``, ``jacobian``, ``transport_error``), and builds releases together
+(``Project._releases``) when it needs them.
 
 ``Output.directory`` is a ``Path`` on a filesystem and a universal path
 (``UPath``) for a URL (``stilt._paths.location``). Code that touches the
@@ -598,7 +598,7 @@ Failure records
 ^^^^^^^^^^^^^^^
 
 When the model run or a stage fails, the worker writes
-``<receptor id>.failure.yaml`` in the
+``<release id>.failure.yaml`` in the
 logs of the folder whose result failed (``logs/settings=<key>/date=.../``:
 the particles' folder for the run, the stage's own for a stage), and
 removes it when that result is written. Its ``stage`` is ``particles`` or
@@ -669,7 +669,7 @@ can call it for another transport model that knows its domain.
 Realizations
 ^^^^^^^^^^^^
 
-``realizations: N`` makes one variant whose simulations are ``(receptor,
+``realizations: N`` makes one variant whose simulations are ``(release,
 variant, k)``, with ``k`` in ``0..N-1``, the ``realization`` column of
 ``project.simulations``. They share one settings folder, with a
 ``realization=k/`` partition each. The run record says ``ensemble: true``
@@ -713,11 +713,11 @@ Pressure weighting
 ``PressureWeighting`` fits ``ln p = b + a·z`` to the particles' first-step
 ``(zagl, pres)`` and gives each distinct release height the pressure slab
 centered on it (``particle_pwf``), split evenly among the particles released
-there (a multipoint receptor releases many per point). The fit is made in the
-receptor's own datum: for ``altitude_ref="msl"`` it uses ``zagl + zsfc`` (so
+there (a multipoint release releases many per point). The fit is made in the
+release's own datum: for ``altitude_ref="msl"`` it uses ``zagl + zsfc`` (so
 ``zsfc`` must be in ``varsiwant``), and the ground closing the bottom slab is
 the terrain under the lowest point. ``PressureWeighting.apply`` reads
-``altitude_ref`` from the receptor it is given; with none it assumes AGL.
+``altitude_ref`` from the release it is given; with none it assumes AGL.
 ``AveragingKernel`` holds only the kernel. ``calc_footprint`` divides by the
 particle count, so weights are scaled by ``N``. Weights sum to the column's
 mass fraction (less than 1) by design: the rest of the atmosphere is above
@@ -744,11 +744,11 @@ Release heights
 The particle table's contract asks a model to write each particle's release
 at ``age = 0``. From it ``add_release_heights`` (``particles/table.py``, a
 core step the worker applies to any model's particles, as is
-``correct_near_field``) finds which point of a multipoint receptor a particle
+``correct_near_field``) finds which point of a multipoint release a particle
 left from, or which slab of a column. ``release_height`` is that point's
 altitude or that slab's center, never the random height inside the slab.
 
-For a multipoint or slant receptor, ``_multipoint_release_heights`` uses, in
+For a multipoint or slant release, ``_multipoint_release_heights`` uses, in
 order: ``age = 0`` rows when present (exact); a match on height when every
 release altitude differs; then horizontal position, with a warning when
 points are closer than 1 km. HYSPLIT 5.1.0, STILT-R's build, writes no ``age = 0``

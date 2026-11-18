@@ -13,7 +13,7 @@ Each kind of result has its own tree: ``particles/`` for what the transport
 model wrote, and one named for each stage of the project, which is what is
 made from a simulation's results afterward. The footprint is a stage, and
 its tree is ``footprint/``. Inside a tree, each settings folder holds the
-results of one set of settings, split by the receptor's date:
+results of one set of settings, split by the release's date:
 
 .. code-block:: text
 
@@ -21,33 +21,33 @@ results of one set of settings, split by the receptor's date:
      particles/
        settings=hrrr-7d36c8/
          _settings.yaml
-         date=2024-07-15/<receptor id>.parquet
+         date=2024-07-15/<release id>.parquet
        settings=hrrr-err-b2399e/                 an ensemble
          _settings.yaml
-         realization=0/date=2024-07-15/<receptor id>.parquet
-         realization=1/date=2024-07-15/<receptor id>.parquet
+         realization=0/date=2024-07-15/<release id>.parquet
+         realization=1/date=2024-07-15/<release id>.parquet
      footprint/
        settings=hrrr-f82d40/
          _settings.yaml
-         date=2024-07-15/<receptor id>.parquet
+         date=2024-07-15/<release id>.parquet
      logs/
-       settings=hrrr-7d36c8/date=2024-07-15/<receptor id>.log
-       settings=hrrr-7d36c8/date=2024-07-15/<receptor id>.failure.yaml
-       settings=hrrr-f82d40/date=2024-07-15/<receptor id>.failure.yaml
+       settings=hrrr-7d36c8/date=2024-07-15/<release id>.log
+       settings=hrrr-7d36c8/date=2024-07-15/<release id>.failure.yaml
+       settings=hrrr-f82d40/date=2024-07-15/<release id>.failure.yaml
      scratch/
-       settings=hrrr-7d36c8/date=2024-07-15/<receptor id>/
+       settings=hrrr-7d36c8/date=2024-07-15/<release id>/
 
 A settings folder is named ``<variant>-<six characters>``. The variant is
 the name in ``config.yaml`` that first made the folder, and the six
 characters are the start of its settings hash (below). The date is the
-receptor's release date in UTC. An ensemble (``realizations: N``) has a
+release's release date in UTC. An ensemble (``realizations: N``) has a
 ``realization=k`` folder between the settings folder and the dates.
 
 The ``logs/`` tree follows the folders of the results:
 
-- ``<receptor id>.log`` is the transport model's log, under the particles'
+- ``<release id>.log`` is the transport model's log, under the particles'
   settings folder.
-- ``<receptor id>.failure.yaml`` says why a result failed, and at which
+- ``<release id>.failure.yaml`` says why a result failed, and at which
   ``stage``. A failed run writes it under the particles' settings folder,
   with ``stage: particles``. A failed footprint writes it under the
   footprint's own settings folder, with ``stage: footprint``, since the
@@ -165,7 +165,7 @@ footprint file records its folder's full hash as ``stilt:hash``.
 Particle files
 --------------
 
-A particle file is ``particles/settings=.../date=.../<receptor id>.parquet``,
+A particle file is ``particles/settings=.../date=.../<release id>.parquet``,
 one row per particle per output step. :doc:`particles` describes what each
 column means.
 
@@ -176,9 +176,9 @@ column means.
    * - Column
      - Stored as
      - Notes
-   * - ``receptor``
+   * - ``release``
      - dictionary of string
-     - The receptor id, the same on every row.
+     - The release id, the same on every row.
    * - ``particle``
      - int32
      - :func:`stilt.read_particles` gives it back as float64.
@@ -189,9 +189,9 @@ column means.
    * - ``lon``, ``lat``, ``zagl``, and the rest
      - float64
      - The columns ``varsiwant`` asked HYSPLIT for, plus ``release_height``
-       for a column or multipoint receptor.
+       for a column or multipoint release.
 
-``time`` is not stored: it is the receptor time plus ``age``.
+``time`` is not stored: it is the release time plus ``age``.
 
 The file's metadata (Parquet key-value metadata):
 
@@ -201,8 +201,8 @@ The file's metadata (Parquet key-value metadata):
 
    * - Key
      - Value
-   * - ``stilt:receptor``
-     - The receptor as JSON (below).
+   * - ``stilt:release``
+     - The release as JSON (below).
    * - ``stilt:settings``
      - The run's settings as JSON, the ``settings`` block of the folder's
        ``_settings.yaml``.
@@ -227,12 +227,12 @@ A footprint file holds only the cells that are not zero:
    * - Column
      - Stored as
      - Notes
-   * - ``receptor``
+   * - ``release``
      - dictionary of string
-     - The receptor id.
+     - The release id.
    * - ``hour``
      - int16
-     - The layer, counted from the receptor time in layers of ``tres``:
+     - The layer, counted from the release time in layers of ``tres``:
        hours, by default (below).
    * - ``y``
      - int16
@@ -253,8 +253,8 @@ The file's metadata:
 
    * - Key
      - Value
-   * - ``stilt:receptor``
-     - The receptor as JSON.
+   * - ``stilt:release``
+     - The release as JSON.
    * - ``stilt:footprint``
      - The footprint settings as JSON, with the grid: the ``settings``
        block of the folder's ``_settings.yaml``.
@@ -284,13 +284,13 @@ The hour
 ~~~~~~~~
 
 Layer ``k`` holds the particles' influence from ``k`` to ``k + 1`` layers
-after the receptor time, and is stamped at its start. A layer is
+after the release time, and is stamped at its start. A layer is
 ``tres`` long, an hour by default, so the stored ``hour`` is the hour
 unless the settings give another length; it is always the layer number.
 :meth:`stilt.Project.footprints` turns it into the unit ``tres`` is written
 in, and names its dimension for it: layer -1 of ``15min`` layers is
 ``minute`` -15 there. A particle row at ``age`` minutes
-falls in layer ``floor(age / m)``, where ``m`` is ``tres`` in minutes. For a receptor at
+falls in layer ``floor(age / m)``, where ``m`` is ``tres`` in minutes. For a release at
 18:30 on a backward run with hourly layers:
 
 .. list-table::
@@ -307,7 +307,7 @@ falls in layer ``floor(age / m)``, where ``m`` is ``tres`` in minutes. For a rec
      - -2
      - 16:30 to 17:30, stamped 16:30
 
-The layers keep the receptor's minute, so a receptor at 18:30 has layers
+The layers keep the release's minute, so a release at 18:30 has layers
 starting at half past. With ``tres: 15min`` its layer -1 covers 18:15
 to 18:30 and layer -2 covers 18:00 to 18:15. With ``tres`` as long as the
 run (``1D`` for a 24-hour run) there is one layer, -1, stamped at the
@@ -351,7 +351,7 @@ For example, in pyarrow:
 
 The small tolerance keeps the last whole cell when the bounds are decimals
 that binary floats store a little short. Layer ``h`` starts
-``h`` times ``tres`` after the receptor time. ``tres`` is in
+``h`` times ``tres`` after the release time. ``tres`` is in
 ``stilt:footprint``, written as minutes (``15min``), hours (``1h``) or days
 (``1D``); a file that does not record it has hourly layers.
 
@@ -362,10 +362,10 @@ Footprint values are in ppm per (µmol m⁻² s⁻¹), ``ppm m2 s umol-1``. The
 files do not say so; :func:`stilt.read_footprint` adds the units to the
 array it returns.
 
-Receptor ids and the receptor
+Release ids and the release
 -----------------------------
 
-A receptor id is the release time to the minute, then the location:
+A release id is the release time to the minute, then the location:
 
 .. code-block:: text
 
@@ -376,7 +376,7 @@ A receptor id is the release time to the minute, then the location:
 A location ends in ``msl`` when its heights are above sea level. Whole
 numbers are written without a decimal point.
 
-``stilt:receptor`` holds the whole receptor as JSON. Its ``time`` keeps
+``stilt:release`` holds the whole release as JSON. Its ``time`` keeps
 the seconds, and is UTC with no time zone:
 
 .. code-block:: text

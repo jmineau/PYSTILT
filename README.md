@@ -57,13 +57,14 @@ has the details and other builds.
 
 ## Quickstart
 
-Describe a measurement, follow particles back from it through the
-meteorology, and calculate its footprint:
+Describe a measurement as a release (STILT's receptor: a release placed at a
+measurement and followed backward in time), follow particles back from it
+through the meteorology, and calculate its footprint:
 
 ```python
 import stilt
 
-receptor = stilt.PointReceptor(
+release = stilt.PointReceptor(
     time="2023-07-15 18:00",   # UTC
     longitude=-111.848,
     latitude=40.766,
@@ -72,19 +73,19 @@ receptor = stilt.PointReceptor(
 met = "/data/hrrr"             # a folder of ARL files; their headers say what they hold
 grid = stilt.Grid(xmin=-113.0, xmax=-110.5, ymin=40.0, ymax=42.0, xres=0.01, yres=0.01)
 
-particles = stilt.run_trajectories(receptor, met, n_hours=-24, numpar=100)
-foot = stilt.calc_footprint(particles, receptor, grid)
+particles = stilt.run_trajectories(release, met, n_hours=-24, numpar=100)
+foot = stilt.calc_footprint(particles, release, grid)
 ```
 
 `particles` is a pandas DataFrame, one row per particle per step, and
 `foot` an xarray DataArray, one map per hour.
 
-For many receptors, a project runs each one and keeps the results:
+For many releases, a project runs each one and keeps the results:
 
 ```python
 project = stilt.Project.init(
     "./my_project",
-    receptors=[receptor],
+    releases=[release],
     mets={"hrrr": met},
     models={"hysplit": {"n_hours": -24, "numpar": 100}},
     stages={"footprint": {"class": "stilt.footprint.FootprintStage", "grid": grid}},
@@ -92,7 +93,7 @@ project = stilt.Project.init(
 )
 project.run()   # returns when the run is done
 
-sim = project.simulation(receptor.id, "hrrr")
+sim = project.simulation(release.id, "hrrr")
 sim.particles, sim.footprint
 ```
 
@@ -103,10 +104,10 @@ setting, edit `config.yaml`.
 ## Command line
 
 ```bash
-stilt init ./my_project          # write a starter config.yaml and receptors.csv
+stilt init ./my_project          # write a starter config.yaml and releases.csv
 stilt check ./my_project         # list what would stop a run, before any run
-stilt run ./my_project           # run every receptor that is not done yet
-stilt run ./my_project --cpus 8  # the same, eight receptors at a time
+stilt run ./my_project           # run every release that is not done yet
+stilt run ./my_project --cpus 8  # the same, eight releases at a time
 stilt status ./my_project        # what has finished, and the settings folders
 ```
 
@@ -115,13 +116,13 @@ when it was stopped, or a connection error stopped some, before they finished. A
 connection or I/O error (a bucket that cannot be reached), which a retry may get past, and with 4
 for any other, which a retry would repeat. `stilt check` exits with 0 when it finds nothing and 1
 when it lists anything. Every command exits with 2 when its command line is wrong or the project's
-files are invalid (`config.yaml` that is not valid YAML, a bad row in `receptors.csv`); `stilt run`
+files are invalid (`config.yaml` that is not valid YAML, a bad row in `releases.csv`); `stilt run`
 and `stilt submit` also when a met directory does not exist or holds no met files, and `stilt status`
 also then, unless the output holds no result the project could own (it reports every simulation pending).
 
 ## Variants
 
-A variant is a named set of settings. Every receptor runs once under each variant. `config.yaml`
+A variant is a named set of settings. Every release runs once under each variant. `config.yaml`
 is blocks: `models` holds the transport model's settings and `stages` the footprint's, which are
 the defaults, and a variant lists only what it changes. The `variants` block declares them all;
 `hrrr: {}` runs the defaults.
@@ -151,7 +152,7 @@ variants:
         transforms: [{kind: averaging_kernel, table: kernels}]
 ```
 
-Each receptor under each variant is one simulation. Results go to the output directory
+Each release under each variant is one simulation. Results go to the output directory
 (`./output` by default), in a folder named for the settings they were made with. Variants whose
 transport settings match share one HYSPLIT run and differ only in the footprint, as `hrrr-ak`
 does here. Adding a variant runs only what is new, and changing a setting writes to a new folder
@@ -160,7 +161,7 @@ beside the old one.
 ## On a cluster
 
 Add an `execution` section to `config.yaml` and run the same command. PYSTILT splits the
-unfinished receptors among the tasks of one Slurm job array and submits it:
+unfinished releases among the tasks of one Slurm job array and submits it:
 
 ```yaml
 execution:
@@ -179,24 +180,24 @@ stilt status ./my_project
 ```
 
 Each task runs `stilt run --task I/N`, so a task is a command line you can read and rerun. A
-task that is preempted or nears its time limit requeues itself and skips the receptors it
+task that is preempted or nears its time limit requeues itself and skips the releases it
 finished. Whether a simulation is finished is always decided by its files in the output
 directory. The same `--task` runs a project as a Kubernetes indexed Job.
 
 ## Column and satellite soundings
 
-Read the soundings into a table with one row per sounding, then make a receptor for each.
+Read the soundings into a table with one row per sounding, then make a release for each.
 Each sounding has its own averaging kernel, which goes into the project as a table:
 
 ```python
 import stilt
-from stilt.observations import read_tropomi_ch4, receptors_from_soundings
+from stilt.observations import read_tropomi_ch4, releases_from_soundings
 
 df = read_tropomi_ch4(path)                      # or read_oco2, read_tccon, or your own reader
-receptors, kernels = receptors_from_soundings(df[df.good], "slant", top=3000)
+releases, kernels = releases_from_soundings(df[df.good], "slant", top=3000)
 
 project = stilt.Project("./my_project")         # a project with a config.yaml
-project.add_receptors(receptors)
+project.add_releases(releases)
 project.add_table("kernels", kernels)
 project.run()
 ```
@@ -233,7 +234,7 @@ transforms:
     max_height: 1200
 ```
 
-A transform is any object with an `apply(particles, receptor=None, directory=None)` method. The
+A transform is any object with an `apply(particles, release=None, directory=None)` method. The
 [transforms guide](https://jmineau.github.io/PYSTILT/stable/guides/transforms.html)
 covers the column-weighting science and how to write your own.
 
@@ -244,12 +245,12 @@ import pandas as pd
 
 import stilt
 
-sims = project.simulations                       # one row per receptor and variant
+sims = project.simulations                       # one row per release and variant
 january = sims[(sims.variant == "hrrr") & sims.time.between("2023-01-01", "2023-01-31")]
 
 project.status(january)                          # which results exist
-footprints = project.footprints(january)         # one dataset: receptor, hour, lat, lon
-mean = footprints.foot.sum("hour").mean("receptor")
+footprints = project.footprints(january)         # one dataset: release, hour, lat, lon
+mean = footprints.foot.sum("hour").mean("release")
 
 windows = stilt.Mesh.from_windows([(-111.9, 40.7), (-111.8, 40.8)], size=0.05)
 time_bins = pd.interval_range(
@@ -258,7 +259,7 @@ time_bins = pd.interval_range(
     freq="1h",
     closed="left",
 )
-H = project.jacobian(january, windows, time_bins)  # sparse: receptors by (hour, window)
+H = project.jacobian(january, windows, time_bins)  # sparse: releases by (hour, window)
 ```
 
 `stilt.sampling.sample_met` adds met columns (`mlht`, `dens`, `pres`, `zsfc`) to a particle
@@ -277,13 +278,13 @@ and the reason. The simulation counts as finished, and `project.footprints()` li
 `attrs["empty"]`.
 
 Runs made with STILT-R or X-STILT are read from their `out/by-id` folder, one simulation at a
-time, as a receptor, a particle table, and a footprint (`pip install "pystilt[stilt-r]"`):
+time, as a release, a particle table, and a footprint (`pip install "pystilt[stilt-r]"`):
 
 ```python
 from stilt.migration import read_stilt_r
 
-for receptor, particles, foot in read_stilt_r("my_project/out/by-id"):
-    print(receptor.id, len(particles), foot is not None)
+for release, particles, foot in read_stilt_r("my_project/out/by-id"):
+    print(release.id, len(particles), foot is not None)
 ```
 
 `stilt.migration.import_stilt_r` writes them into a project's output directory instead, and prints
@@ -296,7 +297,7 @@ PYSTILT footprints match the [STILT-R](https://github.com/uataq/stilt) footprint
 tolerance of 1e-7 in every grid cell, on longitude/latitude grids. The test
 suite checks this on 21 scenarios against a pinned STILT-R commit. A few cases differ on
 purpose: smoothing on a projected grid, grids and particles near 180°, and the near-field
-correction for receptors above sea level. The NetCDF files are laid out differently from STILT-R's, so read them as standard
+correction for releases above sea level. The NetCDF files are laid out differently from STILT-R's, so read them as standard
 CF-1.8 NetCDF. The [STILT-R parity page](https://jmineau.github.io/PYSTILT/stable/development/stilt_r_parity.html)
 of the development docs lists every difference.
 

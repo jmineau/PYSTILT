@@ -27,7 +27,7 @@ Windows and copied over, ``exec/hycs_std`` loses its permission to run;
 ``chmod +x exec/hycs_std`` gives it back.
 
 ``directory`` is a HYSPLIT setting, so a variant can set its own and
-compare two builds on the same receptors:
+compare two builds on the same releases:
 
 .. code-block:: yaml
 
@@ -56,7 +56,7 @@ variant's name and its other settings, and exits with 2 when the variant
 has folders from two builds.
 
 A build that writes each particle's release as a row at ``age = 0`` gives
-exact release heights for multipoint and slant receptors. HYSPLIT 5.1.0
+exact release heights for multipoint and slant releases. HYSPLIT 5.1.0
 writes its first row one time step after release, and PYSTILT matches
 each particle to its release point from that first position
 (:doc:`../reference/particles`).

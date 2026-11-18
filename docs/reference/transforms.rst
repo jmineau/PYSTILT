@@ -3,7 +3,7 @@ Transforms
 
 Particle transforms scale each particle's ``foot`` before the footprint is
 made (see :doc:`/guides/transforms`). A transform is any object with an
-``apply(particles, receptor=None, directory=None)`` method. The built-ins
+``apply(particles, release=None, directory=None)`` method. The built-ins
 are pydantic models, and their fields are their ``config.yaml`` keys.
 
 Built-in transforms

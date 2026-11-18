@@ -9,7 +9,7 @@ each one, and a quick check that tells you whether the choice was good
 enough.
 
 .. This page runs when the docs are built, on the sample project of
-   docs/_ext/docs_examples.py (four receptors on 15 January 2021).
+   docs/_ext/docs_examples.py (four releases on 15 January 2021).
 
 .. ipython:: python
    :suppress:
@@ -28,7 +28,7 @@ valleys, coastlines and mixed-layer depth that steer air near a city are
 smoothed away on a coarse grid. In the contiguous US since mid-2015 that is
 HRRR at 3 km. :doc:`meteorology` has a table of the products and when to use
 each. To see how much the choice matters for your site, run the same
-receptors with a second met as a second variant and compare the footprints.
+releases with a second met as a second variant and compare the footprints.
 
 How long to run
 ---------------
@@ -62,7 +62,7 @@ How many particles
 More particles give a smoother footprint, and the far part of a footprint,
 where few particles reach, needs the most. The default of 200 shows the
 shape of a footprint. For results we use 1000, STILT-R's default. To check
-a value for your site, run a few receptors with three times as many
+a value for your site, run a few releases with three times as many
 particles as a second variant and compare:
 
 .. code-block:: yaml
@@ -80,7 +80,7 @@ The footprint grid
 
 The grid must cover where the air comes from over the whole run, because
 particles outside it add nothing to the footprint. Plot the particles of a
-few receptors from different seasons and times of day, and draw the grid
+few releases from different seasons and times of day, and draw the grid
 around all of them.
 
 Make the cells as fine as the finest flux inventory you will multiply the
@@ -103,6 +103,6 @@ STILT-R. Three are worth knowing:
   a rerun or a colleague's run gives the same footprint
   (:doc:`../getting_started/quickstart`).
 - ``hnf_plume``, the near-field correction, is on by default and matters for
-  a receptor near strong sources (:doc:`checking`).
+  a release near strong sources (:doc:`checking`).
 - A transport-error variant estimates how much the wind errors of the
   meteorology change the modeled enhancement (:doc:`transport_error`).

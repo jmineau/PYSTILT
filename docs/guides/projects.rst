@@ -2,10 +2,10 @@ Projects And Variants
 =====================
 
 A PYSTILT :term:`project` is a folder with your settings and your
-receptors. Every receptor runs once under each :term:`variant`, a named set
+releases. Every release runs once under each :term:`variant`, a named set
 of settings, and the results go to an output directory the settings name.
 We keep one project per study, because a project reruns only what is
-missing and never overwrites a result, so you can add receptors and try
+missing and never overwrites a result, so you can add releases and try
 other settings as the study grows. Most projects need only the settings
 below, and :doc:`../reference/configuration` lists every option.
 
@@ -16,7 +16,7 @@ The project folder
 
    my_project/
      config.yaml        # your settings: meteorology, transport model, footprint, variants
-     receptors.csv      # your receptors: where and when to release particles
+     releases.csv      # your releases: where and when to release particles
      tables/            # other inputs, such as averaging kernels (project.add_table)
 
 ``stilt init`` writes a starter ``config.yaml`` with comments, and so does
@@ -26,7 +26,7 @@ The project folder
 stops if the folder already has a ``config.yaml``.
 
 Both files are yours to edit. PYSTILT never rewrites ``config.yaml``, and it
-only appends to ``receptors.csv``. ``project.add_table("kernels", table)``
+only appends to ``releases.csv``. ``project.add_table("kernels", table)``
 adds rows to ``tables/kernels.parquet`` the same way, and a transform names
 it as ``table: kernels``. A Slurm run also makes a ``_slurm/`` folder with
 its job scripts and logs (:doc:`slurm`).
@@ -56,7 +56,7 @@ A typical config.yaml
          yres: 0.01
 
    variants:
-     hrrr: {}            # every receptor runs once, with these settings
+     hrrr: {}            # every release runs once, with these settings
 
 The file is four blocks, and each names its entries. ``mets`` is your
 meteorology. ``models`` is the transport model that makes the particles,
@@ -89,7 +89,7 @@ The settings most people change
    * - ``n_hours``, under ``models: hysplit:``
      - How many hours to follow the particles. Negative values run backward
        in time, which is what footprints need. Positive values run forward
-       from the receptor (see :ref:`plume-background`).
+       from the release (see :ref:`plume-background`).
      - ``-24`` to ``-72``
    * - ``numpar``, under ``models: hysplit:``
      - Particles released per simulation. More particles give a smoother
@@ -126,10 +126,10 @@ These footprint settings sit next to ``grid``, in the footprint's block:
 
 ``tres``
    The length of each time layer of the footprint. The default, ``1h``,
-   gives one layer per hour back from the receptor time, as STILT-R does.
+   gives one layer per hour back from the release time, as STILT-R does.
    Use ``15min`` for 15-minute observations such as EM27/SUN columns, or
    ``1D`` for daily layers in a coarse inversion. Layers are counted from
-   the receptor time, so a receptor at 18:30 with ``tres: 15min`` has
+   the release time, so a release at 18:30 with ``tres: 15min`` has
    layers starting at 18:15, 18:00, and so on. In
    :meth:`~stilt.Project.footprints` the layer dimension is named for the
    unit ``tres`` is written in and counts in it: ``hour`` -1, -2, ... for
@@ -158,11 +158,11 @@ describes each one.
 Variants
 --------
 
-Every receptor runs once per variant. A variant has a name, a met, and any
+Every release runs once per variant. A variant has a name, a met, and any
 settings that differ from the blocks above, which are the defaults: its
 model's block and the footprint's. Every config lists its variants, and only
 those run. An entry with no overrides (``hrrr: {}`` below) runs the defaults
-unchanged. Add more entries to run the same receptors under other settings:
+unchanged. Add more entries to run the same releases under other settings:
 
 .. code-block:: yaml
 
@@ -177,7 +177,7 @@ unchanged. Add more entries to run the same receptors under other settings:
        horcoruverr: 14
        stages: {footprint: null}  # particles only
 
-Each variant of each receptor is one simulation, so 100 receptors and
+Each variant of each release is one simulation, so 100 releases and
 three variants make 300 simulations. A variant may set:
 
 ``met``
@@ -235,7 +235,7 @@ from them:
            transforms: [{kind: averaging_kernel, table: kernels}]
 
 ``hrrr-regional`` and ``hrrr-ak`` have the same transport settings as
-``hrrr``, so HYSPLIT runs once per receptor for the three of them. There is
+``hrrr``, so HYSPLIT runs once per release for the three of them. There is
 nothing to declare: PYSTILT sees that the settings that decide the particles
 are equal. Add such a variant to a finished project and run again, and
 PYSTILT makes only the new footprints, from the stored particles.
@@ -259,19 +259,19 @@ directory share it.
      particles/
        settings=hrrr-a3f9c2/                 # one folder per set of transport settings
          _settings.yaml                      # the settings, written out in full
-         date=2023-07-15/<receptor id>.parquet
+         date=2023-07-15/<release id>.parquet
        settings=hrrr-err-7be104/             # an ensemble: a folder per realization
-         realization=0/date=2023-07-15/<receptor id>.parquet
+         realization=0/date=2023-07-15/<release id>.parquet
      footprint/
        settings=hrrr-93278c/                 # one folder per variant's footprint settings
          _settings.yaml                      # names the particles folder it was made from
-         date=2023-07-15/<receptor id>.parquet
+         date=2023-07-15/<release id>.parquet
      logs/
-       settings=hrrr-a3f9c2/date=2023-07-15/<receptor id>.log
-       settings=hrrr-a3f9c2/date=2023-07-15/<receptor id>.failure.yaml   # a failed run
-       settings=hrrr-93278c/date=2023-07-15/<receptor id>.failure.yaml   # a failed footprint
+       settings=hrrr-a3f9c2/date=2023-07-15/<release id>.log
+       settings=hrrr-a3f9c2/date=2023-07-15/<release id>.failure.yaml   # a failed run
+       settings=hrrr-93278c/date=2023-07-15/<release id>.failure.yaml   # a failed footprint
      scratch/
-       settings=hrrr-a3f9c2/date=2023-07-15/<receptor id>/              # a kept workdir
+       settings=hrrr-a3f9c2/date=2023-07-15/<release id>/              # a kept workdir
 
 Each :term:`settings folder` is named after the variant that first made it,
 plus a short code computed from the settings it was made with. That is why
@@ -337,7 +337,7 @@ Changing a setting
 Edit ``config.yaml`` and run again. Change a setting, including a default
 the variant inherits or a setting of its met, and the variant's settings
 now point at a folder that does not exist yet. The next run fills it, for
-every receptor, and the old folder stays as it was.
+every release, and the old folder stays as it was.
 
 ``stilt status`` lists every settings folder in the output directory, how
 many result files it holds, which variants use it, and how a folder this
@@ -445,7 +445,7 @@ example because the shapefile was edited after the run.
 Simulation IDs
 --------------
 
-A simulation is one receptor run under one variant. Its ID is the receptor
+A simulation is one release run under one variant. Its ID is the release
 ID and the variant name joined by a slash:
 
 .. code-block:: text
@@ -454,18 +454,18 @@ ID and the variant name joined by a slash:
 
    202307151800_-111.848_40.766_10/hrrr
 
-For a point receptor, the location is the longitude, latitude, and
-altitude. A column receptor has ``X`` and its bottom and top in place of
+For a point release, the location is the longitude, latitude, and
+altitude. A column release has ``X`` and its bottom and top in place of
 the altitude, as in ``202101150600_-112_40.5_X0-3000``. A multipoint
-receptor uses ``multi_`` and a short hash of its points, which does not
+release uses ``multi_`` and a short hash of its points, which does not
 change if you reorder them. Heights above mean sea level add ``msl`` at
 the end, as in ``_100msl`` or ``_X0-3000msl``. Heights above ground have no
 marker.
 
-In the output directory the receptor ID is the file name, in a folder for
-the day of the receptor time. Each particle file also has a ``receptor``
+In the output directory the release ID is the file name, in a folder for
+the day of the release time. Each particle file also has a ``release``
 column, so a scan of the whole ``particles/`` tree with pyarrow, DuckDB, or
-R can tell the receptors apart.
+R can tell the releases apart.
 
 Opening a project again
 -----------------------
@@ -480,15 +480,15 @@ After the project is made, the folder is all you need:
    project.status()   # one row per simulation, with a "state" column
 
 Opening a project only reads it. To change a setting, edit ``config.yaml``.
-To add receptors, add them and run:
+To add releases, add them and run:
 
 .. code-block:: python
 
-   project.add_receptors(new_receptors)     # returns the ids of the new ones
+   project.add_releases(new_releases)     # returns the ids of the new ones
    project.run()
 
-New receptors are appended to ``receptors.csv`` in the file's own columns.
-Receptors already in the file are left as they are.
+New releases are appended to ``releases.csv`` in the file's own columns.
+Releases already in the file are left as they are.
 
 The same settings in Python
 ---------------------------

@@ -14,7 +14,7 @@ when these pages are built, so their numbers and figures are real output.
    the enhancements a tower should have seen.
 
 :doc:`satellite_column`
-   Turn a TROPOMI methane orbit into receptors with their own averaging
+   Turn a TROPOMI methane orbit into releases with their own averaging
    kernels, run them, and compare modeled and observed enhancements.
 
 .. toctree::

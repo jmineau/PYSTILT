@@ -23,8 +23,9 @@ HYSPLIT's words in PYSTILT
 --------------------------
 
 PYSTILT comes from STILT, which follows air backward from a measurement and
-calls the time and place its particles start from a *receptor*. For you, a
-receptor is the starting time and starting locations of ``CONTROL``:
+calls the time and place its particles start from a *receptor*. PYSTILT
+calls it a *release* (receptor), and for you it is the starting time and
+starting locations of ``CONTROL``:
 
 .. list-table::
    :header-rows: 1
@@ -39,7 +40,7 @@ receptor is the starting time and starting locations of ``CONTROL``:
    * - Two heights at one location, a line source
      - A :class:`~stilt.ColumnReceptor`
    * - ``KMSL``, heights above ground or above sea level
-     - The receptor's ``altitude_ref``, ``"agl"`` or ``"msl"``
+     - The release's ``altitude_ref``, ``"agl"`` or ``"msl"``
    * - The settings of one ``CONTROL`` and ``SETUP.CFG``
      - A variant, a named set of settings
    * - The particle positions you read after a run
@@ -147,7 +148,7 @@ options, each kept in its own folder:
      hrrr: {}                 # the settings above
      hrrr-w6: {w_option: 6}   # the same runs with another vertical motion
 
-The starting points go in ``receptors.csv``, one row each:
+The starting points go in ``releases.csv``, one row each:
 
 .. code-block:: text
 
@@ -189,7 +190,7 @@ writes the rest itself:
    * - Line
      - Comes from
    * - ``CONTROL`` starting time and locations
-     - The receptor, latitude, longitude and height
+     - The release (receptor), latitude, longitude and height
    * - ``CONTROL`` total run time
      - ``n_hours``
    * - ``CONTROL`` vertical motion option, top of model domain
@@ -201,7 +202,7 @@ writes the rest itself:
    * - ``CONTROL`` pollutant, concentration grid and deposition
      - Fixed: one pollutant, a placeholder grid, no deposition
    * - ``SETUP.CFG`` ``KMSL``
-     - The receptor's ``altitude_ref``
+     - The release's ``altitude_ref``
    * - ``SETUP.CFG`` ``MAXPAR``
      - ``maxpar``, or when unset enough for ``numpar`` shared over the locations
    * - ``SETUP.CFG`` ``IVMAX``

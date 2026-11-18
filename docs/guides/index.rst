@@ -6,10 +6,10 @@ you are new to PYSTILT, start with :doc:`../getting_started/quickstart`.
 
 **Setting up a project**
 
-- :doc:`receptors`: where and when you measured (towers, columns,
+- :doc:`releases`: releases (receptors), where and when you measured (towers, columns,
   satellites)
-- :doc:`tracks`: receptors along the track of a car, train, aircraft, or
-  ship, and the link from each measurement to its receptor
+- :doc:`tracks`: releases along the track of a car, train, aircraft, or
+  ship, and the link from each measurement to its release
 - :doc:`meteorology`: use your own ARL files or download them from NOAA
 - :doc:`projects`: what goes in ``config.yaml``, variants, and how reruns
   and changed settings work
@@ -36,7 +36,7 @@ you are new to PYSTILT, start with :doc:`../getting_started/quickstart`.
 - :doc:`transport_error`: the transport uncertainty of a modeled
   enhancement, and the wind-error statistics it needs
 - :doc:`background`: the mole fraction at the trajectory endpoints, as a
-  background for the receptor
+  background for the release
 - :doc:`trajectory_analyses`: residence time, PSCF, CWT, mean paths, and
   the transit time from a source, from particles and footprints
 
@@ -51,7 +51,7 @@ you are new to PYSTILT, start with :doc:`../getting_started/quickstart`.
 - :ref:`plume-background`: a background from the soundings a forward-run
   plume did not reach
 - :doc:`../tutorials/satellite_column`: from satellite soundings to
-  receptors, kernels, and modeled enhancements
+  releases, kernels, and modeled enhancements
 
 **HYSPLIT**
 
@@ -69,7 +69,7 @@ steps are in PYSTILT.
 
 - :doc:`migration/stilt_r`: where each ``run_stilt.r`` setting lives, and what
   PYSTILT does differently
-- :doc:`migration/x_stilt`: the column and satellite workflow (receptors from
+- :doc:`migration/x_stilt`: the column and satellite workflow (releases from
   soundings, averaging kernels, backgrounds, and transport error)
 - :doc:`migration/stiltctl`: running STILT on cloud infrastructure, and what
   replaces the work queue and the long-lived workers
@@ -81,7 +81,7 @@ steps are in PYSTILT.
    :hidden:
    :caption: Setting up a project
 
-   receptors
+   releases
    tracks
    meteorology
    projects

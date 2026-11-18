@@ -28,7 +28,7 @@ How the footprints differ
      - One grid. Each particle's influence is spread by a Gaussian kernel
        whose width grows with the spread of the particles, as in STILT-R
        (``smooth_factor``).
-   * - Near the receptor
+   * - Near the release
      - No correction.
      - The near-field correction of ``foot`` (``hnf_plume``), as in
        STILT-R.
@@ -89,6 +89,6 @@ near-field correction, and use the same grid:
 
 The coarsening grids, the ``dmass`` weighting, and the western-edge rule
 have no PYSTILT setting. Footprints from the two will not match cell by
-cell, most of all far from the receptor, where Jena STILT's grids are
+cell, most of all far from the release, where Jena STILT's grids are
 coarsest. Compare totals over regions (:doc:`../aggregation`), or
 the modeled mole fractions, rather than single cells.

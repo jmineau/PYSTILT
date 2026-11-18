@@ -40,7 +40,7 @@ With 6-hour HRRR files of hourly steps, a backward run released at 23:30
 needs the next day's first file, and one released at 23:00 does not. With
 daily NAM12 files of 3-hourly steps (00:00 to 21:00), a run released at
 22:00 needs the next day's file. A 24-hour backward run on 6-hour HRRR files
-needs 5 or 6 files, depending on the receptor hour. Downloads follow the
+needs 5 or 6 files, depending on the release hour. Downloads follow the
 same rule, with the archive's own step (arlmet's ``Archive.step``).
 
 The catalog

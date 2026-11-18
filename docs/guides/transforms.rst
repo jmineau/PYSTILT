@@ -11,7 +11,7 @@ need one in two cases:
   weights the air the way the retrieval does.
 - **A species lost on the way**, which decays, deposits to the ground, or
   reacts with OH. A transform scales each particle by the fraction of the
-  tracer that survives to the receptor.
+  tracer that survives to the release.
 
 A tower measurement of CO2 or methane needs none: with no transforms every
 particle counts equally, which is the standard STILT footprint.
@@ -50,8 +50,8 @@ Built-in transforms
 ``averaging_kernel`` (:class:`stilt.transforms.AveragingKernel`)
    Multiplies each particle's ``foot`` by the kernel, interpolated to the
    particle's release height (``release_height``). The ``levels`` are in
-   meters in the receptor's vertical reference: above ground, or above sea level for a
-   receptor built with ``altitude_ref="msl"``. For a kernel on pressure
+   meters in the release's vertical reference: above ground, or above sea level for a
+   release built with ``altitude_ref="msl"``. For a kernel on pressure
    levels (hPa), set ``coordinate: pres``. Outside ``levels`` the kernel
    keeps its end values. Fold any instrument-specific factor, such as
    TCCON's wet-air scaling, into ``values``. Adds an ``ak_weight`` column.
@@ -72,7 +72,7 @@ Built-in transforms
    particle stands for. The :doc:`X-STILT migration page
    <migration/x_stilt>` lists how this differs from X-STILT's weights.
 
-   A multipoint receptor releases several particles from each point. They
+   A multipoint release releases several particles from each point. They
    share one release height, so the point's slab is split evenly among
    them. The weighted footprint does not depend on how many particles each
    point released.
@@ -80,7 +80,7 @@ Built-in transforms
    You do not need to supply anything. Pass ``surface_pressure`` (hPa) to
    use the retrieval's surface pressure in place of the fitted one. The
    transform needs ``pres`` and ``zagl`` in ``varsiwant``, and both are
-   there by default. A receptor with ``altitude_ref="msl"`` also needs
+   there by default. A release with ``altitude_ref="msl"`` also needs
    ``zsfc``, the terrain height, so the fit can be made against height
    above sea level. It adds ``xpres`` (release pressure, hPa) and ``pwf``
    columns.
@@ -93,7 +93,7 @@ Built-in transforms
 
    The lowest particle's slab reaches down to the surface. A column that
    starts above the ground still measures the air below it, so that
-   particle carries the whole sub-column. Start the receptor at or near
+   particle carries the whole sub-column. Start the release at or near
    the surface unless that is what you want.
 
 ``first_order_lifetime`` (:class:`stilt.transforms.FirstOrderLifetime`)
@@ -103,7 +103,7 @@ Built-in transforms
 
 ``dry_deposition`` (:class:`stilt.transforms.DryDeposition`)
    Scales ``foot`` by the fraction of a depositing tracer that survives
-   from the particle's position to the receptor. Use it for a soluble gas
+   from the particle's position to the release. Use it for a soluble gas
    or a fine aerosol. While a particle is below ``surface_layer_depth``
    (default 50 m), the tracer is lost at the rate ``velocity`` (m/s)
    divided by that depth, HYSPLIT's own dry deposition rule. HYSPLIT does
@@ -128,7 +128,7 @@ Built-in transforms
 ``oxidation`` (:class:`stilt.transforms.Oxidation`)
    Scales ``foot`` by the fraction of the tracer that survives a reaction
    with an oxidant on its way from the particle's position to the
-   receptor. Use it for a species lost mainly to OH, such as CO or ethane.
+   release. Use it for a species lost mainly to OH, such as CO or ethane.
    At each row the loss rate is :math:`k(T) [X]`: the rate constant
    :math:`k = a \exp(-E/R \, / \, T)`, with ``a`` and ``e_over_r`` as the
    JPL and IUPAC tables give them, times the oxidant's number density
@@ -154,14 +154,14 @@ Other losses
 Any loss whose rate you can compute at every row works the same way, as
 long as the rate does not depend on how much tracer the particle carries.
 :func:`~stilt.transforms.survival` takes a rate per row, in s⁻¹, and
-returns the fraction that reaches the receptor; the built-in lifetime,
+returns the fraction that reaches the release; the built-in lifetime,
 deposition and oxidation transforms are special cases of it. Use it in your
 own transform for rain-out, photolysis, or a lifetime from a chemistry
 model. A loss that depends on the tracer itself, as NOx's lifetime depends
 on NOx, has no footprint: it needs the emissions and a chemistry model
 along each trajectory.
 
-One kernel per receptor
+One kernel per release
 -----------------------
 
 A satellite product gives each sounding its own averaging kernel, and an
@@ -177,26 +177,26 @@ footprint's block:
        coordinate: pres
      - kind: pressure_weighting
 
-The table has a ``receptor`` column with the receptor id, and one row per
+The table has a ``release`` column with the release id, and one row per
 kernel point with its ``level`` and ``value``. Build it with
-:func:`~stilt.transforms.averaging_kernel_table` from the receptors you
+:func:`~stilt.transforms.averaging_kernel_table` from the releases you
 added and the kernels in your product, and add it to the project:
 
 .. code-block:: python
 
    from stilt.transforms import averaging_kernel_table
 
-   table = averaging_kernel_table(receptors, levels=df.ak_pressure, values=df.ak)
+   table = averaging_kernel_table(releases, levels=df.ak_pressure, values=df.ak)
    project.add_table("kernels", table)     # tables/kernels.parquet
 
-:func:`~stilt.observations.receptors_from_soundings` returns this table
-for you. Pass ``levels`` as one array per receptor, or as a single array
+:func:`~stilt.observations.releases_from_soundings` returns this table
+for you. Pass ``levels`` as one array per release, or as a single array
 when all kernels share one grid. When the footprint is made, the
-transform looks up the receptor's id in the table. The table is part of
+transform looks up the release's id in the table. The table is part of
 the project, so this works the same in a notebook, with ``stilt run``, and
-on Slurm workers. A receptor with no rows in the table raises an error, and
-``stilt check`` lists those receptors before a run, with the table's ids that
-match no receptor (:doc:`checking`). ``table`` also takes the path of a
+on Slurm workers. A release with no rows in the table raises an error, and
+``stilt check`` lists those releases before a run, with the table's ids that
+match no release (:doc:`checking`). ``table`` also takes the path of a
 Parquet or CSV file, relative to the project root.
 
 In Python
@@ -233,9 +233,9 @@ Writing your own transform
 
 A transform is any object with an ``apply`` method::
 
-   def apply(self, particles, receptor=None, directory=None) -> pd.DataFrame
+   def apply(self, particles, release=None, directory=None) -> pd.DataFrame
 
-It takes the particle table, the receptor the particles were released
+It takes the particle table, the release the particles were released
 from, and the project directory, and returns a new table. To name it in
 ``config.yaml``, write it as a pydantic model: its fields are the keys you
 set in YAML. Return a new table and leave the one you are given unchanged.
@@ -255,7 +255,7 @@ set in YAML. Return a new table and leave the one you are given unchanged.
 
        max_height: float = 1500.0
 
-       def apply(self, particles, receptor=None, directory=None):
+       def apply(self, particles, release=None, directory=None):
            z = release_coordinate(particles, "release_height") # one value per particle
            keep = z.reindex(particles["particle"].to_numpy()) <= self.max_height
            out = particles.copy()
@@ -294,20 +294,20 @@ A few rules keep custom transforms working everywhere:
   import fails to load, with the import error. A stored footprint that
   names one can still be read, with a warning. That entry of
   ``foot.stilt.config.transforms`` is left as its settings mapping.
-- **Get anything outside the table from the receptor or the directory.**
-  ``receptor.id`` is the key for any per-receptor input file, and
-  ``receptor.altitude_ref`` says whether heights are above ground or sea
+- **Get anything outside the table from the release or the directory.**
+  ``release.id`` is the key for any per-release input file, and
+  ``release.altitude_ref`` says whether heights are above ground or sea
   level. ``directory`` is the project directory. Read a file named in your
   transform's settings relative to it, as the ``averaging_kernel`` table
   is read. Both can be ``None`` when a transform is applied to particles
   alone, so raise a clear error if yours needs them.
 
 - **Let** ``stilt check`` **see its inputs** (optional). A ``check(self,
-  receptors, directory)`` method gets the project's receptor ids and
-  directory and returns what is wrong, as ``(check, receptor id or None,
+  releases, directory)`` method gets the project's release ids and
+  directory and returns what is wrong, as ``(check, release id or None,
   message)`` tuples, so a missing input file shows up before any run. The
   ``averaging_kernel`` checks its table this way. Set ``reads_zsfc = True``
-  on the class if it reads ``zsfc`` for a receptor above sea level, as
+  on the class if it reads ``zsfc`` for a release above sea level, as
   ``pressure_weighting`` does, and ``stilt check`` says when ``varsiwant``
   lacks it.
 

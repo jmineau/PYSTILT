@@ -64,16 +64,16 @@ within these tolerances:
 
 The scenarios cover:
 
-- point, column, and three-location multipoint receptors
+- point, column, and three-location multipoint releases
 - 6 h and 24 h backward runs, and a 6 h forward run
 - the hyper-near-field (HNF) plume correction on (every scenario but one) and
   off, with ``veght`` at its default of 0.5 (a fraction of the mixed-layer
   height) and at 100 (meters above ground)
 - ``smooth_factor`` of 0, 0.5, 1, and 2
 - 0.01° and 0.05° longitude/latitude grids and an unsmoothed UTM grid
-- a 2° box, a receptor in the domain's corner, a receptor at the edge of
+- a 2° box, a release in the domain's corner, a release at the edge of
   the met grid, and a small 0.1° domain that particles leave early
-- receptor heights above ground, above sea level (``kmsl=1``), and at 0.5 m
+- release heights above ground, above sea level (``kmsl=1``), and at 0.5 m
 - winter (stable) and summer (convective) HRRR
 - hourly footprints, and STILT-R's ``time_integrate=TRUE`` against one
   PYSTILT layer as long as the run
@@ -202,10 +202,10 @@ What does not match
   interpolated as before, bit for bit.
   ``test_early_interpolation_across_180_intentionally_differs_from_r``
   guards the difference.
-- **The HNF correction of a receptor above sea level.** PYSTILT grows the
+- **The HNF correction of a release above sea level.** PYSTILT grows the
   plume from the release height above ground, so it needs ``zsfc`` in
-  ``varsiwant`` for an MSL receptor. STILT-R grows it from the
-  receptor height as given, which with ``kmsl=1`` is above sea level, so
+  ``varsiwant`` for an MSL release. STILT-R grows it from the
+  release height as given, which with ``kmsl=1`` is above sea level, so
   over high terrain its correction does nothing. The ``msl_altitude``
   scenario compares the uncorrected ``foot_no_hnf_dilution``, and
   ``test_msl_hnf_foot_intentionally_differs_from_r`` guards the difference.
@@ -218,19 +218,19 @@ What does not match
 Large-scale comparison
 ----------------------
 
-Outside CI, PYSTILT was compared with STILT-R on 200 receptors at the WBB
+Outside CI, PYSTILT was compared with STILT-R on 200 releases at the WBB
 tower in the Salt Lake Valley, 2016 to 2024 (35 m above ground, 1000
 particles, 24 h backward, HRRR, ``krand=2`` and ``seed=42``, the same v5.1.0
-``hycs_std`` on both sides). For each receptor, the PYSTILT trajectory was
+``hycs_std`` on both sides). For each release, the PYSTILT trajectory was
 compared with a separate STILT-R ``calc_trajectory`` run, and the PYSTILT
 footprint with STILT-R's ``calc_footprint`` of the same particles, at 0.01°,
-0.05°, and 0.1°. All 200 receptors matched.
+0.05°, and 0.1°. All 200 releases matched.
 
 .. list-table::
    :header-rows: 1
 
    * - Quantity
-     - Agreement (worst of 200 receptors)
+     - Agreement (worst of 200 releases)
    * - Trajectory, per particle
      - absolute ``1.0e-17``, relative ``5.6e-16`` (float64 round-off)
    * - Footprint, per-cell relative difference

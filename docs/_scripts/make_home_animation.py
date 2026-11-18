@@ -62,7 +62,7 @@ TILE_ZOOM = 7
 
 
 def init(project: Path, met_dir: Path | None) -> None:
-    """Write the project: one receptor, HRRR, 1000 particles, 24 hours back."""
+    """Write the project: one release, HRRR, 1000 particles, 24 hours back."""
     crop = {"xmin": -105.0, "xmax": -75.0, "ymin": 38.0, "ymax": 56.0}
     if met_dir is None:
         met = {
@@ -78,7 +78,7 @@ def init(project: Path, met_dir: Path | None) -> None:
             "subgrid_bounds": crop,
             "subgrid_dir": "met_crop",
         }
-    receptor = stilt.PointReceptor(
+    release = stilt.PointReceptor(
         time=pd.Timestamp(TIME),
         longitude=TOWER_LON,
         latitude=TOWER_LAT,
@@ -86,7 +86,7 @@ def init(project: Path, met_dir: Path | None) -> None:
     )
     stilt.Project.init(
         project,
-        receptors=[receptor],
+        releases=[release],
         mets={"hrrr": met},
         models={"hysplit": {"n_hours": -24, "numpar": 1000, "krand": 2, "seed": 42}},
         stages={
@@ -148,11 +148,11 @@ def render(project: Path) -> None:
 
     proj = stilt.Project(project)
     sim = proj.simulation(
-        proj.simulations["receptor"].iloc[0], proj.simulations["variant"].iloc[0]
+        proj.simulations["release"].iloc[0], proj.simulations["variant"].iloc[0]
     )
     particles = sim.particles
-    foot = sim.footprint  # (time, lat, lon), one layer per hour back from the receptor
-    receptor_time = pd.Timestamp(TIME)
+    foot = sim.footprint  # (time, lat, lon), one layer per hour back from the release
+    release_time = pd.Timestamp(TIME)
 
     # A particle's sensitivity and a cell's footprint are different
     # quantities, so each gets its own scale, from its largest value down
@@ -282,7 +282,7 @@ def render(project: Path) -> None:
         )
         # The footprint so far: every hourly layer the particles have reached,
         # the one they are in included, so it grows from the first frame.
-        reached = layer_end > receptor_time + pd.Timedelta(minutes=int(age))
+        reached = layer_end > release_time + pd.Timedelta(minutes=int(age))
         if age == 0 or not reached.any():
             so_far = None
         else:

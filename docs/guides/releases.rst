@@ -1,9 +1,11 @@
-Receptors
-=========
+Releases (receptors)
+====================
 
-A :term:`receptor` is the place and time of a measurement. STILT releases
-particles there and follows them backward in time. Pick the receptor type
-that matches how your instrument samples the air.
+A :term:`release` is a place and time that particles start from. A
+release placed at a measurement and followed backward in time is what
+STILT calls a *receptor*, so in these docs *release (receptor)* is the same
+thing, and the classes keep the name :class:`PointReceptor`. Pick the release
+type that matches how your instrument samples the air.
 
 .. currentmodule:: stilt
 
@@ -11,7 +13,7 @@ that matches how your instrument samples the air.
    :header-rows: 1
    :widths: 25 40 35
 
-   * - Receptor type
+   * - Release type
      - Use it for
      - You give it
    * - :class:`PointReceptor`
@@ -28,7 +30,7 @@ that matches how your instrument samples the air.
        release points at one time
      - ``longitudes``, ``latitudes``, ``altitudes`` (arrays)
 
-Every receptor also needs a ``time`` in UTC. A timezone-aware time is
+Every release also needs a ``time`` in UTC. A timezone-aware time is
 converted to UTC. Altitudes are in meters above ground level. Pass
 ``altitude_ref="msl"`` to give them above mean sea level instead.
 
@@ -37,21 +39,21 @@ PointReceptor
 
 This is the most common type. Use it for a fixed surface site or an airborne
 sample at one height. For an analyzer that measures as it moves,
-:doc:`tracks` makes these receptors from its track.
+:doc:`tracks` makes these releases from its track.
 
 .. ipython:: python
 
    import stilt
 
-   receptor = stilt.PointReceptor(
+   release = stilt.PointReceptor(
        time="2023-07-15 18:00:00",
        longitude=-111.848,
        latitude=40.766,
        altitude=10.0,          # meters above ground
    )
 
-   @savefig receptors_point.png width=5in
-   receptor.plot.map();
+   @savefig releases_point.png width=5in
+   release.plot.map();
 
 
 ColumnReceptor
@@ -63,7 +65,7 @@ HYSPLIT releases the particles evenly in height between ``bottom`` and
 
 .. ipython:: python
 
-   receptor = stilt.ColumnReceptor(
+   release = stilt.ColumnReceptor(
        time="2023-07-15 18:00:00",
        longitude=-111.848,
        latitude=40.766,
@@ -72,8 +74,8 @@ HYSPLIT releases the particles evenly in height between ``bottom`` and
        altitude_ref="msl",
    )
 
-   @savefig receptors_column.png width=5in
-   receptor.plot.map();
+   @savefig releases_column.png width=5in
+   release.plot.map();
 
 ``bottom`` must be below ``top``. Above-ground altitudes cannot be negative.
 
@@ -93,7 +95,7 @@ other satellite views with a full line-of-sight geometry are examples.
 
    import numpy as np
 
-   receptor = stilt.MultiPointReceptor(
+   release = stilt.MultiPointReceptor(
        time="2023-07-15 18:00:00",
        longitudes=np.linspace(-111.85, -111.80, 10),
        latitudes=np.linspace(40.76,  40.80,  10),
@@ -101,10 +103,10 @@ other satellite views with a full line-of-sight geometry are examples.
        altitude_ref="msl",
    )
 
-   @savefig receptors_multipoint.png width=5in
-   receptor.plot.map();
+   @savefig releases_multipoint.png width=5in
+   release.plot.map();
 
-The three arrays must have the same length. The receptor's ID is built from
+The three arrays must have the same length. The release's ID is built from
 a hash of its points, so listing the same points in another order gives the
 same ID. To build the points from viewing angles instead of by hand, see
 :doc:`slant_columns`.
@@ -120,14 +122,14 @@ same ID. To build the points from viewing angles instead of by hand, see
 
    For a vertical column, use :class:`ColumnReceptor`. For several separate
    heights at one location, run one :class:`PointReceptor` per height (a
-   distinct ``r_idx`` in the CSV) and combine the footprints afterward.
+   distinct ``group`` in the CSV) and combine the footprints afterward.
 
 
-Loading receptors from a CSV file
+Loading releases from a CSV file
 ---------------------------------
 
-For more than a handful of receptors, keep them in a CSV file. The simplest
-form has one row per point receptor:
+For more than a handful of releases, keep them in a CSV file. The simplest
+form has one row per point release:
 
 .. code-block:: text
 
@@ -149,22 +151,22 @@ the two in one file, add an ``altitude_ref`` (or ``height_ref``) column with
 ``agl`` and ``msl``, such as ``alt_ref``, is an error: it would be kept as a
 label, and every height read as above ground.
 
-To build a column or multipoint receptor, give its rows the same ``r_idx``
-value. Rows that share an ``r_idx`` become one receptor, so they must also
+To build a column or multipoint release, give its rows the same ``group``
+value. Rows that share a ``group`` become one release, so they must also
 share the same ``time``:
 
 .. code-block:: text
 
-   time,longitude,latitude,altitude,r_idx
+   time,longitude,latitude,altitude,group
    2023-07-15 18:00:00,-111.848,40.766,0,1
    2023-07-15 18:00:00,-111.848,40.766,3000,1
 
 Two rows at the same location make a :class:`ColumnReceptor`. Rows at
 different locations make a :class:`MultiPointReceptor`.
 
-Any other column is kept on the receptor in ``attrs``. A ``scene`` or
+Any other column is kept on the release in ``attrs``. A ``scene`` or
 ``site`` label you add to the file is also a column of
-``project.receptors`` and ``project.simulations``, so you can select
+``project.releases`` and ``project.simulations``, so you can select
 results by it with pandas (see :doc:`outputs`):
 
 .. code-block:: python
@@ -172,28 +174,28 @@ results by it with pandas (see :doc:`outputs`):
    sims = project.simulations
    sims[sims.scene == "A"]
 
-   receptors = project.receptors          # one row per receptor
-   receptors[receptors.site.isin(["WBB", "UOU"])]
+   releases = project.releases          # one row per release
+   releases[releases.site.isin(["WBB", "UOU"])]
 
-For a receptor built from several rows, the first row's labels are used.
-``project.receptor(receptor_id)`` returns the receptor itself. A project
-reads ``receptors.csv`` as a table and builds a receptor only when you ask
-for it, so opening a project of a hundred thousand receptors takes a second
+For a release built from several rows, the first row's labels are used.
+``project.release(release_id)`` returns the release itself. A project
+reads ``releases.csv`` as a table and builds a release only when you ask
+for it, so opening a project of a hundred thousand releases takes a second
 or two. The file is still checked as it is read: a longitude out of range
 or a column of equal heights is an error at once.
-:func:`~stilt.receptors.receptors_to_frame` gives receptors back as one
+:func:`~stilt.releases.releases_to_frame` gives releases back as one
 table with a row per release point, in the same columns as the file.
 
-A project's ``receptors.csv`` is read automatically. To load another CSV,
-use :func:`read_receptors`, or pass the path to the project:
+A project's ``releases.csv`` is read automatically. To load another CSV,
+use :func:`read_releases`, or pass the path to the project:
 
 .. code-block:: python
 
-   receptors = stilt.read_receptors("my_receptors.csv")
-   project.add_receptors("my_receptors.csv")
+   releases = stilt.read_releases("my_releases.csv")
+   project.add_releases("my_releases.csv")
 
-Receptors you add to a project later are appended to its ``receptors.csv``
-using the file's own columns (see :doc:`projects`). If a new receptor's
+Releases you add to a project later are appended to its ``releases.csv``
+using the file's own columns (see :doc:`projects`). If a new release's
 heights are above sea level and the file has no ``altitude_ref`` column, the
 column is added.
 
@@ -219,7 +221,7 @@ cuts a multipoint release short fails as ``PARTICLE_LIMIT``
 (:doc:`checking`).
 
 
-Advanced: release heights for multipoint and slant receptors
+Advanced: release heights for multipoint and slant releases
 ------------------------------------------------------------
 
 Vertical weighting needs each particle's release height, the
@@ -256,76 +258,76 @@ settings, and the version it prints is recorded beside them, so you can
 tell which build made them.
 
 
-Working with receptors in code
+Working with releases in code
 ------------------------------
 
-The rest of this page is for code that handles any type of receptor.
+The rest of this page is for code that handles any type of release.
 
 Shared interface
 ~~~~~~~~~~~~~~~~
 
 All three classes have these members:
 
-``receptor.id``
-   A string of the form ``YYYYMMDDHHMM_{location}``. It names the receptor's
-   result files (see :doc:`projects`), so two different receptors may
-   not share one. For a point or column receptor it spells out the time,
+``release.id``
+   A string of the form ``YYYYMMDDHHMM_{location}``. It names the release's
+   result files (see :doc:`projects`), so two different releases may
+   not share one. For a point or column release it spells out the time,
    position, and heights, with ``msl`` at the end for heights above sea
-   level. ``receptor.location_id`` is the location part.
+   level. ``release.location_id`` is the location part.
 
-``receptor.time``
+``release.time``
    The release time, as a :class:`datetime.datetime` in UTC with no
    timezone attached.
 
-``receptor.altitude_ref``
+``release.altitude_ref``
    ``"agl"`` or ``"msl"``.
 
-``receptor.attrs``
+``release.attrs``
    A dictionary of extra labels, such as the extra columns of
-   ``receptors.csv``. They are not part of the receptor's ID.
+   ``releases.csv``. They are not part of the release's ID.
 
-``receptor.coords()``
-   The receptor's points as a list of ``(latitude, longitude, altitude)``.
+``release.coords()``
+   The release's points as a list of ``(latitude, longitude, altitude)``.
    A :class:`PointReceptor` has one point, a :class:`ColumnReceptor` two
    (bottom and top), and a :class:`MultiPointReceptor` one per location.
    This lets code read coordinates without checking the type.
 
-``receptor.geometry``
+``release.geometry``
    A shapely geometry: a ``Point``, ``LineString``, or ``MultiPoint``.
 
-``receptor.plot.map()``
-   A quick map of the receptor.
+``release.plot.map()``
+   A quick map of the release.
 
-``receptor.to_dict()`` and ``Receptor.from_dict(d)``
+``release.to_dict()`` and ``Receptor.from_dict(d)``
    Convert to and from a JSON-friendly dictionary. The dictionary has a
    ``"kind"`` key (``"point"``, ``"column"``, or ``"multipoint"``), which
    ``Receptor.from_dict`` uses to rebuild the right class.
 
-Receptors are frozen. To change one, make a copy with
-``receptor.model_copy(update={"altitude": 20})``. Every argument is given by
+Releases are frozen. To change one, make a copy with
+``release.model_copy(update={"altitude": 20})``. Every argument is given by
 name, so a longitude cannot be passed as a latitude by mistake.
 
 
 Checking the type
 ~~~~~~~~~~~~~~~~~
 
-Use :func:`isinstance` to branch on the receptor type:
+Use :func:`isinstance` to branch on the release type:
 
 .. code-block:: python
 
    from stilt import ColumnReceptor, MultiPointReceptor, PointReceptor
 
-   if isinstance(receptor, PointReceptor):
-       print(f"Single point at {receptor.altitude} m")
-   elif isinstance(receptor, ColumnReceptor):
-       print(f"Column from {receptor.bottom} to {receptor.top} m")
-   elif isinstance(receptor, MultiPointReceptor):
-       print(f"Multi-point with {len(receptor.coords())} locations")
+   if isinstance(release, PointReceptor):
+       print(f"Single point at {release.altitude} m")
+   elif isinstance(release, ColumnReceptor):
+       print(f"Column from {release.bottom} to {release.top} m")
+   elif isinstance(release, MultiPointReceptor):
+       print(f"Multi-point with {len(release.coords())} locations")
 
 All three are subclasses of :class:`Receptor`.
 
 
-Building a receptor from a list of points
+Building a release from a list of points
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 :meth:`Receptor.from_points` takes a list of ``(longitude, latitude,
