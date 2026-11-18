@@ -1,60 +1,37 @@
 """
-Verify PYSTILT's SETUP.CFG matches calc_trajectory.r's physics namelist.
+Check that a new project's SETUP.CFG is the one STILT-R writes.
 
-The R helper calc_trajectory.r passes an explicit 40-parameter namelist to
-STILT-R's write_setup().  PYSTILT builds its SETUP.CFG from HysplitConfig
-defaults.  This module checks that every physics-affecting entry agrees, so
-that a silent default divergence is caught before it can affect trajectories.
-
-Administrative entries (cmass, conage, ncycl, ndump, pinbc, etc.) are omitted
-because they do not influence particle motion or footprint sensitivity.
+``HysplitConfig`` has HYSPLIT's own defaults; ``stilt init`` and
+``Project.init`` write STILT-R's values where they differ
+(:data:`stilt.config.STILT_R_HYSPLIT`). The first test has STILT-R's own
+``write_setup()`` write ``SETUP.CFG`` from the values its ``run_stilt.r``
+sets, and compares it entry by entry with what PYSTILT writes from the
+starter config. It needs R and a STILT-R checkout, not HYSPLIT, so it runs
+with ``-m r_only``. The others read the particles of the fidelity runs.
 """
 
 from __future__ import annotations
 
 import re
+import subprocess
 from pathlib import Path
 
 import pandas as pd
 import pytest
+import yaml
+
+from stilt.config import STARTER_CONFIG
+from stilt.transport.hysplit import HysplitConfig
+from stilt.transport.hysplit.driver import setup_entries, winderrtf
+from stilt.transport.hysplit.namelist import NameList, read_namelist
 
 from ..fixtures.r_stilt_reference import STILT_R_NAMES
 
-pytestmark = [pytest.mark.fidelity]
+_R_HELPERS = Path(__file__).parents[1] / "fixtures" / "r_helpers"
 
-# ---------------------------------------------------------------------------
-# Reference values from tests/fixtures/r_helpers/calc_trajectory.r
-# ---------------------------------------------------------------------------
-
-# Every key here corresponds to a parameter that affects particle trajectories
-# or footprint sensitivity.  Value is what calc_trajectory.r passes to STILT-R
-# (veght is the scenario's, 0.5 unless it sets one).
-_R_PHYSICS_NAMELIST: dict[str, float] = {
-    "capemin": -1.0,
-    "delt": 1.0,
-    "hscale": 10800.0,
-    "ichem": 8.0,
-    "initd": 0.0,
-    "k10m": 1.0,
-    "kbls": 1.0,
-    "kblt": 5.0,
-    "kdef": 0.0,
-    "kmix0": 150.0,
-    "kmixd": 3.0,
-    "kpuff": 0.0,
-    "kwet": 1.0,
-    "kzmix": 0.0,
-    "nturb": 0.0,
-    "tkerd": 0.18,
-    "tkern": 0.18,
-    "tlfrac": 0.1,
-    "tratio": 0.75,
-    "tvmix": 1.0,
-    "veght": 0.5,
-    "vscale": 200.0,
-    "vscaleu": 200.0,
-    "vscales": -1.0,
-}
+#: Entries the driver writes for each run, from its receptor and error
+#: settings, rather than from the config (``write_inputs``).
+_PER_RUN = {"ivmax", "kmsl", "maxpar", "winderrtf"}
 
 # Columns STILT-R's varsiwant always requests.  The trajectory parquet must
 # contain all of these; PYSTILT may add extras (e.g. pres) without consequence.
@@ -94,35 +71,49 @@ def _parse_setup_cfg(path: Path) -> dict[str, str]:
 # ---------------------------------------------------------------------------
 
 
-def test_setup_cfg_physics_matches_r_namelist(scenario_outputs: dict) -> None:
+@pytest.mark.r_only
+def test_a_new_projects_setup_cfg_is_the_one_stilt_r_writes(
+    rscript, r_stilt_dir, tmp_path
+) -> None:
     """
-    Every physics-relevant SETUP.CFG entry matches calc_trajectory.r's namelist.
+    Every SETUP.CFG entry of the starter config has STILT-R's value.
 
-    Catches silent default divergence that would not trigger a trajectory-level
-    failure until a parameter crosses a physics discontinuity (e.g. kblt
-    selecting a different turbulence scheme).
+    PYSTILT adds ``pres`` to ``varsiwant``, which changes no particle. A
+    setting left out of the starter would run HYSPLIT's own default and
+    show here as missing from PYSTILT's file or as another value.
     """
-    parsed = _parse_setup_cfg(scenario_outputs["setup"])
-    # calc_trajectory.r takes veght from the scenario; the rest is fixed.
-    expected = {**_R_PHYSICS_NAMELIST, "veght": scenario_outputs["scenario"].veght}
-    mismatches: list[str] = []
-    for key, r_val in expected.items():
-        py_str = parsed.get(key)
-        if py_str is None:
-            mismatches.append(f"  {key}: absent from SETUP.CFG (R wants {r_val})")
-            continue
-        try:
-            py_val = float(py_str)
-        except ValueError:
-            mismatches.append(f"  {key}: unparseable value {py_str!r}")
-            continue
-        if py_val != r_val:
-            mismatches.append(f"  {key}: PYSTILT={py_val}, R={r_val}")
-    assert not mismatches, (
-        "SETUP.CFG physics entries diverge from R namelist:\n" + "\n".join(mismatches)
+    r_file = tmp_path / "r" / "SETUP.CFG"
+    r_file.parent.mkdir()
+    subprocess.run(
+        [rscript, str(_R_HELPERS / "write_setup.r"), str(r_stilt_dir), str(r_file)],
+        check=True,
+        capture_output=True,
+        text=True,
     )
+    r_entries = read_namelist(r_file)
+
+    config = HysplitConfig(**yaml.safe_load(STARTER_CONFIG)["models"]["hysplit"])
+    py_file = tmp_path / "SETUP.CFG"
+    namelist = NameList("SETUP")
+    namelist.update(setup_entries(config))
+    namelist.write(py_file)
+    py_entries = read_namelist(py_file)
+
+    assert [v for v in py_entries.pop("varsiwant") if v != "pres"] == r_entries.pop(
+        "varsiwant"
+    )
+    # One release location gets maxpar = numpar, as in STILT-R.
+    assert config.maxpar_for(1) == r_entries["maxpar"]
+    assert winderrtf(config) == r_entries["winderrtf"]
+    differ = {
+        name: (py_entries.get(name, "absent"), r_entries.get(name, "absent"))
+        for name in (py_entries.keys() | r_entries.keys()) - _PER_RUN
+        if py_entries.get(name) != r_entries.get(name)
+    }
+    assert not differ, f"(PYSTILT, STILT-R) values that differ: {differ}"
 
 
+@pytest.mark.fidelity
 def test_trajectory_contains_all_r_varsiwant_columns(scenario_outputs: dict) -> None:
     """
     Trajectory parquet exposes every column STILT-R's varsiwant requests.
@@ -137,6 +128,7 @@ def test_trajectory_contains_all_r_varsiwant_columns(scenario_outputs: dict) -> 
     assert not missing, f"Trajectory parquet missing R-required columns: {missing}"
 
 
+@pytest.mark.fidelity
 def test_setup_cfg_ivmax_at_least_r_varsiwant_count(scenario_outputs: dict) -> None:
     """
     ``ivmax`` in SETUP.CFG is at least as large as R's varsiwant column count.

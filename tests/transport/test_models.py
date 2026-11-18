@@ -73,7 +73,7 @@ def _mets(tmp_path):
 def test_a_variant_may_run_another_model(tmp_path, toy):
     config = ProjectConfig(
         mets=_mets(tmp_path),
-        models={"hysplit": {"numpar": 500}, "toy": {}},
+        models={"hysplit": {"n_hours": -24, "numpar": 500}, "toy": {"n_hours": -24}},
         stages={"footprint": {"class": FOOTPRINT_STAGE, "grid": GRID}},
         variants={
             "hrrr": {"model": "hysplit"},
@@ -132,7 +132,7 @@ def test_each_models_block_holds_its_own_defaults(tmp_path, toy):
 
 
 def test_a_variant_names_its_model_when_there_are_several(tmp_path, toy):
-    models = {"hysplit": {}, "toy": {}}
+    models = {"hysplit": {"n_hours": -24}, "toy": {"n_hours": -24}}
     with pytest.raises(
         ValueError,
         match=r"Variant 'hrrr' must name its model \(one of \['hysplit', 'toy'\]\)",
@@ -146,19 +146,21 @@ def test_a_variant_names_its_model_when_there_are_several(tmp_path, toy):
         )
     # With one model, a variant need not say it.
     only = ProjectConfig(
-        mets=_mets(tmp_path), models={"toy": {}}, variants={"hrrr": {}}
+        mets=_mets(tmp_path), models={"toy": {"n_hours": -24}}, variants={"hrrr": {}}
     )
     assert only.resolve()["hrrr"].model == "toy"
 
 
 def test_a_met_is_checked_by_the_model_that_reads_it(tmp_path, toy):
     """``met_config`` takes the name of a models block, and needs it when there are several."""
-    one = ProjectConfig(mets=_mets(tmp_path), models={"toy": {}}, variants={"hrrr": {}})
+    one = ProjectConfig(
+        mets=_mets(tmp_path), models={"toy": {"n_hours": -24}}, variants={"hrrr": {}}
+    )
     assert isinstance(one.met_config("hrrr"), ToyMet)  # the only model
 
     both = ProjectConfig(
         mets=_mets(tmp_path),
-        models={"hysplit": {}, "toy": {}},
+        models={"hysplit": {"n_hours": -24}, "toy": {"n_hours": -24}},
         variants={"hrrr": {"model": "hysplit"}},
     )
     assert isinstance(both.met_config("hrrr", "toy"), ToyMet)
@@ -177,7 +179,7 @@ def test_with_several_models_a_met_no_variant_uses_is_not_checked(tmp_path, toy)
     mets = {**_mets(tmp_path), "spare": {"subgrid_enable": "maybe"}}
     config = ProjectConfig(
         mets=mets,
-        models={"hysplit": {}, "toy": {}},
+        models={"hysplit": {"n_hours": -24}, "toy": {"n_hours": -24}},
         variants={"hrrr": {"model": "hysplit"}},
     )
     # HYSPLIT's met config refuses it once it is asked.
@@ -214,18 +216,18 @@ def test_a_model_has_one_block(tmp_path):
 
 
 def test_hysplit_runs_when_no_model_is_named(tmp_path):
-    config = ProjectConfig(mets=_mets(tmp_path), variants={"hrrr": {}})
+    config = ProjectConfig(mets=_mets(tmp_path), variants={"hrrr": {"n_hours": -24}})
     assert config.resolve()["hrrr"].model == "hysplit"
     assert "models:" not in config.to_yaml()  # only what was given is written
 
     given = ProjectConfig(
         mets=_mets(tmp_path),
-        models={"hysplit": {"numpar": 300, "seed": 4, "krand": 2}},
+        models={"hysplit": {"n_hours": -24, "numpar": 300, "seed": 4, "krand": 2}},
         variants={"hrrr": {}},
     )
     text = given.to_yaml()
     assert yaml.safe_load(text)["models"] == {
-        "hysplit": {"numpar": 300, "seed": 4, "krand": 2}
+        "hysplit": {"n_hours": -24, "numpar": 300, "seed": 4, "krand": 2}
     }
     loaded = ProjectConfig.from_yaml(_write(tmp_path, text))
     assert loaded.resolve()["hrrr"].transport.seed == 4
@@ -235,10 +237,11 @@ def test_an_empty_models_block_runs_the_models_defaults(tmp_path):
     """``hysplit:`` with nothing under it is read as no settings."""
     path = _write(
         tmp_path,
-        f"mets:\n  hrrr: {tmp_path / 'met'}\nmodels:\n  hysplit:\nvariants:\n  hrrr: {{}}\n",
+        f"mets:\n  hrrr: {tmp_path / 'met'}\nmodels:\n  hysplit:\n"
+        "variants:\n  hrrr: {n_hours: -24}\n",
     )
     variant = ProjectConfig.from_yaml(path).resolve()["hrrr"]
-    assert variant.transport == type(variant.transport)()
+    assert variant.transport == type(variant.transport)(n_hours=-24)
 
 
 def _write(tmp_path, text):
@@ -257,22 +260,24 @@ def test_a_model_config_inherits_the_recorded_settings_and_realizations():
         "nparticles": 10,
     }
     assert [r.seed for r in config.realizations(3)] == [5, 6, 7]
-    assert [r.seed for r in ToyConfig().realizations(2)] == [None, None]
+    assert [r.seed for r in ToyConfig(n_hours=-6).realizations(2)] == [None, None]
     with pytest.raises(ValueError, match="extra"):
-        ToyConfig(unknown=1)
+        ToyConfig(n_hours=-6, unknown=1)
+    with pytest.raises(ValueError, match="n_hours"):
+        ToyConfig()  # a config must say how long the run is
 
 
 def test_a_model_is_named_by_its_import_path_without_registering_it(tmp_path):
     """The block's name is the variant's handle; ``class`` is what runs and what is recorded."""
     config = ProjectConfig(
         mets=_mets(tmp_path),
-        models={"mine": {"class": TOY_PATH, "nparticles": 3}},
+        models={"mine": {"class": TOY_PATH, "n_hours": -6, "nparticles": 3}},
         variants={"toy": {"model": "mine", "met": "hrrr"}},
     )
     variant = config.resolve()["toy"]
     assert variant.transport.nparticles == 3
     assert yaml.safe_load(config.to_yaml())["models"] == {
-        "mine": {"class": TOY_PATH, "nparticles": 3}
+        "mine": {"class": TOY_PATH, "n_hours": -6, "nparticles": 3}
     }
     # The record names the import path, so another process imports it again.
     assert variant.build == ModelInfo(name=TOY_PATH, version="1.0")

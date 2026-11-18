@@ -150,7 +150,10 @@ def blocks(**settings: Any) -> dict[str, Any]:
     ``stages`` themselves) stay as given. A variant's footprint settings
     go under its ``stages``. A variant left with neither a grid nor a
     geometry, or one that says ``grid: None``, makes particles only.
+    ``n_hours`` is -24 unless given, when the settings give no ``models``.
     """
+    if "models" not in settings:
+        settings.setdefault("n_hours", -24)
     config = {k: v for k, v in settings.items() if k in _CONFIG_KEYS}
     footprint = {k: v for k, v in settings.items() if k in _FOOTPRINT_KEYS}
     model = {

@@ -139,6 +139,66 @@ The workflow side by side
    * - ``lib.loc``
      - not needed
 
+STILT-R's HYSPLIT values
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+PYSTILT's ``hysplit`` block has HYSPLIT's own defaults, and STILT-R runs
+HYSPLIT with other values for a few settings. So ``stilt init`` and
+:meth:`stilt.Project.init` write STILT-R's values into a new project's
+``config.yaml``, and its runs match STILT-R's:
+
+.. code-block:: yaml
+
+   models:
+     hysplit:
+       n_hours: -24
+       numpar: 1000
+       capemin: -1
+       kblt: 5
+       kmixd: 3
+       krand: 4
+       vscales: -1
+       wvert: false
+       varsiwant: [time, indx, long, lati, zagl, foot, mlht, pres, dens, samt, sigw, tlgr]
+
+A config you write by hand without these lines runs HYSPLIT's defaults, and
+its particles do not match STILT-R's. Nothing warns you, so keep the lines
+when you edit the block. ``n_hours`` has no default at all: a config must
+give it.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 35 45
+
+   * - Setting
+     - STILT-R
+     - Left out (HYSPLIT's own)
+   * - ``numpar``
+     - 1000
+     - 2500
+   * - ``capemin``
+     - -1, no convection
+     - -2, the Grell convection scheme
+   * - ``krand``
+     - 4, random numbers seeded from the clock, so every run differs
+     - 2 for up to 5000 particles (1 above), the same random numbers every
+       run
+   * - ``wvert``
+     - false
+     - true, WRF fields interpolated with the WRF scheme
+   * - ``varsiwant``
+     - 11 columns; PYSTILT adds ``pres`` for pressure weighting
+     - HYSPLIT's 20 columns, which include those 12
+   * - ``kblt``, ``kmixd``, ``vscales``
+     - 5, 3, -1
+     - unset; HYSPLIT chooses the same values when it runs. They are written
+       so that ``SETUP.CFG`` matches STILT-R's entry for entry.
+
+Every other HYSPLIT setting has the same default in both. These are the
+values of STILT-R's ``run_stilt.r`` at the commit PYSTILT is tested against
+(:doc:`/development/stilt_r_parity`), and a test compares the ``SETUP.CFG``
+of a new project with the one STILT-R writes.
+
 Other differences
 -----------------
 
@@ -402,7 +462,8 @@ seconds each, so import a large project in a Slurm job.
 Moving a project over
 ---------------------
 
-1. Copy your ``run_stilt.r`` settings into ``config.yaml`` using the table
+1. Start from the config ``stilt init`` writes, which has STILT-R's HYSPLIT
+   values, and copy your ``run_stilt.r`` settings into it using the table
    above. Start with one met and one variant that runs the defaults
    (``variants: {hrrr: {}}``).
 2. Write your receptors to ``receptors.csv``.

@@ -68,7 +68,12 @@ HYSPLIT
 The keys of the ``hysplit`` block under ``models:``, the transport model's
 settings (:doc:`hysplit`). They are the defaults of every variant that runs
 HYSPLIT, and a variant may override any of them by writing the key itself.
-Left out, the block is HYSPLIT with the defaults below.
+Left out, the block is HYSPLIT with the defaults below, which are HYSPLIT's
+own. ``n_hours`` has no default, and ``capemin``, ``kblt``, ``kmixd``,
+``krand`` and ``vscales`` are unset unless given: HYSPLIT chooses them when
+it runs. ``stilt init`` and :meth:`stilt.Project.init` write STILT-R's values
+where they differ (:data:`stilt.config.STILT_R_HYSPLIT`; the list is in
+:doc:`../guides/migration/stilt_r`).
 
 .. config-model:: stilt.transport.hysplit.HysplitConfig
 

@@ -108,6 +108,7 @@ def test_a_setting_in_another_block_is_refused_naming_its_own(tmp_path, grid):
         "Write it under models: hysplit:.",
     ):
         ProjectConfig(
+            models={"hysplit": {"n_hours": -24}},
             mets=mets,
             stages={"footprint": {**stage, "numpar": 5}},
             variants={"hrrr": {}},
@@ -118,6 +119,7 @@ def test_a_setting_in_another_block_is_refused_naming_its_own(tmp_path, grid):
         "Write it under the variant's stages: footprint:.",
     ):
         ProjectConfig(
+            models={"hysplit": {"n_hours": -24}},
             mets=mets,
             stages={"footprint": stage},
             variants={"hrrr": {"smooth_factor": 2}},
@@ -127,6 +129,7 @@ def test_a_setting_in_another_block_is_refused_naming_its_own(tmp_path, grid):
         match="Variant 'hrrr', stages: footprint: 'class' is the stage itself",
     ):
         ProjectConfig(
+            models={"hysplit": {"n_hours": -24}},
             mets=mets,
             stages={"footprint": stage},
             variants={"hrrr": {"stages": {"footprint": {"class": FOOTPRINT_STAGE}}}},
@@ -145,7 +148,11 @@ def test_a_models_wrong_value_is_reported_for_its_block(tmp_path):
     with pytest.raises(
         ValueError, match=r"Variant 'hrrr' \(hysplit\): [\s\S]*n_hours must not be 0"
     ):
-        ProjectConfig(mets=mets, variants={"hrrr": {"n_hours": 0}}).resolve()
+        ProjectConfig(
+            models={"hysplit": {"n_hours": -24}},
+            mets=mets,
+            variants={"hrrr": {"n_hours": 0}},
+        ).resolve()
 
 
 def test_a_stage_block_names_the_footprint_stage_as_its_class(tmp_path, grid):
@@ -156,12 +163,16 @@ def test_a_stage_block_names_the_footprint_stage_as_its_class(tmp_path, grid):
         "class: stilt.footprint.FootprintStage.",
     ):
         ProjectConfig(
-            mets=mets, stages={"footprint": {"grid": grid}}, variants={"hrrr": {}}
+            models={"hysplit": {"n_hours": -24}},
+            mets=mets,
+            stages={"footprint": {"grid": grid}},
+            variants={"hrrr": {}},
         )
     with pytest.raises(
         ValueError, match="stages: wind: 'mypkg.WindRose' is not a stage"
     ):
         ProjectConfig(
+            models={"hysplit": {"n_hours": -24}},
             mets=mets,
             stages={"wind": {"class": "mypkg.WindRose"}},
             variants={"hrrr": {}},
@@ -173,13 +184,17 @@ def test_a_stage_block_names_the_footprint_stage_as_its_class(tmp_path, grid):
         "A stage has one block",
     ):
         ProjectConfig(
-            mets=mets, stages={"fine": stage, "coarse": stage}, variants={"hrrr": {}}
+            models={"hysplit": {"n_hours": -24}},
+            mets=mets,
+            stages={"fine": stage, "coarse": stage},
+            variants={"hrrr": {}},
         )
 
 
 def test_a_stage_blocks_name_is_what_a_variant_calls_it(tmp_path, grid):
     """The block's name is a handle: the class says what the stage is."""
     config = ProjectConfig(
+        models={"hysplit": {"n_hours": -24}},
         mets=_met_config(tmp_path),
         stages={"foot": {"class": FOOTPRINT_STAGE, "grid": grid}},
         variants={
@@ -199,6 +214,7 @@ def test_a_stage_blocks_name_is_what_a_variant_calls_it(tmp_path, grid):
         r"not have \(it has \['foot'\]\)",
     ):
         ProjectConfig(
+            models={"hysplit": {"n_hours": -24}},
             mets=_met_config(tmp_path),
             stages={"foot": {"class": FOOTPRINT_STAGE, "grid": grid}},
             variants={"hrrr": {"stages": {"footprint": None}}},
@@ -229,6 +245,7 @@ def test_a_variants_stages_is_a_mapping(tmp_path, grid):
     ):
         ProjectConfig(
             mets=_met_config(tmp_path),
+            models={"hysplit": {"n_hours": -24}},
             stages={"footprint": {"class": FOOTPRINT_STAGE, "grid": grid}},
             variants={"hrrr": {"stages": ["footprint"]}},
         )
@@ -240,7 +257,9 @@ def test_a_met_no_variant_uses_is_still_checked(tmp_path):
     with pytest.raises(
         ValueError, match=r"Met 'spare' \(hysplit\): [\s\S]*subgrid_enable"
     ):
-        ProjectConfig(mets=mets, variants={"hrrr": {}})
+        ProjectConfig(
+            mets=mets, models={"hysplit": {"n_hours": -24}}, variants={"hrrr": {}}
+        )
 
 
 def test_a_config_or_a_block_that_is_not_a_mapping_is_an_error(tmp_path):
@@ -269,13 +288,19 @@ def test_the_footprint_stage_is_at_the_path_a_config_names():
 def test_model_config_requires_nonempty_mets():
     """ProjectConfig must have at least one met entry."""
     with pytest.raises(Exception, match="at least one"):
-        ProjectConfig(mets={}, variants={"hrrr": {}})
+        ProjectConfig(
+            models={"hysplit": {"n_hours": -24}}, mets={}, variants={"hrrr": {}}
+        )
 
 
 def test_model_config_rejects_met_keys_that_cannot_name_a_variant(tmp_path):
     mc = make_met_config(directory=tmp_path / "met")
     with pytest.raises(Exception, match="must match"):
-        ProjectConfig(mets={"hrrr_v2": mc}, variants={"hrrr_v2": {}})
+        ProjectConfig(
+            models={"hysplit": {"n_hours": -24}},
+            mets={"hrrr_v2": mc},
+            variants={"hrrr_v2": {}},
+        )
 
 
 def test_a_config_loads_and_resolves_without_its_hysplit_build(tmp_path):
@@ -289,7 +314,11 @@ def test_a_config_loads_and_resolves_without_its_hysplit_build(tmp_path):
     with pytest.raises(FileNotFoundError, match="hycs_std"):
         _ = variant.build
     with pytest.raises(ValueError, match="realizations must be >= 1"):
-        ProjectConfig(mets={"hrrr": mc}, variants={"e": {"realizations": 0}})
+        ProjectConfig(
+            models={"hysplit": {"n_hours": -24}},
+            mets={"hrrr": mc},
+            variants={"e": {"realizations": 0}},
+        )
 
 
 def _default_footprint(cfg):
@@ -300,13 +329,20 @@ def _default_footprint(cfg):
 def test_without_a_stages_block_a_project_makes_particles_only(tmp_path, grid):
     mc = make_met_config(directory=tmp_path / "met")
     cfg = ProjectConfig(
+        models={"hysplit": {"n_hours": -24}},
         mets={"hrrr": mc},
         stages={"footprint": {"class": FOOTPRINT_STAGE, "grid": grid}},
         variants={"hrrr": {}},
     )
     assert _default_footprint(cfg).grid == grid
     assert (
-        _default_footprint(ProjectConfig(mets={"hrrr": mc}, variants={"hrrr": {}}))
+        _default_footprint(
+            ProjectConfig(
+                models={"hysplit": {"n_hours": -24}},
+                mets={"hrrr": mc},
+                variants={"hrrr": {}},
+            )
+        )
         is None
     )
 
@@ -372,6 +408,7 @@ def test_model_config_refuses_a_repeated_key(tmp_path, text, where):
 
 def test_model_config_yaml_roundtrip_with_execution(tmp_path):
     cfg = ProjectConfig(
+        models={"hysplit": {"n_hours": -24}},
         mets=_met_config(tmp_path),
         execution={
             "backend": "slurm",
@@ -398,14 +435,18 @@ def test_model_config_yaml_roundtrip_with_execution(tmp_path):
 
 def test_execution_defaults_to_one_local_process(tmp_path):
     execution = ProjectConfig(
-        mets=_met_config(tmp_path), variants={"hrrr": {}}
+        models={"hysplit": {"n_hours": -24}},
+        mets=_met_config(tmp_path),
+        variants={"hrrr": {}},
     ).execution
     assert (execution.backend, execution.cpus) == ("local", 1)
     assert (execution.slurm.n_workers, execution.slurm.cpus) == (1, 1)
     assert (
         "execution:"
         not in ProjectConfig(
-            mets=_met_config(tmp_path), variants={"hrrr": {}}
+            models={"hysplit": {"n_hours": -24}},
+            mets=_met_config(tmp_path),
+            variants={"hrrr": {}},
         ).to_yaml()
     )
 
@@ -453,7 +494,10 @@ def test_a_backends_setting_beside_backend_is_refused_naming_its_block(
     message = f"'{key}' is a setting of a backend. Write it under {blocks}"
     with pytest.raises(ValueError, match=re.escape(message)):
         ProjectConfig(
-            mets=_met_config(tmp_path), execution=setting, variants={"hrrr": {}}
+            models={"hysplit": {"n_hours": -24}},
+            mets=_met_config(tmp_path),
+            execution=setting,
+            variants={"hrrr": {}},
         )
 
 
@@ -461,36 +505,42 @@ def test_unknown_execution_setting_is_an_error(tmp_path):
     """A typo, or an sbatch option outside `slurm:`, used to be ignored or passed on (#63)."""
     with pytest.raises(ValueError, match=r"execution\.partion\s+Extra inputs"):
         ProjectConfig(
+            models={"hysplit": {"n_hours": -24}},
             mets=_met_config(tmp_path),
             execution={"partion": "compute"},
             variants={"hrrr": {}},
         )
     with pytest.raises(ValueError, match=r"execution\.requeue\s+Extra inputs"):
         ProjectConfig(
+            models={"hysplit": {"n_hours": -24}},
             mets=_met_config(tmp_path),
             execution={"requeue": True},
             variants={"hrrr": {}},
         )
     with pytest.raises(ValueError, match=r"execution\.cpus_per_task\s+Extra inputs"):
         ProjectConfig(
+            models={"hysplit": {"n_hours": -24}},
             mets=_met_config(tmp_path),
             execution={"cpus_per_task": 4},
             variants={"hrrr": {}},
         )
     with pytest.raises(ValueError, match="backend"):
         ProjectConfig(
+            models={"hysplit": {"n_hours": -24}},
             mets=_met_config(tmp_path),
             execution={"backend": "kubernetes"},
             variants={"hrrr": {}},
         )
     with pytest.raises(ValueError, match="n_workers"):
         ProjectConfig(
+            models={"hysplit": {"n_hours": -24}},
             mets=_met_config(tmp_path),
             execution={"slurm": {"n_workers": 0}},
             variants={"hrrr": {}},
         )
     with pytest.raises(ValueError, match=r"execution\.local\.n_workers\s+Extra inputs"):
         ProjectConfig(
+            models={"hysplit": {"n_hours": -24}},
             mets=_met_config(tmp_path),
             execution={"local": {"n_workers": 2}},
             variants={"hrrr": {}},
@@ -570,7 +620,7 @@ def test_footprint_depth_goes_to_hysplit_as_veght(tmp_path):
 
     config = ProjectConfig(
         mets=_met_config(tmp_path),
-        models={"hysplit": {"footprint_depth": 0.3}},
+        models={"hysplit": {"n_hours": -24, "footprint_depth": 0.3}},
         variants={"hrrr": {}},
     )
     entries = setup_entries(config.resolve()["hrrr"].transport)
@@ -612,6 +662,7 @@ def test_a_variant_turns_the_footprint_off_with_null(tmp_path, grid):
         "smooth_factor": 0.5,
     }
     config = ProjectConfig(
+        models={"hysplit": {"n_hours": -24}},
         mets=_met_config(tmp_path),
         stages={"footprint": stage},
         variants={"hrrr": {}, "hrrr-err": {"stages": {"footprint": None}}},
@@ -626,6 +677,7 @@ def test_a_variant_turns_the_footprint_off_with_null(tmp_path, grid):
         r"stages: \{footprint: null\} to make particles only",
     ):
         ProjectConfig(
+            models={"hysplit": {"n_hours": -24}},
             mets=_met_config(tmp_path),
             stages={"footprint": stage},
             variants={
@@ -1050,12 +1102,14 @@ def test_a_footprint_without_a_grid_is_an_error(tmp_path, grid):
     stage = {"class": FOOTPRINT_STAGE, "smooth_factor": 2}
     with pytest.raises(ValueError, match="Variant 'hrrr': its footprint has no grid"):
         ProjectConfig(
+            models={"hysplit": {"n_hours": -24}},
             mets=_met_config(tmp_path),
             stages={"footprint": stage},
             variants={"hrrr": {}},
         )
     # The block may leave the grid to each variant.
     config = ProjectConfig(
+        models={"hysplit": {"n_hours": -24}},
         mets=_met_config(tmp_path),
         stages={"footprint": stage},
         variants={"hrrr": {"stages": {"footprint": {"grid": grid}}}},
@@ -1160,9 +1214,17 @@ def test_to_yaml_writes_only_what_was_set(tmp_path, grid):
 def test_variant_must_name_its_met_when_there_are_several(tmp_path):
     mc = _met_config(tmp_path)["hrrr"]
     with pytest.raises(ValueError, match="must name its met"):
-        ProjectConfig(mets={"hrrr": mc, "gfs": mc}, variants={"a": {}})
+        ProjectConfig(
+            models={"hysplit": {"n_hours": -24}},
+            mets={"hrrr": mc, "gfs": mc},
+            variants={"a": {}},
+        )
     with pytest.raises(ValueError, match="unknown met"):
-        ProjectConfig(mets={"hrrr": mc}, variants={"a": {"met": "nam"}})
+        ProjectConfig(
+            models={"hysplit": {"n_hours": -24}},
+            mets={"hrrr": mc},
+            variants={"a": {"met": "nam"}},
+        )
 
 
 @pytest.mark.parametrize("name", ["Hrrr", "hrrr_v2", "-x", "a b"])
@@ -1288,7 +1350,11 @@ def test_to_yaml_always_writes_the_variants_that_run(tmp_path):
 
 def test_variant_named_after_a_met_uses_it(tmp_path):
     mc = _met_config(tmp_path)["hrrr"]
-    cfg = ProjectConfig(mets={"hrrr": mc, "gfs": mc}, variants={"gfs": {}, "hrrr": {}})
+    cfg = ProjectConfig(
+        models={"hysplit": {"n_hours": -24}},
+        mets={"hrrr": mc, "gfs": mc},
+        variants={"gfs": {}, "hrrr": {}},
+    )
     assert {n: v.met for n, v in cfg.resolve().items()} == {
         "gfs": "gfs",
         "hrrr": "hrrr",
@@ -1346,6 +1412,8 @@ def test_each_geometry_is_built_once_and_not_on_load(tmp_path, monkeypatch):
         textwrap.dedent(f"""
         mets:
           hrrr: {{directory: {tmp_path}/met}}
+        models:
+          hysplit: {{n_hours: -24}}
         stages:
           footprint:
             class: stilt.footprint.FootprintStage
@@ -1434,7 +1502,7 @@ def test_a_config_without_variants_says_what_to_write(tmp_path):
     with pytest.raises(
         ValueError, match=r"no variants. Add\n  variants:\n    hrrr: \{\}"
     ):
-        ProjectConfig(mets=_met_config(tmp_path))
+        ProjectConfig(models={"hysplit": {"n_hours": -24}}, mets=_met_config(tmp_path))
 
 
 @pytest.mark.parametrize(
@@ -1512,7 +1580,11 @@ def test_a_relative_geometry_file_starts_from_the_project_directory(
 def test_a_met_may_be_only_its_folder(tmp_path):
     """``hrrr: /path/to/hrrr`` is the whole entry, and stays one line in the file."""
     write_arl_file(tmp_path / "met" / "20230101_00-05_hrrr")
-    config = ProjectConfig(mets={"hrrr": str(tmp_path / "met")}, variants={"hrrr": {}})
+    config = ProjectConfig(
+        models={"hysplit": {"n_hours": -24}},
+        mets={"hrrr": str(tmp_path / "met")},
+        variants={"hrrr": {}},
+    )
 
     assert config.met_config("hrrr").directory == tmp_path / "met"
     written = config.to_yaml()
@@ -1521,13 +1593,21 @@ def test_a_met_may_be_only_its_folder(tmp_path):
 
 def test_a_met_may_be_a_path_in_python(tmp_path):
     write_arl_file(tmp_path / "met" / "20230101_00-05_hrrr")
-    config = ProjectConfig(mets={"hrrr": tmp_path / "met"}, variants={"hrrr": {}})
+    config = ProjectConfig(
+        models={"hysplit": {"n_hours": -24}},
+        mets={"hrrr": tmp_path / "met"},
+        variants={"hrrr": {}},
+    )
 
     assert config.mets == {"hrrr": str(tmp_path / "met")}
 
 
 def test_a_relative_met_folder_starts_from_the_project(tmp_path):
     write_arl_file(tmp_path / "met" / "20230101_00-05_hrrr")
-    config = ProjectConfig(mets={"hrrr": "met"}, variants={"hrrr": {}})
+    config = ProjectConfig(
+        models={"hysplit": {"n_hours": -24}},
+        mets={"hrrr": "met"},
+        variants={"hrrr": {}},
+    )
 
     assert config.resolve(tmp_path)["hrrr"].met_config.directory == tmp_path / "met"

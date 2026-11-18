@@ -29,7 +29,7 @@ import yaml
 
 from stilt._paths import absolute, location, write_parquet
 from stilt.check import check_project
-from stilt.config import STARTER_CONFIG, ProjectConfig, Variant
+from stilt.config import STARTER_CONFIG, STILT_R_HYSPLIT, ProjectConfig, Variant
 from stilt.execution.config import ExecutionConfig
 from stilt.fetch import fetch_project
 from stilt.footprint import Geometry, Jacobian
@@ -61,6 +61,24 @@ RECEPTOR_COLUMNS = ("receptor", "time", "kind", "location")
 
 #: Where a simulation stands, the ``state`` column of :meth:`Project.status`.
 STATES = ("complete", "failed", "interrupted", "pending")
+
+
+def _with_stilt_r_values(config: ProjectConfig) -> ProjectConfig:
+    """
+    Return *config* with STILT-R's HYSPLIT values in its ``hysplit`` block, where it gives none.
+
+    A config that does not run the built-in HYSPLIT is returned as it is.
+    """
+    data = yaml.safe_load(config.to_yaml())
+    models = data.get("models") or {"hysplit": {}}
+    if "hysplit" not in models or "class" in (models["hysplit"] or {}):
+        return config
+    block = models["hysplit"] or {}
+    models["hysplit"] = block | {
+        name: value for name, value in STILT_R_HYSPLIT.items() if name not in block
+    }
+    data["models"] = models
+    return ProjectConfig.model_validate(data)
 
 
 def _as_receptors(
@@ -239,10 +257,15 @@ class Project:
         """
         Make a new project and return it.
 
-        Writes ``config.yaml``, with only the settings given, and
+        Writes ``config.yaml``, with the settings given, and
         ``receptors.csv`` when receptors are given. With ``starter=True`` it
         writes the commented starter config instead, to edit by hand, as
         ``stilt init`` does.
+
+        Either way, a project that runs HYSPLIT gets STILT-R's values where
+        they differ from HYSPLIT's own defaults
+        (:data:`stilt.config.STILT_R_HYSPLIT`) in its ``models: hysplit:``
+        block, unless the settings give them, so it runs as STILT-R does.
 
         Parameters
         ----------
@@ -288,8 +311,10 @@ class Project:
             )
         if starter:
             config = ProjectConfig.model_validate(yaml.safe_load(STARTER_CONFIG))
-        elif config is None:
-            config = ProjectConfig(**settings)
+        else:
+            if config is None:
+                config = ProjectConfig(**settings)
+            config = _with_stilt_r_values(config)
         directory = absolute(path)
         config_path = directory / "config.yaml"
         # The config checks a variant's own transport settings only when it is

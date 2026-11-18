@@ -664,7 +664,7 @@ def test_an_inline_kernel_has_no_table_to_check(tmp_path):
 # ---------------------------------------------------------------------------
 
 _WEIGHTING = {"transforms": [{"kind": "pressure_weighting"}]}
-_WITH_ZSFC = [*HysplitConfig().varsiwant, "zsfc"]
+_WITH_ZSFC = [*HysplitConfig(n_hours=-24).varsiwant, "zsfc"]
 
 
 def _above_sea_level_point() -> PointReceptor:
@@ -954,7 +954,7 @@ def test_a_model_with_no_files_to_check_has_no_met_findings(tmp_path, monkeypatc
     project = _project(
         tmp_path,
         [_receptor(20)],
-        models={"toy": {}},
+        models={"toy": {"n_hours": -24}},
         variants={"toy": {"model": "toy", "met": "hrrr"}},
     )
 

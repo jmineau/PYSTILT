@@ -130,8 +130,10 @@ class TransportConfig(BaseModel):
     UNRECORDED: ClassVar[frozenset[str]] = frozenset()
 
     n_hours: int = Field(
-        -24,
-        description="Length of each simulation, in hours. Negative runs backward in time.",
+        description=(
+            "Length of each simulation, in hours. Negative runs backward in "
+            "time. It has no default: a config must say it."
+        ),
     )
 
     @field_validator("n_hours")
@@ -709,6 +711,9 @@ def run_trajectories(
     **params
         The transport model's parameters, such as ``n_hours`` and
         ``numpar`` (:class:`stilt.transport.hysplit.HysplitConfig`).
+        ``n_hours`` is required; the others default to the model's own
+        values, which for HYSPLIT are not STILT-R's (see
+        :data:`stilt.config.STILT_R_HYSPLIT`).
 
     Returns
     -------

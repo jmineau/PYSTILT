@@ -37,9 +37,11 @@ _FOOTPRINT = {
 }
 
 #: Blocks a config example leaves out because the page is about something
-#: else: one met, a footprint with a grid, and one variant.
+#: else: one met, HYSPLIT with a run length, a footprint with a grid, and one
+#: variant.
 _BASE_CONFIG = {
     "mets": {"hrrr": "/met"},
+    "models": {"hysplit": {"n_hours": -24}},
     "stages": {"footprint": _FOOTPRINT},
     "variants": {"hrrr": {}},
 }
@@ -50,11 +52,17 @@ def _whole(data: dict) -> dict:
     Return a config example as a whole config, over :data:`_BASE_CONFIG`.
 
     An example of footprint settings alone, such as a ``transforms:`` list,
-    is what a page shows of the footprint's block, so it goes there.
+    is what a page shows of the footprint's block, so it goes there. A
+    ``hysplit`` block that leaves out ``n_hours`` shows the settings the
+    page is about, so it gets the base's.
     """
     if data.keys() <= set(FootprintConfig.model_fields):
         return {**_BASE_CONFIG, "stages": {"footprint": {**_FOOTPRINT, **data}}}
-    return {**_BASE_CONFIG, **data}
+    whole = {**_BASE_CONFIG, **data}
+    hysplit = whole["models"].get("hysplit")
+    if isinstance(hysplit, dict) and "class" not in hysplit:
+        whole["models"] = {**whole["models"], "hysplit": {"n_hours": -24, **hysplit}}
+    return whole
 
 
 #: YAML blocks that are not a ``config.yaml``: a Kubernetes manifest.

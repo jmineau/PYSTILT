@@ -142,7 +142,7 @@ def test_a_positions_only_run_gets_a_foot_that_makes_a_footprint_near_hysplits(
     finished = _finish(
         ModelRun(positions, met_files=run.met_files),
         receptor,
-        TransportConfig(footprint_depth=VEGHT),
+        TransportConfig(n_hours=-24, footprint_depth=VEGHT),
     )
     assert "from the met's PBLH" in finished.log
     assert finished.particles["foot"].notna().all()
@@ -241,6 +241,7 @@ def test_each_pbl_height_moves_a_positions_only_footprint_from_hysplits(hysplit_
             ModelRun(positions, met_files=run.met_files),
             receptor,
             TransportConfig(
+                n_hours=-24,
                 footprint_depth=VEGHT,
                 pbl_height=pbl_height,
                 pbl_height_min=pbl_height_min,
@@ -265,6 +266,7 @@ def test_pbl_height_set_replaces_hysplits_own_foot(hysplit_run):
         ModelRun(run.particles, met_files=run.met_files),
         receptor,
         TransportConfig(
+            n_hours=-24,
             footprint_depth=VEGHT,
             pbl_height="richardson",
             pbl_height_min=KMIX0,

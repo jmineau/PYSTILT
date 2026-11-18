@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from stilt.config import ProjectConfig
+from stilt.config import STILT_R_HYSPLIT, ProjectConfig
 from stilt.receptors import ColumnReceptor, MultiPointReceptor
 from stilt.spatial import Grid
 from stilt.transport.hysplit import MetConfig
@@ -21,6 +21,11 @@ from ..fixtures.r_stilt_reference import (
     reference_grid,
     reference_receptor,
 )
+
+#: The HYSPLIT settings of the configs here: STILT-R's values, as
+#: ``Project.init`` writes them, so a test that writes a fixture's config
+#: over an initialized project keeps its settings folders, then a short run.
+HYSPLIT = {**STILT_R_HYSPLIT, "n_hours": -6, "numpar": 100}
 
 
 def reference_met(met_dir: Path) -> MetConfig:
@@ -69,8 +74,7 @@ def wbb_config(met_dir, wbb_grid) -> ProjectConfig:
     return ProjectConfig(
         **blocks(
             mets={"hrrr": reference_met(met_dir)},
-            n_hours=-6,
-            numpar=100,
+            **HYSPLIT,
             grid=wbb_grid,
             variants={"hrrr": {}},
         )
@@ -83,8 +87,7 @@ def traj_only_config(met_dir) -> ProjectConfig:
     return ProjectConfig(
         **blocks(
             mets={"hrrr": reference_met(met_dir)},
-            n_hours=-6,
-            numpar=100,
+            **HYSPLIT,
             variants={"hrrr": {}},
         )
     )
@@ -99,8 +102,7 @@ def multifoot_config(met_dir, wbb_grid) -> ProjectConfig:
     return ProjectConfig(
         **blocks(
             mets={"hrrr": reference_met(met_dir)},
-            n_hours=-6,
-            numpar=100,
+            **HYSPLIT,
             grid=wbb_grid,
             variants={
                 "hrrr": {},
@@ -117,8 +119,7 @@ def multipoint_config(met_dir) -> ProjectConfig:
     return ProjectConfig(
         **blocks(
             mets={"hrrr": reference_met(met_dir)},
-            n_hours=-6,
-            numpar=100,
+            **HYSPLIT,
             grid=grid,
             variants={"hrrr": {}},
         )

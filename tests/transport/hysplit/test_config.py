@@ -8,12 +8,12 @@ from stilt.transport.hysplit import HysplitConfig
 
 def test_winderrtf_partial_xy_raises():
     with pytest.raises(ValidationError):
-        HysplitConfig(siguverr=1.0)  # only one of four XY params set
+        HysplitConfig(n_hours=-24, siguverr=1.0)  # only one of four XY params set
 
 
 def test_winderrtf_partial_zi_raises():
     with pytest.raises(ValidationError):
-        HysplitConfig(sigzierr=0.6, tlzierr=60.0)  # missing horcorzierr
+        HysplitConfig(n_hours=-24, sigzierr=0.6, tlzierr=60.0)  # missing horcorzierr
 
 
 def test_stilt_params_flat_construction():
@@ -27,54 +27,56 @@ def test_stilt_params_flat_construction():
 
 
 def test_stilt_params_ziscale_defaults_to_scalar_one():
-    p = HysplitConfig()
+    p = HysplitConfig(n_hours=-24)
     assert p.ziscale == 1.0
 
 
 def test_saved_config_no_longer_carries_zicontroltf():
-    assert "zicontroltf" not in HysplitConfig(ziscale=0.8).model_dump()
+    assert "zicontroltf" not in HysplitConfig(n_hours=-24, ziscale=0.8).model_dump()
 
 
 def test_zicontroltf_is_not_a_setting():
     with pytest.raises(ValidationError, match="zicontroltf"):
-        HysplitConfig(zicontroltf=1)
+        HysplitConfig(n_hours=-24, zicontroltf=1)
 
 
 @pytest.mark.parametrize("ziscale", [0.0, [1.0, 0.0]])
 def test_ziscale_zero_is_rejected(ziscale):
     with pytest.raises(ValueError, match="ziscale of 0"):
-        HysplitConfig(ziscale=ziscale)
+        HysplitConfig(n_hours=-24, ziscale=ziscale)
 
 
 def test_ziscale_empty_list_is_rejected():
     with pytest.raises(ValueError, match="cannot be empty"):
-        HysplitConfig(ziscale=[])
+        HysplitConfig(n_hours=-24, ziscale=[])
 
 
 def test_ziscale_rejects_multiple_per_simulation_lists():
     with pytest.raises(ValueError, match="Per-simulation ziscale lists"):
-        HysplitConfig(ziscale=[[0.8, 0.8], [0.9, 0.9]])
+        HysplitConfig(n_hours=-24, ziscale=[[0.8, 0.8], [0.9, 0.9]])
 
 
 @pytest.mark.parametrize("krand", [0, 1, 3, 4, 10, 13])
 def test_seed_requires_krand_2(krand):
     with pytest.raises(ValueError, match="requires krand=2"):
-        HysplitConfig(seed=1, krand=krand)
+        HysplitConfig(n_hours=-24, seed=1, krand=krand)
 
 
 @pytest.mark.parametrize("krand", [0, 1, 2, 3, 4, 10, 11, 12, 13])
 def test_krand_accepts_hysplit_modes(krand):
-    assert HysplitConfig(krand=krand).krand == krand
+    assert HysplitConfig(n_hours=-24, krand=krand).krand == krand
 
 
 @pytest.mark.parametrize("krand", [-1, 5, 9, 14, 20])
 def test_krand_rejects_undocumented_values(krand):
     with pytest.raises(ValueError, match="krand"):
-        HysplitConfig(krand=krand)
+        HysplitConfig(n_hours=-24, krand=krand)
 
 
 def test_varsiwant_takes_zcfx_the_name_hysplit_reads():
-    config = HysplitConfig(varsiwant=["time", "indx", "long", "lati", "zcfx"])
+    config = HysplitConfig(
+        n_hours=-24, varsiwant=["time", "indx", "long", "lati", "zcfx"]
+    )
     assert config.varsiwant[-1] == "zcfx"
 
 
@@ -82,19 +84,19 @@ def test_varsiwant_takes_zcfx_the_name_hysplit_reads():
 def test_varsiwant_refuses_zfx1_and_names_zcfx(name):
     """hycs_std stops at lowercase `zfx1` and reads `ZFX1` only in capitals, which no other name takes (#324)."""
     with pytest.raises(ValidationError, match="'zfx1' is not a varsiwant name.*'zcfx'"):
-        HysplitConfig(varsiwant=["time", "indx", "long", "lati", name])
+        HysplitConfig(n_hours=-24, varsiwant=["time", "indx", "long", "lati", name])
 
 
 @pytest.mark.parametrize("name", ["zfxx", "TIME", "height"])
 def test_varsiwant_refuses_a_name_hysplit_does_not_read(name):
     with pytest.raises(ValidationError, match="varsiwant"):
-        HysplitConfig(varsiwant=["time", "indx", "long", "lati", name])
+        HysplitConfig(n_hours=-24, varsiwant=["time", "indx", "long", "lati", name])
 
 
 @pytest.mark.parametrize("numpar", [0, -5])
 def test_numpar_must_be_at_least_one(numpar):
     with pytest.raises(ValidationError, match="numpar"):
-        HysplitConfig(numpar=numpar)
+        HysplitConfig(n_hours=-24, numpar=numpar)
 
 
 def test_n_hours_must_not_be_zero():
@@ -118,7 +120,7 @@ def test_n_hours_must_not_be_zero():
 def test_a_physical_setting_out_of_its_range_is_refused(field, value):
     """These were accepted and ran, or failed later with no field named (#440)."""
     with pytest.raises(ValidationError, match=field):
-        HysplitConfig(**{field: value})
+        HysplitConfig(n_hours=-24, **{field: value})
 
 
 @pytest.mark.parametrize(
@@ -133,16 +135,16 @@ def test_a_negative_wind_error_setting_is_refused(field):
         "horcoruverr": 14.0,
     }
     with pytest.raises(ValidationError, match=field):
-        HysplitConfig(**{**errors, field: -errors[field]})
+        HysplitConfig(n_hours=-24, **{**errors, field: -errors[field]})
 
 
 @pytest.mark.parametrize("field", ["sigzierr", "tlzierr", "horcorzierr"])
 def test_a_negative_mixed_layer_error_setting_is_refused(field):
     errors = {"sigzierr": 0.6, "tlzierr": 60.0, "horcorzierr": 40.0}
     with pytest.raises(ValidationError, match=field):
-        HysplitConfig(**{**errors, field: -errors[field]})
+        HysplitConfig(n_hours=-24, **{**errors, field: -errors[field]})
 
 
 def test_a_negative_ziscale_is_kept_as_hysplits_switch_to_the_met_pbl_height():
     """HYSPLIT reads a negative factor as: use the met files' own PBL height."""
-    assert HysplitConfig(ziscale=-1.0).ziscale == -1.0
+    assert HysplitConfig(n_hours=-24, ziscale=-1.0).ziscale == -1.0

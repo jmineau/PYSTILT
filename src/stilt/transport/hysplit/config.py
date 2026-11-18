@@ -39,6 +39,31 @@ ZI_ERROR_SETTINGS = ("sigzierr", "tlzierr", "horcorzierr")
 #: has a name that says what it does.
 SETUP_NAMES: dict[str, str] = {"footprint_depth": "veght"}
 
+#: The particle variables ``hycs_std`` writes when ``SETUP.CFG`` names none,
+#: its own default ``VARSIWANT``, in its order.
+HYSPLIT_VARSIWANT = (
+    "time",
+    "indx",
+    "long",
+    "lati",
+    "zagl",
+    "sigw",
+    "tlgr",
+    "zsfc",
+    "temp",
+    "samt",
+    "foot",
+    "shtf",
+    "dmas",
+    "dens",
+    "rhfr",
+    "sphu",
+    "dswf",
+    "wout",
+    "mlht",
+    "pres",
+)
+
 FIXED_SETUP: dict[str, Any] = {
     "cmass": 0,
     "cpack": 1,
@@ -100,6 +125,14 @@ class HysplitConfig(TransportConfig):
     ``SETUP.CFG`` entries that cannot change the particles, such as ``delt``
     and ``ichem``, are not settings: PYSTILT writes the same value in every
     run (:data:`FIXED_SETUP`), and a config that sets one is refused.
+
+    The defaults are HYSPLIT's own, in the STILT mode those fixed entries
+    set. HYSPLIT decides ``capemin``, ``kblt``, ``kmixd``, ``krand`` and
+    ``vscales`` only after it has read ``SETUP.CFG``, from the mode and
+    ``numpar``, so they are unset by default: an unset setting is not
+    written, and HYSPLIT chooses. ``n_hours`` has no default. STILT-R runs
+    HYSPLIT with other values for some of them, which a new PYSTILT project
+    writes into its ``config.yaml``.
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -110,7 +143,7 @@ class HysplitConfig(TransportConfig):
     UNRECORDED: ClassVar[frozenset[str]] = frozenset({"directory"})
 
     numpar: int = Field(
-        200,
+        2500,
         ge=1,
         description=(
             "Number of particles released per simulation. More particles give a "
@@ -163,36 +196,23 @@ class HysplitConfig(TransportConfig):
             "zcfx",
         ]
     ] = Field(
-        default_factory=lambda: [
-            "time",
-            "indx",
-            "long",
-            "lati",
-            "zagl",
-            "foot",
-            "mlht",
-            "pres",
-            "dens",
-            "samt",
-            "sigw",
-            "tlgr",
-        ],
+        default_factory=lambda: list(HYSPLIT_VARSIWANT),
         description=(
             "Particle variables ``hycs_std`` writes to the trajectory output, "
             "by the lowercase four-letter names HYSPLIT reads. Each is a "
             "column of the particles under the same name, except ``indx``, "
             "``time``, ``long``, and ``lati``. ``zcfx`` is the vertical "
             "displacement by convective flux along the trajectory, in m. "
-            "The default is the set footprints need, plus ``pres`` for "
-            "pressure weighting."
+            "The default is HYSPLIT's own list of 20. A footprint needs "
+            "``foot`` and ``mlht`` among them, and pressure weighting ``pres``."
         ),
     )
-    capemin: float = Field(
-        -1.0,
+    capemin: float | None = Field(
+        None,
         description=(
             "Convection option. -1 turns convection off, -2 uses the Grell "
             "scheme, and a positive value mixes vertically when CAPE exceeds "
-            "it, in J/kg."
+            "it, in J/kg. Unset, HYSPLIT chooses -2 in STILT mode."
         ),
     )
     emisshrs: float = Field(
@@ -218,11 +238,12 @@ class HysplitConfig(TransportConfig):
             "wind and temperature profiles (2)."
         ),
     )
-    kblt: int = Field(
-        5,
+    kblt: int | None = Field(
+        None,
         description=(
             "Boundary-layer turbulence scheme: 1 Beljaars, 2 Kantha-Clayson, "
-            "3 TKE, 4 measured variances, 5 Hanna."
+            "3 TKE, 4 measured variances, 5 Hanna. Unset, HYSPLIT chooses 5 "
+            "in STILT mode."
         ),
     )
     kdef: int = Field(
@@ -233,19 +254,19 @@ class HysplitConfig(TransportConfig):
         150,
         description="Minimum mixed-layer depth, in meters.",
     )
-    kmixd: int = Field(
-        3,
+    kmixd: int | None = Field(
+        None,
         description=(
             "Mixed-layer depth source: 0 from the meteorology, 1 from the "
             "temperature profile, 2 from the TKE profile, 3 from a modified "
-            "Richardson number."
+            "Richardson number. Unset, HYSPLIT chooses 3 in STILT mode."
         ),
     )
-    krand: Literal[0, 1, 2, 3, 4, 10, 11, 12, 13] = Field(
-        4,
+    krand: Literal[0, 1, 2, 3, 4, 10, 11, 12, 13] | None = Field(
+        None,
         description=(
-            "How HYSPLIT draws the random numbers for turbulence. 0 picks 2 "
-            "when ``numpar`` is 5000 or less and 1 otherwise. 1 uses a "
+            "How HYSPLIT draws the random numbers for turbulence. 0, or "
+            "unset, picks 2 when ``numpar`` is 5000 or less and 1 otherwise. 1 uses a "
             "precomputed table. 2 draws them during the run and is the only "
             "mode that uses ``seed``. 3 uses no random numbers (a diagnostic "
             "mode). 4 draws them during the run from a clock-based seed, so "
@@ -336,12 +357,13 @@ class HysplitConfig(TransportConfig):
         200.0,
         description="Vertical Lagrangian timescale in an unstable boundary layer, in seconds.",
     )
-    vscales: float = Field(
-        -1.0,
+    vscales: float | None = Field(
+        None,
         description=(
             "Vertical Lagrangian timescale in a stable boundary layer, in "
             "seconds. -1 uses the Hanna timescale, which varies with the "
-            "turbulence, and then ``vscaleu`` is not used."
+            "turbulence, and then ``vscaleu`` is not used. Unset, HYSPLIT "
+            "chooses -1 in STILT mode."
         ),
     )
     w_option: int = Field(
@@ -367,7 +389,7 @@ class HysplitConfig(TransportConfig):
         description="Fixed rise velocity, in m/s. Used by vertical motion option 9.",
     )
     wvert: bool = Field(
-        False,
+        True,
         description="Interpolate WRF fields vertically with the WRF scheme instead of HYSPLIT's.",
     )
     z_top: float = Field(
@@ -491,8 +513,9 @@ class HysplitConfig(TransportConfig):
     def _validate_seed(self) -> Self:
         """Require ``krand=2`` when a seed is set."""
         if self.seed is not None and self.krand != 2:
+            got = "krand unset" if self.krand is None else f"krand={self.krand}"
             raise ValueError(
-                f"seed={self.seed} requires krand=2 (got krand={self.krand}): the "
+                f"seed={self.seed} requires krand=2 (got {got}): the "
                 "hycs_std of HYSPLIT 5.1.0 discards the namelist seed under krand=4 and "
                 "10-13 and uses it only for the initial turbulent velocity under "
                 "krand=1. Set krand=2, or drop the seed."
@@ -512,9 +535,9 @@ class HysplitConfig(TransportConfig):
 
         Examples
         --------
-        >>> HysplitConfig(numpar=1000).maxpar_for(40)
+        >>> HysplitConfig(n_hours=-24, numpar=1000).maxpar_for(40)
         1040
-        >>> HysplitConfig(numpar=1000).maxpar_for(1)
+        >>> HysplitConfig(n_hours=-24, numpar=1000).maxpar_for(1)
         1000
         """
         if self.maxpar is not None:
@@ -558,6 +581,7 @@ class HysplitConfig(TransportConfig):
 
 __all__ = [
     "FIXED_SETUP",
+    "HYSPLIT_VARSIWANT",
     "SETUP_NAMES",
     "MAX_ZISCALE_HOURS",
     "WIND_ERROR_SETTINGS",

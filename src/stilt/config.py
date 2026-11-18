@@ -791,6 +791,37 @@ class ProjectConfig(BaseModel):
         return cls.model_validate(raw)
 
 
+#: STILT-R's HYSPLIT settings where they differ from what HYSPLIT does on its
+#: own: ``Project.init`` and ``stilt init`` write them into a new project's
+#: ``models: hysplit:`` block, so it runs HYSPLIT as STILT-R does. The values
+#: are those of STILT-R's ``run_stilt.r``. ``kblt``, ``kmixd`` and ``vscales``
+#: are what HYSPLIT chooses itself in STILT mode, and are written so that
+#: ``SETUP.CFG`` matches STILT-R's line for line. ``varsiwant`` is STILT-R's
+#: list with ``pres`` added, for pressure weighting.
+STILT_R_HYSPLIT: dict[str, Any] = {
+    "numpar": 1000,
+    "capemin": -1.0,
+    "kblt": 5,
+    "kmixd": 3,
+    "krand": 4,
+    "vscales": -1.0,
+    "wvert": False,
+    "varsiwant": [
+        "time",
+        "indx",
+        "long",
+        "lati",
+        "zagl",
+        "foot",
+        "mlht",
+        "pres",
+        "dens",
+        "samt",
+        "sigw",
+        "tlgr",
+    ],
+}
+
 #: The commented ``config.yaml`` that ``Project.init(path, starter=True)`` and
 #: ``stilt init`` write, to edit by hand.
 STARTER_CONFIG = """# PYSTILT project configuration
@@ -808,7 +839,15 @@ mets:
 models:
   hysplit:
     n_hours: -24
+    # STILT-R's values where HYSPLIT's own defaults differ. A setting left
+    # out runs with HYSPLIT's default.
     numpar: 1000
+    capemin: -1     # no convection
+    kblt: 5         # Hanna turbulence
+    kmixd: 3        # mixed-layer height from the bulk Richardson number
+    krand: 4        # random numbers seeded from the clock
+    vscales: -1     # Hanna timescale in a stable boundary layer
+    wvert: false
     varsiwant: [time, indx, long, lati, zagl, foot, mlht, pres, dens, samt, sigw, tlgr]
 
 
@@ -1177,6 +1216,7 @@ def _check_keys(
 __all__ = [
     "FOOTPRINT_STAGE",
     "STARTER_CONFIG",
+    "STILT_R_HYSPLIT",
     "VARIANT_NAME_RE",
     "ProjectConfig",
     "Variant",

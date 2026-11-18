@@ -81,8 +81,9 @@ The variant then runs four times per receptor, as realizations ``0`` to
 Each realization needs a different random draw, and there are two ways to
 get one:
 
-- ``krand: 4``, the default. HYSPLIT seeds each run from the clock. The
-  realizations differ, but a rerun gives different ones.
+- ``krand: 4``, STILT-R's value, which ``stilt init`` writes into a new
+  project's config. HYSPLIT seeds each run from the clock. The realizations
+  differ, but a rerun gives different ones.
 - ``krand: 2`` with a ``seed``. Realization ``k`` runs with ``seed + k``,
   and a rerun reproduces every realization exactly.
 

@@ -1528,7 +1528,7 @@ def test_a_batched_model_runs_every_receptor_of_a_variant_in_one_call(
         [receptor, other_receptor, third],
         grid=GRID,
         hnf_plume=False,
-        models={"toy": {"class": BATCHED_TOY}},
+        models={"toy": {"class": BATCHED_TOY, "n_hours": -24}},
         variants={"toy": {}, "toy-s2": {"smooth_factor": 2.0}},
     )
     ids = [str(r.id) for r in (receptor, other_receptor, third)]

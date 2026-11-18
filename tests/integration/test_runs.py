@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from stilt.config import ProjectConfig
+from stilt.config import STILT_R_HYSPLIT, ProjectConfig
 from stilt.exceptions import SimulationError
 from stilt.execution.runner import resolve_compute_root
 from stilt.footprint.targets import Mesh
@@ -112,9 +112,9 @@ def test_the_functions_make_what_a_project_stores(tmp_path, wbb_receptor, wbb_co
     project.run()
     sim = project.simulation(*_sim_id(wbb_receptor))
 
-    particles = stilt.run_trajectories(
-        wbb_receptor, config.mets["hrrr"], n_hours=-6, numpar=100, krand=2, seed=7
-    )
+    # Project.init wrote STILT-R's HYSPLIT values; run_trajectories takes HYSPLIT's own.
+    settings = {**STILT_R_HYSPLIT, "n_hours": -6, "numpar": 100, "krand": 2, "seed": 7}
+    particles = stilt.run_trajectories(wbb_receptor, config.mets["hrrr"], **settings)
     stored = sim.particles
     columns = [c for c in particles.columns if c in stored.columns]
     pd.testing.assert_frame_equal(

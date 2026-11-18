@@ -16,7 +16,7 @@ from stilt.transport.hysplit import (
     read_particle_dat,
     write_inputs,
 )
-from stilt.transport.hysplit.config import FIXED_SETUP
+from stilt.transport.hysplit.config import FIXED_SETUP, HYSPLIT_VARSIWANT
 from stilt.transport.hysplit.control import ControlFile
 from stilt.transport.hysplit.driver import (
     MET_STOP_CELLS,
@@ -875,7 +875,9 @@ def test_setup_cfg_holds_the_settings_and_kmsl(tmp_path, point_receptor):
 
 
 def test_setup_cfg_includes_the_seed_when_configured(tmp_path, point_receptor):
-    content = _setup_cfg(tmp_path, point_receptor, HysplitConfig(seed=17, krand=2))
+    content = _setup_cfg(
+        tmp_path, point_receptor, HysplitConfig(n_hours=-24, seed=17, krand=2)
+    )
     assert "seed=-18" in content  # -(|seed|+1): the value HYSPLIT honours
     assert "winderrtf=0" in content
 
@@ -895,7 +897,7 @@ def test_setup_cfg_takes_kmsl_from_an_msl_receptor(tmp_path, point_receptor):
 def test_read_namelist_reads_the_setup_cfg_written(tmp_path, point_receptor):
     from stilt.transport.hysplit.namelist import read_namelist
 
-    config = HysplitConfig(numpar=150, wvert=True)
+    config = HysplitConfig(n_hours=-24, numpar=150, wvert=True)
     entries = read_namelist(_inputs(tmp_path, point_receptor, config) / "SETUP.CFG")
     assert entries["numpar"] == 150
     assert entries["dzf"] == 0.01
@@ -920,7 +922,7 @@ def test_read_namelist_rejects_a_file_that_is_not_one(tmp_path):
 def test_kmsl_comes_only_from_the_receptor():
     """KMSL follows each receptor's altitude_ref; there is no setting to contradict it."""
     with pytest.raises(ValueError, match="kmsl"):
-        HysplitConfig(kmsl=0)
+        HysplitConfig(n_hours=-24, kmsl=0)
 
 
 def test_write_inputs_takes_a_release_time_and_release_locations(tmp_path):
@@ -1098,21 +1100,24 @@ def test_a_missing_table_says_where_the_tables_go(tmp_path, point_receptor):
 
 
 def test_winderrtf_all_none():
-    assert winderrtf(HysplitConfig()) == 0
+    assert winderrtf(HysplitConfig(n_hours=-24)) == 0
 
 
 def test_winderrtf_xy_only():
-    e = HysplitConfig(siguverr=1.0, tluverr=60.0, zcoruverr=500.0, horcoruverr=40.0)
+    e = HysplitConfig(
+        n_hours=-24, siguverr=1.0, tluverr=60.0, zcoruverr=500.0, horcoruverr=40.0
+    )
     assert winderrtf(e) == 1
 
 
 def test_winderrtf_zi_only():
-    e = HysplitConfig(sigzierr=0.6, tlzierr=60.0, horcorzierr=40.0)
+    e = HysplitConfig(n_hours=-24, sigzierr=0.6, tlzierr=60.0, horcorzierr=40.0)
     assert winderrtf(e) == 2
 
 
 def test_winderrtf_both():
     e = HysplitConfig(
+        n_hours=-24,
         siguverr=1.0,
         tluverr=60.0,
         zcoruverr=500.0,
@@ -1126,26 +1131,30 @@ def test_winderrtf_both():
 
 def test_winderrtf_zero_value_params():
     """0.0 error params are set (not None) - winderrtf must still be 1."""
-    e = HysplitConfig(siguverr=0.0, tluverr=0.0, zcoruverr=0.0, horcoruverr=0.0)
+    e = HysplitConfig(
+        n_hours=-24, siguverr=0.0, tluverr=0.0, zcoruverr=0.0, horcoruverr=0.0
+    )
     assert winderrtf(e) == 1
 
 
 def test_unset_maxpar_gives_every_location_its_rounded_up_share():
     """HYSPLIT gives each of n locations ``numpar // n``, often plus one (#237)."""
-    p = HysplitConfig(numpar=1000)
+    p = HysplitConfig(n_hours=-24, numpar=1000)
     assert p.maxpar is None
     assert p.maxpar_for(1) == 1000  # one location keeps numpar
     assert p.maxpar_for(3) == 3 * 334
     assert p.maxpar_for(40) == 40 * 26
     assert p.maxpar_for(56) == 56 * 18
-    assert HysplitConfig(numpar=10).maxpar_for(40) == 40  # at least one each
+    assert (
+        HysplitConfig(n_hours=-24, numpar=10).maxpar_for(40) == 40
+    )  # at least one each
 
 
 def test_a_set_maxpar_is_used_as_given():
-    p = HysplitConfig(numpar=1000, maxpar=800)
+    p = HysplitConfig(n_hours=-24, numpar=1000, maxpar=800)
     assert p.maxpar_for(1) == p.maxpar_for(40) == 800
     assert setup_entries(p)["maxpar"] == 800
-    assert "maxpar" not in setup_entries(HysplitConfig(numpar=1000))
+    assert "maxpar" not in setup_entries(HysplitConfig(n_hours=-24, numpar=1000))
 
 
 def test_setup_cfg_maxpar_follows_the_receptors_locations(
@@ -1164,22 +1173,25 @@ def test_setup_cfg_maxpar_follows_the_receptors_locations(
 
 
 def test_zicontroltf_is_derived_from_ziscale():
-    assert zicontroltf(HysplitConfig()) == 0
-    assert ziscale_factors(HysplitConfig()) is None
-    assert zicontroltf(HysplitConfig(ziscale=[1.0, 1.0])) == 0
-    assert zicontroltf(HysplitConfig(ziscale=0.8)) == 1
-    assert zicontroltf(HysplitConfig(ziscale=[1.0, 0.9])) == 1
+    assert zicontroltf(HysplitConfig(n_hours=-24)) == 0
+    assert ziscale_factors(HysplitConfig(n_hours=-24)) is None
+    assert zicontroltf(HysplitConfig(n_hours=-24, ziscale=[1.0, 1.0])) == 0
+    assert zicontroltf(HysplitConfig(n_hours=-24, ziscale=0.8)) == 1
+    assert zicontroltf(HysplitConfig(n_hours=-24, ziscale=[1.0, 0.9])) == 1
 
 
 def test_ziscale_scalar_repeats_for_every_hour_and_list_is_used_as_given():
     assert ziscale_factors(HysplitConfig(n_hours=-3, ziscale=0.8)) == [0.8, 0.8, 0.8]
     assert ziscale_factors(HysplitConfig(n_hours=-24, ziscale=[0.8])) == [0.8]
-    assert ziscale_factors(HysplitConfig(ziscale=[[0.8, 0.9]])) == [0.8, 0.9]
+    assert ziscale_factors(HysplitConfig(n_hours=-24, ziscale=[[0.8, 0.9]])) == [
+        0.8,
+        0.9,
+    ]
 
 
 def test_setup_entries_write_the_derived_zicontroltf():
-    assert setup_entries(HysplitConfig())["zicontroltf"] == 0
-    assert setup_entries(HysplitConfig(ziscale=1.2))["zicontroltf"] == 1
+    assert setup_entries(HysplitConfig(n_hours=-24))["zicontroltf"] == 0
+    assert setup_entries(HysplitConfig(n_hours=-24, ziscale=1.2))["zicontroltf"] == 1
 
 
 def test_ziscale_at_most_150_hourly_factors():
@@ -1188,7 +1200,7 @@ def test_ziscale_at_most_150_hourly_factors():
     with pytest.raises(ValueError, match="at most 150"):
         HysplitConfig(n_hours=-151, ziscale=0.8)
     with pytest.raises(ValueError, match="at most 150"):
-        HysplitConfig(ziscale=[0.8] * 151)
+        HysplitConfig(n_hours=-24, ziscale=[0.8] * 151)
 
 
 def test_long_run_without_scaling_is_fine():
@@ -1196,7 +1208,7 @@ def test_long_run_without_scaling_is_fine():
 
 
 def test_setup_entries_route_transport_params_to_setup_cfg():
-    p = HysplitConfig()
+    p = HysplitConfig(n_hours=-24)
     entries = setup_entries(p)
 
     assert entries["numpar"] == p.numpar
@@ -1242,8 +1254,26 @@ HYSPLIT_SETUP_TYPES = {
 
 
 def test_hysplit_setup_types_cover_every_setup_entry():
-    entries = setup_entries(HysplitConfig(seed=1, krand=2, maxpar=1000))
-    assert set(entries) == set(HYSPLIT_SETUP_TYPES)
+    config = HysplitConfig(
+        n_hours=-24,
+        capemin=-1,
+        kblt=5,
+        kmixd=3,
+        vscales=-1,
+        seed=1,
+        krand=2,
+        maxpar=1000,
+    )
+    assert set(setup_entries(config)) == set(HYSPLIT_SETUP_TYPES)
+
+
+def test_settings_hysplit_chooses_are_unset_and_left_out_of_setup_cfg():
+    # HYSPLIT sets these after reading SETUP.CFG, from its mode and numpar.
+    entries = setup_entries(HysplitConfig(n_hours=-24))
+
+    assert not {"capemin", "kblt", "kmixd", "krand", "vscales"} & set(entries)
+    assert (entries["numpar"], entries["wvert"]) == (2500, True)
+    assert entries["varsiwant"] == list(HYSPLIT_VARSIWANT)
 
 
 @pytest.mark.parametrize(
@@ -1256,7 +1286,7 @@ def test_hysplit_setup_types_cover_every_setup_entry():
 )
 def test_real_setup_fields_accept_fractions(name):
     # HYSPLIT reads these as REAL, so a fractional value is valid.
-    assert setup_entries(HysplitConfig(**{name: 0.5}))[name] == 0.5
+    assert setup_entries(HysplitConfig(n_hours=-24, **{name: 0.5}))[name] == 0.5
 
 
 @pytest.mark.parametrize(
@@ -1269,12 +1299,12 @@ def test_real_setup_fields_accept_fractions(name):
 )
 def test_integer_setup_fields_reject_fractions(name):
     # HYSPLIT stops with a namelist read error on a fractional INTEGER.
-    with pytest.raises(ValidationError):
-        HysplitConfig(**{name: 0.5})
+    with pytest.raises(ValidationError, match=name):
+        HysplitConfig(n_hours=-24, **{name: 0.5})
 
 
 def test_fixed_setup_entries_are_written_and_are_no_settings():
-    entries = setup_entries(HysplitConfig())
+    entries = setup_entries(HysplitConfig(n_hours=-24))
     for name, value in FIXED_SETUP.items():
         assert name not in HysplitConfig.model_fields
         assert entries[name] == value
@@ -1283,12 +1313,12 @@ def test_fixed_setup_entries_are_written_and_are_no_settings():
 @pytest.mark.parametrize("name", ["delt", "ichem", "cmass", "khinp"])
 def test_a_fixed_setup_entry_is_refused_as_a_setting(name):
     with pytest.raises(ValidationError, match=name):
-        HysplitConfig(**{name: FIXED_SETUP[name]})
+        HysplitConfig(n_hours=-24, **{name: FIXED_SETUP[name]})
 
 
 def test_setup_cfg_holds_the_entries_it_held_when_they_were_settings():
     # Every SETUP.CFG entry and value from before the fixed ones stopped
-    # being settings: the default config, with a seed and maxpar.
+    # being settings: the default config of then, with a seed and maxpar.
     before = {
         "veght": 0.5, "numpar": 200, "capemin": -1, "cmass": 0, "conage": 48,
         "cpack": 1, "delt": 1, "dxf": 1, "dyf": 1, "dzf": 0.01, "efile": "",
@@ -1305,7 +1335,19 @@ def test_setup_cfg_holds_the_entries_it_held_when_they_were_settings():
         "vscale": 200, "vscaleu": 200, "vscales": -1, "wbbh": 0, "wbwf": 0,
         "wbwr": 0, "wvert": False, "zicontroltf": 0,
     }  # fmt: skip
-    entries = setup_entries(HysplitConfig(seed=3, krand=2, maxpar=1000))
+    config = HysplitConfig(
+        n_hours=-24,
+        numpar=200,
+        capemin=-1,
+        kblt=5,
+        kmixd=3,
+        vscales=-1,
+        wvert=False,
+        seed=3,
+        krand=2,
+        maxpar=1000,
+    )
+    entries = setup_entries(config)
     entries.pop("varsiwant")
     assert entries == before
 
@@ -1313,9 +1355,9 @@ def test_setup_cfg_holds_the_entries_it_held_when_they_were_settings():
 def test_setup_entries_map_seed_to_negative_namelist_value():
     # HYSPLIT's ran1 re-initializes only from a negative value; -(|seed|+1)
     # keeps every seed distinct and off the unseeded default (state 1).
-    assert setup_entries(HysplitConfig(seed=17, krand=2))["seed"] == -18
-    assert setup_entries(HysplitConfig(seed=-17, krand=2))["seed"] == -18
-    assert setup_entries(HysplitConfig(seed=0, krand=2))["seed"] == -1
+    assert setup_entries(HysplitConfig(n_hours=-24, seed=17, krand=2))["seed"] == -18
+    assert setup_entries(HysplitConfig(n_hours=-24, seed=-17, krand=2))["seed"] == -18
+    assert setup_entries(HysplitConfig(n_hours=-24, seed=0, krand=2))["seed"] == -1
     assert setup_seed(42) == -43
 
 
@@ -1330,6 +1372,6 @@ def test_the_driver_names_only_real_settings_outside_setup_cfg():
     from stilt.transport.hysplit.driver import NOT_IN_SETUP
 
     assert set(HysplitConfig.model_fields) >= NOT_IN_SETUP
-    entries = setup_entries(HysplitConfig())
+    entries = setup_entries(HysplitConfig(n_hours=-24))
     assert "numpar" in entries
     assert not NOT_IN_SETUP & set(entries)

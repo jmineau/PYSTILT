@@ -12,7 +12,7 @@ import pytest
 import xarray as xr
 
 from stilt import transport_error
-from stilt.config import ProjectConfig
+from stilt.config import STILT_R_HYSPLIT, ProjectConfig
 from stilt.execution.config import ExecutionConfig
 from stilt.execution.runner import resolve_compute_root
 from stilt.output import Output
@@ -49,8 +49,15 @@ def _met(tmp_path) -> MetConfig:
 
 
 def _config(tmp_path, include_footprint=True, **overrides) -> ProjectConfig:
-    """Minimal ProjectConfig with one met and (optionally) a footprint grid."""
+    """
+    Minimal ProjectConfig with one met and (optionally) a footprint grid.
+
+    Its ``hysplit`` block has STILT-R's values, as ``Project.init`` writes
+    them, unless *overrides* give the ``models`` blocks.
+    """
     overrides.setdefault("grid", _GRID if include_footprint else None)
+    if "models" not in overrides:
+        overrides = {**STILT_R_HYSPLIT, **overrides}
     return ProjectConfig(
         **blocks(
             mets={"hrrr": _met(tmp_path)}, **{"variants": {"hrrr": {}}, **overrides}
@@ -138,9 +145,9 @@ def test_init_writes_the_settings_given_and_the_receptors(tmp_path, point_recept
     )
 
     text = (tmp_path / "proj" / "config.yaml").read_text()
-    assert "n_hours: -6" in text and "numpar" not in text  # only what was given
+    assert "n_hours: -6" in text and "kmix0" not in text  # no other defaults
     assert (tmp_path / "proj" / "receptors.csv").exists()
-    assert project.config.models == {"hysplit": {"n_hours": -6}}
+    assert project.config.models == {"hysplit": {"n_hours": -6, **STILT_R_HYSPLIT}}
     assert project.variants["hrrr"].transport.n_hours == -6
     assert list(project.receptors["receptor"]) == [point_receptor.id]
     assert Project(tmp_path / "proj").config == project.config
@@ -164,10 +171,55 @@ def test_init_takes_the_receptors_second(tmp_path, point_receptor):
         tmp_path / "proj",
         [point_receptor],
         mets={"hrrr": _met(tmp_path)},
+        models={"hysplit": {"n_hours": -24}},
         variants={"hrrr": {}},
     )
 
     assert list(project.receptors["receptor"]) == [point_receptor.id]
+
+
+def test_init_writes_stilt_rs_hysplit_values_where_none_are_given(tmp_path):
+    project = Project.init(
+        tmp_path / "proj",
+        mets={"hrrr": _met(tmp_path)},
+        models={"hysplit": {"n_hours": -24, "numpar": 200, "kmixd": None}},
+        variants={"hrrr": {}},
+    )
+
+    hysplit = project.config.models["hysplit"]
+    assert hysplit == {
+        "n_hours": -24,
+        "numpar": 200,
+        "kmixd": None,
+        **{k: v for k, v in STILT_R_HYSPLIT.items() if k not in ("numpar", "kmixd")},
+    }
+    transport = project.variants["hrrr"].transport
+    assert (transport.numpar, transport.kmixd, transport.krand) == (200, None, 4)
+
+
+def test_init_writes_stilt_rs_values_when_no_model_is_given(tmp_path):
+    # Without models:, the project runs HYSPLIT, so the values go in its block.
+    config = ProjectConfig(
+        mets={"hrrr": _met(tmp_path)},
+        variants={"hrrr": {"n_hours": -24}},
+    )
+
+    project = Project.init(tmp_path / "proj", config=config)
+
+    assert project.config.models == {"hysplit": STILT_R_HYSPLIT}
+    assert project.variants["hrrr"].transport.capemin == -1.0
+
+
+def test_init_writes_no_hysplit_values_for_another_model(tmp_path):
+    config = ProjectConfig(
+        mets={"hrrr": _met(tmp_path)},
+        models={"mine": {"class": "tests.transport.test_models.ToyModel"}},
+        variants={"hrrr": {"n_hours": -24}},
+    )
+
+    project = Project.init(tmp_path / "proj", config=config)
+
+    assert "hysplit" not in project.config.models
 
 
 def test_init_refuses_a_project_that_has_a_config(tmp_path):
@@ -562,7 +614,7 @@ def _with_unreadable_met(project, tmp_path, **overrides):
     config = ProjectConfig(
         **blocks(
             mets={"hrrr": MetConfig(directory=tmp_path / "no-such-met")},
-            **{"variants": {"hrrr": {}}, "grid": _GRID, **overrides},
+            **{"variants": {"hrrr": {}}, "grid": _GRID, **STILT_R_HYSPLIT, **overrides},
         )
     )
     config.to_yaml(project.config_path)
@@ -1693,6 +1745,7 @@ def test_relative_paths_start_from_the_project_not_the_working_directory(
             "local": "met",
             "shared": {"directory": "$MET_ROOT/hrrr"},
         },
+        models={"hysplit": {"n_hours": -24}},
         output=str(tmp_path / "output_link"),
         variants={"local": {}, "shared": {}},
     )
