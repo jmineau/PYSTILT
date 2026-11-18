@@ -234,6 +234,28 @@ def test_stored_settings_read_back_to_the_same_hash(tmp_path):
     assert settings_hash(read_run_settings(stored)) != variant.particles_hash
 
 
+@pytest.mark.parametrize(
+    "gone",
+    [{"footprint_depth": 0.3}, {"footprint_depth": 0.5}, {"pbl_height": "richardson"}],
+)
+def test_a_stored_setting_this_version_does_not_have_keeps_the_run_apart(
+    tmp_path, gone
+):
+    """
+    A run made when the depth was a run setting is not taken for HYSPLIT's ``veght``.
+
+    Dropping the setting would read a run made with ``footprint_depth: 0.3``,
+    or with a ``foot`` computed under ``pbl_height``, as one made with the
+    default ``veght: 0.5``, and a variant would find particles made otherwise.
+    """
+    variant = _variant(tmp_path, numpar=100)
+    stored = {k: v for k, v in variant.run_settings.items() if k != "veght"}
+    stored.update(gone)
+    record = read_run_settings(stored)
+    assert settings_hash(record) != variant.particles_hash
+    assert {k: record[k] for k in gone} == gone
+
+
 def _make_folder(directory, variant):
     """Make *variant*'s particles folder in the output *directory*, and return it."""
     out = Output(directory)
@@ -249,7 +271,12 @@ def _rewrite_record(folder, change) -> None:
 
 
 def test_a_folder_with_a_setting_this_version_lacks_still_loads(tmp_path):
-    """A setting removed after a folder was written is ignored, so the folder is found."""
+    """
+    A setting removed after a folder was written still loads, and keeps the folder apart.
+
+    The run may have been made differently under it, so no variant is
+    matched to the folder; it is listed as used by none.
+    """
     variant = _variant(tmp_path, numpar=100)
     folder = _make_folder(tmp_path / "out", variant)
 
@@ -258,6 +285,19 @@ def test_a_folder_with_a_setting_this_version_lacks_still_loads(tmp_path):
         settings["model"]["removed_too"] = "x"
 
     _rewrite_record(folder, add_removed)
+    out = Output(tmp_path / "out")
+    assert out.folder("particles", variant) is None
+    listed = out.folders({"hrrr": variant})
+    assert listed["folder"].tolist() == [folder.name.removeprefix("settings=")]
+    assert listed["variant"].tolist() == [""]
+    assert "removed_setting" in listed["differs"].iloc[0]
+
+
+def test_a_build_detail_this_version_lacks_is_ignored(tmp_path):
+    """The model's record is read through ``ModelInfo``, which drops what it does not have."""
+    variant = _variant(tmp_path, numpar=100)
+    folder = _make_folder(tmp_path / "out", variant)
+    _rewrite_record(folder, lambda s: s["model"].update(removed_too="x"))
     assert Output(tmp_path / "out").folder("particles", variant) == folder
 
 
