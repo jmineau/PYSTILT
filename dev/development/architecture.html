@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=70c92553"></script>
+    <script src="../_static/documentation_options.js?v=8fa7a052"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev15+gee07397d8" />
+  <meta name="docsearch:version" content="0.1.0a30.dev20+g100216f09" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -883,12 +883,19 @@ error.</p></li>
 <code class="docutils literal notranslate"><span class="pre">model</span></code> (needed with several models), <code class="docutils literal notranslate"><span class="pre">realizations</span></code> and <code class="docutils literal notranslate"><span class="pre">stages</span></code>;
 every other key is a setting of its model. Each model’s block holds all of
 its parameters, the ones PYSTILT’s own code reads among them (the base
-<code class="docutils literal notranslate"><span class="pre">TransportConfig</span></code>: <code class="docutils literal notranslate"><span class="pre">n_hours</span></code>, <code class="docutils literal notranslate"><span class="pre">seed</span></code>, <code class="docutils literal notranslate"><span class="pre">footprint_depth</span></code>,
-<code class="docutils literal notranslate"><span class="pre">pbl_height</span></code>, <code class="docutils literal notranslate"><span class="pre">pbl_height_min</span></code>). <code class="docutils literal notranslate"><span class="pre">hnf_plume</span></code> is a footprint field:
-the near-field correction is applied when a footprint is made, so a stored
-particle file holds the model’s <code class="docutils literal notranslate"><span class="pre">foot</span></code>. A
-parameter goes on the base only when the core reads it; <code class="docutils literal notranslate"><span class="pre">numpar</span></code> and
-every <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> setting are HYSPLIT’s.</p></li>
+<code class="docutils literal notranslate"><span class="pre">TransportConfig</span></code>: <code class="docutils literal notranslate"><span class="pre">n_hours</span></code>, <code class="docutils literal notranslate"><span class="pre">seed</span></code>). A parameter goes on the base
+only when the core reads it; <code class="docutils literal notranslate"><span class="pre">numpar</span></code> and every <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> setting,
+<code class="docutils literal notranslate"><span class="pre">veght</span></code> among them, are HYSPLIT’s.</p></li>
+<li><p>A stored particle file holds what the model wrote. The footprint’s own
+fields say what is done with it afterwards: <code class="docutils literal notranslate"><span class="pre">hnf_plume</span></code> (the near-field
+correction, applied when a footprint is made), and <code class="docutils literal notranslate"><span class="pre">footprint_depth</span></code>,
+<code class="docutils literal notranslate"><span class="pre">pbl_height</span></code> and <code class="docutils literal notranslate"><span class="pre">pbl_height_min</span></code>, with which the footprint stage
+computes <code class="docutils literal notranslate"><span class="pre">foot</span></code> when it needs one (<code class="docutils literal notranslate"><span class="pre">pbl_height</span></code> set, or particles
+without <code class="docutils literal notranslate"><span class="pre">foot</span></code>) and stores it nowhere. On the model’s own <code class="docutils literal notranslate"><span class="pre">foot</span></code> the
+stage’s <code class="docutils literal notranslate"><span class="pre">resolve</span></code> takes the run’s <code class="docutils literal notranslate"><span class="pre">veght</span></code> as <code class="docutils literal notranslate"><span class="pre">footprint_depth</span></code>, for
+the near-field correction and the record, and refuses a different one
+written in the config. So variants that differ only in how <code class="docutils literal notranslate"><span class="pre">foot</span></code> is
+computed share one run, and no stage sets a model setting.</p></li>
 <li><p>When it loads, <code class="docutils literal notranslate"><span class="pre">ProjectConfig</span></code> checks each block and each declared
 variant (names, met, model, <code class="docutils literal notranslate"><span class="pre">realizations</span></code>, stage overrides) and rejects
 an unknown key with the nearest known one (<code class="docutils literal notranslate"><span class="pre">difflib</span></code>), reading no other

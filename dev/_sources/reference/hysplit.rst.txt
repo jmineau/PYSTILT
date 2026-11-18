@@ -83,7 +83,7 @@ when it makes the footprint, the near-field correction
    run_hycs_std(Path("run"))
    particles = read_particle_dat("run/PARTICLE_STILT.DAT", config.varsiwant)
    particles = add_release_heights(particles, receptor)
-   particles = correct_near_field(particles, receptor, config.footprint_depth)
+   particles = correct_near_field(particles, receptor, config.veght)
 
 .. autosummary::
    :toctree: _api

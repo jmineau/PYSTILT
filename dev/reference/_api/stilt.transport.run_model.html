@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=70c92553"></script>
+    <script src="../../_static/documentation_options.js?v=8fa7a052"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev15+gee07397d8" />
+  <meta name="docsearch:version" content="0.1.0a30.dev20+g100216f09" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -419,6 +419,7 @@
 <li class="toctree-l1 has-children"><a class="reference internal" href="../core.html">Core Objects</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="stilt.run_trajectories.html">stilt.run_trajectories</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.calc_footprint.html">stilt.calc_footprint</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.footprint.footprint_particles.html">stilt.footprint.footprint_particles</a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.Project.html">stilt.Project</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Project.config.html">stilt.Project.config</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Project.config_path.html">stilt.Project.config_path</a></li>
@@ -722,7 +723,6 @@
 </ul>
 </details></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.transport.TransportConfig.html">stilt.transport.TransportConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.TransportConfig.RECORDED_WHEN_SET.html">stilt.transport.TransportConfig.RECORDED_WHEN_SET</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.TransportConfig.UNRECORDED.html">stilt.transport.TransportConfig.UNRECORDED</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.TransportConfig.realizations.html">stilt.transport.TransportConfig.realizations</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.TransportConfig.settings.html">stilt.transport.TransportConfig.settings</a></li>
@@ -965,13 +965,14 @@
 <span class="sig-prename descclassname"><span class="pre">stilt.transport.</span></span><span class="sig-name descname"><span class="pre">run_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">receptor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">met</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">workdir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/stilt/transport.html#run_model"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.transport.run_model" title="Link to this definition">#</a></dt>
 <dd><p>Run the transport model called <em>name</em> for one receptor, and finish its particles.</p>
 <p>The particles are checked against the particle table
-(<a class="reference internal" href="stilt.particles.check_particles.html#stilt.particles.check_particles" title="stilt.particles.check_particles"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.particles.check_particles()</span></code></a>), get their release heights
-(<a class="reference internal" href="stilt.particles.add_release_heights.html#stilt.particles.add_release_heights" title="stilt.particles.add_release_heights"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.particles.add_release_heights()</span></code></a>), and <code class="docutils literal notranslate"><span class="pre">foot</span></code> when the
-model wrote none (<a class="reference internal" href="stilt.particles.add_foot.html#stilt.particles.add_foot" title="stilt.particles.add_foot"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.particles.add_foot()</span></code></a>). These steps are
-PYSTILT’s, the same for any model. <code class="docutils literal notranslate"><span class="pre">foot</span></code> is computed from the met
-files the run read, and the run’s log says so. The near-field
-correction is not applied here: <a class="reference internal" href="stilt.calc_footprint.html#stilt.calc_footprint" title="stilt.calc_footprint"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.calc_footprint()</span></code></a> applies it
-when it makes a footprint (<code class="docutils literal notranslate"><span class="pre">hnf_plume</span></code>).</p>
+(<a class="reference internal" href="stilt.particles.check_particles.html#stilt.particles.check_particles" title="stilt.particles.check_particles"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.particles.check_particles()</span></code></a>) and get their release heights
+(<a class="reference internal" href="stilt.particles.add_release_heights.html#stilt.particles.add_release_heights" title="stilt.particles.add_release_heights"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.particles.add_release_heights()</span></code></a>). These steps are
+PYSTILT’s, the same for any model. Nothing else is added: <code class="docutils literal notranslate"><span class="pre">foot</span></code> is
+the model’s own, or missing for a model that writes none, and the
+footprint stage computes one when it needs it
+(<a class="reference internal" href="stilt.footprint.footprint_particles.html#stilt.footprint.footprint_particles" title="stilt.footprint.footprint_particles"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.footprint.footprint_particles()</span></code></a>). The near-field
+correction is not applied here either: <a class="reference internal" href="stilt.calc_footprint.html#stilt.calc_footprint" title="stilt.calc_footprint"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.calc_footprint()</span></code></a>
+applies it when it makes a footprint (<code class="docutils literal notranslate"><span class="pre">hnf_plume</span></code>).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">

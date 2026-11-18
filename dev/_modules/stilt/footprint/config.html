@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=70c92553"></script>
+    <script src="../../../_static/documentation_options.js?v=8fa7a052"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev15+gee07397d8" />
+  <meta name="docsearch:version" content="0.1.0a30.dev20+g100216f09" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -611,7 +611,7 @@
 <a class="viewcode-back" href="../../../reference/_api/stilt.FootprintConfig.html#stilt.FootprintConfig">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">FootprintConfig</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Footprint settings: the grid, smoothing, the near-field correction, and particle transforms.</span>
+<span class="sd">    Footprint settings: the grid, smoothing, the near-field correction, ``foot``, and particle transforms.</span>
 
 <span class="sd">    The config and each variant hold these as their defaults and overrides,</span>
 <span class="sd">    and every footprint keeps the settings it was calculated with.</span>
@@ -673,6 +673,43 @@
             <span class="s2">"Needs the particle columns ``dens``, ``tlgr``, ``sigw``, ``foot``, "</span>
             <span class="s2">"``mlht``, and ``samt``, and ``zsfc`` for a receptor above sea "</span>
             <span class="s2">"level; particles without them get no correction."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">footprint_depth</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mf">0.5</span><span class="p">,</span>
+        <span class="n">gt</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Height below which a particle's time counts toward the ``foot`` "</span>
+            <span class="s2">"PYSTILT computes: the depth surface fluxes are mixed through. A "</span>
+            <span class="s2">"value of 1 or less is a fraction of the mixed-layer height; a "</span>
+            <span class="s2">"larger value is meters above ground. It is used when PYSTILT "</span>
+            <span class="s2">"computes ``foot`` (``pbl_height`` set, or particles without "</span>
+            <span class="s2">"``foot``). A footprint from HYSPLIT's own ``foot`` takes HYSPLIT's "</span>
+            <span class="s2">"``veght`` instead, and records it here; a different value written "</span>
+            <span class="s2">"for such a footprint is refused."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">pbl_height</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"met"</span><span class="p">,</span> <span class="s2">"richardson"</span><span class="p">]</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="kc">None</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"How PYSTILT finds the mixed-layer height (``mlht``) when it "</span>
+            <span class="s2">"computes ``foot``: ``met`` reads the met's ``PBLH``, ``richardson`` "</span>
+            <span class="s2">"finds it from the met's profile as HYSPLIT's ``kmixd: 3`` does, "</span>
+            <span class="s2">"and a number is a fixed height in meters above ground. Set, the "</span>
+            <span class="s2">"footprint is made from a ``foot`` PYSTILT computes from the met "</span>
+            <span class="s2">"files the run read, in place of the transport model's own. Unset, "</span>
+            <span class="s2">"it uses the model's ``foot``; for particles without one it "</span>
+            <span class="s2">"computes ``foot`` from the model's ``mlht``, or else the met's "</span>
+            <span class="s2">"``PBLH``."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">pbl_height_min</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">ge</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Lowest mixed-layer height, in meters, for a height PYSTILT finds "</span>
+            <span class="s2">"itself (``pbl_height``, or the met's ``PBLH`` when unset), as "</span>
+            <span class="s2">"``kmix0`` is for HYSPLIT. 0 sets no minimum."</span>
         <span class="p">),</span>
     <span class="p">)</span>
     <span class="n">transforms</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
@@ -803,6 +840,18 @@
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"time_integrate"</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">TIME_INTEGRATE_REMOVED</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">data</span>
+
+    <span class="nd">@field_validator</span><span class="p">(</span><span class="s2">"pbl_height"</span><span class="p">)</span>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_pbl_height_is_positive</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span> <span class="n">pbl_height</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Refuse a fixed mixed-layer height that is not above the ground."""</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">pbl_height</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">pbl_height</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">"pbl_height must be met, richardson, or a height above 0 m."</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">pbl_height</span>
 
     <span class="nd">@field_validator</span><span class="p">(</span><span class="s2">"transforms"</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"before"</span><span class="p">)</span>
     <span class="nd">@classmethod</span>

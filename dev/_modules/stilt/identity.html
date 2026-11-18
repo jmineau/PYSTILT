@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=70c92553"></script>
+    <script src="../../_static/documentation_options.js?v=8fa7a052"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev15+gee07397d8" />
+  <meta name="docsearch:version" content="0.1.0a30.dev20+g100216f09" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -577,8 +577,10 @@
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the run settings a ``_settings.yaml`` records, read through the current classes.</span>
 
-<span class="sd">    Settings this version does not have are dropped, so a folder written</span>
-<span class="sd">    before a setting was removed still loads. A record of a transport model</span>
+<span class="sd">    A setting this version does not have is kept as written, so a folder</span>
+<span class="sd">    written before it was removed still loads, and hashes apart from every</span>
+<span class="sd">    current variant: a run made with ``footprint_depth: 0.3``, when that was</span>
+<span class="sd">    a run setting, is not taken for one made with HYSPLIT's ``veght: 0.5``. A record of a transport model</span>
 <span class="sd">    that is not installed here is returned as written, with a warning. A folder of one realization,</span>
 <span class="sd">    as realizations were written before they were partitions, keeps its</span>
 <span class="sd">    number, so it hashes as it did and no current variant finds it.</span>
@@ -604,7 +606,10 @@
     <span class="p">)</span>
     <span class="k">if</span> <span class="n">stored</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"realization"</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">record</span><span class="p">[</span><span class="s2">"realization"</span><span class="p">]</span> <span class="o">=</span> <span class="n">stored</span><span class="p">[</span><span class="s2">"realization"</span><span class="p">]</span>
-    <span class="k">return</span> <span class="n">record</span></div>
+    <span class="n">fields</span> <span class="o">=</span> <span class="n">get_model</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">config_class</span><span class="o">.</span><span class="n">model_fields</span>
+    <span class="n">gone</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">stored</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">fields</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">record</span><span class="p">)</span> <span class="o">-</span> <span class="p">{</span><span class="s2">"ensemble"</span><span class="p">}</span>
+    <span class="n">record</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">key</span><span class="p">:</span> <span class="n">stored</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">gone</span><span class="p">)})</span>
+    <span class="k">return</span> <span class="n">canonical</span><span class="p">(</span><span class="n">record</span><span class="p">)</span></div>
 
 
 

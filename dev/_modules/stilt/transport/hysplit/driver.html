@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../../_static/documentation_options.js?v=70c92553"></script>
+    <script src="../../../../_static/documentation_options.js?v=8fa7a052"></script>
     <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev15+gee07397d8" />
+  <meta name="docsearch:version" content="0.1.0a30.dev20+g100216f09" />
   
     
     <script src="../../../../_static/searchtools.js"></script>
@@ -482,7 +482,6 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">HYSPLITNotFoundError</span><span class="p">,</span> <span class="n">SimulationError</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transport.hysplit.config</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">FIXED_SETUP</span><span class="p">,</span>
-    <span class="n">SETUP_NAMES</span><span class="p">,</span>
     <span class="n">WIND_ERROR_SETTINGS</span><span class="p">,</span>
     <span class="n">ZI_ERROR_SETTINGS</span><span class="p">,</span>
     <span class="n">HysplitConfig</span><span class="p">,</span>
@@ -522,7 +521,7 @@
 <span class="n">CONTROL_SETTINGS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"n_hours"</span><span class="p">,</span> <span class="s2">"emisshrs"</span><span class="p">,</span> <span class="s2">"w_option"</span><span class="p">,</span> <span class="s2">"z_top"</span><span class="p">)</span>
 
 <span class="c1">#: Settings PYSTILT uses itself, in no HYSPLIT input file.</span>
-<span class="n">PYSTILT_SETTINGS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"pbl_height"</span><span class="p">,</span> <span class="s2">"pbl_height_min"</span><span class="p">,</span> <span class="s2">"directory"</span><span class="p">)</span>
+<span class="n">PYSTILT_SETTINGS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"directory"</span><span class="p">,)</span>
 
 <span class="c1">#: Every setting that is not a ``SETUP.CFG`` entry. All other settings are.</span>
 <span class="n">NOT_IN_SETUP</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span>
@@ -696,15 +695,15 @@
 <span class="sd">    Return the ``SETUP.CFG`` namelist entries of *params*, leaving out unset ones.</span>
 
 <span class="sd">    The entries of :data:`FIXED_SETUP` come first, then every setting not</span>
-<span class="sd">    in :data:`NOT_IN_SETUP`, in declaration order, by their</span>
-<span class="sd">    ``SETUP.CFG`` names (:data:`SETUP_NAMES`). The driver adds</span>
+<span class="sd">    in :data:`NOT_IN_SETUP`, in declaration order, under their own names.</span>
+<span class="sd">    The driver adds</span>
 <span class="sd">    ``KMSL``, ``IVMAX``, and ``WINDERRTF``, and ``MAXPAR`` when ``maxpar``</span>
 <span class="sd">    is unset, which depend on the release locations or follow from other</span>
 <span class="sd">    settings.</span>
 <span class="sd">    """</span>
     <span class="n">entries</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">FIXED_SETUP</span><span class="p">)</span>
     <span class="n">entries</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
-        <span class="p">(</span><span class="n">SETUP_NAMES</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">name</span><span class="p">),</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">name</span><span class="p">))</span>
+        <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">name</span><span class="p">))</span>
         <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">HysplitConfig</span><span class="o">.</span><span class="n">model_fields</span>
         <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">NOT_IN_SETUP</span> <span class="ow">and</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
     <span class="p">)</span>

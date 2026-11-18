@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=70c92553"></script>
+    <script src="../../_static/documentation_options.js?v=8fa7a052"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -59,13 +59,13 @@
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="stilt.Project" href="stilt.Project.html" />
+    <link rel="next" title="stilt.footprint.footprint_particles" href="stilt.footprint.footprint_particles.html" />
     <link rel="prev" title="stilt.run_trajectories" href="stilt.run_trajectories.html" />
   
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev15+gee07397d8" />
+  <meta name="docsearch:version" content="0.1.0a30.dev20+g100216f09" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -419,6 +419,7 @@
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="../core.html">Core Objects</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="stilt.run_trajectories.html">stilt.run_trajectories</a></li>
 <li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#">stilt.calc_footprint</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.footprint.footprint_particles.html">stilt.footprint.footprint_particles</a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.Project.html">stilt.Project</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Project.config.html">stilt.Project.config</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Project.config_path.html">stilt.Project.config_path</a></li>
@@ -722,7 +723,6 @@
 </ul>
 </details></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.transport.TransportConfig.html">stilt.transport.TransportConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.TransportConfig.RECORDED_WHEN_SET.html">stilt.transport.TransportConfig.RECORDED_WHEN_SET</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.TransportConfig.UNRECORDED.html">stilt.transport.TransportConfig.UNRECORDED</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.TransportConfig.realizations.html">stilt.transport.TransportConfig.realizations</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.TransportConfig.settings.html">stilt.transport.TransportConfig.settings</a></li>
@@ -1032,7 +1032,12 @@ row at <code class="docutils literal notranslate"><span class="pre">age</span></
 default. Particles without the columns it reads get no correction,
 and a warning is logged.</p></li>
 <li><p><strong>footprint_depth</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a></span>) – The depth surface fluxes are mixed through, which the near-field
-correction reads: the run’s own <code class="docutils literal notranslate"><span class="pre">footprint_depth</span></code>.</p></li>
+correction reads: the depth <code class="docutils literal notranslate"><span class="pre">foot</span></code> was made with. For HYSPLIT’s
+own <code class="docutils literal notranslate"><span class="pre">foot</span></code> that is the run’s <code class="docutils literal notranslate"><span class="pre">veght</span></code>
+(<code class="docutils literal notranslate"><span class="pre">sim.variant.transport.veght</span></code>); for a <code class="docutils literal notranslate"><span class="pre">foot</span></code> the footprint
+stage computes (<code class="docutils literal notranslate"><span class="pre">pbl_height</span></code>), the footprint’s <code class="docutils literal notranslate"><span class="pre">footprint_depth</span></code>.
+<code class="docutils literal notranslate"><span class="pre">sim.variant.stages[&quot;footprint&quot;].footprint_depth</span></code> is the right one
+either way.</p></li>
 <li><p><strong>transforms</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code></a>]</span>) – Particle transforms applied before the footprint is calculated, as
 objects or as the mappings <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> takes
 (<code class="docutils literal notranslate"><span class="pre">{&quot;kind&quot;:</span> <span class="pre">&quot;pressure_weighting&quot;}</span></code>).</p></li>
@@ -1100,11 +1105,11 @@ accessor has the methods that use it.</p>
       </div>
     </a>
     <a class="right-next"
-       href="stilt.Project.html"
+       href="stilt.footprint.footprint_particles.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">stilt.Project</p>
+        <p class="prev-next-title">stilt.footprint.footprint_particles</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>

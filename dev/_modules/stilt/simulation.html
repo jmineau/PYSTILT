@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=70c92553"></script>
+    <script src="../../_static/documentation_options.js?v=8fa7a052"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev15+gee07397d8" />
+  <meta name="docsearch:version" content="0.1.0a30.dev20+g100216f09" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -473,6 +473,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint</span><span class="w"> </span><span class="kn">import</span> <span class="n">gridding</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">FootprintConfig</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">read_footprint</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.stage</span><span class="w"> </span><span class="kn">import</span> <span class="n">simulation_particles</span><span class="p">,</span> <span class="n">variant_footprint</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.output</span><span class="w"> </span><span class="kn">import</span> <span class="n">Output</span><span class="p">,</span> <span class="n">completed</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.particles</span><span class="w"> </span><span class="kn">import</span> <span class="n">read_particles</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.receptors</span><span class="w"> </span><span class="kn">import</span> <span class="n">Receptor</span>
@@ -800,9 +801,10 @@
 <span class="sd">        Calculate a footprint from the stored particles, without writing it.</span>
 
 <span class="sd">        This is :func:`stilt.calc_footprint` with this simulation's</span>
-<span class="sd">        particles, receptor, and settings filled in, the run's</span>
-<span class="sd">        ``footprint_depth`` among them. Each setting given replaces the</span>
-<span class="sd">        variant's own. Use it to try other settings; the</span>
+<span class="sd">        particles, receptor, and footprint settings filled in, as the</span>
+<span class="sd">        footprint stage makes it: the particles get the ``foot`` those</span>
+<span class="sd">        settings ask for (:func:`stilt.footprint.footprint_particles`).</span>
+<span class="sd">        Each setting given replaces the variant's own. Use it to try other settings; the</span>
 <span class="sd">        workers write the variant's own footprint. A relative file name in</span>
 <span class="sd">        a transform's settings starts from the project directory.</span>
 
@@ -826,15 +828,13 @@
 <span class="sd">        ...     grid=hexes.to_grid(cells_per_target=4)</span>
 <span class="sd">        ... )  # doctest: +SKIP</span>
 <span class="sd">        """</span>
-        <span class="n">own</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">variant</span><span class="o">.</span><span class="n">stages</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"footprint"</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">own</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">own</span> <span class="o">=</span> <span class="n">FootprintConfig</span><span class="o">.</span><span class="n">model_validate</span><span class="p">({})</span>
+        <span class="n">own</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_footprint_config</span>
         <span class="c1"># The variant's geometry names its own grid, not another one.</span>
         <span class="n">geometry_hash</span> <span class="o">=</span> <span class="n">own</span><span class="o">.</span><span class="n">geometry_hash</span> <span class="k">if</span> <span class="n">grid</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
         <span class="n">grid</span> <span class="o">=</span> <span class="n">grid</span> <span class="k">if</span> <span class="n">grid</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">own</span><span class="o">.</span><span class="n">grid</span>
         <span class="k">if</span> <span class="n">grid</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="si">}</span><span class="s2"> has no footprint settings; give a grid."</span><span class="p">)</span>
-        <span class="n">particles</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">particles</span>
+        <span class="n">particles</span> <span class="o">=</span> <span class="n">simulation_particles</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">own</span><span class="p">)</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">gridding</span><span class="o">.</span><span class="n">calc_footprint</span><span class="p">(</span>
                 <span class="n">particles</span><span class="p">,</span>
@@ -845,7 +845,7 @@
                 <span class="k">else</span> <span class="n">smooth_factor</span><span class="p">,</span>
                 <span class="n">tres</span><span class="o">=</span><span class="n">own</span><span class="o">.</span><span class="n">tres</span> <span class="k">if</span> <span class="n">tres</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">tres</span><span class="p">,</span>
                 <span class="n">hnf_plume</span><span class="o">=</span><span class="n">own</span><span class="o">.</span><span class="n">hnf_plume</span> <span class="k">if</span> <span class="n">hnf_plume</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">hnf_plume</span><span class="p">,</span>
-                <span class="n">footprint_depth</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">variant</span><span class="o">.</span><span class="n">transport</span><span class="o">.</span><span class="n">footprint_depth</span><span class="p">,</span>
+                <span class="n">footprint_depth</span><span class="o">=</span><span class="n">own</span><span class="o">.</span><span class="n">footprint_depth</span><span class="p">,</span>
                 <span class="n">transforms</span><span class="o">=</span><span class="n">own</span><span class="o">.</span><span class="n">transforms</span> <span class="k">if</span> <span class="n">transforms</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">transforms</span><span class="p">,</span>
                 <span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">variant</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
                 <span class="n">directory</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="p">,</span>
@@ -856,6 +856,11 @@
 
 
     <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_footprint_config</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FootprintConfig</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""The footprint settings of this simulation: the variant's, or the defaults with the model's depth (:func:`stilt.footprint.stage.variant_footprint`)."""</span>
+        <span class="k">return</span> <span class="n">variant_footprint</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variant</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_transforms</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Any</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">"""The footprint's particle transforms, which weight the particles; none without a footprint."""</span>
         <span class="n">footprint</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">variant</span><span class="o">.</span><span class="n">stages</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"footprint"</span><span class="p">)</span>
@@ -863,13 +868,11 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_near_field_settings</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">"""The near-field correction a footprint of this simulation gets: ``hnf_plume`` and the run's ``footprint_depth``."""</span>
-        <span class="n">footprint</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">variant</span><span class="o">.</span><span class="n">stages</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
-            <span class="s2">"footprint"</span>
-        <span class="p">)</span> <span class="ow">or</span> <span class="n">FootprintConfig</span><span class="o">.</span><span class="n">model_validate</span><span class="p">({})</span>
+<span class="w">        </span><span class="sd">"""The near-field correction a footprint of this simulation gets: ``hnf_plume`` and ``footprint_depth``."""</span>
+        <span class="n">footprint</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_footprint_config</span>
         <span class="k">return</span> <span class="p">{</span>
             <span class="s2">"hnf_plume"</span><span class="p">:</span> <span class="n">footprint</span><span class="o">.</span><span class="n">hnf_plume</span><span class="p">,</span>
-            <span class="s2">"footprint_depth"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">variant</span><span class="o">.</span><span class="n">transport</span><span class="o">.</span><span class="n">footprint_depth</span><span class="p">,</span>
+            <span class="s2">"footprint_depth"</span><span class="p">:</span> <span class="n">footprint</span><span class="o">.</span><span class="n">footprint_depth</span><span class="p">,</span>
         <span class="p">}</span>
 
 <div class="viewcode-block" id="Simulation.background">
@@ -938,9 +941,10 @@
 <span class="sd">        &gt;&gt;&gt; sim.transport_error(ensemble, flux)  # doctest: +SKIP</span>
 <span class="sd">        """</span>
         <span class="n">sims</span> <span class="o">=</span> <span class="p">[</span><span class="n">error</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="n">Simulation</span><span class="p">)</span> <span class="k">else</span> <span class="nb">list</span><span class="p">(</span><span class="n">error</span><span class="p">)</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_footprint_config</span>
         <span class="k">return</span> <span class="n">transport_error</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">particles</span><span class="p">,</span>
-            <span class="p">[</span><span class="n">e</span><span class="o">.</span><span class="n">particles</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">sims</span><span class="p">],</span>
+            <span class="n">simulation_particles</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">),</span>
+            <span class="p">[</span><span class="n">simulation_particles</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">sims</span><span class="p">],</span>
             <span class="n">flux</span><span class="p">,</span>
             <span class="n">transforms</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span><span class="p">,</span>
             <span class="n">receptor</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">receptor</span><span class="p">,</span>

@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=70c92553"></script>
+    <script src="../../../_static/documentation_options.js?v=8fa7a052"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev15+gee07397d8" />
+  <meta name="docsearch:version" content="0.1.0a30.dev20+g100216f09" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -1332,7 +1332,12 @@
 <span class="sd">        and a warning is logged.</span>
 <span class="sd">    footprint_depth : float, default 0.5</span>
 <span class="sd">        The depth surface fluxes are mixed through, which the near-field</span>
-<span class="sd">        correction reads: the run's own ``footprint_depth``.</span>
+<span class="sd">        correction reads: the depth ``foot`` was made with. For HYSPLIT's</span>
+<span class="sd">        own ``foot`` that is the run's ``veght``</span>
+<span class="sd">        (``sim.variant.transport.veght``); for a ``foot`` the footprint</span>
+<span class="sd">        stage computes (``pbl_height``), the footprint's ``footprint_depth``.</span>
+<span class="sd">        ``sim.variant.stages["footprint"].footprint_depth`` is the right one</span>
+<span class="sd">        either way.</span>
 <span class="sd">    transforms : sequence, optional</span>
 <span class="sd">        Particle transforms applied before the footprint is calculated, as</span>
 <span class="sd">        objects or as the mappings ``config.yaml`` takes</span>

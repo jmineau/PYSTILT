@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=70c92553"></script>
+    <script src="../../../_static/documentation_options.js?v=8fa7a052"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev15+gee07397d8" />
+  <meta name="docsearch:version" content="0.1.0a30.dev20+g100216f09" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -465,10 +465,12 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">dt</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">functools</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">weakref</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Mapping</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Mapping</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span>
 
@@ -479,7 +481,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt._paths</span><span class="w"> </span><span class="kn">import</span> <span class="n">absolute</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">EmptyFootprint</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.identity</span><span class="w"> </span><span class="kn">import</span> <span class="n">file_stamp</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.particles</span><span class="w"> </span><span class="kn">import</span> <span class="n">HNF_PLUME_COLUMNS</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.particles</span><span class="w"> </span><span class="kn">import</span> <span class="n">HNF_PLUME_COLUMNS</span><span class="p">,</span> <span class="n">add_foot</span><span class="p">,</span> <span class="n">particles_metadata</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.receptors</span><span class="w"> </span><span class="kn">import</span> <span class="n">Receptor</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.spatial</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grid</span>
 
@@ -498,6 +500,8 @@
     <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">Variant</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.output</span><span class="w"> </span><span class="kn">import</span> <span class="n">Output</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.simulation</span><span class="w"> </span><span class="kn">import</span> <span class="n">Simulation</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
 <span class="c1">#: One thing :meth:`FootprintStage.check` found: the check, the receptor it is about (or ``None``), and what is wrong.</span>
 <span class="n">_Finding</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span>
@@ -563,12 +567,20 @@
 <span class="sd">        only by a geometry is derived from it (:meth:`stilt.Mesh.to_grid`).</span>
 <span class="sd">        A relative geometry file starts from *directory*.</span>
 
+<span class="sd">        When the footprint is made from the transport model's own ``foot``</span>
+<span class="sd">        (``pbl_height`` unset, and a model that records the depth it made</span>
+<span class="sd">        ``foot`` with, HYSPLIT's ``veght``), ``footprint_depth`` becomes</span>
+<span class="sd">        that depth: the near-field correction reads it, and the footprint</span>
+<span class="sd">        records it.</span>
+
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
 <span class="sd">        ValueError</span>
-<span class="sd">            If the settings have neither a grid nor a geometry, or the</span>
-<span class="sd">            near-field correction is on and the transport model is not</span>
-<span class="sd">            asked for a particle column it reads (HYSPLIT's ``varsiwant``).</span>
+<span class="sd">            If the settings have neither a grid nor a geometry, the</span>
+<span class="sd">            near-field correction is on and the transport model is not asked</span>
+<span class="sd">            for a particle column it reads (HYSPLIT's ``varsiwant``), or a</span>
+<span class="sd">            ``footprint_depth`` is written for a footprint made from the</span>
+<span class="sd">            model's ``foot`` and differs from the model's depth.</span>
 <span class="sd">        """</span>
         <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">grid</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">config</span><span class="o">.</span><span class="n">geometry</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
@@ -586,6 +598,19 @@
                     <span class="s2">"hnf_plume: false."</span>
                 <span class="p">)</span>
         <span class="n">update</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"geometry_hash"</span><span class="p">:</span> <span class="kc">None</span><span class="p">}</span>
+        <span class="n">depth</span> <span class="o">=</span> <span class="n">model_foot_depth</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">model_settings</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">depth</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">written</span> <span class="o">=</span> <span class="s2">"footprint_depth"</span> <span class="ow">in</span> <span class="n">config</span><span class="o">.</span><span class="n">model_fields_set</span>
+            <span class="k">if</span> <span class="n">written</span> <span class="ow">and</span> <span class="n">config</span><span class="o">.</span><span class="n">footprint_depth</span> <span class="o">!=</span> <span class="n">depth</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"footprint_depth is </span><span class="si">{</span><span class="n">config</span><span class="o">.</span><span class="n">footprint_depth</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">, and the "</span>
+                    <span class="sa">f</span><span class="s2">"footprint is made from the </span><span class="si">{</span><span class="n">model</span><span class="si">}</span><span class="s2"> model's own foot, "</span>
+                    <span class="sa">f</span><span class="s2">"which it made with veght </span><span class="si">{</span><span class="n">depth</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">. Set veght: "</span>
+                    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">config</span><span class="o">.</span><span class="n">footprint_depth</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> in the model's settings for "</span>
+                    <span class="s2">"that depth, or set pbl_height so that PYSTILT computes "</span>
+                    <span class="s2">"foot with footprint_depth."</span>
+                <span class="p">)</span>
+            <span class="n">update</span><span class="p">[</span><span class="s2">"footprint_depth"</span><span class="p">]</span> <span class="o">=</span> <span class="n">depth</span>
         <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">geometry</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">mesh</span> <span class="o">=</span> <span class="n">_mesh</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">geometry</span><span class="p">,</span> <span class="n">directory</span><span class="p">)</span>
             <span class="n">update</span><span class="p">[</span><span class="s2">"geometry_hash"</span><span class="p">]</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">hash</span>
@@ -643,7 +668,10 @@
 <span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Calculate a simulation's footprint from its particles and write it at *path*.</span>
 
-<span class="sd">        The near-field correction reads the run's ``footprint_depth``. A</span>
+<span class="sd">        The particles get the ``foot`` the settings ask for</span>
+<span class="sd">        (:func:`footprint_particles`): the transport model's own, or one</span>
+<span class="sd">        computed from the met files the run read, which is used and not</span>
+<span class="sd">        stored. The near-field correction reads ``footprint_depth``. A</span>
 <span class="sd">        relative file name in a transform's settings starts from the</span>
 <span class="sd">        project directory (``sim.directory``). When no particle reaches the</span>
 <span class="sd">        grid, the file written has no rows and is marked ``stilt:empty``: a</span>
@@ -655,13 +683,13 @@
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"The footprint of </span><span class="si">{</span><span class="n">sim</span><span class="si">}</span><span class="s2"> has no grid."</span><span class="p">)</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">foot</span> <span class="o">=</span> <span class="n">calc_footprint</span><span class="p">(</span>
-                <span class="n">sim</span><span class="o">.</span><span class="n">particles</span><span class="p">,</span>
+                <span class="n">simulation_particles</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="n">config</span><span class="p">),</span>
                 <span class="n">sim</span><span class="o">.</span><span class="n">receptor</span><span class="p">,</span>
                 <span class="n">config</span><span class="o">.</span><span class="n">grid</span><span class="p">,</span>
                 <span class="n">smooth_factor</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">smooth_factor</span><span class="p">,</span>
                 <span class="n">tres</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">tres</span><span class="p">,</span>
                 <span class="n">hnf_plume</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">hnf_plume</span><span class="p">,</span>
-                <span class="n">footprint_depth</span><span class="o">=</span><span class="n">sim</span><span class="o">.</span><span class="n">variant</span><span class="o">.</span><span class="n">transport</span><span class="o">.</span><span class="n">footprint_depth</span><span class="p">,</span>
+                <span class="n">footprint_depth</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">footprint_depth</span><span class="p">,</span>
                 <span class="n">transforms</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">transforms</span><span class="p">,</span>
                 <span class="n">name</span><span class="o">=</span><span class="n">sim</span><span class="o">.</span><span class="n">variant</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
                 <span class="n">directory</span><span class="o">=</span><span class="n">sim</span><span class="o">.</span><span class="n">directory</span><span class="p">,</span>
@@ -674,6 +702,195 @@
         <span class="p">)</span></div>
 </div>
 
+
+
+<div class="viewcode-block" id="footprint_particles">
+<a class="viewcode-back" href="../../../reference/_api/stilt.footprint.footprint_particles.html#stilt.footprint.footprint_particles">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">footprint_particles</span><span class="p">(</span>
+    <span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+    <span class="n">config</span><span class="p">:</span> <span class="n">FootprintConfig</span><span class="p">,</span>
+    <span class="n">met_files</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">z_top</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return the particles a footprint under *config* is made from, with the ``foot`` it uses.</span>
+
+<span class="sd">    The particles are returned as they are when they have ``foot`` and</span>
+<span class="sd">    ``pbl_height`` is unset: the transport model's own ``foot``, such as</span>
+<span class="sd">    HYSPLIT's. Otherwise PYSTILT computes ``foot`` with ``footprint_depth``,</span>
+<span class="sd">    ``pbl_height`` and ``pbl_height_min`` (:func:`stilt.particles.add_foot`),</span>
+<span class="sd">    in place of the model's, and returns a copy with it. The particles</span>
+<span class="sd">    passed in are not changed, and the computed ``foot`` is stored</span>
+<span class="sd">    nowhere: each footprint computes it again.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    particles : pandas.DataFrame</span>
+<span class="sd">        A particle table, such as ``sim.particles``.</span>
+<span class="sd">    config : FootprintConfig</span>
+<span class="sd">        The footprint settings.</span>
+<span class="sd">    met_files : iterable of path-like</span>
+<span class="sd">        The met files the run read, which a particle file records</span>
+<span class="sd">        (:func:`stilt.particles.particles_metadata`). They are read only</span>
+<span class="sd">        when ``foot`` is computed, and must still be at those paths then.</span>
+<span class="sd">    z_top : float, optional</span>
+<span class="sd">        The top of the run's domain, HYSPLIT's ``z_top``, which</span>
+<span class="sd">        ``pbl_height: richardson`` reads.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pandas.DataFrame</span>
+<span class="sd">        The particles, with ``foot``.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    FileNotFoundError</span>
+<span class="sd">        If ``foot`` is computed and the run named no met files, or one of</span>
+<span class="sd">        them is no longer there.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; meta = stilt.particles.particles_metadata(sim.particles_path)  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; config = stilt.FootprintConfig(</span>
+<span class="sd">    ...     grid=grid, pbl_height="richardson"</span>
+<span class="sd">    ... )  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; particles = stilt.footprint.footprint_particles(</span>
+<span class="sd">    ...     sim.particles, config, meta.met_files</span>
+<span class="sd">    ... )  # doctest: +SKIP</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">_computes_foot</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">config</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">particles</span>
+    <span class="n">files</span> <span class="o">=</span> <span class="p">[</span><span class="n">Path</span><span class="p">(</span><span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">met_files</span><span class="p">]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">files</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
+            <span class="s2">"The footprint needs a foot computed by PYSTILT, from the met "</span>
+            <span class="s2">"files the run read, and the run named none."</span>
+        <span class="p">)</span>
+    <span class="n">gone</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">files</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">f</span><span class="o">.</span><span class="n">exists</span><span class="p">()]</span>
+    <span class="k">if</span> <span class="n">gone</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"The footprint needs a foot computed by PYSTILT from the met files "</span>
+            <span class="sa">f</span><span class="s2">"the run read, and </span><span class="si">{</span><span class="n">gone</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2"> is not there any more"</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="sa">f</span><span class="s1">' (nor </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">gone</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s1"> more)'</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="n">gone</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">''</span><span class="si">}</span><span class="s2">. Put the "</span>
+            <span class="s2">"met files back where the run read them."</span>
+        <span class="p">)</span>
+    <span class="n">had_foot</span> <span class="o">=</span> <span class="s2">"foot"</span> <span class="ow">in</span> <span class="n">particles</span><span class="o">.</span><span class="n">columns</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">particles</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="s2">"foot"</span><span class="p">)</span> <span class="k">if</span> <span class="n">had_foot</span> <span class="k">else</span> <span class="n">particles</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">add_foot</span><span class="p">(</span>
+        <span class="n">out</span><span class="p">,</span>
+        <span class="n">files</span><span class="p">,</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">footprint_depth</span><span class="p">,</span>
+        <span class="n">pbl_height</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">pbl_height</span><span class="p">,</span>
+        <span class="n">pbl_height_min</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">pbl_height_min</span><span class="p">,</span>
+        <span class="n">z_top</span><span class="o">=</span><span class="n">z_top</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="s2">"foot computed by PYSTILT from </span><span class="si">%s</span><span class="s2"> and the air below it in the met files "</span>
+        <span class="s2">"(stilt.particles.add_foot)</span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span>
+        <span class="n">_mixed_layer</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">config</span><span class="p">),</span>
+        <span class="s2">" in place of the model's foot"</span> <span class="k">if</span> <span class="n">had_foot</span> <span class="k">else</span> <span class="s2">""</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">out</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_mixed_layer</span><span class="p">(</span><span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">FootprintConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Say where the mixed-layer height of a ``foot`` PYSTILT computes comes from."""</span>
+    <span class="n">pbl_height</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">pbl_height</span>
+    <span class="k">if</span> <span class="n">pbl_height</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="s2">"mlht"</span> <span class="ow">in</span> <span class="n">particles</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">"the model's mlht"</span>
+    <span class="k">if</span> <span class="n">pbl_height</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">pbl_height</span> <span class="o">==</span> <span class="s2">"met"</span><span class="p">:</span>
+        <span class="n">found</span> <span class="o">=</span> <span class="s2">"the met's PBLH"</span>
+    <span class="k">elif</span> <span class="n">pbl_height</span> <span class="o">==</span> <span class="s2">"richardson"</span><span class="p">:</span>
+        <span class="n">found</span> <span class="o">=</span> <span class="s2">"the mixed layer found from the met's profile (HYSPLIT's kmixd 3)"</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">found</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"a mixed layer of </span><span class="si">{</span><span class="n">pbl_height</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> m"</span>
+    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">pbl_height_min</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">found</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">", at least </span><span class="si">{</span><span class="n">config</span><span class="o">.</span><span class="n">pbl_height_min</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> m,"</span>
+    <span class="k">return</span> <span class="n">found</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">stored_particles</span><span class="p">(</span>
+    <span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+    <span class="n">config</span><span class="p">:</span> <span class="n">FootprintConfig</span><span class="p">,</span>
+    <span class="n">path</span><span class="p">:</span> <span class="n">Location</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">start</span><span class="p">:</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span> <span class="o">|</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">z_top</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return particles read from the file at *path* with the ``foot`` a footprint under *config* uses (:func:`footprint_particles`).</span>
+
+<span class="sd">    The met files are read from the particle file's metadata only when</span>
+<span class="sd">    ``foot`` is computed. For that, particles without ``time`` (the run's</span>
+<span class="sd">    own, in memory) get it from *start*, the receptor time, and lose it</span>
+<span class="sd">    again.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">_computes_foot</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">config</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">particles</span>
+    <span class="n">met_files</span> <span class="o">=</span> <span class="p">[]</span> <span class="k">if</span> <span class="n">path</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">particles_metadata</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">met_files</span>
+    <span class="n">added_time</span> <span class="o">=</span> <span class="s2">"time"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">particles</span><span class="o">.</span><span class="n">columns</span> <span class="ow">and</span> <span class="n">start</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">added_time</span><span class="p">:</span>
+        <span class="n">particles</span> <span class="o">=</span> <span class="n">particles</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span>
+            <span class="n">time</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">start</span><span class="p">)</span>
+            <span class="o">+</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_timedelta</span><span class="p">(</span><span class="n">particles</span><span class="p">[</span><span class="s2">"age"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">unit</span><span class="o">=</span><span class="s2">"min"</span><span class="p">)</span>
+        <span class="p">)</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">footprint_particles</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">met_files</span><span class="p">,</span> <span class="n">z_top</span><span class="o">=</span><span class="n">z_top</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">out</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="s2">"time"</span><span class="p">)</span> <span class="k">if</span> <span class="n">added_time</span> <span class="k">else</span> <span class="n">out</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">simulation_particles</span><span class="p">(</span><span class="n">sim</span><span class="p">:</span> <span class="n">Simulation</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">FootprintConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return a simulation's particles with the ``foot`` a footprint under *config* uses (:func:`stored_particles`)."""</span>
+    <span class="k">return</span> <span class="n">stored_particles</span><span class="p">(</span>
+        <span class="n">sim</span><span class="o">.</span><span class="n">particles</span><span class="p">,</span>
+        <span class="n">config</span><span class="p">,</span>
+        <span class="n">sim</span><span class="o">.</span><span class="n">particles_path</span><span class="p">,</span>
+        <span class="n">start</span><span class="o">=</span><span class="n">sim</span><span class="o">.</span><span class="n">receptor</span><span class="o">.</span><span class="n">time</span><span class="p">,</span>
+        <span class="n">z_top</span><span class="o">=</span><span class="nb">getattr</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">transport</span><span class="p">,</span> <span class="s2">"z_top"</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">variant_footprint</span><span class="p">(</span><span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FootprintConfig</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return *variant*'s footprint settings, or the defaults when it has no footprint.</span>
+
+<span class="sd">    The defaults get the depth of the transport model's own ``foot``, as</span>
+<span class="sd">    :meth:`FootprintStage.resolve` gives it (:func:`model_foot_depth`), so a</span>
+<span class="sd">    footprint made from particles of a variant without one corrects the</span>
+<span class="sd">    near field as its run would.</span>
+<span class="sd">    """</span>
+    <span class="n">own</span> <span class="o">=</span> <span class="n">variant</span><span class="o">.</span><span class="n">stages</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"footprint"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">own</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">own</span>
+    <span class="n">own</span> <span class="o">=</span> <span class="n">FootprintConfig</span><span class="o">.</span><span class="n">model_validate</span><span class="p">({})</span>
+    <span class="n">depth</span> <span class="o">=</span> <span class="n">model_foot_depth</span><span class="p">(</span><span class="n">own</span><span class="p">,</span> <span class="n">variant</span><span class="o">.</span><span class="n">transport</span><span class="o">.</span><span class="n">settings</span><span class="p">())</span>
+    <span class="k">return</span> <span class="n">own</span> <span class="k">if</span> <span class="n">depth</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">own</span><span class="o">.</span><span class="n">model_copy</span><span class="p">(</span><span class="n">update</span><span class="o">=</span><span class="p">{</span><span class="s2">"footprint_depth"</span><span class="p">:</span> <span class="n">depth</span><span class="p">})</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_computes_foot</span><span class="p">(</span><span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">FootprintConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Whether a footprint under *config* is made from a ``foot`` PYSTILT computes: ``pbl_height`` is set, or *particles* have none."""</span>
+    <span class="k">return</span> <span class="n">config</span><span class="o">.</span><span class="n">pbl_height</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">or</span> <span class="s2">"foot"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">particles</span><span class="o">.</span><span class="n">columns</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">model_foot_depth</span><span class="p">(</span>
+    <span class="n">config</span><span class="p">:</span> <span class="n">FootprintConfig</span><span class="p">,</span> <span class="n">model_settings</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return the depth the transport model made its ``foot`` with when the footprint uses that ``foot``, else ``None``.</span>
+
+<span class="sd">    The depth is HYSPLIT's ``veght``. A model that records none, or that is</span>
+<span class="sd">    not asked for ``foot`` (HYSPLIT's ``varsiwant``), or ``pbl_height``</span>
+<span class="sd">    set, gives ``None``: then PYSTILT computes ``foot`` with</span>
+<span class="sd">    ``footprint_depth``.</span>
+<span class="sd">    """</span>
+    <span class="n">depth</span> <span class="o">=</span> <span class="n">model_settings</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"veght"</span><span class="p">)</span>
+    <span class="n">columns</span> <span class="o">=</span> <span class="n">model_settings</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"varsiwant"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">pbl_height</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">depth</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">columns</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="s2">"foot"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">depth</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">store_footprint</span><span class="p">(</span>
@@ -798,7 +1015,16 @@
     <span class="p">]</span>
 
 
-<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"FootprintStage"</span><span class="p">,</span> <span class="s2">"store_empty_footprint"</span><span class="p">,</span> <span class="s2">"store_footprint"</span><span class="p">]</span>
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">"FootprintStage"</span><span class="p">,</span>
+    <span class="s2">"footprint_particles"</span><span class="p">,</span>
+    <span class="s2">"model_foot_depth"</span><span class="p">,</span>
+    <span class="s2">"simulation_particles"</span><span class="p">,</span>
+    <span class="s2">"stored_particles"</span><span class="p">,</span>
+    <span class="s2">"variant_footprint"</span><span class="p">,</span>
+    <span class="s2">"store_empty_footprint"</span><span class="p">,</span>
+    <span class="s2">"store_footprint"</span><span class="p">,</span>
+<span class="p">]</span>
 </pre></div>
 
                 </article>

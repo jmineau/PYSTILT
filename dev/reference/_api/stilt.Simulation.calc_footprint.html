@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=70c92553"></script>
+    <script src="../../_static/documentation_options.js?v=8fa7a052"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev15+gee07397d8" />
+  <meta name="docsearch:version" content="0.1.0a30.dev20+g100216f09" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -419,6 +419,7 @@
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="../core.html">Core Objects</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="stilt.run_trajectories.html">stilt.run_trajectories</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.calc_footprint.html">stilt.calc_footprint</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.footprint.footprint_particles.html">stilt.footprint.footprint_particles</a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.Project.html">stilt.Project</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Project.config.html">stilt.Project.config</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Project.config_path.html">stilt.Project.config_path</a></li>
@@ -722,7 +723,6 @@
 </ul>
 </details></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.transport.TransportConfig.html">stilt.transport.TransportConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.TransportConfig.RECORDED_WHEN_SET.html">stilt.transport.TransportConfig.RECORDED_WHEN_SET</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.TransportConfig.UNRECORDED.html">stilt.transport.TransportConfig.UNRECORDED</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.TransportConfig.realizations.html">stilt.transport.TransportConfig.realizations</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.TransportConfig.settings.html">stilt.transport.TransportConfig.settings</a></li>
@@ -968,9 +968,10 @@
 <span class="sig-prename descclassname"><span class="pre">Simulation.</span></span><span class="sig-name descname"><span class="pre">calc_footprint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">smooth_factor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tres</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hnf_plume</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">transforms</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/stilt/simulation.html#Simulation.calc_footprint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.Simulation.calc_footprint" title="Link to this definition">#</a></dt>
 <dd><p>Calculate a footprint from the stored particles, without writing it.</p>
 <p>This is <a class="reference internal" href="stilt.calc_footprint.html#stilt.calc_footprint" title="stilt.calc_footprint"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.calc_footprint()</span></code></a> with this simulation’s
-particles, receptor, and settings filled in, the run’s
-<code class="docutils literal notranslate"><span class="pre">footprint_depth</span></code> among them. Each setting given replaces the
-variant’s own. Use it to try other settings; the
+particles, receptor, and footprint settings filled in, as the
+footprint stage makes it: the particles get the <code class="docutils literal notranslate"><span class="pre">foot</span></code> those
+settings ask for (<a class="reference internal" href="stilt.footprint.footprint_particles.html#stilt.footprint.footprint_particles" title="stilt.footprint.footprint_particles"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.footprint.footprint_particles()</span></code></a>).
+Each setting given replaces the variant’s own. Use it to try other settings; the
 workers write the variant’s own footprint. A relative file name in
 a transform’s settings starts from the project directory.</p>
 <dl class="field-list simple">

@@ -25,7 +25,6 @@ Attributes
    :toctree:
    :nosignatures:
 
-   ~TransportConfig.RECORDED_WHEN_SET
    ~TransportConfig.UNRECORDED
 
 

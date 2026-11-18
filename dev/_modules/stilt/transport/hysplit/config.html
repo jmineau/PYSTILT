@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../../_static/documentation_options.js?v=70c92553"></script>
+    <script src="../../../../_static/documentation_options.js?v=8fa7a052"></script>
     <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev15+gee07397d8" />
+  <meta name="docsearch:version" content="0.1.0a30.dev20+g100216f09" />
   
     
     <script src="../../../../_static/searchtools.js"></script>
@@ -492,10 +492,6 @@
 <span class="c1">#: mode overrides them (``DELT`` to ``IDSP``). Some break a run when changed:</span>
 <span class="c1">#: ``ICHEM=0`` and ``IDSP=1`` write no particle file, and ``INITD`` 1 or 4</span>
 <span class="c1">#: releases puffs.</span>
-<span class="c1">#: Settings whose ``SETUP.CFG`` entry has another name: PYSTILT's name to</span>
-<span class="c1">#: HYSPLIT's. ``footprint_depth`` is read by PYSTILT's own code too, so it</span>
-<span class="c1">#: has a name that says what it does.</span>
-<span class="n">SETUP_NAMES</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"footprint_depth"</span><span class="p">:</span> <span class="s2">"veght"</span><span class="p">}</span>
 
 <span class="c1">#: The particle variables ``hycs_std`` writes when ``SETUP.CFG`` names none,</span>
 <span class="c1">#: its own default ``VARSIWANT``, in its order.</span>
@@ -809,6 +805,19 @@
         <span class="mf">1.0</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="s2">"Vertical mixing scale factor, used by the ``kzmix`` scaling modes."</span><span class="p">,</span>
     <span class="p">)</span>
+    <span class="n">veght</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mf">0.5</span><span class="p">,</span>
+        <span class="n">gt</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Height below which HYSPLIT counts a particle's time toward its "</span>
+            <span class="s2">"``foot``: the depth surface fluxes are mixed through. A value of 1 "</span>
+            <span class="s2">"or less is a fraction of the mixed-layer height; a larger value is "</span>
+            <span class="s2">"meters above ground. A footprint from HYSPLIT's ``foot`` reads it "</span>
+            <span class="s2">"for the near-field correction too. The footprint stage's "</span>
+            <span class="s2">"``footprint_depth`` is the same depth for a ``foot`` PYSTILT "</span>
+            <span class="s2">"computes (``pbl_height``)."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
     <span class="n">vscale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="mf">200.0</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="s2">"Vertical Lagrangian timescale, in seconds."</span><span class="p">,</span>
@@ -1052,7 +1061,6 @@
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
     <span class="s2">"FIXED_SETUP"</span><span class="p">,</span>
     <span class="s2">"HYSPLIT_VARSIWANT"</span><span class="p">,</span>
-    <span class="s2">"SETUP_NAMES"</span><span class="p">,</span>
     <span class="s2">"MAX_ZISCALE_HOURS"</span><span class="p">,</span>
     <span class="s2">"WIND_ERROR_SETTINGS"</span><span class="p">,</span>
     <span class="s2">"ZI_ERROR_SETTINGS"</span><span class="p">,</span>

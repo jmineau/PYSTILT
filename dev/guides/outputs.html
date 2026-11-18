@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=70c92553"></script>
+    <script src="../_static/documentation_options.js?v=8fa7a052"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev15+gee07397d8" />
+  <meta name="docsearch:version" content="0.1.0a30.dev20+g100216f09" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -629,7 +629,7 @@ whole run. Use xarray as you would on any other array:</p>
 <span class="gh">Out[16]: </span><span class="go">Grid(xmin=-113.0, xmax=-110.5, ymin=40.0, ymax=42.0, xres=0.01, yres=0.01, crs='+proj=longlat')</span>
 
 <span class="gp">In [17]: </span><span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">config</span>        <span class="c1"># all the footprint settings</span>
-<span class="gh">Out[17]: </span><span class="go">FootprintConfig(grid=Grid(xmin=-113.0, xmax=-110.5, ymin=40.0, ymax=42.0, xres=0.01, yres=0.01, crs='+proj=longlat'), geometry=None, cells_per_target=4.0, smooth_factor=1.0, tres='1h', hnf_plume=True, transforms=[], geometry_hash=None)</span>
+<span class="gh">Out[17]: </span><span class="go">FootprintConfig(grid=Grid(xmin=-113.0, xmax=-110.5, ymin=40.0, ymax=42.0, xres=0.01, yres=0.01, crs='+proj=longlat'), geometry=None, cells_per_target=4.0, smooth_factor=1.0, tres='1h', hnf_plume=True, footprint_depth=0.5, pbl_height=None, pbl_height_min=0.0, transforms=[], geometry_hash=None)</span>
 </pre></div>
 </div>
 <p>The receptor id is also a coordinate, <code class="docutils literal notranslate"><span class="pre">foot.receptor</span></code>. It stays on the
