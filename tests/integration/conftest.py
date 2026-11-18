@@ -1,5 +1,5 @@
 """
-Fixtures for the integration tests: receptors and configs at the WBB site.
+Fixtures for the integration tests: releases and configs at the WBB site.
 
 The tests run HYSPLIT on real meteorology, the test met cache that the
 ``met_dir`` fixture finds, and are marked ``integration``.
@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 from stilt.config import ProjectConfig
-from stilt.receptors import ColumnReceptor, MultiPointReceptor
+from stilt.releases import ColumnReceptor, MultiPointReceptor
 from stilt.spatial import Grid
 from stilt.stilt_project import STILT_R_HYSPLIT
 from stilt.transport.hysplit import MetConfig
@@ -20,7 +20,7 @@ from ..fixtures.factories import make_met_config
 from ..fixtures.r_stilt_reference import (
     REFERENCE_TIME,
     reference_grid,
-    reference_receptor,
+    reference_release,
 )
 
 #: The HYSPLIT settings of the configs here: STILT-R's values, as
@@ -35,14 +35,14 @@ def reference_met(met_dir: Path) -> MetConfig:
 
 
 @pytest.fixture(scope="session")
-def wbb_receptor():
-    """Single WBB-like receptor matching STILT-R tutorial parameters."""
-    return reference_receptor()
+def wbb_release():
+    """Single WBB-like release matching STILT-R tutorial parameters."""
+    return reference_release()
 
 
 @pytest.fixture(scope="session")
-def wbb_column_receptor():
-    """Column receptor at WBB - same lat/lon, two heights."""
+def wbb_column_release():
+    """Column release at WBB - same lat/lon, two heights."""
     return ColumnReceptor(
         time=REFERENCE_TIME,
         longitude=-112.0,
@@ -53,8 +53,8 @@ def wbb_column_receptor():
 
 
 @pytest.fixture(scope="session")
-def wbb_multipoint_receptor():
-    """Three-location multipoint receptor at WBB area."""
+def wbb_multipoint_release():
+    """Three-location multipoint release at WBB area."""
     return MultiPointReceptor(
         time=REFERENCE_TIME,
         longitudes=[-112.0, -111.5, -111.0],
@@ -115,7 +115,7 @@ def multifoot_config(met_dir, wbb_grid) -> ProjectConfig:
 
 @pytest.fixture(scope="session")
 def multipoint_config(met_dir) -> ProjectConfig:
-    """Config with a wider domain covering all three multipoint receptor locations."""
+    """Config with a wider domain covering all three multipoint release locations."""
     grid = Grid(xmin=-113.0, xmax=-110.5, ymin=39.5, ymax=42.0, xres=0.01, yres=0.01)
     return ProjectConfig(
         **blocks(

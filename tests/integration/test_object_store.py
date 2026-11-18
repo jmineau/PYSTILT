@@ -27,7 +27,7 @@ from ..fixtures.output import (  # noqa: E402
     VARIANT,
     fake_footprint,
     fake_particles,
-    receptor_at,
+    release_at,
     write_one,
 )
 
@@ -69,10 +69,10 @@ def store(s3_server) -> str:
 def test_output_on_an_object_store_writes_lists_and_reads(store):
     out = Output(f"{store}/output/")
     assert str(out.directory) == f"{store}/output"
-    receptor = receptor_at()
-    rid = str(receptor.id)
+    release = release_at()
+    rid = str(release.id)
 
-    path = write_one(out, VARIANT, receptor)
+    path = write_one(out, VARIANT, release)
     assert str(path).startswith("s3://")
     assert out.present("particles", VARIANT) == {rid}
     assert out.hashes("particles") == {
@@ -81,10 +81,10 @@ def test_output_on_an_object_store_writes_lists_and_reads(store):
         ]: VARIANT.particles_hash  # type: ignore[union-attr]
     }
     particles = read_particles(path)
-    assert len(particles) == len(fake_particles(receptor))
+    assert len(particles) == len(fake_particles(release))
     assert out.table("particles", VARIANT).num_rows == len(particles)
 
-    foot = fake_footprint(receptor)
+    foot = fake_footprint(release)
     store_footprint(out, FEET, foot)
     assert out.present("footprint", FEET) == {rid}
     back = read_footprint(out.path("footprint", FEET, rid))  # type: ignore[arg-type]
@@ -93,7 +93,7 @@ def test_output_on_an_object_store_writes_lists_and_reads(store):
     ds = open_footprints([out.path("footprint", FEET, rid)])  # type: ignore[list-item]
     assert float(ds.foot.sum()) == pytest.approx(float(foot.sum()), rel=1e-6)
 
-    later = receptor_at(hour=18)
+    later = release_at(hour=18)
     store_empty_footprint(out, FEET, later)
     assert out.present("footprint", FEET) == {rid, str(later.id)}
     assert read_footprint(out.path("footprint", FEET, str(later.id))) is None  # type: ignore[arg-type]
@@ -101,7 +101,7 @@ def test_output_on_an_object_store_writes_lists_and_reads(store):
 
 def test_logs_and_failure_records_on_an_object_store(store):
     out = Output(f"{store}/output")
-    rid = str(receptor_at().id)
+    rid = str(release_at().id)
     log = out.write_log(VARIANT, rid, "hycs_std ran\n")
     assert log.read_text() == "hycs_std ran\n"
     record = {"stage": "particles", "reason": "MET_COVERAGE", "message": "boom"}
@@ -113,7 +113,7 @@ def test_logs_and_failure_records_on_an_object_store(store):
 
 def test_a_kept_workdir_on_an_object_store_leaves_out_links(store, tmp_path):
     out = Output(f"{store}/output")
-    rid = str(receptor_at().id)
+    rid = str(release_at().id)
     workdir = tmp_path / "work"
     workdir.mkdir()
     (workdir / "CONTROL").write_text("x")
@@ -128,7 +128,7 @@ def test_a_kept_workdir_on_an_object_store_leaves_out_links(store, tmp_path):
 
 @integration
 def test_a_project_runs_with_its_output_on_an_object_store(
-    tmp_path, store, wbb_config, wbb_receptor
+    tmp_path, store, wbb_config, wbb_release
 ):
     """A run writes to S3, and status, the footprints, and the Jacobian read it back."""
     import pandas as pd
@@ -137,22 +137,22 @@ def test_a_project_runs_with_its_output_on_an_object_store(
 
     config = wbb_config.model_copy(update={"output": f"{store}/output"})
     project = Project.init(
-        tmp_path / "s3_project", config=config, receptors=[wbb_receptor]
+        tmp_path / "s3_project", config=config, releases=[wbb_release]
     )
 
     status = project.run()
 
     assert list(status["state"]) == ["complete"]
     assert set(project.status()["state"]) == {"complete"}
-    sim = project.simulation(str(wbb_receptor.id), "hrrr")
+    sim = project.simulation(str(wbb_release.id), "hrrr")
     assert sim.log  # the run's log, read back from the store
     ds = project.footprints()
-    assert ds.sizes["receptor"] == 1
+    assert ds.sizes["release"] == 1
     grid = project.variants["hrrr"].stages.get("footprint").grid
     bins = pd.IntervalIndex.from_breaks(
         pd.date_range(
-            wbb_receptor.time - pd.Timedelta("1D"),
-            wbb_receptor.time + pd.Timedelta("1h"),
+            wbb_release.time - pd.Timedelta("1D"),
+            wbb_release.time + pd.Timedelta("1h"),
             freq="1D",
         ),
         closed="left",

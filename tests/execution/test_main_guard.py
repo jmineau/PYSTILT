@@ -23,13 +23,13 @@ import stilt
 """
 
 _RUN = """\
-receptors = [
+releases = [
     stilt.PointReceptor(time=f"2023-01-01 0{h}:00", longitude=-111.85, latitude=40.77, altitude=5)
     for h in range(3)
 ]
 project = stilt.Project.init(
     "project",
-    receptors=receptors,
+    releases=releases,
     mets={"toy": {"weather": "hrrr"}},
     models={"toy": {"class": "toypool.ToyModel", "n_hours": -1}},
     variants={"toy": {}},
@@ -88,7 +88,7 @@ def test_an_unguarded_script_stops_and_shows_the_fix(tmp_path, method):
 
 @pytest.mark.parametrize("method", START_METHODS)
 def test_a_guarded_script_runs(tmp_path, method):
-    """The same script under the guard runs every receptor."""
+    """The same script under the guard runs every release."""
     body = 'if __name__ == "__main__":\n' + "".join(
         f"    {line}\n" for line in _RUN.splitlines()
     )

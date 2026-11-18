@@ -25,7 +25,7 @@ from stilt.transport import ModelRun
 from stilt.transport.hysplit.config import HysplitConfig
 
 if TYPE_CHECKING:
-    from stilt.receptors import Receptor
+    from stilt.releases import Receptor
 
 #: The import path of :class:`StiltRModel`, the ``class`` of the ``models:``
 #: block of imported STILT-R runs, as their run settings record it.
@@ -102,7 +102,7 @@ class StiltRModel:
     The ``stilt-r`` transport model of imported runs, named by its import path (:data:`STILT_R_MODEL`).
 
     It holds the settings of imported STILT-R runs and runs nothing.
-    :meth:`run` fails, so a ``stilt run`` of a receptor STILT-R did not run
+    :meth:`run` fails, so a ``stilt run`` of a release STILT-R did not run
     records a failure for it.
     """
 
@@ -127,7 +127,7 @@ class StiltRModel:
 
     def run(
         self,
-        receptor: Receptor,
+        release: Receptor,
         config: StiltRConfig,
         met: StiltRMetConfig,
         window: tuple[dt.datetime, dt.datetime],
@@ -143,8 +143,8 @@ class StiltRModel:
             Always, with ``reason`` ``NOT_RUNNABLE``.
         """
         raise SimulationError(
-            f"{receptor.id}: PYSTILT cannot run STILT-R. A stilt-r variant reads "
-            "the runs stilt.migration.import_stilt_r wrote; run the receptor "
+            f"{release.id}: PYSTILT cannot run STILT-R. A stilt-r variant reads "
+            "the runs stilt.migration.import_stilt_r wrote; run the release "
             "with a hysplit variant instead.",
             reason="NOT_RUNNABLE",
         )

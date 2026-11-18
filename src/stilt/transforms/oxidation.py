@@ -19,7 +19,7 @@ from stilt.sampling import sample_field, vertical_dim
 from stilt.transforms.lifetime import survival
 
 if TYPE_CHECKING:
-    from stilt.receptors import Receptor
+    from stilt.releases import Receptor
 
 # The specific gas constant of dry air, in J kg⁻¹ K⁻¹.
 _R_DRY_AIR = 287.05
@@ -238,7 +238,7 @@ class Oxidation(BaseModel):
         return k * number_density
 
     def check(
-        self, receptors: Sequence[str], directory: str | Path | None = None
+        self, releases: Sequence[str], directory: str | Path | None = None
     ) -> list[tuple[str, str | None, str]]:
         """
         Return what is wrong with the oxidant file, which ``stilt check`` reports.
@@ -267,7 +267,7 @@ class Oxidation(BaseModel):
     def apply(
         self,
         particles: pd.DataFrame,
-        receptor: Receptor | None = None,
+        release: Receptor | None = None,
         directory: str | Path | None = None,
     ) -> pd.DataFrame:
         """Return the particles with ``foot`` scaled by the surviving fraction."""

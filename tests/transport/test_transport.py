@@ -51,7 +51,7 @@ def test_stilt_r_is_no_built_in_model():
         get_model("stilt-r")
 
 
-def test_stilt_r_is_a_model_named_by_import_path_that_cannot_run(point_receptor):
+def test_stilt_r_is_a_model_named_by_import_path_that_cannot_run(point_release):
     from stilt.exceptions import SimulationError
     from stilt.stilt_r import STILT_R_MODEL, StiltRMetConfig, StiltRModel
 
@@ -59,9 +59,9 @@ def test_stilt_r_is_a_model_named_by_import_path_that_cannot_run(point_receptor)
     assert isinstance(model, StiltRModel)
     met = StiltRMetConfig(met_path="/data/hrrr")
     assert met.settings() == {"met_path": "/data/hrrr"}
-    window = run_window(point_receptor.time, -24)
+    window = run_window(point_release.time, -24)
     with pytest.raises(SimulationError) as caught:
-        model.run(point_receptor, None, met, window)
+        model.run(point_release, None, met, window)
     assert caught.value.reason == "NOT_RUNNABLE"
 
 
@@ -140,13 +140,13 @@ def _fake_hysplit(monkeypatch) -> dict:
 
 
 def test_hysplit_model_reads_the_met_in_place_and_records_the_source(
-    tmp_path, point_receptor, monkeypatch
+    tmp_path, point_release, monkeypatch
 ):
     seen = _fake_hysplit(monkeypatch)
     params = HysplitConfig(n_hours=-1)
-    make_met_files(tmp_path / "archive", point_receptor.time, params.n_hours)
+    make_met_files(tmp_path / "archive", point_release.time, params.n_hours)
     met = make_met_config(tmp_path / "archive")
-    window = run_window(point_receptor.time, params.n_hours)
+    window = run_window(point_release.time, params.n_hours)
     source = Met("met", met).files_for(window)
     cropped = [tmp_path / "crops" / path.name for path in source]
     for path, crop in zip(source, cropped, strict=True):
@@ -156,7 +156,7 @@ def test_hysplit_model_reads_the_met_in_place_and_records_the_source(
     monkeypatch.setattr(Met, "readable", lambda self, files: cropped)
 
     result = HysplitModel().run(
-        point_receptor, params, met, window, tmp_path / "work", timeout=30
+        point_release, params, met, window, tmp_path / "work", timeout=30
     )
 
     assert isinstance(result, ModelRun)
@@ -167,15 +167,15 @@ def test_hysplit_model_reads_the_met_in_place_and_records_the_source(
 
 
 def test_run_particles_goes_through_the_model_the_settings_name(
-    tmp_path, point_receptor, monkeypatch
+    tmp_path, point_release, monkeypatch
 ):
     calls: list[dict] = []
 
     class _Model:
         name = "hysplit"
 
-        def run(self, receptor, params, met, window, workdir=None, timeout=None):
-            calls.append({"receptor": receptor, "timeout": timeout, "workdir": workdir})
+        def run(self, release, params, met, window, workdir=None, timeout=None):
+            calls.append({"release": release, "timeout": timeout, "workdir": workdir})
             particles = pd.DataFrame(
                 {
                     "age": [-60.0],
@@ -194,12 +194,12 @@ def test_run_particles_goes_through_the_model_the_settings_name(
     )
     met_config = make_met_config(tmp_path)
     variant = make_variant(met_config=met_config, n_hours=-1, numpar=1)
-    sim = Simulation(point_receptor, variant, Output(tmp_path / "output"))
+    sim = Simulation(point_release, variant, Output(tmp_path / "output"))
 
     traj = run_particles(sim, workdir=tmp_path / "work", timeout=45)
 
     assert asked == ["hysplit"]
-    assert calls[0]["receptor"] == point_receptor
+    assert calls[0]["release"] == point_release
     assert calls[0]["timeout"] == 45  # the timeout reaches the model
     assert len(traj) == 1
     assert sim.has_particles
@@ -223,7 +223,7 @@ class _EchoModel:
     def data_files(self, config):
         return None
 
-    def run(self, receptor, config, met, window, workdir=None, timeout=None):
+    def run(self, release, config, met, window, workdir=None, timeout=None):
         if workdir is not None:
             (workdir / "CONTROL").write_text("")
         type(self).seen = {
@@ -258,19 +258,19 @@ def _met(tmp_path) -> dict:
 
 
 def test_run_trajectories_returns_the_particles_and_removes_its_workdir(
-    tmp_path, point_receptor, echo
+    tmp_path, point_release, echo
 ):
     from stilt import run_trajectories
 
     particles = run_trajectories(
-        point_receptor, _met(tmp_path), model="echo", n_hours=-24, numpar=50, timeout=9
+        point_release, _met(tmp_path), model="echo", n_hours=-24, numpar=50, timeout=9
     )
     # The footprint applies the near-field correction, not the run.
     assert "foot_no_hnf_dilution" not in particles.columns
 
     assert particles["particle"].unique().tolist() == [1]
-    # time is the receptor time plus age, as a table read from a file has.
-    expected = pd.Timestamp(point_receptor.time) + pd.to_timedelta(
+    # time is the release time plus age, as a table read from a file has.
+    expected = pd.Timestamp(point_release.time) + pd.to_timedelta(
         particles["age"], unit="min"
     )
     pd.testing.assert_series_equal(particles["time"], expected, check_names=False)
@@ -279,14 +279,14 @@ def test_run_trajectories_returns_the_particles_and_removes_its_workdir(
     assert echo.seen["met"].directory == tmp_path.resolve()
     assert echo.seen["workdir"] is None  # the model makes its own when it needs one
     start, end = echo.seen["window"]
-    assert end == point_receptor.time and (end - start).total_seconds() == 24 * 3600
+    assert end == point_release.time and (end - start).total_seconds() == 24 * 3600
 
 
-def test_run_trajectories_keeps_a_workdir_it_was_given(tmp_path, point_receptor, echo):
+def test_run_trajectories_keeps_a_workdir_it_was_given(tmp_path, point_release, echo):
     from stilt import run_trajectories
 
     run_trajectories(
-        point_receptor,
+        point_release,
         _met(tmp_path),
         model="echo",
         n_hours=-24,
@@ -295,7 +295,7 @@ def test_run_trajectories_keeps_a_workdir_it_was_given(tmp_path, point_receptor,
     assert (tmp_path / "w" / "CONTROL").exists()
     with pytest.raises(ValueError, match="not empty"):
         run_trajectories(
-            point_receptor,
+            point_release,
             _met(tmp_path),
             model="echo",
             n_hours=-24,
@@ -303,15 +303,15 @@ def test_run_trajectories_keeps_a_workdir_it_was_given(tmp_path, point_receptor,
         )
 
 
-def test_run_trajectories_checks_the_models_parameters(tmp_path, point_receptor, echo):
+def test_run_trajectories_checks_the_models_parameters(tmp_path, point_release, echo):
     from stilt import run_trajectories
 
     with pytest.raises(ValueError, match="nparticles"):
         run_trajectories(
-            point_receptor, _met(tmp_path), model="echo", n_hours=-24, nparticles=5
+            point_release, _met(tmp_path), model="echo", n_hours=-24, nparticles=5
         )
     with pytest.raises(ValueError, match="n_hours"):
-        run_trajectories(point_receptor, _met(tmp_path), model="echo")
+        run_trajectories(point_release, _met(tmp_path), model="echo")
 
 
 def test_finish_leaves_foot_for_the_footprint_to_correct():
@@ -322,7 +322,7 @@ def test_finish_leaves_foot_for_the_footprint_to_correct():
         foot=[1e-5, 2e-5], dens=1.2, samt=1.0, sigw=0.1, tlgr=10.0, mlht=500.0
     )
     run = _finish(
-        ModelRun(particles, met_files=[]), _receptor(), TransportConfig(n_hours=-24)
+        ModelRun(particles, met_files=[]), _release(), TransportConfig(n_hours=-24)
     )
 
     assert run.particles["foot"].tolist() == [1e-5, 2e-5]
@@ -348,7 +348,7 @@ def test_finish_adds_no_foot_to_a_model_that_writes_none(tmp_path):
 
     run = _finish(
         ModelRun(_positions_only(), log="model log\n", met_files=[tmp_path / "met"]),
-        _receptor(),
+        _release(),
         TransportConfig(n_hours=-24),
     )
 
@@ -364,8 +364,8 @@ def test_a_transport_config_has_none_of_the_footprints_foot_settings(setting):
         TransportConfig(n_hours=-24, **{setting: 100.0})
 
 
-def _receptor():
-    from stilt.receptors import PointReceptor
+def _release():
+    from stilt.releases import PointReceptor
 
     return PointReceptor(
         time="2023-01-01 12:00", longitude=-111.9, latitude=40.7, altitude=5.0

@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 
 from stilt.meteorology import run_window
-from stilt.receptors import ColumnReceptor, MultiPointReceptor
+from stilt.releases import ColumnReceptor, MultiPointReceptor
 from stilt.transport.hysplit import (
     HysplitConfig,
     Met,
@@ -22,11 +22,11 @@ from ...fixtures.factories import make_met_config
 from ...fixtures.particles import finished
 
 
-def _raw_particles(receptor, config, met, workdir, timeout):
+def _raw_particles(release, config, met, workdir, timeout):
     """Run hycs_std and return its particles as HYSPLIT wrote them, before release heights are added."""
-    window = run_window(receptor.time, config.n_hours)
+    window = run_window(release.time, config.n_hours)
     files = met.files_for(window)
-    write_inputs(workdir, receptor.time, receptor.coords(), config, files)
+    write_inputs(workdir, release.time, release.coords(), config, files)
     run_hycs_std(workdir, timeout)
     return read_particle_dat(workdir / "PARTICLE_STILT.DAT", config.varsiwant)
 
@@ -37,9 +37,9 @@ def _release_time_rows(particles):
     return particles.loc[particles["age"] == latest_time].sort_values("particle")
 
 
-def _nearest_release_assignments(release_rows, receptor):
+def _nearest_release_assignments(release_rows, release):
     """Return the nearest explicit release-point index for each particle row."""
-    release_points = np.column_stack((receptor.longitudes, receptor.latitudes))
+    release_points = np.column_stack((release.longitudes, release.latitudes))
     particle_points = release_rows[["lon", "lat"]].to_numpy()
     distances = np.sum(
         (particle_points[:, None, :] - release_points[None, :, :]) ** 2,
@@ -58,7 +58,7 @@ def test_hysplit_multipoint_release_points_follow_control_order(tmp_path, met_di
     so each explicit release point should receive the same-size contiguous
     ``particle`` block.
     """
-    receptor = MultiPointReceptor(
+    release = MultiPointReceptor(
         time=dt.datetime(2021, 1, 15, 6, 0),
         longitudes=[-112.0, -111.8, -111.6],
         latitudes=[40.5, 40.5, 40.5],
@@ -71,13 +71,13 @@ def test_hysplit_multipoint_release_points_follow_control_order(tmp_path, met_di
     )
     met = Met("hrrr", make_met_config(met_dir))
     result = _raw_particles(
-        receptor, params, met, Path(tmp_path) / "hysplit_assignment", timeout=120
+        release, params, met, Path(tmp_path) / "hysplit_assignment", timeout=120
     )
 
     release_rows = _release_time_rows(result)
     assert release_rows["particle"].tolist() == list(range(1, params.numpar + 1))
 
-    nearest_release = _nearest_release_assignments(release_rows, receptor)
+    nearest_release = _nearest_release_assignments(release_rows, release)
 
     assert nearest_release == [
         0,
@@ -98,7 +98,7 @@ def test_hysplit_multipoint_release_points_follow_control_order(tmp_path, met_di
         release_rows.iloc[start : start + 4]["zagl"].to_numpy(dtype=float)
         for start in (0, 4, 8)
     ]
-    expected_heights = list(receptor.altitudes)
+    expected_heights = list(release.altitudes)
     for block, expected in zip(grouped_heights, expected_heights, strict=False):
         assert abs(float(block.mean()) - expected) < 100.0
 
@@ -108,7 +108,7 @@ def test_hysplit_multipoint_release_points_follow_control_order_nondivisible(
     tmp_path, met_dir
 ):
     """Nondivisible particle counts use equal contiguous blocks in point order."""
-    receptor = MultiPointReceptor(
+    release = MultiPointReceptor(
         time=dt.datetime(2021, 1, 15, 6, 0),
         longitudes=[-112.0, -111.8, -111.6],
         latitudes=[40.5, 40.5, 40.5],
@@ -121,7 +121,7 @@ def test_hysplit_multipoint_release_points_follow_control_order_nondivisible(
     )
     met = Met("hrrr", make_met_config(met_dir))
     result = _raw_particles(
-        receptor,
+        release,
         params,
         met,
         Path(tmp_path) / "hysplit_assignment_nondivisible",
@@ -133,7 +133,7 @@ def test_hysplit_multipoint_release_points_follow_control_order_nondivisible(
     release_rows = _release_time_rows(result)
     assert release_rows["particle"].tolist() == list(range(1, 13))
     assert (
-        _nearest_release_assignments(release_rows, receptor)
+        _nearest_release_assignments(release_rows, release)
         == [0] * 4 + [1] * 4 + [2] * 4
     )
 
@@ -143,7 +143,7 @@ def test_hysplit_column_release_spans_vertical_line_without_endpoint_chunking(
     tmp_path, met_dir
 ):
     """Column releases span the requested vertical range rather than endpoint chunks."""
-    receptor = ColumnReceptor(
+    release = ColumnReceptor(
         time=dt.datetime(2021, 1, 15, 6, 0),
         longitude=-112.0,
         latitude=40.5,
@@ -161,21 +161,19 @@ def test_hysplit_column_release_spans_vertical_line_without_endpoint_chunking(
     )
     met = Met("hrrr", make_met_config(met_dir))
     result = _raw_particles(
-        receptor, params, met, Path(tmp_path) / "hysplit_column_assignment", timeout=120
+        release, params, met, Path(tmp_path) / "hysplit_column_assignment", timeout=120
     )
 
     release_rows = _release_time_rows(result)
     assert release_rows["particle"].tolist() == list(range(1, params.numpar + 1))
-    assert (
-        release_rows["zagl"].between(receptor.bottom - 50.0, receptor.top + 50.0).all()
-    )
+    assert release_rows["zagl"].between(release.bottom - 50.0, release.top + 50.0).all()
     heights = release_rows["zagl"].to_numpy(dtype=float)
     assert len(np.unique(heights)) == params.numpar
-    span = receptor.top - receptor.bottom
+    span = release.top - release.bottom
     sorted_heights = np.sort(heights)
     central_band = heights[
-        (heights >= receptor.bottom + 0.25 * span)
-        & (heights <= receptor.top - 0.25 * span)
+        (heights >= release.bottom + 0.25 * span)
+        & (heights <= release.top - 0.25 * span)
     ]
 
     # A true column release should populate the interior of the requested
@@ -204,7 +202,7 @@ def test_close_spaced_slant_release_heights_are_recovered(tmp_path, met_dir):
     n_levels = 10
     altitudes = np.linspace(300.0, 3000.0, n_levels)
     metres_per_deg_lon = 111_320.0 * np.cos(np.radians(40.766))
-    receptor = MultiPointReceptor(
+    release = MultiPointReceptor(
         time=dt.datetime(2021, 1, 15, 6, 0),
         longitudes=-111.8479 + np.arange(n_levels) * 173.0 / metres_per_deg_lon,
         latitudes=np.full(n_levels, 40.766),
@@ -213,9 +211,9 @@ def test_close_spaced_slant_release_heights_are_recovered(tmp_path, met_dir):
     params = HysplitConfig(n_hours=-1, numpar=200)
     met = Met("hrrr", make_met_config(met_dir))
     particles = _raw_particles(
-        receptor, params, met, Path(tmp_path) / "close_slant", timeout=300
+        release, params, met, Path(tmp_path) / "close_slant", timeout=300
     )
-    data = finished(particles, receptor)
+    data = finished(particles, release)
 
     release = _release_time_rows(data).drop_duplicates("particle")
     # Each group's actual height should sit at the altitude it was assigned.

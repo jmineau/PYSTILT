@@ -228,9 +228,9 @@ def test_a_variant_cannot_change_part_of_a_grid_derived_from_the_blocks_geometry
 
 
 def _rows(**columns) -> pd.DataFrame:
-    """Return release-point rows of two receptors, the second outside :data:`GRID`."""
+    """Return release-point rows of two releases, the second outside :data:`GRID`."""
     rows = {
-        "receptor": ["202407010000_-111.85_40.77_5", "202407010000_-100_40.77_5"],
+        "release": ["202407010000_-111.85_40.77_5", "202407010000_-100_40.77_5"],
         "longitude": [-111.85, -100.0],
         "latitude": [40.77, 40.77],
         "altitude": [5.0, 5.0],
@@ -240,7 +240,7 @@ def _rows(**columns) -> pd.DataFrame:
     return pd.DataFrame({**rows, **columns})
 
 
-def test_check_lists_the_receptors_outside_the_grid():
+def test_check_lists_the_releases_outside_the_grid():
     config = _resolve(FootprintConfig(grid=GRID), varsiwant=ALL_COLUMNS)
     found = FootprintStage().check(config, _rows(), None)
     assert found == [
@@ -283,7 +283,7 @@ def test_check_runs_once_for_footprints_that_share_a_grid_or_a_transform(monkeyp
         kind = "tests.footprint.test_stage.Checked"
         checks: list = []
 
-        def apply(self, particles, receptor=None, directory=None):
+        def apply(self, particles, release=None, directory=None):
             return particles
 
         def check(self, ids, directory):
@@ -305,7 +305,7 @@ def test_check_runs_once_for_footprints_that_share_a_grid_or_a_transform(monkeyp
     assert len(calls) == 1 and Checked.checks == [2]
     assert found[0] == found[1] == found[2]
     assert [check for check, _, _ in found[0]] == ["grid", "checked"]
-    # Another grid, or another table of receptors, is checked for itself.
+    # Another grid, or another table of releases, is checked for itself.
     other = GRID.model_copy(update={"xmax": -95.0})
     assert stage.check(FootprintConfig(grid=other), rows, None) == []
     assert len(calls) == 2
@@ -328,7 +328,7 @@ def test_a_footprint_stage_under_another_name_writes_its_own_files(tmp_path):
     from stilt.output import Output
     from stilt.simulation import Simulation
 
-    from ..fixtures.factories import make_receptor
+    from ..fixtures.factories import make_release
     from ..fixtures.particles import finished, random_walk
 
     config = FootprintConfig(grid=GRID, smooth_factor=0.5)
@@ -342,10 +342,10 @@ def test_a_footprint_stage_under_another_name_writes_its_own_files(tmp_path):
             },
         }
     )
-    receptor = make_receptor(dt.datetime(2024, 1, 15, 18))  # where the walk starts
-    sim = Simulation(receptor, variant, Output(tmp_path / "output"))
-    sim.__dict__["particles"] = finished(random_walk(), receptor)
-    path = sim.output.make_path("coarse_footprint", variant, receptor.id)
+    release = make_release(dt.datetime(2024, 1, 15, 18))  # where the walk starts
+    sim = Simulation(release, variant, Output(tmp_path / "output"))
+    sim.__dict__["particles"] = finished(random_walk(), release)
+    path = sim.output.make_path("coarse_footprint", variant, release.id)
     path.parent.mkdir(parents=True)
 
     CoarseFootprint().run(config, sim, path)
@@ -542,15 +542,15 @@ def test_a_stored_runs_met_files_are_read_only_to_compute_foot(
 ):
     from stilt.footprint import stage
     from stilt.particles import write_particles
-    from stilt.receptors import PointReceptor
+    from stilt.releases import PointReceptor
 
     met = tmp_path / "met"
     met.touch()
-    receptor = PointReceptor(
+    release = PointReceptor(
         time="2023-01-01 12:00", longitude=-111.9, latitude=40.7, altitude=5.0
     )
     path = write_particles(
-        tmp_path / "p.parquet", _particles(foot=1e-3), receptor, {}, [met]
+        tmp_path / "p.parquet", _particles(foot=1e-3), release, {}, [met]
     )
     particles = _particles(foot=1e-3)  # in memory, without time
 
@@ -563,7 +563,7 @@ def test_a_stored_runs_met_files_are_read_only_to_compute_foot(
     monkeypatch.setattr(stage, "add_foot", _record_time(add_foot))
 
     out = stage.stored_particles(
-        particles, FootprintConfig(pbl_height=500.0), path, start=receptor.time
+        particles, FootprintConfig(pbl_height=500.0), path, start=release.time
     )
     assert add_foot["met_files"] == [met]
     assert add_foot["time"] == [

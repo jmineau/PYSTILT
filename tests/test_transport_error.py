@@ -8,7 +8,7 @@ import xarray as xr
 from stilt import TransportError
 from stilt import transport_error as _transport_error
 from stilt.footprint import correct_near_field
-from stilt.receptors import PointReceptor
+from stilt.releases import PointReceptor
 from stilt.transforms import AveragingKernel
 
 
@@ -165,14 +165,14 @@ def test_a_short_length_scale_on_a_tall_column_does_not_overflow():
 
 
 def test_a_small_error_in_a_column_is_not_underestimated():
-    """Mean over receptors at a signal a few times the noise (#383)."""
-    n, extra, receptors = 1000, 0.2, 100
+    """Mean over releases at a signal a few times the noise (#383)."""
+    n, extra, releases = 1000, 0.2, 100
     rng = np.random.default_rng(383)
     heights = rng.uniform(0.0, 3000.0, n)
     truth = extra * _pair_correlation(heights, 356.0).sum() / n**2
 
     variances = []
-    for _ in range(receptors):
+    for _ in range(releases):
         main = _particles(heights, 10.0 + rng.standard_normal(n))
         err = _particles(heights, 10.0 + np.sqrt(1.0 + extra) * rng.standard_normal(n))
         variances.append(transport_error(main, err, FLUX).variance)
@@ -184,12 +184,12 @@ def test_a_small_error_in_a_column_is_not_underestimated():
 
 @pytest.mark.parametrize("column", [False, True], ids=["point", "column"])
 def test_noise_is_the_spread_of_the_variance_with_no_perturbation(column):
-    n, receptors = 1000, 150
+    n, releases = 1000, 150
     rng = np.random.default_rng(7)
     heights = rng.uniform(0.0, 3000.0, n) if column else np.zeros(n)
 
     variances, noises = [], []
-    for _ in range(receptors):
+    for _ in range(releases):
         main = _particles(heights, 10.0 + rng.standard_normal(n))
         err = _particles(heights, 10.0 + rng.standard_normal(n))
         result = transport_error(main, err, FLUX)
@@ -233,7 +233,7 @@ def test_level_statistics_are_numpy_means_and_variances():
         assert row["var_err"] == np.mean(vars_e)
 
 
-def test_point_receptor_particles_are_one_level():
+def test_point_release_particles_are_one_level():
     main = _column(n_levels=1, spread=1.0, seed=5).drop(columns="release_height")
     err = _column(n_levels=1, spread=2.0, seed=6).drop(columns="release_height")
 
@@ -278,12 +278,12 @@ def test_transforms_are_applied_to_both_tables():
     assert weighted.sd < plain.sd
 
 
-def test_the_receptor_reaches_the_transforms(point_receptor):
+def test_the_release_reaches_the_transforms(point_release):
     seen = []
 
     class Recorder:
-        def apply(self, particles, receptor=None, directory=None):
-            seen.append(receptor)
+        def apply(self, particles, release=None, directory=None):
+            seen.append(release)
             return particles
 
     p = _column(n_levels=1, per_level=10)
@@ -292,10 +292,10 @@ def test_the_receptor_reaches_the_transforms(point_receptor):
         p.copy(),
         FLUX,
         transforms=[Recorder()],
-        receptor=point_receptor,
+        release=point_release,
     )
 
-    assert seen == [point_receptor, point_receptor]
+    assert seen == [point_release, point_release]
 
 
 def test_rejects_bad_arguments():
@@ -439,15 +439,15 @@ def test_realizations_must_not_be_empty():
         transport_error(p, [], FLUX)
 
 
-def test_the_near_field_correction_needs_the_receptor():
+def test_the_near_field_correction_needs_the_release():
     p = _column(n_levels=1, per_level=10)
-    with pytest.raises(ValueError, match="needs the receptor"):
+    with pytest.raises(ValueError, match="needs the release"):
         _transport_error(p, p.copy(), FLUX)
 
 
 def test_the_near_field_correction_is_applied_to_both_tables():
     """With hnf_plume, the error is of the enhancement the footprint gives."""
-    receptor = PointReceptor(
+    release = PointReceptor(
         time="2023-01-01", longitude=-111.0, latitude=41.0, altitude=5.0
     )
     rng = np.random.default_rng(0)
@@ -459,12 +459,12 @@ def test_the_near_field_correction_is_applied_to_both_tables():
         age=-1.0, **near
     )
 
-    corrected = _transport_error(main, err, FLUX, receptor=receptor)
+    corrected = _transport_error(main, err, FLUX, release=release)
     by_hand = _transport_error(
-        correct_near_field(main, receptor, 0.5),
-        correct_near_field(err, receptor, 0.5),
+        correct_near_field(main, release, 0.5),
+        correct_near_field(err, release, 0.5),
         FLUX,
-        receptor=receptor,
+        release=release,
         hnf_plume=False,
     )
 

@@ -46,8 +46,8 @@ def modelled_column(
         µmol m⁻² s⁻¹ gives ppm; multiply by 1000 for ppb.
     background : float
         The weighted background (``sim.background(field).value``). Over a
-        receptor that stops below the top of the atmosphere it covers the
-        receptor's levels only; add the weighted field above the top first.
+        release that stops below the top of the atmosphere it covers the
+        release's levels only; add the weighted field above the top first.
     ak : array-like, optional
         The column averaging kernel on the retrieval's levels (the
         soundings' ``ak``).

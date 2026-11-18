@@ -21,11 +21,11 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 from stilt._paths import location, readable, write_parquet
-from stilt.receptors import (
+from stilt.releases import (
     ColumnReceptor,
     MultiPointReceptor,
     Receptor,
-    parse_receptor_id,
+    parse_release_id,
 )
 
 if TYPE_CHECKING:
@@ -66,8 +66,8 @@ class ParticleMetadata(NamedTuple):
 
     Attributes
     ----------
-    receptor : Receptor
-        Receptor the particles were released from.
+    release : Receptor
+        Release the particles were released from.
     settings : dict
         The run's settings, as its folder's ``_settings.yaml`` records them:
         the transport model's settings, the met's, the model build, and
@@ -80,7 +80,7 @@ class ParticleMetadata(NamedTuple):
         ``seed + realization``; ``None`` for a single run.
     """
 
-    receptor: Receptor
+    release: Receptor
     settings: dict[str, Any]
     met_files: list[Path]
     realization: int | None = None
@@ -142,7 +142,7 @@ def _need_foot(particles: pd.DataFrame) -> None:
 
 def particles_metadata(path: str | Path | UPath) -> ParticleMetadata:
     """
-    Return the receptor, run settings, and met files a particle file records.
+    Return the release, run settings, and met files a particle file records.
 
     Raises
     ------
@@ -165,7 +165,7 @@ def particles_metadata(path: str | Path | UPath) -> ParticleMetadata:
         )
     realization = meta.get(b"stilt:realization")
     return ParticleMetadata(
-        receptor=Receptor.from_json(meta[b"stilt:receptor"]),
+        release=Receptor.from_json(meta[b"stilt:release"]),
         settings=json.loads(meta[b"stilt:settings"]),
         met_files=[Path(p) for p in json.loads(meta[b"stilt:met_files"])],
         realization=None if realization is None else int(realization),
@@ -178,10 +178,10 @@ def read_particles(
     """
     Read a particle file.
 
-    It needs nothing but the file: the receptor time in its metadata gives
+    It needs nothing but the file: the release time in its metadata gives
     the ``time`` column (UTC) back, from ``age``. ``age`` and ``particle`` come back as
     float64, as HYSPLIT writes them. :func:`particles_metadata` reads the
-    receptor and settings.
+    release and settings.
 
     Parameters
     ----------
@@ -203,11 +203,9 @@ def read_particles(
     with readable(path) as source:
         pf = pq.ParquetFile(source)
         stored = pf.schema_arrow.names
-        # The output directory adds a ``receptor`` column for scans of the
-        # whole tree. One file is one receptor, so it is not read here.
-        wanted = [
-            c for c in (stored if columns is None else columns) if c != "receptor"
-        ]
+        # The output directory adds a ``release`` column for scans of the
+        # whole tree. One file is one release, so it is not read here.
+        wanted = [c for c in (stored if columns is None else columns) if c != "release"]
         want_time = "time" in wanted or columns is None
         read = [c for c in wanted if c in stored]
         if want_time and "age" in stored and "age" not in read:
@@ -218,8 +216,8 @@ def read_particles(
             data[name] = data[name].astype("float64")
     if want_time and "age" in data.columns:
         meta = pf.schema_arrow.metadata or {}
-        receptor = Receptor.from_json(meta[b"stilt:receptor"])
-        data["time"] = pd.Timestamp(receptor.time) + pd.to_timedelta(
+        release = Receptor.from_json(meta[b"stilt:release"])
+        data["time"] = pd.Timestamp(release.time) + pd.to_timedelta(
             data["age"].to_numpy(), unit="min"
         )
     return data
@@ -227,34 +225,34 @@ def read_particles(
 
 def particles_from_table(table: pa.Table, time: bool = True) -> pd.DataFrame:
     """
-    Return a table of many receptors' particles as one DataFrame.
+    Return a table of many releases' particles as one DataFrame.
 
     The table is what :meth:`stilt.output.Output.table` reads: a
-    ``receptor`` column, the stored particle columns, and ``date``. The
-    result has ``receptor`` first, ``age`` and ``particle`` as float64, and
-    ``time`` (UTC) rebuilt from each receptor's time and ``age`` (unless
+    ``release`` column, the stored particle columns, and ``date``. The
+    result has ``release`` first, ``age`` and ``particle`` as float64, and
+    ``time`` (UTC) rebuilt from each release's time and ``age`` (unless
     *time* is false, or there is no ``age``); ``date`` is dropped.
     """
     data = table.unify_dictionaries().to_pandas()
     data = data.drop(columns=["date"], errors="ignore")
     if data.empty:
         return data
-    # The receptor column is a dictionary of a few ids (a Categorical here), so
+    # The release column is a dictionary of a few ids (a Categorical here), so
     # the strings and the times are made once per id and taken for every row:
     # converting each of millions of rows takes seconds.
-    receptor = data["receptor"]
-    if not isinstance(receptor.dtype, pd.CategoricalDtype):
-        receptor = receptor.astype("category")
-    ids = receptor.cat.categories.astype(str)
-    codes = receptor.cat.codes.to_numpy()
-    data["receptor"] = ids.take(codes)
+    release = data["release"]
+    if not isinstance(release.dtype, pd.CategoricalDtype):
+        release = release.astype("category")
+    ids = release.cat.categories.astype(str)
+    codes = release.cat.codes.to_numpy()
+    data["release"] = ids.take(codes)
     for name in _INT_COLUMNS:
         if name in data.columns:
             data[name] = data[name].astype("float64")
     if time and "age" in data.columns:
-        receptor_time = pd.to_datetime([parse_receptor_id(r)[0] for r in ids])
+        release_time = pd.to_datetime([parse_release_id(r)[0] for r in ids])
         data["time"] = pd.Series(
-            receptor_time.take(codes), index=data.index
+            release_time.take(codes), index=data.index
         ) + pd.to_timedelta(data["age"].to_numpy(), unit="min")
     return data
 
@@ -262,7 +260,7 @@ def particles_from_table(table: pa.Table, time: bool = True) -> pd.DataFrame:
 def write_particles(
     path: str | Path | UPath,
     particles: pd.DataFrame,
-    receptor: Receptor,
+    release: Receptor,
     settings: Mapping[str, Any],
     met_files: list[Path],
     metadata: dict[bytes, bytes] | None = None,
@@ -271,9 +269,9 @@ def write_particles(
     Write a particle table to a Parquet file that :func:`read_particles` reads alone.
 
     ``age`` and ``particle`` are stored as int32, and ``time`` is left out
-    since it is the receptor time plus ``age``. A ``receptor`` column holds
-    the receptor id, so a scan of many files can tell receptors apart. The
-    receptor, the run's settings, and the met files go in the file's
+    since it is the release time plus ``age``. A ``release`` column holds
+    the release id, so a scan of many files can tell releases apart. The
+    release, the run's settings, and the met files go in the file's
     metadata, so the file reads alone.
 
     Parameters
@@ -282,8 +280,8 @@ def write_particles(
         File to write.
     particles : pandas.DataFrame
         The particle table.
-    receptor : Receptor
-        Receptor the particles were released from.
+    release : Receptor
+        Release the particles were released from.
     settings : mapping
         The run's settings, as its folder records them
         (:attr:`stilt.config.Variant.run_settings`).
@@ -302,7 +300,7 @@ def write_particles(
     ValueError
         If ``age`` or ``particle`` holds a value that is not a whole number.
     """
-    data = particles.drop(columns=["time", "receptor"], errors="ignore")
+    data = particles.drop(columns=["time", "release"], errors="ignore")
     for name in _INT_COLUMNS:
         if name in data.columns:
             values = data[name].to_numpy()
@@ -312,14 +310,14 @@ def write_particles(
     table = pa.Table.from_pandas(data, preserve_index=False)
     table = table.add_column(
         0,
-        pa.field("receptor", pa.dictionary(pa.int32(), pa.string())),
+        pa.field("release", pa.dictionary(pa.int32(), pa.string())),
         pa.DictionaryArray.from_arrays(
             pa.array(np.zeros(table.num_rows, dtype=np.int32)),
-            pa.array([str(receptor.id)]),
+            pa.array([str(release.id)]),
         ),
     )
     meta = {
-        b"stilt:receptor": receptor.to_json().encode(),
+        b"stilt:release": release.to_json().encode(),
         b"stilt:settings": json.dumps(dict(settings)).encode(),
         b"stilt:met_files": json.dumps([str(p) for p in met_files]).encode(),
         **(metadata or {}),
@@ -352,11 +350,11 @@ def needs_height_to_match(
     altitudes: Iterable[float],
 ) -> bool:
     """
-    Return whether a multipoint receptor's particles can be told from their points only by height.
+    Return whether a multipoint release's particles can be told from their points only by height.
 
     :func:`add_release_heights` matches them by height when every point has its
     own altitude and the model writes no release (``t = 0``) rows; for a
-    receptor above sea level that height is ``zagl + zsfc``. Points that share
+    release above sea level that height is ``zagl + zsfc``. Points that share
     an altitude are matched by position, and so are points more than
     ``1000 m`` apart, which position tells apart reliably. This is the one
     case left: every altitude differs and two points are closer than that.
@@ -373,29 +371,29 @@ def needs_height_to_match(
     )
 
 
-def add_release_heights(particles: pd.DataFrame, receptor: Receptor) -> pd.DataFrame:
+def add_release_heights(particles: pd.DataFrame, release: Receptor) -> pd.DataFrame:
     """
-    Return *particles* with each particle's ``release_height``, for a column or multipoint receptor.
+    Return *particles* with each particle's ``release_height``, for a column or multipoint release.
 
     The release row (``age = 0``) says where each particle started. For a
-    multipoint receptor that is one of its points, and ``release_height`` is that
-    point's altitude. For a column receptor it is inside one of the
+    multipoint release that is one of its points, and ``release_height`` is that
+    point's altitude. For a column release it is inside one of the
     ``numpar`` slabs the column is split into, and ``release_height`` is that slab's
     center: the slab is what the particle stands for, not the random
     height inside it. A model that writes no release row, such as HYSPLIT
     5.1.0 (STILT-R's build), falls back to matching: a column's particles are
-    released bottom to top in ``particle`` order, and a multipoint receptor's
+    released bottom to top in ``particle`` order, and a multipoint release's
     are matched to the nearest point from their first row.
 
-    A point receptor's particles are returned as they are.
+    A point release's particles are returned as they are.
     """
-    if isinstance(receptor, ColumnReceptor):
+    if isinstance(release, ColumnReceptor):
         return particles.assign(
-            release_height=_column_release_heights(particles, receptor)
+            release_height=_column_release_heights(particles, release)
         )
-    if isinstance(receptor, MultiPointReceptor):
+    if isinstance(release, MultiPointReceptor):
         return particles.assign(
-            release_height=_multipoint_release_heights(particles, receptor)
+            release_height=_multipoint_release_heights(particles, release)
         )
     return particles
 
@@ -408,20 +406,20 @@ def _release_rows(p: pd.DataFrame) -> pd.DataFrame | None:
     return released
 
 
-def _height(rows: pd.DataFrame, receptor: Receptor) -> np.ndarray | None:
-    """Return the rows' heights in the receptor's vertical reference, or ``None`` when they cannot be known."""
+def _height(rows: pd.DataFrame, release: Receptor) -> np.ndarray | None:
+    """Return the rows' heights in the release's vertical reference, or ``None`` when they cannot be known."""
     if "zagl" not in rows.columns:
         return None
-    if receptor.altitude_ref == "agl":
+    if release.altitude_ref == "agl":
         return rows["zagl"].to_numpy(dtype=float)
     if "zsfc" in rows.columns:
         return (rows["zagl"] + rows["zsfc"]).to_numpy(dtype=float)
     return None
 
 
-def _column_release_heights(p: pd.DataFrame, receptor: ColumnReceptor) -> pd.Series:
+def _column_release_heights(p: pd.DataFrame, release: ColumnReceptor) -> pd.Series:
     """
-    Return each row's release height for a column receptor: the center of its particle's slab.
+    Return each row's release height for a column release: the center of its particle's slab.
 
     The column is split into ``numpar`` slabs of equal depth. With release
     rows, a particle's slab is the one its release height falls in;
@@ -429,23 +427,23 @@ def _column_release_heights(p: pd.DataFrame, receptor: ColumnReceptor) -> pd.Ser
     releases them.
     """
     numpar = int(p["particle"].max())
-    step = (receptor.top - receptor.bottom) / numpar
+    step = (release.top - release.bottom) / numpar
     released = _release_rows(p)
-    height = None if released is None else _height(released, receptor)
+    height = None if released is None else _height(released, release)
     if released is None or height is None:
-        return (p["particle"] - 0.5) * step + receptor.bottom
-    slab = np.clip(np.floor((height - receptor.bottom) / step), 0, numpar - 1)
+        return (p["particle"] - 0.5) * step + release.bottom
+    slab = np.clip(np.floor((height - release.bottom) / step), 0, numpar - 1)
     center = dict(
-        zip(released["particle"], receptor.bottom + (slab + 0.5) * step, strict=True)
+        zip(released["particle"], release.bottom + (slab + 0.5) * step, strict=True)
     )
     return pd.Series(p["particle"].to_numpy(), index=p.index).map(center.get)
 
 
 def _multipoint_release_heights(
-    p: pd.DataFrame, receptor: MultiPointReceptor
+    p: pd.DataFrame, release: MultiPointReceptor
 ) -> pd.Series:
     """
-    Return each row's release altitude for a multipoint receptor.
+    Return each row's release altitude for a multipoint release.
 
     The particle table does not record which point a particle came from.
     It is recovered from each particle's row nearest the release time:
@@ -464,13 +462,13 @@ def _multipoint_release_heights(
         .sort_values("_age", kind="stable")
         .drop_duplicates(subset="particle")
     )
-    lons = np.asarray(receptor.longitudes, dtype=float)
-    lats = np.asarray(receptor.latitudes, dtype=float)
-    alts = np.asarray(receptor.altitudes, dtype=float)
+    lons = np.asarray(release.longitudes, dtype=float)
+    lats = np.asarray(release.latitudes, dtype=float)
+    alts = np.asarray(release.altitudes, dtype=float)
     has_t0 = bool((first["_age"] == 0).all())
 
-    # Height of each particle in the receptor's own vertical reference.
-    height = _height(first, receptor)
+    # Height of each particle in the release's own vertical reference.
+    height = _height(first, release)
 
     if not has_t0 and height is not None and len(np.unique(alts)) == len(alts):
         nearest = np.argmin(np.abs(height[:, None] - alts[None, :]), axis=1)

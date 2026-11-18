@@ -95,7 +95,7 @@ def atomic_path(path: P) -> Iterator[P]:
 
     Write the file to the yielded path inside the ``with`` block. Two workers
     can write the same file at once (the settings of a run they both start,
-    or a receptor run twice by accident). On a filesystem each writes under
+    or a release run twice by accident). On a filesystem each writes under
     its own name and renames it into place, so neither can move or remove
     the other's half-written file, and the last rename wins. The leading
     dot keeps dataset readers from listing a file in progress. The

@@ -7,7 +7,7 @@ import xarray as xr
 
 from tests.fixtures.particles import random_walk
 
-RECEPTOR_TIME = pd.Timestamp("2024-01-15 18:00")
+RELEASE_TIME = pd.Timestamp("2024-01-15 18:00")
 
 
 @pytest.fixture
@@ -50,7 +50,7 @@ def test_obs_counts_steps_from_the_release():
             "zagl": [1.0, 1.0, 1.0],
         }
     )
-    table["time"] = RECEPTOR_TIME + pd.to_timedelta(table["age"], unit="min")
+    table["time"] = RELEASE_TIME + pd.to_timedelta(table["age"], unit="min")
     ds = table.stilt.to_cf_trajectories()
     assert ds.lon.values.tolist() == [[1.0, 2.0, 3.0]]
     # A backward run's time decreases along obs.
@@ -67,7 +67,7 @@ def test_a_forward_run_runs_forward_in_time():
             "zagl": [1.0, 1.0],
         }
     )
-    table["time"] = RECEPTOR_TIME + pd.to_timedelta(table["age"], unit="min")
+    table["time"] = RELEASE_TIME + pd.to_timedelta(table["age"], unit="min")
     ds = table.stilt.to_cf_trajectories()
     expected = np.array(
         ["2024-01-15T18:10", "2024-01-15T18:20"], dtype="datetime64[ns]"

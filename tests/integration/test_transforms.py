@@ -22,7 +22,7 @@ def _footprint_total(footprint) -> float:
 def test_declarative_transform_config_changes_real_footprint(
     tmp_path,
     met_dir,
-    wbb_receptor,
+    wbb_release,
     wbb_grid,
 ):
     """Per-footprint transform specs should affect real footprint output."""
@@ -42,12 +42,12 @@ def test_declarative_transform_config_changes_real_footprint(
     )
 
     project = Project.init(
-        tmp_path / "configured_transforms", config=config, receptors=[wbb_receptor]
+        tmp_path / "configured_transforms", config=config, releases=[wbb_release]
     )
     project.run()
 
-    baseline = project.simulation(wbb_receptor.id, "hrrr").footprint
-    lifetime = project.simulation(wbb_receptor.id, "lifetime").footprint
+    baseline = project.simulation(wbb_release.id, "hrrr").footprint
+    lifetime = project.simulation(wbb_release.id, "lifetime").footprint
     assert baseline is not None and lifetime is not None
 
     assert len(lifetime.stilt.config.transforms) == 1

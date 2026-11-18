@@ -21,7 +21,7 @@ from .conftest import STAND_IN_VERSION
 from .fixtures.factories import (
     make_hysplit_dir,
     make_met_config,
-    make_receptor,
+    make_release,
     write_arl_file,
 )
 
@@ -162,7 +162,7 @@ def test_run_settings_leave_out_what_changes_no_particle(tmp_path):
     recorded = base.run_settings
     assert "directory" not in recorded
     assert set(recorded["model"]) == {"name", "sha256", "data_files"}
-    # Unset, maxpar depends on the receptor (#237), so it is recorded unset,
+    # Unset, maxpar depends on the release (#237), so it is recorded unset,
     # and a set maxpar, which can stop a multipoint release, is another run.
     assert recorded["maxpar"] is None
     capped = _variant(tmp_path, numpar=100, maxpar=100)
@@ -330,7 +330,7 @@ def test_footprints_written_before_tres_are_hourly_and_still_found(tmp_path):
     )
 
     out = Output(tmp_path / "out")
-    store_empty_footprint(out, hourly, make_receptor())
+    store_empty_footprint(out, hourly, make_release())
     folder = out.folder("footprint", hourly)
     _rewrite_record(folder, lambda s: s.pop("tres"))
 

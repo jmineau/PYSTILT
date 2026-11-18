@@ -9,15 +9,15 @@ import stilt
 from stilt.footprint._paris import _particle_locations
 from tests.fixtures.particles import random_walk
 
-RECEPTOR_TIME = pd.Timestamp("2024-01-15 18:00")
-RECEPTOR_ID = "202401151800_-111.85_40.77_5"
+RELEASE_TIME = pd.Timestamp("2024-01-15 18:00")
+RELEASE_ID = "202401151800_-111.85_40.77_5"
 
 
 @pytest.fixture
-def receptor():
-    """A point receptor 5 m above ground in Salt Lake City."""
+def release():
+    """A point release 5 m above ground in Salt Lake City."""
     return stilt.PointReceptor(
-        time=RECEPTOR_TIME.to_pydatetime(),
+        time=RELEASE_TIME.to_pydatetime(),
         longitude=-111.85,
         latitude=40.77,
         altitude=5,
@@ -26,7 +26,7 @@ def receptor():
 
 @pytest.fixture
 def paris_grid():
-    """A 0.1 degree grid around the receptor."""
+    """A 0.1 degree grid around the release."""
     return stilt.Grid(xmin=-113, xmax=-110.5, ymin=40, ymax=42, xres=0.1, yres=0.1)
 
 
@@ -37,15 +37,15 @@ def particles():
 
 
 @pytest.fixture
-def footprint(particles, receptor, paris_grid):
+def footprint(particles, release, paris_grid):
     """An hourly footprint of the random walk, as PYSTILT makes it."""
-    return stilt.calc_footprint(particles, receptor, paris_grid)
+    return stilt.calc_footprint(particles, release, paris_grid)
 
 
 def layered(hours_back, *, dim="time", lat=(40.5, 41.5), lon=(-112.5, -111.5)):
-    """A footprint with a layer starting each of *hours_back* hours before the receptor time; its value is that number."""
+    """A footprint with a layer starting each of *hours_back* hours before the release time; its value is that number."""
     hours_back = sorted(hours_back, reverse=True)  # layers in time order
-    starts = RECEPTOR_TIME - pd.to_timedelta(hours_back, unit="h")
+    starts = RELEASE_TIME - pd.to_timedelta(hours_back, unit="h")
     values = np.array(hours_back, dtype=float)[:, None, None] * np.ones(
         (1, len(lat), len(lon))
     )
@@ -53,15 +53,15 @@ def layered(hours_back, *, dim="time", lat=(40.5, 41.5), lon=(-112.5, -111.5)):
         values,
         dims=(dim, "lat", "lon"),
         coords={"time": (dim, starts), "lat": list(lat), "lon": list(lon)},
-    ).assign_coords(receptor=RECEPTOR_ID)
+    ).assign_coords(release=RELEASE_ID)
 
 
-def test_the_hour_before_the_receptor_time_is_h_back_1():
+def test_the_hour_before_the_release_time_is_h_back_1():
     ds = layered([1, 2, 3]).stilt.to_paris()
     per_hour = ds.srr_time_resolved.isel(time=0, latitude=0, longitude=0).values
     # Each layer's value is its hours back, so it must land at that H_back.
     assert per_hour.tolist() == [0, 1, 2, 3] + [0] * 20
-    assert per_hour[0] == 0  # the hour after the receptor time stays empty
+    assert per_hour[0] == 0  # the hour after the release time stays empty
 
 
 def test_layers_24_hours_back_and_older_go_to_the_residual():
@@ -76,20 +76,20 @@ def test_layers_24_hours_back_and_older_go_to_the_residual():
 
 
 def test_the_layer_dimension_may_have_any_name():
-    # One receptor of project.footprints(): time runs along the layer dimension.
+    # One release of project.footprints(): time runs along the layer dimension.
     for dim in ("hour", "layer"):
         renamed = layered([1, 2, 3], dim=dim).stilt.to_paris()
         xr.testing.assert_identical(renamed, layered([1, 2, 3]).stilt.to_paris())
 
 
-def test_a_receptor_of_project_footprints():
+def test_a_release_of_project_footprints():
     one = layered([3, 2, 1], dim="hour")
     many = xr.concat(
-        [one.drop_vars("receptor"), one.drop_vars("receptor")], dim="receptor"
-    ).assign_coords(receptor=[RECEPTOR_ID, "202401151900_-111.85_40.77_5"])
-    first = many.sel(receptor=RECEPTOR_ID).stilt.to_paris()
+        [one.drop_vars("release"), one.drop_vars("release")], dim="release"
+    ).assign_coords(release=[RELEASE_ID, "202401151900_-111.85_40.77_5"])
+    first = many.sel(release=RELEASE_ID).stilt.to_paris()
     xr.testing.assert_identical(first, one.stilt.to_paris())
-    with pytest.raises(ValueError, match="Select one receptor"):
+    with pytest.raises(ValueError, match="Select one release"):
         many.stilt.to_paris()
 
 
@@ -101,8 +101,8 @@ def test_layout_and_metadata():
     assert ds.srr.attrs["units"] == "(mol/mol)/(mol/m2/s)"
     assert ds.resolution.values.tolist() == list(range(24))
     assert ds.resolution.attrs["units"] == "hours"
-    assert ds.time.values.tolist() == [RECEPTOR_TIME.value]
-    assert ds.attrs["receptor"] == RECEPTOR_ID
+    assert ds.time.values.tolist() == [RELEASE_TIME.value]
+    assert ds.attrs["release"] == RELEASE_ID
     assert "height" not in ds.dims  # no particles, no particle_locations
 
 
@@ -114,7 +114,7 @@ def test_a_pystilt_footprint(footprint):
     # 48 hours of particles: the last 24 layers are the residual.
     np.testing.assert_allclose(
         ds.srr_residual.isel(time=0).values,
-        footprint.where(footprint.time < RECEPTOR_TIME - pd.Timedelta("23h"), 0)
+        footprint.where(footprint.time < RELEASE_TIME - pd.Timedelta("23h"), 0)
         .sum("time")
         .values,
         rtol=1e-12,
@@ -122,8 +122,8 @@ def test_a_pystilt_footprint(footprint):
 
 
 @pytest.mark.parametrize("tres", ["15min", "1D", "2h"])
-def test_layers_other_than_an_hour_are_refused(particles, receptor, paris_grid, tres):
-    foot = stilt.calc_footprint(particles, receptor, paris_grid, tres=tres)
+def test_layers_other_than_an_hour_are_refused(particles, release, paris_grid, tres):
+    foot = stilt.calc_footprint(particles, release, paris_grid, tres=tres)
     with pytest.raises(ValueError, match=f"layers are {tres} long"):
         foot.stilt.to_paris()
 
@@ -148,9 +148,9 @@ def test_a_projected_grid_is_refused():
         foot.stilt.to_paris()
 
 
-def test_a_footprint_without_its_receptor_is_refused():
-    with pytest.raises(ValueError, match="receptor id"):
-        layered([1, 2]).drop_vars("receptor").stilt.to_paris()
+def test_a_footprint_without_its_release_is_refused():
+    with pytest.raises(ValueError, match="release id"):
+        layered([1, 2]).drop_vars("release").stilt.to_paris()
 
 
 # A grid of 4 longitudes (-113 to -109) by 3 latitudes (40 to 43), 1 degree cells.
@@ -309,11 +309,11 @@ def test_a_footprint_without_settings_cannot_find_exits(particles):
         foot.stilt.to_paris(particles)
 
 
-def test_many_receptors_concatenate_and_write(tmp_path):
+def test_many_releases_concatenate_and_write(tmp_path):
     first = layered([1, 2, 3], lat=LAT, lon=LON).stilt.to_paris()
     later = layered([1, 2, 3], lat=LAT, lon=LON).assign_coords(
-        receptor="202401151900_-111.85_40.77_5",
-        time=("time", RECEPTOR_TIME + pd.to_timedelta([-2, -1, 0], unit="h")),
+        release="202401151900_-111.85_40.77_5",
+        time=("time", RELEASE_TIME + pd.to_timedelta([-2, -1, 0], unit="h")),
     )
     ds = xr.concat(
         [first, later.stilt.to_paris()], dim="time", combine_attrs="drop_conflicts"
@@ -322,7 +322,7 @@ def test_many_receptors_concatenate_and_write(tmp_path):
     ds.to_netcdf(path)
     with xr.open_dataset(path, decode_timedelta=False) as back:
         assert back.time.values.tolist() == [
-            RECEPTOR_TIME.value,
-            (RECEPTOR_TIME + pd.Timedelta("1h")).value,
+            RELEASE_TIME.value,
+            (RELEASE_TIME + pd.Timedelta("1h")).value,
         ]
         np.testing.assert_array_equal(back.srr.values, ds.srr.values)

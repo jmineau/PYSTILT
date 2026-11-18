@@ -4,7 +4,7 @@ Where to release particles for a sounding.
 Points spread over a pixel (:func:`jitter_points`), points along a slant
 line of sight (:func:`slant_points`), and the altitudes of a retrieval's
 pressure levels to place them at (:func:`pressure_altitudes`).
-:func:`receptors_from_soundings` makes a receptor for each row of a
+:func:`releases_from_soundings` makes a release for each row of a
 reader's table, and their averaging-kernel table.
 """
 
@@ -20,7 +20,7 @@ import pandas as pd
 from numpy.typing import ArrayLike
 from shapely.geometry import Point, Polygon
 
-from stilt.receptors import ColumnReceptor, Receptor
+from stilt.releases import ColumnReceptor, Receptor
 from stilt.transforms import averaging_kernel_table
 
 JitterMethod = Literal["regular", "random"]
@@ -229,8 +229,8 @@ def jitter_points(
     """
     Return ``(longitude, latitude)`` points spread over one pixel.
 
-    Running several receptors across a large pixel and averaging their
-    footprints represents the pixel better than one receptor at its center.
+    Running several releases across a large pixel and averaging their
+    footprints represents the pixel better than one release at its center.
     This is X-STILT's ``jitterTF``.
 
     Parameters
@@ -259,14 +259,14 @@ def jitter_points(
     raise ValueError(f"Unknown jitter method: {method!r}")
 
 
-# -- receptors from a table of soundings ----------------------------------------
+# -- releases from a table of soundings ----------------------------------------
 
 
-def receptors_from_soundings(
+def releases_from_soundings(
     soundings: pd.DataFrame, kind: Literal["column", "slant"], *, top: float
 ) -> tuple[list[Receptor], pd.DataFrame | None]:
     """
-    Return a receptor for each sounding, and their averaging-kernel table.
+    Return a release for each sounding, and their averaging-kernel table.
 
     Parameters
     ----------
@@ -281,15 +281,15 @@ def receptors_from_soundings(
         along the line of sight given by ``zenith`` and ``azimuth``
         (:func:`slant_points`), above sea level.
     top : float
-        Height of the receptor's top above the surface, in meters.
+        Height of the release's top above the surface, in meters.
 
     Returns
     -------
-    receptors : list of Receptor
+    releases : list of Receptor
         One per sounding, in table order, each with the ``sounding_id`` as
-        an attribute (a column of ``receptors.csv``).
+        an attribute (a column of ``releases.csv``).
     kernels : pandas.DataFrame or None
-        The averaging kernels by receptor
+        The averaging kernels by release
         (:func:`~stilt.transforms.averaging_kernel_table`), for
         ``project.add_table("kernels", kernels)``. ``None`` when the
         soundings have no kernel (GGG ``.oof`` files).
@@ -297,7 +297,7 @@ def receptors_from_soundings(
     Raises
     ------
     ValueError
-        If a slant receptor's columns (``altitude_levels``, ``zenith``,
+        If a slant release's columns (``altitude_levels``, ``zenith``,
         ``azimuth``) are missing. For OCO-2, which gives pressures only,
         add ``altitude_levels`` from :func:`pressure_altitudes` first.
 
@@ -306,10 +306,10 @@ def receptors_from_soundings(
     >>> df = read_tropomi_ch4(
     ...     path, lon_range=(-113.5, -110.5), lat_range=(39.5, 42)
     ... )  # doctest: +SKIP
-    >>> receptors, kernels = receptors_from_soundings(
+    >>> releases, kernels = releases_from_soundings(
     ...     df[df.good], "slant", top=3000
     ... )  # doctest: +SKIP
-    >>> project.add_receptors(receptors)  # doctest: +SKIP
+    >>> project.add_releases(releases)  # doctest: +SKIP
     >>> project.add_table("kernels", kernels)  # doctest: +SKIP
     """
     if kind not in ("column", "slant"):
@@ -319,15 +319,15 @@ def receptors_from_soundings(
         missing = [c for c in needed if c not in soundings.columns]
         if missing:
             raise ValueError(
-                f"A slant receptor needs the columns {missing}. For a product "
+                f"A slant release needs the columns {missing}. For a product "
                 "with pressures only (OCO-2), add altitude_levels from "
                 "pressure_altitudes."
             )
-    receptors: list[Receptor] = []
+    releases: list[Receptor] = []
     for row in soundings.to_dict("records"):
         attrs = {"sounding_id": str(row["sounding_id"])}
         if kind == "column":
-            receptors.append(
+            releases.append(
                 ColumnReceptor(
                     time=row["time"],
                     longitude=float(row["longitude"]),
@@ -347,22 +347,22 @@ def receptors_from_soundings(
             zenith=float(row["zenith"]),
             azimuth=float(row["azimuth"]),
         )
-        receptors.append(
+        releases.append(
             Receptor.from_points(row["time"], points, altitude_ref="msl", attrs=attrs)
         )
     kernels = None
     if "ak" in soundings.columns and "ak_pressure" in soundings.columns:
         kernels = averaging_kernel_table(
-            receptors,
+            releases,
             levels=list(soundings["ak_pressure"]),
             values=list(soundings["ak"]),
         )
-    return receptors, kernels
+    return releases, kernels
 
 
 __all__ = [
     "jitter_points",
     "pressure_altitudes",
-    "receptors_from_soundings",
+    "releases_from_soundings",
     "slant_points",
 ]

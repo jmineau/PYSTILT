@@ -33,7 +33,7 @@ dependencies = [
     "pandas>=2.1",  # xarray 2024.10 needs it
     "pyarrow>=14.0",
     "pyproj>=3.5",
-    "pydantic>=2.1.0",  # 2.0 fails the receptor tests (unhashable dict)
+    "pydantic>=2.1.0",  # 2.0 fails the release tests (unhashable dict)
     "pyyaml>=6.0",
     "scipy>=1.10",
     "shapely>=2.0",
@@ -132,7 +132,7 @@ exclude_type_checking_imports = true
 # The package in layers, top to bottom: a module may import the layers
 # below it, never those above. Modules that import each other share a layer
 # (joined by ":"); "|" joins modules that must not. The observation layer
-# sits above the transport core, which runs without it; receptors and the
+# sits above the transport core, which runs without it; releases and the
 # raster layer import nothing above them; a transport model's package, in
 # the transport layer, does not import the project config. The migration
 # module writes imported runs into an output directory through variants, so
@@ -162,7 +162,7 @@ layers = [
     "stilt_particles",
     "particles",
     "stilt_visualization",
-    "receptors : visualization",
+    "releases : visualization",
     "transforms",
     "sampling",
     "spatial",
@@ -209,7 +209,7 @@ forbidden_modules = [
 ]
 allow_indirect_imports = true
 
-# The core that makes particle runs (receptors and variants, settings
+# The core that makes particle runs (releases and variants, settings
 # folders, completion by file, run and submit, the met catalog, the transport
 # models) is kept apart from what STILT adds on top of the particles:
 # footprints (foot and the near-field correction among them), transforms,
@@ -334,7 +334,7 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 # Tests need no docstrings, and a fixture's names what it provides ("A point
-# receptor."); the other docstring rules still apply to them.
+# release."); the other docstring rules still apply to them.
 "tests/**" = ["D100", "D101", "D102", "D103", "D104", "D106", "D107", "D401"]
 
 [tool.ruff.lint.pydocstyle]

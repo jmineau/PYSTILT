@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from stilt.config import ProjectConfig
-from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor
+from stilt.releases import ColumnReceptor, MultiPointReceptor, PointReceptor
 from stilt.spatial import Grid
 from tests.fixtures.factories import blocks
 
@@ -174,13 +174,13 @@ def met_dir() -> Path:
 
 
 # ---------------------------------------------------------------------------
-# Receptor fixtures
+# Release fixtures
 # ---------------------------------------------------------------------------
 
 
 @pytest.fixture
-def point_receptor():
-    """A simple single-point receptor."""
+def point_release():
+    """A simple single-point release."""
     return PointReceptor(
         time=dt.datetime(2023, 1, 1, 12, 0),
         longitude=-111.85,
@@ -190,8 +190,8 @@ def point_receptor():
 
 
 @pytest.fixture
-def column_receptor():
-    """A vertical-column receptor (two heights, same lon/lat)."""
+def column_release():
+    """A vertical-column release (two heights, same lon/lat)."""
     return ColumnReceptor(
         time=dt.datetime(2023, 1, 1, 12, 0),
         longitude=-111.85,
@@ -202,8 +202,8 @@ def column_receptor():
 
 
 @pytest.fixture
-def multipoint_receptor():
-    """A multi-point receptor (three different locations)."""
+def multipoint_release():
+    """A multi-point release (three different locations)."""
     return MultiPointReceptor(
         time=dt.datetime(2023, 1, 1, 12, 0),
         longitudes=[-111.85, -111.86, -111.84],

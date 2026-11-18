@@ -105,8 +105,8 @@ class WorkerDied(StiltError, RuntimeError):
 
     A run on ``cpus`` above 1 raises it when a worker is killed outright
     (``SIGKILL``, as the kernel's out-of-memory killer sends). The pool
-    cannot say which receptor the worker held, so the message names every
-    receptor that was in progress. What finished is kept and nothing is marked
+    cannot say which release the worker held, so the message names every
+    release that was in progress. What finished is kept and nothing is marked
     failed: run again, and only what is missing runs. ``stilt run`` ends
     with exit code 3.
     """

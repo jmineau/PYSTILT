@@ -37,13 +37,13 @@ from ...fixtures.factories import make_hysplit_dir, make_met_config, make_met_fi
 
 
 def _make_control(
-    receptor, n_hours=-24, met_files=None, emisshrs=0.01, w_option=0, z_top=25000.0
+    release, n_hours=-24, met_files=None, emisshrs=0.01, w_option=0, z_top=25000.0
 ):
     if met_files is None:
         met_files = [Path("/met/hrrr_2023010100")]
     return ControlFile(
-        release_time=receptor.time,
-        locations=receptor.coords(),
+        release_time=release.time,
+        locations=release.coords(),
         emisshrs=emisshrs,
         n_hours=n_hours,
         w_option=w_option,
@@ -53,58 +53,58 @@ def _make_control(
 
 
 # ---------------------------------------------------------------------------
-# ControlFile.write / .read roundtrip - single-point receptor
+# ControlFile.write / .read roundtrip - single-point release
 # ---------------------------------------------------------------------------
 
 
-def test_control_file_roundtrip_single_point(point_receptor, tmp_path):
-    cf = _make_control(point_receptor)
+def test_control_file_roundtrip_single_point(point_release, tmp_path):
+    cf = _make_control(point_release)
     path = tmp_path / "CONTROL"
     cf.write(path)
     loaded = ControlFile.read(path)
 
-    assert loaded.release_time == point_receptor.time
-    assert loaded.locations == point_receptor.coords()
+    assert loaded.release_time == point_release.time
+    assert loaded.locations == point_release.coords()
     assert loaded.n_hours == -24
     assert loaded.w_option == 0
     assert loaded.z_top == 25000.0
     assert len(loaded.met_files) == 1
 
 
-def test_control_file_roundtrip_emisshrs(point_receptor, tmp_path):
-    cf = _make_control(point_receptor, emisshrs=0.5)
+def test_control_file_roundtrip_emisshrs(point_release, tmp_path):
+    cf = _make_control(point_release, emisshrs=0.5)
     path = tmp_path / "CONTROL"
     cf.write(path)
     loaded = ControlFile.read(path)
     assert loaded.emisshrs == pytest.approx(0.5)
 
 
-def test_control_file_roundtrip_fractional_emisshrs(point_receptor, tmp_path):
-    cf = _make_control(point_receptor, emisshrs=0.01)
+def test_control_file_roundtrip_fractional_emisshrs(point_release, tmp_path):
+    cf = _make_control(point_release, emisshrs=0.01)
     path = tmp_path / "CONTROL"
     cf.write(path)
     loaded = ControlFile.read(path)
     assert loaded.emisshrs == pytest.approx(0.01)
 
 
-def test_control_file_roundtrip_n_hours_forward(point_receptor, tmp_path):
-    cf = _make_control(point_receptor, n_hours=24)
+def test_control_file_roundtrip_n_hours_forward(point_release, tmp_path):
+    cf = _make_control(point_release, n_hours=24)
     path = tmp_path / "CONTROL"
     cf.write(path)
     loaded = ControlFile.read(path)
     assert loaded.n_hours == 24
 
 
-def test_control_file_roundtrip_release_time(point_receptor, tmp_path):
-    cf = _make_control(point_receptor)
+def test_control_file_roundtrip_release_time(point_release, tmp_path):
+    cf = _make_control(point_release)
     path = tmp_path / "CONTROL"
     cf.write(path)
     loaded = ControlFile.read(path)
-    assert loaded.release_time == point_receptor.time
+    assert loaded.release_time == point_release.time
 
 
 def test_control_file_lists_a_location_as_latitude_longitude_height(tmp_path):
-    """CONTROL's order, which is not the (lon, lat, height) of a receptor's points."""
+    """CONTROL's order, which is not the (lon, lat, height) of a release's points."""
     path = tmp_path / "CONTROL"
     ControlFile(
         release_time=dt.datetime(2023, 7, 15, 18, 5),
@@ -128,12 +128,12 @@ def test_control_file_lists_a_location_as_latitude_longitude_height(tmp_path):
     ]
 
 
-def test_control_file_roundtrip_multiple_met_files(point_receptor, tmp_path):
+def test_control_file_roundtrip_multiple_met_files(point_release, tmp_path):
     met = [
         Path("/met/hrrr_2022123100"),
         Path("/met/hrrr_2023010100"),
     ]
-    cf = _make_control(point_receptor, met_files=met)
+    cf = _make_control(point_release, met_files=met)
     path = tmp_path / "CONTROL"
     cf.write(path)
     loaded = ControlFile.read(path)
@@ -142,11 +142,11 @@ def test_control_file_roundtrip_multiple_met_files(point_receptor, tmp_path):
     assert loaded.met_files[1].name == "hrrr_2023010100"
 
 
-def test_control_lists_the_met_files_as_one_grid(point_receptor, tmp_path):
+def test_control_lists_the_met_files_as_one_grid(point_release, tmp_path):
     """HYSPLIT reads at most 12 grids but 128 files of one grid."""
     met = [Path(f"/met/hrrr_{i:02d}") for i in range(20)]
     path = tmp_path / "CONTROL"
-    _make_control(point_receptor, met_files=met).write(path)
+    _make_control(point_release, met_files=met).write(path)
 
     lines = path.read_text().splitlines()
     count = lines.index("/met/") - 1
@@ -154,34 +154,34 @@ def test_control_lists_the_met_files_as_one_grid(point_receptor, tmp_path):
     assert [f.name for f in ControlFile.read(path).met_files] == [m.name for m in met]
 
 
-def test_control_reads_a_met_count_of_one_file_per_grid(point_receptor, tmp_path):
+def test_control_reads_a_met_count_of_one_file_per_grid(point_release, tmp_path):
     """A CONTROL file written by STILT-R gives a bare count."""
     met = [Path("/met/hrrr_a"), Path("/met/hrrr_b")]
     path = tmp_path / "CONTROL"
-    _make_control(point_receptor, met_files=met).write(path)
+    _make_control(point_release, met_files=met).write(path)
     path.write_text(path.read_text().replace("\n1 2\n", "\n2\n"))
 
     assert [f.name for f in ControlFile.read(path).met_files] == ["hrrr_a", "hrrr_b"]
 
 
-def test_control_file_roundtrip_column_receptor(column_receptor, tmp_path):
-    cf = _make_control(column_receptor)
+def test_control_file_roundtrip_column_release(column_release, tmp_path):
+    cf = _make_control(column_release)
     path = tmp_path / "CONTROL"
     cf.write(path)
     loaded = ControlFile.read(path)
-    assert loaded.locations == column_receptor.coords()
+    assert loaded.locations == column_release.coords()
     assert [height for _, _, height in loaded.locations] == [
-        column_receptor.bottom,
-        column_receptor.top,
+        column_release.bottom,
+        column_release.top,
     ]
 
 
-def test_control_file_roundtrip_multipoint_receptor(multipoint_receptor, tmp_path):
-    cf = _make_control(multipoint_receptor)
+def test_control_file_roundtrip_multipoint_release(multipoint_release, tmp_path):
+    cf = _make_control(multipoint_release)
     path = tmp_path / "CONTROL"
     cf.write(path)
     loaded = ControlFile.read(path)
-    assert loaded.locations == multipoint_receptor.coords()
+    assert loaded.locations == multipoint_release.coords()
 
 
 def test_control_file_read_missing_raises(tmp_path):
@@ -210,11 +210,11 @@ def _fake_build(path: Path, marker: str = "fake binary") -> Path:
     return path
 
 
-def _inputs(tmp_path, receptor, config=None) -> Path:
-    """Write the input files for *receptor*, as the model does, and return the working directory."""
+def _inputs(tmp_path, release, config=None) -> Path:
+    """Write the input files for *release*, as the model does, and return the working directory."""
     workdir = tmp_path / "run"
     model._write_inputs(
-        workdir, receptor, config or _config(), [tmp_path / "met" / "dummy"]
+        workdir, release, config or _config(), [tmp_path / "met" / "dummy"]
     )
     return workdir
 
@@ -531,37 +531,35 @@ def _ending_at(minute: int) -> list[list[float]]:
     return [[t, 1, -100.0, 40.7, 10.0, 0.0] for t in times]
 
 
-def _run(tmp_path, receptor, config=None):
+def _run(tmp_path, release, config=None):
     from stilt.meteorology import run_window
 
     config = config or _config()
-    make_met_files(tmp_path / "met", receptor.time, config.n_hours)
+    make_met_files(tmp_path / "met", release.time, config.n_hours)
     met = make_met_config(tmp_path / "met")
-    window = run_window(receptor.time, config.n_hours)
+    window = run_window(release.time, config.n_hours)
     (tmp_path / "run").mkdir(exist_ok=True)
-    return HysplitModel().run(
-        receptor, config, met, window, tmp_path / "run", timeout=5
-    )
+    return HysplitModel().run(release, config, met, window, tmp_path / "run", timeout=5)
 
 
 def test_a_run_whose_particles_left_the_domain_early_is_complete(
-    tmp_path, point_receptor, monkeypatch
+    tmp_path, point_release, monkeypatch
 ):
     """Particles that stop short with no met failure are a domain exit, kept for any model (#189)."""
     from stilt.transport import run_model
 
     _fake_hysplit(monkeypatch, log="", rows=_ending_at(13 * 60))
-    make_met_files(tmp_path / "met", point_receptor.time, -24)
+    make_met_files(tmp_path / "met", point_release.time, -24)
     met = make_met_config(tmp_path / "met")
     (tmp_path / "run").mkdir()
 
-    run = run_model("hysplit", point_receptor, _config(), met, tmp_path / "run")
+    run = run_model("hysplit", point_release, _config(), met, tmp_path / "run")
 
     assert run.particles["age"].min() == -13 * 60
 
 
 def test_run_keeps_a_run_that_reaches_the_end_past_a_damaged_met_file(
-    tmp_path, point_receptor, monkeypatch
+    tmp_path, point_release, monkeypatch
 ):
     _fake_hysplit(
         monkeypatch,
@@ -569,11 +567,11 @@ def test_run_keeps_a_run_that_reaches_the_end_past_a_damaged_met_file(
         rows=_ending_at(24 * 60),
     )
 
-    assert _run(tmp_path, point_receptor).particles["age"].min() == -24 * 60
+    assert _run(tmp_path, point_release).particles["age"].min() == -24 * 60
 
 
 def test_run_leaves_an_empty_particle_file_to_the_caller(
-    tmp_path, point_receptor, monkeypatch
+    tmp_path, point_release, monkeypatch
 ):
     _fake_hysplit(
         monkeypatch,
@@ -581,33 +579,33 @@ def test_run_leaves_an_empty_particle_file_to_the_caller(
         rows=[],
     )
 
-    assert _run(tmp_path, point_receptor).particles.empty
+    assert _run(tmp_path, point_release).particles.empty
 
 
 def test_run_leaves_particles_that_stop_early_to_the_caller(
-    tmp_path, point_receptor, monkeypatch
+    tmp_path, point_release, monkeypatch
 ):
     """Particles that all left the met's domain before the end are a run."""
     _fake_hysplit(monkeypatch, log="", rows=_ending_at(13 * 60))
 
-    assert _run(tmp_path, point_receptor).particles["age"].min() == -13 * 60
+    assert _run(tmp_path, point_release).particles["age"].min() == -13 * 60
 
 
 def test_a_run_with_zcfx_in_varsiwant_gives_a_zcfx_column(
-    tmp_path, point_receptor, monkeypatch
+    tmp_path, point_release, monkeypatch
 ):
     """`zcfx` is a column of the particles under that name, as in STILT-R (#324)."""
     from stilt.transport import run_model
 
     rows = [[*row, 2.5] for row in _ending_at(24 * 60)]
     _fake_hysplit(monkeypatch, log="", rows=rows)
-    make_met_files(tmp_path / "met", point_receptor.time, -24)
+    make_met_files(tmp_path / "met", point_release.time, -24)
     met = make_met_config(tmp_path / "met")
     (tmp_path / "run").mkdir()
 
     run = run_model(
         "hysplit",
-        point_receptor,
+        point_release,
         _config(varsiwant=[*VARS, "zcfx"]),
         met,
         tmp_path / "run",
@@ -618,11 +616,11 @@ def test_a_run_with_zcfx_in_varsiwant_gives_a_zcfx_column(
     assert entries["varsiwant"][-1] == "zcfx"
 
 
-def test_run_without_a_particle_file_fails(tmp_path, point_receptor, monkeypatch):
+def test_run_without_a_particle_file_fails(tmp_path, point_release, monkeypatch):
     _fake_hysplit(monkeypatch, log="", rows=None)
 
     with pytest.raises(SimulationError, match="PARTICLE_STILT.DAT") as caught:
-        _run(tmp_path, point_receptor)
+        _run(tmp_path, point_release)
     assert caught.value.reason == FailureReason.NO_PARTICLE_DATA
 
 
@@ -630,37 +628,37 @@ PUFF_LIMIT = " WARNING emspnt: exceeding puff limit\n"
 
 
 def test_a_multipoint_release_cut_short_by_maxpar_fails(
-    tmp_path, multipoint_receptor, monkeypatch
+    tmp_path, multipoint_release, monkeypatch
 ):
     """HYSPLIT's puff-limit warning means the last locations got fewer particles (#237)."""
     _fake_hysplit(monkeypatch, log="", rows=_ending_at(24 * 60), warning=PUFF_LIMIT)
 
     with pytest.raises(SimulationError, match="3 release locations") as caught:
-        _run(tmp_path, multipoint_receptor, _config(maxpar=10))
+        _run(tmp_path, multipoint_release, _config(maxpar=10))
     assert caught.value.reason == FailureReason.PARTICLE_LIMIT
     assert "Raise maxpar or leave it unset" in str(caught.value)
 
 
 def test_a_point_release_at_the_puff_limit_is_a_run(
-    tmp_path, point_receptor, column_receptor, monkeypatch
+    tmp_path, point_release, column_release, monkeypatch
 ):
     """From one location HYSPLIT asks for numpar + 1 and keeps numpar, which is harmless."""
     _fake_hysplit(monkeypatch, log="", rows=_ending_at(24 * 60), warning=PUFF_LIMIT)
 
-    assert not _run(tmp_path / "point", point_receptor).particles.empty
-    assert not _run(tmp_path / "column", column_receptor).particles.empty
+    assert not _run(tmp_path / "point", point_release).particles.empty
+    assert not _run(tmp_path / "column", column_release).particles.empty
 
 
 def test_a_multipoint_release_without_the_warning_is_a_run(
-    tmp_path, multipoint_receptor, monkeypatch
+    tmp_path, multipoint_release, monkeypatch
 ):
     _fake_hysplit(monkeypatch, log="", rows=_ending_at(24 * 60))
 
-    assert not _run(tmp_path, multipoint_receptor).particles.empty
+    assert not _run(tmp_path, multipoint_release).particles.empty
 
 
 def test_a_perturbed_run_is_one_hycs_std_call_with_winderr(
-    tmp_path, point_receptor, monkeypatch
+    tmp_path, point_release, monkeypatch
 ):
     # East of the test met's grid, so the run's early end is a domain exit.
     calls = _fake_hysplit(
@@ -668,7 +666,7 @@ def test_a_perturbed_run_is_one_hycs_std_call_with_winderr(
     )
     config = _config(siguverr=1.0, tluverr=60.0, zcoruverr=500.0, horcoruverr=40.0)
 
-    result = _run(tmp_path, point_receptor, config)
+    result = _run(tmp_path, point_release, config)
 
     workdir = tmp_path / "run"
     assert calls == [5]
@@ -826,25 +824,25 @@ def _rows_inside(minute: int) -> list[list[float]]:
 
 
 def test_run_fails_a_run_whose_particles_stopped_inside_the_met(
-    tmp_path, point_receptor, monkeypatch
+    tmp_path, point_release, monkeypatch
 ):
     _fake_hysplit(monkeypatch, log=" Complete Hysplit\n", rows=_rows_inside(360))
     monkeypatch.setattr(model, "_met_grid", lambda path: _grid())
 
     with pytest.raises(SimulationError, match="the met ran out") as caught:
-        _run(tmp_path, point_receptor)
+        _run(tmp_path, point_release)
     assert caught.value.reason == FailureReason.MET_COVERAGE
     assert caught.value.log == " Complete Hysplit\n"
 
 
 def test_run_does_not_check_where_particles_stopped_when_outdt_is_set(
-    tmp_path, point_receptor, monkeypatch
+    tmp_path, point_release, monkeypatch
 ):
     """With a row only every outdt minutes, a particle's last row can be far from where it left."""
     _fake_hysplit(monkeypatch, log="", rows=_rows_inside(360))
     monkeypatch.setattr(model, "_met_grid", lambda path: _grid())
 
-    run = _run(tmp_path, point_receptor, _config(outdt=60))
+    run = _run(tmp_path, point_release, _config(outdt=60))
 
     assert run.particles["age"].min() == -360
 
@@ -862,43 +860,43 @@ def test_met_grid_is_the_grid_of_a_met_file(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def _setup_cfg(tmp_path, receptor, config=None) -> str:
-    return (_inputs(tmp_path, receptor, config) / "SETUP.CFG").read_text().lower()
+def _setup_cfg(tmp_path, release, config=None) -> str:
+    return (_inputs(tmp_path, release, config) / "SETUP.CFG").read_text().lower()
 
 
-def test_setup_cfg_holds_the_settings_and_kmsl(tmp_path, point_receptor):
-    content = _setup_cfg(tmp_path, point_receptor)
+def test_setup_cfg_holds_the_settings_and_kmsl(tmp_path, point_release):
+    content = _setup_cfg(tmp_path, point_release)
     assert "numpar" in content
     assert "varsiwant" in content
     assert "kmsl=0" in content
     assert "seed=" not in content
 
 
-def test_setup_cfg_includes_the_seed_when_configured(tmp_path, point_receptor):
+def test_setup_cfg_includes_the_seed_when_configured(tmp_path, point_release):
     content = _setup_cfg(
-        tmp_path, point_receptor, HysplitConfig(n_hours=-24, seed=17, krand=2)
+        tmp_path, point_release, HysplitConfig(n_hours=-24, seed=17, krand=2)
     )
     assert "seed=-18" in content  # -(|seed|+1): the value HYSPLIT honours
     assert "winderrtf=0" in content
 
 
-def test_setup_cfg_sets_winderrtf_from_error_settings(tmp_path, point_receptor):
+def test_setup_cfg_sets_winderrtf_from_error_settings(tmp_path, point_release):
     config = _config(siguverr=1.0, tluverr=60.0, zcoruverr=500.0, horcoruverr=40.0)
-    assert "winderrtf=1" in _setup_cfg(tmp_path, point_receptor, config)
+    assert "winderrtf=1" in _setup_cfg(tmp_path, point_release, config)
 
 
-def test_setup_cfg_takes_kmsl_from_an_msl_receptor(tmp_path, point_receptor):
-    receptor = point_receptor.model_copy(
+def test_setup_cfg_takes_kmsl_from_an_msl_release(tmp_path, point_release):
+    release = point_release.model_copy(
         update={"altitude": 1500.0, "altitude_ref": "msl"}
     )
-    assert "kmsl=1" in _setup_cfg(tmp_path, receptor)
+    assert "kmsl=1" in _setup_cfg(tmp_path, release)
 
 
-def test_read_namelist_reads_the_setup_cfg_written(tmp_path, point_receptor):
+def test_read_namelist_reads_the_setup_cfg_written(tmp_path, point_release):
     from stilt.transport.hysplit.namelist import read_namelist
 
     config = HysplitConfig(n_hours=-24, numpar=150, wvert=True)
-    entries = read_namelist(_inputs(tmp_path, point_receptor, config) / "SETUP.CFG")
+    entries = read_namelist(_inputs(tmp_path, point_release, config) / "SETUP.CFG")
     assert entries["numpar"] == 150
     assert entries["dzf"] == 0.01
     assert entries["wvert"] is True
@@ -919,14 +917,14 @@ def test_read_namelist_rejects_a_file_that_is_not_one(tmp_path):
         read_namelist(path)
 
 
-def test_kmsl_comes_only_from_the_receptor():
-    """KMSL follows each receptor's altitude_ref; there is no setting to contradict it."""
+def test_kmsl_comes_only_from_the_release():
+    """KMSL follows each release's altitude_ref; there is no setting to contradict it."""
     with pytest.raises(ValueError, match="kmsl"):
         HysplitConfig(n_hours=-24, kmsl=0)
 
 
 def test_write_inputs_takes_a_release_time_and_release_locations(tmp_path):
-    """HYSPLIT's own inputs, with no receptor: CONTROL's first lines, KMSL and MAXPAR."""
+    """HYSPLIT's own inputs, with no release: CONTROL's first lines, KMSL and MAXPAR."""
     workdir = tmp_path / "run"
     write_inputs(
         workdir,
@@ -964,8 +962,8 @@ def test_write_inputs_takes_heights_as_above_ground_unless_told(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_inputs_hold_control_setup_and_the_binary(tmp_path, point_receptor):
-    workdir = _inputs(tmp_path, point_receptor)
+def test_inputs_hold_control_setup_and_the_binary(tmp_path, point_release):
+    workdir = _inputs(tmp_path, point_release)
 
     assert (workdir / "CONTROL").exists()
     assert (workdir / "SETUP.CFG").exists()
@@ -974,27 +972,27 @@ def test_inputs_hold_control_setup_and_the_binary(tmp_path, point_receptor):
         assert not (workdir / name).exists()
 
 
-def test_winderr_lines_follow_the_settings_order(tmp_path, point_receptor):
+def test_winderr_lines_follow_the_settings_order(tmp_path, point_release):
     config = _config(siguverr=1.0, tluverr=60.0, zcoruverr=500.0, horcoruverr=40.0)
-    lines = (_inputs(tmp_path, point_receptor, config) / "WINDERR").read_text()
+    lines = (_inputs(tmp_path, point_release, config) / "WINDERR").read_text()
     assert lines.split() == ["1.0", "60.0", "500.0", "40.0"]
 
 
-def test_zierr_lines_follow_the_settings_order(tmp_path, point_receptor):
+def test_zierr_lines_follow_the_settings_order(tmp_path, point_release):
     config = _config(sigzierr=0.6, tlzierr=60.0, horcorzierr=40.0)
-    lines = (_inputs(tmp_path, point_receptor, config) / "ZIERR").read_text()
+    lines = (_inputs(tmp_path, point_release, config) / "ZIERR").read_text()
     assert lines.split() == ["0.6", "60.0", "40.0"]
 
 
-def test_zicontrol_holds_the_hourly_factors(tmp_path, point_receptor):
+def test_zicontrol_holds_the_hourly_factors(tmp_path, point_release):
     config = _config(ziscale=[0.8, 0.8, 0.9])
-    zicontrol = _inputs(tmp_path, point_receptor, config) / "ZICONTROL"
+    zicontrol = _inputs(tmp_path, point_release, config) / "ZICONTROL"
     assert zicontrol.read_text().strip().splitlines() == ["3", "0.8", "0.8", "0.9"]
 
 
-def test_zicontrol_repeats_a_scalar_over_the_run(tmp_path, point_receptor):
+def test_zicontrol_repeats_a_scalar_over_the_run(tmp_path, point_release):
     config = _config(n_hours=-4, ziscale=0.8)
-    lines = (_inputs(tmp_path, point_receptor, config) / "ZICONTROL").read_text()
+    lines = (_inputs(tmp_path, point_release, config) / "ZICONTROL").read_text()
     assert lines.strip().splitlines() == ["4", "0.8", "0.8", "0.8", "0.8"]
 
 
@@ -1003,16 +1001,16 @@ def test_zicontrol_repeats_a_scalar_over_the_run(tmp_path, point_receptor):
 # ---------------------------------------------------------------------------
 
 
-def test_directory_is_used(tmp_path, point_receptor):
+def test_directory_is_used(tmp_path, point_release):
     build = _fake_build(tmp_path / "hysplit", "patched")
-    workdir = _inputs(tmp_path, point_receptor, _config(directory=build))
+    workdir = _inputs(tmp_path, point_release, _config(directory=build))
     assert (workdir / "hycs_std").read_text() == "patched"
 
 
 def test_without_directory_the_hycs_std_on_path_is_used(
-    tmp_path, point_receptor, stand_in_hycs_std
+    tmp_path, point_release, stand_in_hycs_std
 ):
-    workdir = _inputs(tmp_path, point_receptor)
+    workdir = _inputs(tmp_path, point_release)
     assert (workdir / "hycs_std").resolve() == (
         stand_in_hycs_std / "hycs_std"
     ).resolve()
@@ -1029,47 +1027,47 @@ def test_directory_comes_before_path(tmp_path, monkeypatch):
 
 
 def test_without_directory_or_hycs_std_on_path_says_what_to_set(
-    tmp_path, point_receptor, monkeypatch
+    tmp_path, point_release, monkeypatch
 ):
     """PYSTILT includes no HYSPLIT: the message names both places to put it."""
     monkeypatch.setenv("PATH", str(tmp_path))
     with pytest.raises(HYSPLITNotFoundError, match="directory.*PATH"):
-        _inputs(tmp_path, point_receptor)
+        _inputs(tmp_path, point_release)
 
 
-def test_directory_without_exec_hycs_std_raises(tmp_path, point_receptor):
+def test_directory_without_exec_hycs_std_raises(tmp_path, point_release):
     empty = tmp_path / "empty"
     empty.mkdir()
     with pytest.raises(HYSPLITNotFoundError, match="No exec/hycs_std in"):
-        _inputs(tmp_path, point_receptor, _config(directory=empty))
+        _inputs(tmp_path, point_release, _config(directory=empty))
 
 
-def test_a_hycs_std_that_is_not_executable_says_so(tmp_path, point_receptor):
+def test_a_hycs_std_that_is_not_executable_says_so(tmp_path, point_release):
     """A HYSPLIT folder unpacked on Windows loses the executable bit."""
     build = _fake_build(tmp_path / "hysplit")
     (build / "exec" / "hycs_std").chmod(0o644)
     with pytest.raises(HYSPLITNotFoundError, match="not executable.*chmod \\+x"):
-        _inputs(tmp_path, point_receptor, _config(directory=build))
+        _inputs(tmp_path, point_release, _config(directory=build))
 
 
-def test_only_hycs_std_is_linked_from_exec(tmp_path, point_receptor):
+def test_only_hycs_std_is_linked_from_exec(tmp_path, point_release):
     # A real HYSPLIT exec/ directory holds dozens of other programs.
     build = _fake_build(tmp_path / "hysplit")
     (build / "exec" / "Makefile").write_text("")
     (build / "exec" / "concplot").write_text("")
-    workdir = _inputs(tmp_path, point_receptor, _config(directory=build))
+    workdir = _inputs(tmp_path, point_release, _config(directory=build))
     assert (workdir / "hycs_std").exists()
     assert not (workdir / "Makefile").exists()
     assert not (workdir / "concplot").exists()
     assert "directory" not in (workdir / "SETUP.CFG").read_text().lower()
 
 
-def test_the_tables_are_linked_from_bdyfiles(tmp_path, point_receptor):
+def test_the_tables_are_linked_from_bdyfiles(tmp_path, point_release):
     """The four tables of bdyfiles/ are linked; nothing else in it is."""
     build = _fake_build(tmp_path / "hysplit")
     (build / "bdyfiles" / "Makefile").write_text("")
 
-    workdir = _inputs(tmp_path, point_receptor, _config(directory=build))
+    workdir = _inputs(tmp_path, point_release, _config(directory=build))
 
     for name in ("LANDUSE.ASC", "ROUGLEN.ASC", "TERRAIN.ASC"):
         assert (workdir / name).resolve() == (build / "bdyfiles" / name).resolve()
@@ -1077,14 +1075,14 @@ def test_the_tables_are_linked_from_bdyfiles(tmp_path, point_receptor):
 
 
 def test_hysplits_ascdata_cfg_is_written_to_read_the_tables_in_the_workdir(
-    tmp_path, point_receptor
+    tmp_path, point_release
 ):
     """HYSPLIT's own ASCDATA.CFG says ../bdyfiles/; the workdir's says ./ and keeps the rest."""
     build = _fake_build(tmp_path / "hysplit")
     theirs = (build / "bdyfiles" / "ASCDATA.CFG").read_text().splitlines(True)
     assert "../bdyfiles/" in theirs[5]
 
-    workdir = _inputs(tmp_path, point_receptor, _config(directory=build))
+    workdir = _inputs(tmp_path, point_release, _config(directory=build))
 
     written = (workdir / "ASCDATA.CFG").read_text().splitlines(keepends=True)
     assert not (workdir / "ASCDATA.CFG").is_symlink()
@@ -1092,11 +1090,11 @@ def test_hysplits_ascdata_cfg_is_written_to_read_the_tables_in_the_workdir(
     assert written[5].startswith("'./'")
 
 
-def test_a_missing_table_says_where_the_tables_go(tmp_path, point_receptor):
+def test_a_missing_table_says_where_the_tables_go(tmp_path, point_release):
     build = _fake_build(tmp_path / "hysplit")
     (build / "bdyfiles" / "TERRAIN.ASC").unlink()
     with pytest.raises(HYSPLITNotFoundError, match="No TERRAIN.ASC in"):
-        _inputs(tmp_path, point_receptor, _config(directory=build))
+        _inputs(tmp_path, point_release, _config(directory=build))
 
 
 def test_winderrtf_all_none():
@@ -1157,19 +1155,19 @@ def test_a_set_maxpar_is_used_as_given():
     assert "maxpar" not in setup_entries(HysplitConfig(n_hours=-24, numpar=1000))
 
 
-def test_setup_cfg_maxpar_follows_the_receptors_locations(
-    tmp_path, point_receptor, column_receptor, multipoint_receptor
+def test_setup_cfg_maxpar_follows_the_releases_locations(
+    tmp_path, point_release, column_release, multipoint_release
 ):
     """One location (a column is one line source) gets numpar; three get 3 * (10 // 3 + 1)."""
-    for receptor, maxpar in [
-        (point_receptor, 10),
-        (column_receptor, 10),
-        (multipoint_receptor, 12),
+    for release, maxpar in [
+        (point_release, 10),
+        (column_release, 10),
+        (multipoint_release, 12),
     ]:
-        assert driver.release_locations(receptor.coords()) == (3 if maxpar == 12 else 1)
-        assert f"maxpar={maxpar}," in _setup_cfg(tmp_path / receptor.kind, receptor)
+        assert driver.release_locations(release.coords()) == (3 if maxpar == 12 else 1)
+        assert f"maxpar={maxpar}," in _setup_cfg(tmp_path / release.kind, release)
     set_maxpar = _config(maxpar=10)
-    assert "maxpar=10," in _setup_cfg(tmp_path / "set", multipoint_receptor, set_maxpar)
+    assert "maxpar=10," in _setup_cfg(tmp_path / "set", multipoint_release, set_maxpar)
 
 
 def test_zicontroltf_is_derived_from_ziscale():
@@ -1220,7 +1218,7 @@ def test_setup_entries_route_transport_params_to_setup_cfg():
         assert name not in entries
     # None-valued fields are omitted
     assert "seed" not in entries
-    assert "maxpar" not in entries  # write_inputs adds it for the receptor
+    assert "maxpar" not in entries  # write_inputs adds it for the release
 
 
 # Fortran type of every SETUP.CFG entry PYSTILT writes, from the SETUP

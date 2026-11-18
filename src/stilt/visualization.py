@@ -1,5 +1,5 @@
 """
-Plotting for particles, receptors, and projects.
+Plotting for particles, releases, and projects.
 
 The plots of a footprint and of a simulation, which draw the footprint, are
 STILT's: :mod:`stilt.stilt_visualization`.
@@ -19,10 +19,10 @@ if TYPE_CHECKING:
     from cartopy.io.img_tiles import GoogleTiles
 
     from stilt.project import Project
-    from stilt.receptors import Receptor
+    from stilt.releases import Receptor
     from stilt.spatial import Bounds
 
-from stilt.receptors import ColumnReceptor, MultiPointReceptor, Receptor
+from stilt.releases import ColumnReceptor, MultiPointReceptor, Receptor
 
 # ---------------------------------------------------------------------------
 # Internal helpers
@@ -116,10 +116,10 @@ def _bounds_extent(bounds: Bounds, pad: float) -> tuple[float, float, float, flo
     return _extent([bounds.xmin, bounds.xmax], [bounds.ymin, bounds.ymax], pad)
 
 
-def _receptor_points(receptor: Receptor) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Return the longitudes, latitudes, and heights of a receptor's release points."""
+def _release_points(release: Receptor) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Return the longitudes, latitudes, and heights of a release's release points."""
     lats, lons, alts = (
-        np.array(v, dtype=float) for v in zip(*receptor.coords(), strict=True)
+        np.array(v, dtype=float) for v in zip(*release.coords(), strict=True)
     )
     return lons, lats, alts
 
@@ -180,7 +180,7 @@ class ParticlesPlotAccessor:
     def map(
         self,
         color_by: str = "age",
-        receptor: Receptor | None = None,
+        release: Receptor | None = None,
         ax: Axes | None = None,
         cmap: str = "viridis_r",
         s: float = 1.0,
@@ -196,8 +196,8 @@ class ParticlesPlotAccessor:
         ----------
         color_by : {"age", "zagl", "foot"}, default "age"
             Particle variable to color by.
-        receptor : Receptor, optional
-            Mark this receptor on the map.
+        release : Receptor, optional
+            Mark this release on the map.
         ax : Axes, optional
             Axes to plot on. By default a new map is made, with cartopy when
             it is installed.
@@ -254,22 +254,22 @@ class ParticlesPlotAccessor:
         )
         fig.colorbar(sc, ax=ax, label=cbar_label, shrink=0.7, pad=0.02)
 
-        if receptor is not None:
-            receptor.plot.map(ax=ax)
+        if release is not None:
+            release.plot.map(ax=ax)
         ax.set(xlabel="Longitude", ylabel="Latitude", title="Particles")
         return ax
 
 
 # ---------------------------------------------------------------------------
-# Receptor plot accessor
+# Release plot accessor
 # ---------------------------------------------------------------------------
 
 
 class ReceptorPlotAccessor:
-    """Plotting methods of :class:`stilt.Receptor`, as ``receptor.plot``."""
+    """Plotting methods of :class:`stilt.Receptor`, as ``release.plot``."""
 
-    def __init__(self, receptor: Receptor) -> None:
-        self._receptor = receptor
+    def __init__(self, release: Receptor) -> None:
+        self._release = release
 
     def map(
         self,
@@ -282,9 +282,9 @@ class ReceptorPlotAccessor:
         **kwargs,
     ) -> Axes:
         """
-        Map the receptor's location.
+        Map the release's location.
 
-        A multipoint receptor's points are colored by height.
+        A multipoint release's points are colored by height.
 
         Parameters
         ----------
@@ -297,7 +297,7 @@ class ReceptorPlotAccessor:
         met_bounds : Bounds, optional
             Outline the meteorology domain with a dotted blue line.
         color : str, default "red"
-            Marker color of a point or column receptor.
+            Marker color of a point or column release.
         tiler : cartopy.io.img_tiles.GoogleTiles, optional
             Map tiles drawn as a background on a new cartopy map.
         tiler_zoom : int, default 8
@@ -311,8 +311,8 @@ class ReceptorPlotAccessor:
         """
         standalone = ax is None
 
-        r = self._receptor
-        lons, lats, alts = _receptor_points(r)
+        r = self._release
+        lons, lats, alts = _release_points(r)
 
         if domain is not None:
             extent = _bounds_extent(domain, pad=0.5)
@@ -334,7 +334,7 @@ class ReceptorPlotAccessor:
                 cmap="plasma",
                 s=80,
                 zorder=5,
-                label="Receptors",
+                label="Releases",
                 **{**_data_crs(ax), **kwargs},
             )
             fig.colorbar(
@@ -352,7 +352,7 @@ class ReceptorPlotAccessor:
                 s=200,
                 color=color,
                 zorder=5,
-                label="Receptor",
+                label="Release",
                 **{**_data_crs(ax), **kwargs},
             )
             if isinstance(r, ColumnReceptor):
@@ -372,7 +372,7 @@ class ReceptorPlotAccessor:
 
         _legend(ax)
         if standalone:
-            ax.set(xlabel="Longitude", ylabel="Latitude", title="Receptor")
+            ax.set(xlabel="Longitude", ylabel="Latitude", title="Release")
         return ax
 
 
@@ -389,11 +389,11 @@ class ProjectPlotAccessor:
 
     def availability(self, ax: Axes | None = None, **kwargs) -> Axes:
         """
-        Plot how many receptors each location has on each day.
+        Plot how many releases each location has on each day.
 
-        Each location is a row, and each day with receptors there a one-day
+        Each location is a row, and each day with releases there a one-day
         bar shaded by their number, so the plot stays quick for projects of
-        tens of thousands of receptors. Whether their simulations have run
+        tens of thousands of releases. Whether their simulations have run
         is not shown; ``project.status()`` says that.
 
         Parameters
@@ -417,15 +417,15 @@ class ProjectPlotAccessor:
             _, ax = plt.subplots(layout="constrained")
         assert ax is not None
 
-        receptors = self._project.receptors
-        if receptors.empty:
+        releases = self._project.releases
+        if releases.empty:
             return ax
 
         cmap = plt.get_cmap(kwargs.pop("cmap", "viridis"))
-        days = pd.to_datetime(receptors["time"]).dt.floor("D")
-        counts = receptors.assign(day=days).groupby(["location", "day"]).size()
+        days = pd.to_datetime(releases["time"]).dt.floor("D")
+        counts = releases.assign(day=days).groupby(["location", "day"]).size()
         norm = Normalize(vmin=1, vmax=max(int(counts.to_numpy().max()), 2))
-        locations = list(dict.fromkeys(receptors["location"]))
+        locations = list(dict.fromkeys(releases["location"]))
         for row, location in enumerate(locations):
             per_day = counts.loc[location]
             starts = mdates.date2num(per_day.index.to_pydatetime())
@@ -438,7 +438,7 @@ class ProjectPlotAccessor:
         ax.set_yticks(range(len(locations)), labels=locations)
         ax.xaxis_date()
         ax.figure.colorbar(
-            ScalarMappable(norm=norm, cmap=cmap), ax=ax, label="Receptors per day"
+            ScalarMappable(norm=norm, cmap=cmap), ax=ax, label="Releases per day"
         )
         if ax.figure.get_layout_engine() is None:
             ax.figure.autofmt_xdate()  # rotates the dates and makes room for them
@@ -446,5 +446,5 @@ class ProjectPlotAccessor:
             for label in ax.get_xticklabels():
                 label.set_rotation(30)
                 label.set_horizontalalignment("right")
-        ax.set(title="Receptors", xlabel="Day", ylabel="Location")
+        ax.set(title="Releases", xlabel="Day", ylabel="Location")
         return ax

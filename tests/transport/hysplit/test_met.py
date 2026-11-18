@@ -90,7 +90,7 @@ def test_metconfig_subgrid_requires_bounds(tmp_path):
 
 
 def test_metconfig_refuses_a_crop_box_with_swapped_latitudes(tmp_path):
-    """A swapped or NaN box held no receptor, so every run would fail (#440)."""
+    """A swapped or NaN box held no release, so every run would fail (#440)."""
     box = {"xmin": float("nan"), "xmax": -115, "ymin": 42, "ymax": 39}
     with pytest.raises(ValueError, match="subgrid_bounds"):
         MetConfig(directory=tmp_path, subgrid_enable=True, subgrid_bounds=box)
@@ -374,16 +374,16 @@ def test_check_finds_a_crop_the_archive_has_no_file_for(tmp_path):
     met = _archive_met(tmp_path)
     later = pd.date_range("2023-01-02 12:00", periods=6, freq="h")
     write_arl_file(met.crop_dir / "recovered", times=later)
-    receptors = pd.DataFrame(
+    releases = pd.DataFrame(
         {
-            "receptor": ["a"],
+            "release": ["a"],
             "time": [pd.Timestamp("2023-01-02 13:00")],
             "longitude": [-112.0],
             "latitude": [40.5],
         }
     )
 
-    assert met.check_receptors(receptors, 1).empty
+    assert met.check_releases(releases, 1).empty
 
 
 def test_met_local_subgrid_levels(tmp_path):
@@ -534,7 +534,7 @@ def test_files_for_backward_24h(tmp_path):
 
 
 def test_files_for_forward_run(tmp_path):
-    """A forward run includes the files after the receptor time."""
+    """A forward run includes the files after the release time."""
     names = ["20230101_06-11_hrrr", "20230101_12-17_hrrr", "20230101_18-23_hrrr"]
     _hrrr_files(tmp_path, names)
     files = _run_files(_make_met(tmp_path), dt.datetime(2023, 1, 1, 12), 7)
@@ -584,8 +584,8 @@ def test_nothing_is_missing_for_a_download(tmp_path):
     assert met.missing(run_window(dt.datetime(2023, 1, 1, 12), -3)) == []
 
 
-def test_checking_receptors_lists_the_folder_once(tmp_path, monkeypatch):
-    """Receptors an hour apart, some missing their files, cost one listing of the folder."""
+def test_checking_releases_lists_the_folder_once(tmp_path, monkeypatch):
+    """Releases an hour apart, some missing their files, cost one listing of the folder."""
     from stilt.transport.hysplit import catalog as catalog_module
 
     _hrrr_files(tmp_path, ["20230101_06-11_hrrr"])
@@ -594,18 +594,18 @@ def test_checking_receptors_lists_the_folder_once(tmp_path, monkeypatch):
     monkeypatch.setattr(
         catalog_module, "walk", lambda top: walks.append(top) or real_walk(top)
     )
-    receptors = pd.DataFrame(
+    releases = pd.DataFrame(
         {
-            "receptor": [f"r{h}" for h in range(6, 16)],
+            "release": [f"r{h}" for h in range(6, 16)],
             "time": [pd.Timestamp(f"2023-01-01 {h}:00") for h in range(6, 16)],
             "longitude": -111.85,
             "latitude": 40.77,
         }
     )
 
-    found = _make_met(tmp_path).check_receptors(receptors, -3)
+    found = _make_met(tmp_path).check_releases(releases, -3)
 
-    assert set(found["receptor"]) == {f"r{h}" for h in [6, 7, 8, 12, 13, 14, 15]}
+    assert set(found["release"]) == {f"r{h}" for h in [6, 7, 8, 12, 13, 14, 15]}
     assert walks == [tmp_path]
 
 
@@ -622,17 +622,17 @@ def _outside_crop(tmp_path, west, east, longitudes, latitude=40.0):
         subgrid_enable=True,
         subgrid_bounds=Bounds(xmin=west, xmax=east, ymin=30, ymax=50),
     )
-    receptors = pd.DataFrame(
+    releases = pd.DataFrame(
         {
-            "receptor": [f"r{i}" for i in range(len(longitudes))],
+            "release": [f"r{i}" for i in range(len(longitudes))],
             "time": pd.Timestamp("2023-01-01 12:00"),
             "longitude": longitudes,
             "latitude": latitude,
         }
     )
-    found = Met("hrrr", config).check_receptors(receptors, -3)
+    found = Met("hrrr", config).check_releases(releases, -3)
     assert set(found["check"]) <= {"met_crop"}
-    return [longitudes[int(r[1:])] for r in found["receptor"]]
+    return [longitudes[int(r[1:])] for r in found["release"]]
 
 
 @pytest.mark.parametrize(
@@ -643,7 +643,7 @@ def _outside_crop(tmp_path, west, east, longitudes, latitude=40.0):
         (170, -170, [175, -175, 0], [0]),
         (170, 190, [175, -175, 185, 0], [0]),
         (-190, -170, [-175, 175, 185], []),
-        # A receptor on an edge is inside, written either way.
+        # A release on an edge is inside, written either way.
         (-125, -100, [-125, -100], []),
         (170, -170, [170, -170, 190, -190], []),
         (170, 190, [170, 190, -170, -190], []),
@@ -667,11 +667,11 @@ def _outside_crop(tmp_path, west, east, longitudes, latitude=40.0):
 def test_crop_box_longitudes_count_modulo_360(
     tmp_path, west, east, longitudes, flagged
 ):
-    """A receptor is in the box when its longitude, east of the box's west edge, is within the box's width."""
+    """A release is in the box when its longitude, east of the box's west edge, is within the box's width."""
     assert _outside_crop(tmp_path, west, east, longitudes) == flagged
 
 
-def test_a_receptor_outside_the_crop_in_latitude_is_flagged_across_the_dateline(
+def test_a_release_outside_the_crop_in_latitude_is_flagged_across_the_dateline(
     tmp_path,
 ):
     assert _outside_crop(tmp_path, 170, -170, [175, -175], latitude=60) == [175, -175]
@@ -919,7 +919,7 @@ def test_the_source_is_not_read_from_a_copy_set_aside(tmp_path):
 
 def test_downloaded_met_gets_the_next_file_in_the_last_hour_of_a_file(tmp_path):
     """
-    A receptor in the last hour of a met file also needs the next file, as for local met.
+    A release in the last hour of a met file also needs the next file, as for local met.
 
     At 17:30 with 6-hour HRRR files (12-17, 18-23), HYSPLIT interpolates
     between 17:00 and 18:00, so the 18:00 file is needed. STILT-R applies

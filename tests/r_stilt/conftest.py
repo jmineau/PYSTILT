@@ -40,7 +40,7 @@ def _csv(values: float | tuple[float, ...]) -> str:
 
 
 def _with_near_field(
-    path: Path, receptor, scenario: ReferenceScenario, out: Path
+    path: Path, release, scenario: ReferenceScenario, out: Path
 ) -> Path:
     """
     Write PYSTILT's stored particles with the near-field correction, as STILT-R's calc_trajectory leaves its own.
@@ -50,7 +50,7 @@ def _with_near_field(
     """
     particles = pd.read_parquet(path)
     if scenario.hnf_plume:
-        particles = correct_near_field(particles, receptor, scenario.veght)
+        particles = correct_near_field(particles, release, scenario.veght)
     particles.to_parquet(out)
     return out
 
@@ -71,9 +71,9 @@ def scenario_outputs(request, met_dir, rscript, r_stilt_dir, tmp_path_factory) -
     scenario: ReferenceScenario = request.param
 
     project_dir = tmp_path_factory.mktemp(f"fidelity_{scenario.name}")
-    receptor = scenario.make_receptor()
+    release = scenario.make_release()
     config = scenario.make_model_config(met_dir)
-    project = Project.init(project_dir, config=config, receptors=[receptor])
+    project = Project.init(project_dir, config=config, releases=[release])
     t0 = time.perf_counter()
     project.run()
     print(f"\n[PROFILE] {scenario.name} PYSTILT sim: {time.perf_counter() - t0:.1f}s")
@@ -86,7 +86,7 @@ def scenario_outputs(request, met_dir, rscript, r_stilt_dir, tmp_path_factory) -
     traj_file = sim.particles_path
     assert traj_file is not None
     traj_hnf = _with_near_field(
-        traj_file, receptor, scenario, project_dir / "py_traj_hnf.parquet"
+        traj_file, release, scenario, project_dir / "py_traj_hnf.parquet"
     )
     # The footprint is stored sparse in float32; compare the footprint as
     # computed, in float64, by remaking it from the stored particles.
@@ -105,7 +105,7 @@ def scenario_outputs(request, met_dir, rscript, r_stilt_dir, tmp_path_factory) -
         None
         if error_traj_path is None
         else _with_near_field(
-            error_traj_path, receptor, scenario, project_dir / "py_error_hnf.parquet"
+            error_traj_path, release, scenario, project_dir / "py_error_hnf.parquet"
         )
     )
 
@@ -168,7 +168,7 @@ def scenario_outputs(request, met_dir, rscript, r_stilt_dir, tmp_path_factory) -
             str(kmsl),
             *winderr_args,
             # The MAXPAR PYSTILT gave HYSPLIT, which is above numpar for a
-            # multipoint receptor, so both release the same particles.
+            # multipoint release, so both release the same particles.
             _setup_value(setup_file, "maxpar"),
             f"{scenario.veght:g}",
         ],

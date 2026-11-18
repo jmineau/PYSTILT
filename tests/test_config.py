@@ -36,7 +36,7 @@ class ScaleFoot(BaseModel):
 
     factor: float = 1.0
 
-    def apply(self, particles, receptor=None, directory=None):
+    def apply(self, particles, release=None, directory=None):
         out = particles.copy()
         out["foot"] = out["foot"] * self.factor
         return out
@@ -1109,14 +1109,14 @@ def test_cells_per_target_and_an_explicit_grid_wins(tmp_path):
     assert fc2.grid == explicit and fc2.geometry is not None
 
 
-def test_footprint_needs_a_grid(point_receptor):
+def test_footprint_needs_a_grid(point_release):
     import pandas as pd
 
     from stilt.footprint import calc_footprint
 
     assert FootprintConfig().grid is None
     with pytest.raises(ValueError, match="grid"):
-        calc_footprint(pd.DataFrame(), point_receptor, None)
+        calc_footprint(pd.DataFrame(), point_release, None)
 
 
 def test_footprint_h3_geometry(tmp_path):
@@ -1609,7 +1609,7 @@ def test_maxpar_follows_each_variants_numpar(tmp_path):
     assert variants["np3k"].transport.maxpar_for(1) == 3000
     assert variants["np3k"].transport.maxpar_for(40) == 40 * 76
     # An unset maxpar is recorded unset: what HYSPLIT gets depends on the
-    # receptor's locations.
+    # release's locations.
     assert variants["hrrr"].run_settings["maxpar"] is None
 
 

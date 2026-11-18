@@ -105,7 +105,7 @@ class SlowModel:
     def data_files(self, config):
         return None
 
-    def run(self, receptor, config, met, window, workdir=None, timeout=None):
+    def run(self, release, config, met, window, workdir=None, timeout=None):
         here = Path(os.environ["SLOW_DIR"])
         exe = workdir / "hycs_std"
         exe.write_text(
@@ -117,9 +117,9 @@ class SlowModel:
         return ModelRun(particles=pd.DataFrame({
             "particle": [1, 2, 1, 2],
             "age": [0, 0, -60, -60],
-            "lon": receptor.longitude,
-            "lat": receptor.latitude,
-            "zagl": receptor.altitude,
+            "lon": release.longitude,
+            "lat": release.latitude,
+            "zagl": release.altitude,
             "foot": [0.0, 0.0, 0.01, 0.01],
         }))
 """
@@ -161,7 +161,7 @@ def test_sigterm_stops_a_run_on_two_cpus_with_exit_3(tmp_path, method):
         "mets:\n  slow:\n    weather: hrrr\n"
         "variants:\n  slow: {}\n"
     )
-    (project / "receptors.csv").write_text(
+    (project / "releases.csv").write_text(
         "time,longitude,latitude,altitude\n"
         + "".join(f"2023-01-01 {h:02d}:00:00,-111.85,40.77,5.0\n" for h in range(2))
     )
@@ -218,7 +218,7 @@ def test_sigterm_stops_a_run_on_two_cpus_with_exit_3(tmp_path, method):
                 os.kill(int(pid), signal.SIGKILL)
 
     assert proc.returncode == 3, output
-    assert "stopped after 0 of 2 receptors; the rest did not run" in output
+    assert "stopped after 0 of 2 releases; the rest did not run" in output
     assert "interrupted=2" in output
     # The fake hycs_std runs were stopped, not left behind.
     for pid in map(int, pids.read_text().split()):

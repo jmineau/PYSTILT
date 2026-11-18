@@ -1,7 +1,7 @@
 """
 The transport model interface.
 
-A transport model turns one receptor and one set of transport settings into
+A transport model turns one release and one set of transport settings into
 a particle table. HYSPLIT (:class:`stilt.transport.hysplit.HysplitModel`)
 is the one built in; a model in another package, or PYSTILT's model of runs
 imported from STILT-R (:class:`stilt.stilt_r.StiltRModel`), is named by its
@@ -27,7 +27,7 @@ from stilt.meteorology import run_window
 from stilt.particles import add_release_heights, check_particles
 
 if TYPE_CHECKING:
-    from stilt.receptors import Receptor
+    from stilt.releases import Receptor
 
 
 @dataclass(frozen=True)
@@ -166,7 +166,7 @@ class TransportConfig(BaseModel):
 
 class TransportModel(Protocol):
     """
-    A transport model that follows particles from a receptor.
+    A transport model that follows particles from a release.
 
     Attributes
     ----------
@@ -177,18 +177,18 @@ class TransportModel(Protocol):
         when the model does not say; a model that writes no files sets it
         False, and gets ``None``.
     batched : bool, optional
-        Whether the model runs many receptors in one call
+        Whether the model runs many releases in one call
         (:meth:`run_many`). False when the model does not say. The worker
-        then hands it every receptor of a variant that needs particles at
+        then hands it every release of a variant that needs particles at
         once, where it otherwise calls :meth:`run` for one at a time.
     check_met : callable, optional
-        ``check_met(met, receptors, n_hours)``, for a model that reads files,
+        ``check_met(met, releases, n_hours)``, for a model that reads files,
         which ``stilt check`` calls to find what would stop its runs before
-        any starts. *met* is the model's met config, *receptors* a table
-        with one row per release point (``receptor``, ``time``,
+        any starts. *met* is the model's met config, *releases* a table
+        with one row per release point (``release``, ``time``,
         ``longitude``, ``latitude``), and *n_hours* the length of the runs.
         It returns a DataFrame with ``check`` (a short name, such as
-        ``met_files``), ``receptor`` (the id, or ``NA`` for a problem of the
+        ``met_files``), ``release`` (the id, or ``NA`` for a problem of the
         met itself), and ``message`` columns, one row for each problem. It
         runs and downloads nothing. A model without it has no met files to
         check.
@@ -254,7 +254,7 @@ class TransportModel(Protocol):
 
     def run(
         self,
-        receptor: Receptor,
+        release: Receptor,
         config: Any,
         met: Any,
         window: tuple[dt.datetime, dt.datetime],
@@ -262,7 +262,7 @@ class TransportModel(Protocol):
         timeout: int | None = None,
     ) -> ModelRun:
         """
-        Run one receptor and return its particles.
+        Run one release and return its particles.
 
         The particles are the model's own: PYSTILT checks them and adds the
         release heights, and ``foot`` when the model wrote none, afterwards
@@ -270,7 +270,7 @@ class TransportModel(Protocol):
 
         Parameters
         ----------
-        receptor : Receptor
+        release : Receptor
             Where and when particles are released.
         config : TransportConfig
             The model's config, of its ``config_class``.
@@ -297,7 +297,7 @@ class TransportModel(Protocol):
 
 class BatchedTransportModel(TransportModel, Protocol):
     """
-    A transport model that runs many receptors in one call, such as an emulator on a GPU.
+    A transport model that runs many releases in one call, such as an emulator on a GPU.
 
     It sets ``batched = True`` and gives :meth:`run_many` beside
     :meth:`run`.
@@ -307,7 +307,7 @@ class BatchedTransportModel(TransportModel, Protocol):
 
     def run_many(
         self,
-        receptors: list[Receptor],
+        releases: list[Receptor],
         config: Any,
         met: Any,
         windows: list[tuple[dt.datetime, dt.datetime]],
@@ -315,11 +315,11 @@ class BatchedTransportModel(TransportModel, Protocol):
         timeout: int | None = None,
     ) -> ModelRun:
         """
-        Run many receptors with one config, and return their particles as one table.
+        Run many releases with one config, and return their particles as one table.
 
-        The table has a ``receptor`` column holding each row's receptor id,
+        The table has a ``release`` column holding each row's release id,
         beside the particle columns :meth:`run` returns. ``windows[i]`` is
-        the time ``receptors[i]`` covers. A receptor with no rows failed;
+        the time ``releases[i]`` covers. A release with no rows failed;
         the others are written. The log and met files are shared by all.
 
         Raises
@@ -401,14 +401,14 @@ def get_model(name: str) -> TransportModel:
 
 def run_model(
     name: str,
-    receptor: Receptor,
+    release: Receptor,
     config: TransportConfig,
     met: Any,
     workdir: Path | None = None,
     timeout: int | None = None,
 ) -> ModelRun:
     """
-    Run the transport model called *name* for one receptor, and finish its particles.
+    Run the transport model called *name* for one release, and finish its particles.
 
     The particles are checked against the particle table
     (:func:`stilt.particles.check_particles`) and get their release heights
@@ -424,7 +424,7 @@ def run_model(
     ----------
     name : str
         The transport model (:data:`MODELS`).
-    receptor : Receptor
+    release : Receptor
         Where and when particles are released.
     config : TransportConfig
         The model's config.
@@ -442,71 +442,71 @@ def run_model(
         If the run fails, as when the meteorology does not cover it
         (``MET_COVERAGE``), or the model wrote no particles.
     """
-    window = run_window(receptor.time, config.n_hours)
-    run = get_model(name).run(receptor, config, met, window, workdir, timeout=timeout)
-    return _finish(run, receptor, config)
+    window = run_window(release.time, config.n_hours)
+    run = get_model(name).run(release, config, met, window, workdir, timeout=timeout)
+    return _finish(run, release, config)
 
 
 def run_model_many(
     name: str,
-    receptors: list[Receptor],
+    releases: list[Receptor],
     config: TransportConfig,
     met: Any,
     workdir: Path | None = None,
     timeout: int | None = None,
 ) -> dict[str, ModelRun | SimulationError]:
     """
-    Run a batched transport model once for many receptors, and finish each one's particles.
+    Run a batched transport model once for many releases, and finish each one's particles.
 
-    The model's one table is split by its ``receptor`` column, and each
-    receptor's particles get the steps :func:`run_model` applies. A receptor
+    The model's one table is split by its ``release`` column, and each
+    release's particles get the steps :func:`run_model` applies. A release
     whose particles are missing or fail those steps gets its error, and the
     others their runs.
 
     Returns
     -------
     dict
-        ``{receptor id: ModelRun}``, or the :class:`SimulationError` of a
-        receptor that failed.
+        ``{release id: ModelRun}``, or the :class:`SimulationError` of a
+        release that failed.
 
     Raises
     ------
     SimulationError
         If the whole call fails.
     """
-    windows = [run_window(r.time, config.n_hours) for r in receptors]
+    windows = [run_window(r.time, config.n_hours) for r in releases]
     model = get_model(name)
     run_many = getattr(model, "run_many", None)
     if run_many is None:
         raise TypeError(f"Transport model {name!r} has no run_many.")
-    run = run_many(receptors, config, met, windows, workdir, timeout=timeout)
-    if "receptor" not in run.particles.columns:
+    run = run_many(releases, config, met, windows, workdir, timeout=timeout)
+    if "release" not in run.particles.columns:
         raise SimulationError(
-            "A batched transport model's particles need a receptor column.",
+            "A batched transport model's particles need a release column.",
             reason="NO_PARTICLE_DATA",
             log=run.log,
         )
-    by_receptor = dict(tuple(run.particles.groupby("receptor", sort=False)))
+    by_release = dict(tuple(run.particles.groupby("release", sort=False)))
     results: dict[str, ModelRun | SimulationError] = {}
-    for receptor in receptors:
-        rows = by_receptor.get(str(receptor.id))
+    for release in releases:
+        rows = by_release.get(str(release.id))
         own = replace(
             run,
             particles=(
                 pd.DataFrame()
                 if rows is None
-                else rows.drop(columns="receptor").reset_index(drop=True)
+                else rows.drop(columns="release").reset_index(drop=True)
             ),
         )
         try:
-            results[str(receptor.id)] = _finish(own, receptor, config)
+            results[str(release.id)] = _finish(own, release, config)
         except SimulationError as error:
             error.log = run.log
-            results[str(receptor.id)] = error
+            results[str(release.id)] = error
     return results
 
 
-def _finish(run: ModelRun, receptor: Receptor, config: TransportConfig) -> ModelRun:
+def _finish(run: ModelRun, release: Receptor, config: TransportConfig) -> ModelRun:
     """
     Return *run* with its particles checked and their release heights.
 
@@ -527,11 +527,11 @@ def _finish(run: ModelRun, receptor: Receptor, config: TransportConfig) -> Model
             log=run.log,
         )
     check_particles(run.particles)
-    return replace(run, particles=add_release_heights(run.particles, receptor))
+    return replace(run, particles=add_release_heights(run.particles, release))
 
 
 def run_trajectories(
-    receptor: Receptor,
+    release: Receptor,
     met: BaseModel | Mapping[str, Any],
     *,
     model: str = "hysplit",
@@ -540,15 +540,15 @@ def run_trajectories(
     **params: Any,
 ) -> pd.DataFrame:
     """
-    Run the transport model for one receptor and return its particles.
+    Run the transport model for one release and return its particles.
 
-    This is what a project runs for each receptor, without a project: the
+    This is what a project runs for each release, without a project: the
     particles are returned, not stored. STILT-R calls it
     ``calc_trajectory``.
 
     Parameters
     ----------
-    receptor : Receptor
+    release : Receptor
         Where and when particles are released.
     met : str, dict or BaseModel
         The meteorology, as one entry under ``mets:`` in ``config.yaml``,
@@ -575,7 +575,7 @@ def run_trajectories(
     -------
     pandas.DataFrame
         The particle table, one row per particle per output step, with
-        ``time`` (UTC), the receptor time plus ``age``, as a table read from
+        ``time`` (UTC), the release time plus ``age``, as a table read from
         a particle file has. ``foot`` is the model's own (HYSPLIT's, made
         with ``veght``), with no near-field correction:
         :func:`stilt.calc_footprint` applies it (``hnf_plume``), given
@@ -595,11 +595,11 @@ def run_trajectories(
 
     Examples
     --------
-    >>> receptor = stilt.PointReceptor(  # doctest: +SKIP
+    >>> release = stilt.PointReceptor(  # doctest: +SKIP
     ...     time="2023-07-15 18:00", longitude=-111.848, latitude=40.766, altitude=10
     ... )
     >>> particles = stilt.run_trajectories(
-    ...     receptor, "/data/hrrr", n_hours=-24, numpar=200
+    ...     release, "/data/hrrr", n_hours=-24, numpar=200
     ... )  # doctest: +SKIP
     """
     transport_model = get_model(model)
@@ -614,9 +614,9 @@ def run_trajectories(
             )
         workdir.mkdir(parents=True, exist_ok=True)
     particles = run_model(
-        model, receptor, config, met_config, workdir, timeout
+        model, release, config, met_config, workdir, timeout
     ).particles
-    particles["time"] = pd.Timestamp(receptor.time) + pd.to_timedelta(
+    particles["time"] = pd.Timestamp(release.time) + pd.to_timedelta(
         particles["age"].to_numpy(), unit="min"
     )
     return particles

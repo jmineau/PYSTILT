@@ -2,8 +2,8 @@
 Small objects many tests need, built in one place.
 
 A test that needs a met config, a project config, a resolved variant, or a
-receptor calls these, so a change to :class:`stilt.transport.hysplit.MetConfig`,
-:class:`stilt.config.Variant`, or the receptor types is one edit here, not
+release calls these, so a change to :class:`stilt.transport.hysplit.MetConfig`,
+:class:`stilt.config.Variant`, or the release types is one edit here, not
 one in every test module.
 """
 
@@ -16,7 +16,7 @@ from typing import Any
 
 from stilt.config import FOOTPRINT_STAGE, ProjectConfig, Variant
 from stilt.footprint.config import FootprintConfig
-from stilt.receptors import PointReceptor
+from stilt.releases import PointReceptor
 from stilt.transport import TransportConfig
 from stilt.transport.hysplit import HysplitConfig, MetConfig
 
@@ -37,7 +37,7 @@ def write_arl_file(
     Write a small ARL file whose header names *source*, and return its path.
 
     One time step per entry in *times* on a 20 x 20 grid of whole degrees,
-    125 W to 106 W and 30 N to 49 N (so it holds the tests' receptors), each with PRSS
+    125 W to 106 W and 30 N to 49 N (so it holds the tests' releases), each with PRSS
     at the surface and TEMP above it: enough for a met's source to be read
     from it (:meth:`stilt.transport.hysplit.MetConfig.source`) and for
     arlmet to check it, not for HYSPLIT to run on it. With *partial*, the
@@ -241,14 +241,14 @@ def with_footprint(footprint: FootprintConfig | None) -> dict[str, Any]:
     }
 
 
-def make_receptor(
+def make_release(
     time: dt.datetime = dt.datetime(2023, 1, 1, 12),
     longitude: float = -111.85,
     latitude: float = 40.77,
     altitude: float = 5.0,
     **attrs: Any,
 ) -> PointReceptor:
-    """Return a point receptor at the University of Utah's WBB site; *attrs* become its extra columns."""
+    """Return a point release at the University of Utah's WBB site; *attrs* become its extra columns."""
     return PointReceptor(
         time=time,
         longitude=longitude,

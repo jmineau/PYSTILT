@@ -228,7 +228,7 @@ def test_particles_enhancement_without_foot_says_how_to_get_one():
         _particles().drop(columns="foot").stilt.enhancement(_flux())
 
 
-def _footprint(point_receptor, values):
+def _footprint(point_release, values):
     grid = Grid(xmin=-112.5, xmax=-109.5, ymin=39.5, ymax=41.5, xres=1.0, yres=1.0)
     times = pd.to_datetime(["2023-01-01 12:00", "2023-01-01 11:00"])
     data = xr.DataArray(
@@ -236,11 +236,11 @@ def _footprint(point_receptor, values):
         dims=["time", "lat", "lon"],
         coords={"time": times, "lat": [40.0, 41.0], "lon": [-112.0, -111.0, -110.0]},
     )
-    return as_footprint(data, point_receptor, FootprintConfig(grid=grid), "test")
+    return as_footprint(data, point_release, FootprintConfig(grid=grid), "test")
 
 
-def test_footprint_enhancement_is_foot_times_flux_per_time_step(point_receptor):
-    foot = _footprint(point_receptor, [np.ones((2, 3)), 2 * np.ones((2, 3))])
+def test_footprint_enhancement_is_foot_times_flux_per_time_step(point_release):
+    foot = _footprint(point_release, [np.ones((2, 3)), 2 * np.ones((2, 3))])
 
     enhancement = foot.stilt.enhancement(_flux())  # flux cells 0..5 sum to 15
 
@@ -249,8 +249,8 @@ def test_footprint_enhancement_is_foot_times_flux_per_time_step(point_receptor):
     assert float(enhancement.sum()) == 45.0
 
 
-def test_footprint_enhancement_does_not_depend_on_dimension_order(point_receptor):
-    foot = _footprint(point_receptor, [np.ones((2, 3)), 2 * np.ones((2, 3))])
+def test_footprint_enhancement_does_not_depend_on_dimension_order(point_release):
+    foot = _footprint(point_release, [np.ones((2, 3)), 2 * np.ones((2, 3))])
     flux = _flux()
     expected = foot.stilt.enhancement(flux)
 
@@ -260,9 +260,9 @@ def test_footprint_enhancement_does_not_depend_on_dimension_order(point_receptor
 
 
 def test_footprint_enhancement_of_a_time_summed_footprint_is_the_total(
-    point_receptor,
+    point_release,
 ):
-    foot = _footprint(point_receptor, [np.ones((2, 3)), 2 * np.ones((2, 3))])
+    foot = _footprint(point_release, [np.ones((2, 3)), 2 * np.ones((2, 3))])
     total = foot.sum("time", keep_attrs=True)
 
     assert float(total.stilt.enhancement(_flux())) == 45.0
@@ -271,8 +271,8 @@ def test_footprint_enhancement_of_a_time_summed_footprint_is_the_total(
         total.stilt.enhancement(flux_in_time)
 
 
-def test_footprint_enhancement_samples_flux_on_its_own_grid(point_receptor):
-    foot = _footprint(point_receptor, [np.ones((2, 3)), np.zeros((2, 3))])
+def test_footprint_enhancement_samples_flux_on_its_own_grid(point_release):
+    foot = _footprint(point_release, [np.ones((2, 3)), np.zeros((2, 3))])
     # a single-cell axis has no spacing to bound, so it covers every point
     uniform = xr.DataArray(
         [[7.0]], dims=["lat", "lon"], coords={"lat": [40.5], "lon": [-111.0]}
@@ -288,8 +288,8 @@ def test_footprint_enhancement_samples_flux_on_its_own_grid(point_receptor):
     assert float(foot.stilt.enhancement(narrow)[0]) == 7.0 * 2  # only the -112 column
 
 
-def test_footprint_enhancement_time_varying_flux(point_receptor):
-    foot = _footprint(point_receptor, [np.ones((2, 3)), np.ones((2, 3))])
+def test_footprint_enhancement_time_varying_flux(point_release):
+    foot = _footprint(point_release, [np.ones((2, 3)), np.ones((2, 3))])
     flux = xr.DataArray(
         np.stack([np.ones((2, 3)), 10 * np.ones((2, 3))]),
         dims=["time", "lat", "lon"],
@@ -303,8 +303,8 @@ def test_footprint_enhancement_time_varying_flux(point_receptor):
     assert foot.stilt.enhancement(flux).to_numpy().tolist() == [60.0, 6.0]
 
 
-def test_footprint_enhancement_refuses_a_finer_flux(point_receptor):
-    foot = _footprint(point_receptor, [np.ones((2, 3)), np.ones((2, 3))])
+def test_footprint_enhancement_refuses_a_finer_flux(point_release):
+    foot = _footprint(point_release, [np.ones((2, 3)), np.ones((2, 3))])
     lons = np.arange(-112.0, -109.9, 0.25)
     fine = _flux(np.ones((2, lons.size)), lons=tuple(lons))
     with pytest.raises(ValueError, match="finer than the footprint's"):
@@ -312,11 +312,11 @@ def test_footprint_enhancement_refuses_a_finer_flux(point_receptor):
 
 
 def test_footprint_enhancement_warns_when_cells_of_one_size_are_offset(
-    point_receptor, recwarn
+    point_release, recwarn
 ):
     import warnings
 
-    foot = _footprint(point_receptor, [np.ones((2, 3)), np.ones((2, 3))])
+    foot = _footprint(point_release, [np.ones((2, 3)), np.ones((2, 3))])
     with pytest.warns(UserWarning, match="0.50 of a cell"):
         foot.stilt.enhancement(_flux(lons=(-112.5, -111.5, -110.5, -109.5)))
     with warnings.catch_warnings():

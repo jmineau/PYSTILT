@@ -12,11 +12,11 @@ varies more across them. The increase is the transport-error variance
 
     var_transport = var(enhancement | perturbed) − var(enhancement | unperturbed)
 
-For a column receptor the difference is taken per release level, and the
+For a column release the difference is taken per release level, and the
 levels are added with the column weighting and X-STILT's vertical error
 correlation (Wu et al., 2018, GMD). The difference of two sample variances
 is noisy and can be negative. It is returned with its sign and with its
-standard error, so many receptors can be combined with a mean and a single
+standard error, so many releases can be combined with a mean and a single
 value can be compared with its noise.
 """
 
@@ -34,13 +34,13 @@ import xarray as xr
 
 from stilt.background import _background, _fill_missing
 from stilt.footprint.foot import _near_field
-from stilt.receptors import Receptor
+from stilt.releases import Receptor
 from stilt.transforms import apply_transforms, release_coordinate
 
 #: X-STILT's empirical mean vertical correlation length of transport errors, m.
 DEFAULT_LENGTH_SCALE = 356.0
 
-#: The results :func:`_transport_errors` keeps for each receptor, in column order.
+#: The results :func:`_transport_errors` keeps for each release, in column order.
 _RESULT_COLUMNS = (
     "enhancement",
     "enhancement_perturbed",
@@ -291,7 +291,7 @@ def transport_error(
     flux: xr.DataArray,
     *,
     transforms: Sequence[Any] = (),
-    receptor: Receptor | None = None,
+    release: Receptor | None = None,
     directory: str | Path | None = None,
     hnf_plume: bool = True,
     footprint_depth: float = 0.5,
@@ -306,19 +306,19 @@ def transport_error(
     Parameters
     ----------
     particles : pandas.DataFrame
-        Unperturbed particle table of a receptor (``sim.particles``).
+        Unperturbed particle table of a release (``sim.particles``).
     error_particles : pandas.DataFrame or sequence of pandas.DataFrame
-        Particle table of a wind-error variant of the same receptor, or one
+        Particle table of a wind-error variant of the same release, or one
         table per realization for a variant with ``realizations: N`` (see
-        Examples). A table is one simulation's particles: one receptor and
+        Examples). A table is one simulation's particles: one release and
         one realization.
     flux : xarray.DataArray
         Surface flux field (see ``particles.stilt.enhancement``).
     transforms : sequence, optional
         The footprint's particle transforms (``sim.variant.stages["footprint"].transforms``),
         applied to both tables so the error is weighted like the footprint.
-    receptor : Receptor, optional
-        The receptor (``sim.receptor``), for the near-field correction and
+    release : Receptor, optional
+        The release (``sim.release``), for the near-field correction and
         the transforms. Needed when *hnf_plume* is set.
     directory : str or Path, optional
         Where a kernel table's relative path starts (``project.directory``).
@@ -337,12 +337,12 @@ def transport_error(
         Release-height levels to compute statistics on: a number of
         equal-width bins between the lowest and highest release height, or
         bin edges in meters. When the particles have no more distinct
-        release heights than ``levels`` (a multipoint receptor), each height
-        is a level. A point receptor is one level.
+        release heights than ``levels`` (a multipoint release), each height
+        is a level. A point release is one level.
     length_scale : float or None, default 356.0
         Vertical e-folding length of the error correlation between levels,
         in meters (X-STILT's value). ``None`` treats the levels as
-        independent. It has no effect for a point receptor.
+        independent. It has no effect for a point release.
     percentile : float, default 1.0
         In each level, drop particles above this quantile of the enhancement
         before taking the variance. 1.0 keeps every particle, as Lin and
@@ -376,7 +376,7 @@ def transport_error(
     weights are particle counts.
 
     The sum is linear in ``dvar``, so the sampling noise in each level's
-    ``dvar`` averages out over many receptors. Where the error changes
+    ``dvar`` averages out over many releases. Where the error changes
     sharply with height within a correlation length, the mean of two levels'
     ``dvar`` is above the product of their standard deviations, and the
     column variance is high by up to about 20 %.
@@ -399,30 +399,30 @@ def transport_error(
     the wind error decorrelates quickly (HYSPLIT decorrelates it with the
     distance a particle travels as well as with time), and when turbulence
     already spreads the particles widely, as on a convective afternoon.
-    Compare a single value with ``noise``. Over many receptors, combine the
+    Compare a single value with ``noise``. Over many releases, combine the
     signed ``variance`` values with a mean instead of clipping each at
     zero.
 
     Examples
     --------
     For the variant ``hrrr-err`` with ``realizations: 4``, select one
-    receptor's simulations and group their particles by realization. Grouping
+    release's simulations and group their particles by realization. Grouping
     by ``variant`` gives one table, which counts as one realization and gives
-    a wrong variance. Without the receptor, each realization's table holds
-    every receptor's particles.
+    a wrong variance. Without the release, each realization's table holds
+    every release's particles.
 
     >>> from stilt import transport_error  # doctest: +SKIP
     >>> sim = project.simulation(rid, "hrrr")  # doctest: +SKIP
     >>> sims = project.simulations  # doctest: +SKIP
     >>> ensemble = sims[
-    ...     (sims.variant == "hrrr-err") & (sims.receptor == rid)
+    ...     (sims.variant == "hrrr-err") & (sims.release == rid)
     ... ]  # doctest: +SKIP
     >>> by_realization = project.particles(ensemble).groupby(
     ...     "realization"
     ... )  # doctest: +SKIP
     >>> error_particles = [rows for _, rows in by_realization]  # doctest: +SKIP
     >>> result = transport_error(
-    ...     sim.particles, error_particles, flux, receptor=sim.receptor
+    ...     sim.particles, error_particles, flux, release=sim.release
     ... )  # doctest: +SKIP
     >>> result.realizations  # doctest: +SKIP
     4
@@ -432,10 +432,10 @@ def transport_error(
     ``directory``, and the variant's ``hnf_plume`` and
     ``footprint_depth``, which this call leaves at their defaults.
     """
-    if hnf_plume and receptor is None:
+    if hnf_plume and release is None:
         raise ValueError(
-            "The near-field correction (hnf_plume) needs the receptor: give "
-            "receptor=sim.receptor, or hnf_plume=False."
+            "The near-field correction (hnf_plume) needs the release: give "
+            "release=sim.release, or hnf_plume=False."
         )
     if not 0 < percentile <= 1:
         raise ValueError("percentile must be in (0, 1].")
@@ -455,10 +455,10 @@ def transport_error(
     ) -> tuple[pd.Series, pd.Series, float]:
         """Return the modeled value and release height per particle, and the background."""
         if hnf_plume:
-            assert receptor is not None  # checked above
-            table = _near_field(table, receptor, footprint_depth)
+            assert release is not None  # checked above
+            table = _near_field(table, release, footprint_depth)
         weighted = (
-            apply_transforms(table, transforms, receptor, directory)
+            apply_transforms(table, transforms, release, directory)
             if transforms
             else table
         )
@@ -469,7 +469,7 @@ def transport_error(
             table,
             background,
             transforms=transforms,
-            receptor=receptor,
+            release=release,
             directory=directory,
         )
         # Each particle's background, weighted like its enhancement. A
@@ -515,7 +515,7 @@ def transport_error(
 
 def _transport_errors(
     read: Callable[[str], tuple[pd.DataFrame, list[pd.DataFrame]]],
-    receptors: Sequence[Receptor],
+    releases: Sequence[Receptor],
     flux: xr.DataArray,
     *,
     transforms: Sequence[Any] = (),
@@ -524,28 +524,28 @@ def _transport_errors(
     **options: Any,
 ) -> pd.DataFrame:
     """
-    Return the transport error of many receptors, one receptor at a time.
+    Return the transport error of many releases, one release at a time.
 
-    ``read(receptor_id)`` returns that receptor's unperturbed particle table
+    ``read(release_id)`` returns that release's unperturbed particle table
     and one table per error realization, as :func:`transport_error` takes
-    them; every receptor must have both. Each receptor is read and estimated
-    in one of *workers* threads, which holds only that receptor's tables.
+    them; every release must have both. Each release is read and estimated
+    in one of *workers* threads, which holds only that release's tables.
     *transforms* are the unperturbed variant's footprint transforms, as
     ``sim.transport_error`` passes them, and *options* go to
     :func:`transport_error` unchanged.
 
-    Returns one row per receptor, indexed by receptor id in *receptors*
+    Returns one row per release, indexed by release id in *releases*
     order, with the columns in :data:`_RESULT_COLUMNS`.
     """
 
-    def one(receptor: Receptor) -> tuple[float, float, float, float, float, int]:
-        particles, error_particles = read(receptor.id)
+    def one(release: Receptor) -> tuple[float, float, float, float, float, int]:
+        particles, error_particles = read(release.id)
         result = transport_error(
             particles,
             error_particles,
             flux,
             transforms=transforms,
-            receptor=receptor,
+            release=release,
             directory=directory,
             **options,
         )
@@ -558,14 +558,14 @@ def _transport_errors(
             result.realizations,
         )
 
-    if workers <= 1 or len(receptors) <= 1:
-        rows = [one(r) for r in receptors]
+    if workers <= 1 or len(releases) <= 1:
+        rows = [one(r) for r in releases]
     else:
         with ThreadPoolExecutor(max_workers=workers) as pool:
-            rows = list(pool.map(one, receptors))
+            rows = list(pool.map(one, releases))
     return pd.DataFrame(
         rows,
-        index=pd.Index([r.id for r in receptors], name="receptor"),
+        index=pd.Index([r.id for r in releases], name="release"),
         columns=pd.Index(_RESULT_COLUMNS),
     ).astype({"realizations": "int64"})
 

@@ -357,14 +357,14 @@ def test_a_model_in_its_own_package_runs_from_a_fresh_interpreter(tmp_path):
                 def data_files(self, config):
                     return None
 
-                def run(self, receptor, config, met, window, workdir=None, timeout=None):
+                def run(self, release, config, met, window, workdir=None, timeout=None):
                     n = config.nparticles
                     particles = pd.DataFrame({
                         "particle": list(range(1, n + 1)) * 2,
                         "age": [0] * n + [-60] * n,
-                        "lon": [receptor.longitude] * 2 * n,
-                        "lat": [receptor.latitude] * 2 * n,
-                        "zagl": [receptor.altitude] * 2 * n,
+                        "lon": [release.longitude] * 2 * n,
+                        "lat": [release.latitude] * 2 * n,
+                        "zagl": [release.altitude] * 2 * n,
                         "foot": [0.0] * n + [0.01] * n,
                     })
                     return ModelRun(particles=particles)
@@ -374,12 +374,12 @@ def test_a_model_in_its_own_package_runs_from_a_fresh_interpreter(tmp_path):
     script = textwrap.dedent(
         """
         import stilt
-        receptor = stilt.PointReceptor(
+        release = stilt.PointReceptor(
             time="2023-01-01 12:00", longitude=-111.85, latitude=40.77, altitude=5
         )
         met = {"weather": "hrrr"}  # no directory: the toy reads no met files
         particles = stilt.run_trajectories(
-            receptor, met, model="toypkg.ToyModel", n_hours=-1, nparticles=4
+            release, met, model="toypkg.ToyModel", n_hours=-1, nparticles=4
         )
         print(len(particles), sorted(int(p) for p in particles["particle"].unique()))
         """

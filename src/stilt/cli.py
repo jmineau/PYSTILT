@@ -12,7 +12,7 @@ Examples::
     stilt run ./my_project --no-skip  # run every simulation again
     stilt run --backend slurm         # run as a Slurm job array, and wait
     stilt run --task 3/10             # run task 3 of 10 here (a job array's task)
-    stilt run --receptors ids.txt     # run only the receptors listed in ids.txt
+    stilt run --releases ids.txt     # run only the releases listed in ids.txt
     stilt submit                      # submit a Slurm job array and return
     stilt status                      # count finished simulations; list the settings folders
 
@@ -28,7 +28,7 @@ busy or unreachable. Every command
 exits with 2 when its command line is wrong (an unknown option, a bad value,
 or a directory that is not a project) or the project's files are invalid
 (``config.yaml`` that is not valid YAML or has a misspelled setting, a bad
-row in ``receptors.csv``). ``stilt run`` and ``stilt submit`` also
+row in ``releases.csv``). ``stilt run`` and ``stilt submit`` also
 exit with 2 when a met directory does not exist or holds no ARL file, which
 ``stilt check`` lists. ``stilt status`` does too, unless the output holds no
 result the project could own: then it counts every simulation as pending.
@@ -179,8 +179,8 @@ def _open(
     """
     Open the project, exiting with 2 when its files are invalid or the met of a variant cannot be read.
 
-    With *rows* (from ``--receptors receptors.parquet``) the project takes
-    its receptors from them, so ``receptors.csv`` is not read.
+    With *rows* (from ``--releases releases.parquet``) the project takes
+    its releases from them, so ``releases.csv`` is not read.
 
     A variant's settings folder is named by its met's weather product, read
     from the header of the met's first file. Without the file every command
@@ -197,14 +197,14 @@ def _open(
 
 def _require_inputs(project: Project) -> None:
     """
-    Exit with 2 and the problem when ``config.yaml`` or ``receptors.csv`` is invalid.
+    Exit with 2 and the problem when ``config.yaml`` or ``releases.csv`` is invalid.
 
     That includes a class the config names that is not installed here, and
     a stage whose settings do not fit its variant's transport model.
     """
     try:
         _ = project.config
-        _ = project.receptors
+        _ = project.releases
         _ = project.variants
     except (MissingClass, ValueError) as error:
         _fail(str(error))
@@ -243,14 +243,14 @@ def check(project: str | None = _PROJECT_ARG) -> None:
     List what would stop a project's runs, before any run.
 
     For each variant, checks that the met's directory exists and holds ARL
-    files, that every met file each receptor's run needs is there (naming
+    files, that every met file each release's run needs is there (naming
     the hours), that the first of them holds more than one time period,
-    which HYSPLIT needs, that each receptor is inside the met's crop box and the
+    which HYSPLIT needs, that each release is inside the met's crop box and the
     footprint grid, that an averaging-kernel table matches the
-    receptors, and that ``varsiwant`` holds ``zsfc`` when receptors above sea
+    releases, and that ``varsiwant`` holds ``zsfc`` when releases above sea
     level need it. Nothing is run or downloaded. It looks for files, not inside
     them: a run that passes can still fail as MET_COVERAGE, when a met file
-    is damaged or cut short, or the receptor is outside the files' domain.
+    is damaged or cut short, or the release is outside the files' domain.
     Exits with 0 when it finds nothing, 1 when it lists anything, and 2 when
     the command line is wrong or the project's files are invalid.
     """
@@ -277,17 +277,17 @@ _CPUS = typer.Option(
     None,
     "--cpus",
     help=(
-        "Receptors each task runs at once (local processes, or CPUs per "
+        "Releases each task runs at once (local processes, or CPUs per "
         "Slurm task). Overrides cpus in the backend's block of execution "
         "in config.yaml."
     ),
 )
-_RECEPTORS = typer.Option(
+_RELEASES = typer.Option(
     None,
-    "--receptors",
+    "--releases",
     help=(
-        "File of receptor ids, one per line, or the receptors.parquet a Slurm "
-        "submission writes. Only those receptors run."
+        "File of release ids, one per line, or the releases.parquet a Slurm "
+        "submission writes. Only those releases run."
     ),
 )
 _OUTPUT = typer.Option(
@@ -308,7 +308,7 @@ _TASK = typer.Option(
     "--task",
     help=(
         "Run task I of N here, as one task of a job array: every Nth "
-        "receptor of the project, starting at I (0 to N-1). Runs in this "
+        "release of the project, starting at I (0 to N-1). Runs in this "
         "process whatever the backend."
     ),
 )
@@ -325,18 +325,18 @@ def _parse_task(task: str) -> tuple[int, int]:
     return i, n
 
 
-def _read_receptors(path: Path) -> tuple[list[str], pd.DataFrame | None]:
+def _read_releases(path: Path) -> tuple[list[str], pd.DataFrame | None]:
     """
-    Return the receptor ids in a file, and their checked rows when the file holds them.
+    Return the release ids in a file, and their checked rows when the file holds them.
 
     A text file lists ids, one per line; blank lines and # comments are
-    skipped. A Parquet file is the ``receptors.parquet`` a Slurm submission
-    writes: the checked rows of its receptors, in the order they run.
+    skipped. A Parquet file is the ``releases.parquet`` a Slurm submission
+    writes: the checked rows of its releases, in the order they run.
     """
     try:
         if path.suffix == ".parquet":
             rows = pd.read_parquet(path)
-            return list(dict.fromkeys(rows["receptor"].astype(str))), rows
+            return list(dict.fromkeys(rows["release"].astype(str))), rows
         text = path.read_text()
     except (OSError, ValueError, KeyError) as error:
         _fail(f"cannot read {path}: {error}")
@@ -362,8 +362,8 @@ def _start(
     no_skip: bool,
     compute_root: str | None,
     waits: bool,
-    receptor_ids: list[str] | None = None,
-    receptor_rows: pd.DataFrame | None = None,
+    release_ids: list[str] | None = None,
+    release_rows: pd.DataFrame | None = None,
     task: tuple[int, int] | None = None,
     execution_file: Path | None = None,
     output: str | None = None,
@@ -371,10 +371,10 @@ def _start(
     """
     Open the project, print what is about to run, and return the run's options.
 
-    With *receptor_rows* (from ``--receptors receptors.parquet``) the
-    project takes its receptors from them, not from ``receptors.csv``.
+    With *release_rows* (from ``--releases releases.parquet``) the
+    project takes its releases from them, not from ``releases.csv``.
     """
-    opened = _open(project, output=output, rows=receptor_rows)
+    opened = _open(project, output=output, rows=release_rows)
     _require_build(opened)
     if execution_file is None:
         settings = opened.config.execution.model_dump(exclude_unset=True)
@@ -387,7 +387,7 @@ def _start(
         if backend == "slurm":
             _fail("--task runs here, as one task of a job array; drop --backend slurm.")
         backend = "local"
-    # Progress is the worker's one line per finished receptor.
+    # Progress is the worker's one line per finished release.
     logging.basicConfig(level=logging.WARNING, format="%(message)s")
     logging.getLogger("stilt.execution").setLevel(logging.INFO)
 
@@ -413,7 +413,7 @@ def _start(
         compute_root=compute_root,
         skip_existing=not no_skip,
         waits=waits,
-        receptor_ids=receptor_ids,
+        release_ids=release_ids,
         task=task,
     )
     options = {
@@ -464,7 +464,7 @@ def _stop_once() -> Iterator[None]:
 @app.command()
 def fetch(
     project: str | None = _PROJECT_ARG,
-    receptors: Path | None = _RECEPTORS,
+    releases: Path | None = _RELEASES,
     no_skip: bool = typer.Option(
         False,
         "--no-skip",
@@ -480,9 +480,9 @@ def fetch(
     set downloads what is missing, cropped to its subgrid, so the runs that
     follow find every file and download nothing: run this once where the
     files are shared, before many workers start. A met without download is
-    only checked for missing files, as stilt check does. --receptors limits
-    it to the receptors listed in a file, as for stilt run; the fetch job
-    stilt submit sends before a job array reads its receptors.parquet.
+    only checked for missing files, as stilt check does. --releases limits
+    it to the releases listed in a file, as for stilt run; the fetch job
+    stilt submit sends before a job array reads its releases.parquet.
     --no-skip gets the met of every simulation, for a stilt run --no-skip.
     Exits with 0 when
     every file is there, 1 when the archive lacks some, 2 when the command
@@ -490,23 +490,21 @@ def fetch(
     SIGTERM, after removing the file it was downloading, or when the archive
     was busy or the connection failed (4 for any other unexpected error).
     """
-    receptor_ids, rows = (
-        (None, None) if receptors is None else _read_receptors(receptors)
-    )
+    release_ids, rows = (None, None) if releases is None else _read_releases(releases)
     opened = _open(project, output=output, rows=rows)
     sel = None
-    if receptor_ids is not None:
+    if release_ids is not None:
         try:
             # Checks the ids as a run does; lists no output without skip_existing.
-            receptor_ids = pending(opened, receptors=receptor_ids, skip_existing=False)
+            release_ids = pending(opened, releases=release_ids, skip_existing=False)
         except ValueError as error:
-            _fail(f"{receptors}: {error}")
-        sel = opened.simulations["receptor"].isin(receptor_ids)
+            _fail(f"{releases}: {error}")
+        sel = opened.simulations["release"].isin(release_ids)
     # arlmet logs each file it downloads, which is the progress to show.
     logging.basicConfig(level=logging.WARNING, format="%(message)s")
     logging.getLogger("arlmet.archives").setLevel(logging.INFO)
-    count = len(opened.receptors) if receptor_ids is None else len(receptor_ids)
-    typer.echo(f"Project: {opened.directory}  receptors={count}")
+    count = len(opened.releases) if release_ids is None else len(release_ids)
+    typer.echo(f"Project: {opened.directory}  releases={count}")
     try:
         with _stop_once():
             files = opened.fetch(sel, skip_existing=not no_skip)
@@ -529,7 +527,7 @@ def run(
     n_workers: int | None = _N_WORKERS,
     cpus: int | None = _CPUS,
     compute_root: str | None = _COMPUTE_ROOT,
-    receptors: Path | None = _RECEPTORS,
+    releases: Path | None = _RELEASES,
     task: str | None = _TASK,
     execution: Path | None = _EXECUTION,
     output: str | None = _OUTPUT,
@@ -537,12 +535,12 @@ def run(
     """
     Run every unfinished simulation in a project, and wait until they are done.
 
-    Runs the transport model for each receptor and variant, then the footprint when the
+    Runs the transport model for each release and variant, then the footprint when the
     variant has one. Simulations whose outputs exist are skipped unless
     --no-skip is given. With the Slurm backend this submits a job array and
     waits for it; use stilt submit to return as soon as it is submitted.
 
-    --receptors limits the run to the receptors listed in a file. --task
+    --releases limits the run to the releases listed in a file. --task
     I/N runs one share of them here, for each task of a job array or a
     Kubernetes indexed Job.
 
@@ -557,9 +555,7 @@ def run(
     be reached, which a retry may get past, and with 4 when it is any
     other, which a retry would repeat.
     """
-    receptor_ids, rows = (
-        (None, None) if receptors is None else _read_receptors(receptors)
-    )
+    release_ids, rows = (None, None) if releases is None else _read_releases(releases)
     share = None if task is None else _parse_task(task)
     opened, options = _start(
         project,
@@ -569,21 +565,21 @@ def run(
         no_skip=no_skip,
         compute_root=compute_root,
         waits=True,
-        receptor_ids=receptor_ids,
-        receptor_rows=rows,
+        release_ids=release_ids,
+        release_rows=rows,
         task=share,
         execution_file=execution,
         output=output,
     )
     try:
-        table = opened.run(receptors=receptor_ids, task=share, **options)
+        table = opened.run(releases=release_ids, task=share, **options)
     except ValueError as error:
         _fail(str(error))
     except WorkerDied as error:
         # A worker was killed, most likely for memory; the message says what to do.
         typer.echo(f"stilt run stopped: {error}", err=True)
         raise typer.Exit(code=EXIT_INTERRUPTED) from None
-    if receptor_ids is None and share is None:
+    if release_ids is None and share is None:
         _print_status(opened)
     else:
         _print_status(opened, table)
@@ -597,19 +593,17 @@ def submit(
     n_workers: int | None = _N_WORKERS,
     cpus: int | None = _CPUS,
     compute_root: str | None = _COMPUTE_ROOT,
-    receptors: Path | None = _RECEPTORS,
+    releases: Path | None = _RELEASES,
     output: str | None = _OUTPUT,
 ) -> None:
     """
     Submit every unfinished simulation in a project to Slurm, and return.
 
-    The receptors are split among a Slurm job array's tasks, with the
-    resources under execution in config.yaml. --receptors limits it to the
-    receptors listed in a file. Check on them with stilt status.
+    The releases are split among a Slurm job array's tasks, with the
+    resources under execution in config.yaml. --releases limits it to the
+    releases listed in a file. Check on them with stilt status.
     """
-    receptor_ids, rows = (
-        (None, None) if receptors is None else _read_receptors(receptors)
-    )
+    release_ids, rows = (None, None) if releases is None else _read_releases(releases)
     opened, options = _start(
         project,
         backend="slurm",
@@ -618,12 +612,12 @@ def submit(
         no_skip=no_skip,
         compute_root=compute_root,
         waits=False,
-        receptor_ids=receptor_ids,
-        receptor_rows=rows,
+        release_ids=release_ids,
+        release_rows=rows,
         output=output,
     )
     try:
-        job_id = opened.submit(receptors=receptor_ids, **options)
+        job_id = opened.submit(releases=release_ids, **options)
     except ValueError as error:
         _fail(str(error))
     if job_id is not None:
@@ -758,12 +752,12 @@ def _status_data(
 
 def _print_check(project: Project, problems: pd.DataFrame) -> None:
     """
-    Print the receptors and variants checked, then the problems found as a table.
+    Print the releases and variants checked, then the problems found as a table.
 
     The first :data:`_CHECK_ROWS` rows of each check are shown, with a count
     of the rest.
     """
-    typer.echo(f"Project: {project.directory}  receptors={len(project.receptors)}")
+    typer.echo(f"Project: {project.directory}  releases={len(project.releases)}")
     variants = ", ".join(
         f"{name} (met {v.met}, {', '.join(v.stages) or 'particles only'})"
         for name, v in project.variants.items()
@@ -775,14 +769,14 @@ def _print_check(project: Project, problems: pd.DataFrame) -> None:
     lines: list[tuple[str, str, str, str]] = []
     for name, rows in problems.groupby("check", sort=False):
         for row in rows.head(_CHECK_ROWS).itertuples():
-            receptor = "" if pd.isna(row.receptor) else str(row.receptor)
-            lines.append((str(name), str(row.variant), receptor, str(row.message)))
+            release = "" if pd.isna(row.release) else str(row.release)
+            lines.append((str(name), str(row.variant), release, str(row.message)))
         if len(rows) > _CHECK_ROWS:
             more = (
                 f"... {len(rows) - _CHECK_ROWS} more (project.check() lists them all)"
             )
             lines.append((str(name), "", "", more))
-    header = ("check", "variant", "receptor", "message")
+    header = ("check", "variant", "release", "message")
     widths = [max(len(line[i]) for line in [header, *lines]) for i in range(3)]
     typer.echo()
     for line in [header, *lines]:
@@ -872,7 +866,7 @@ def _print_run_start(
     compute_root: str | None,
     skip_existing: bool,
     waits: bool,
-    receptor_ids: list[str] | None = None,
+    release_ids: list[str] | None = None,
     task: tuple[int, int] | None = None,
 ) -> None:
     """Print the settings ``stilt run`` is about to use."""
@@ -894,15 +888,15 @@ def _print_run_start(
         typer.echo(f"Compute root: {compute_root}")
     else:
         typer.echo("Compute root: each task's own $TMPDIR (or PYSTILT_COMPUTE_ROOT)")
-    typer.echo(f"Receptors loaded: {len(project.receptors)}")
-    if receptor_ids is not None:
-        typer.echo(f"Receptors listed: {len(receptor_ids)}")
+    typer.echo(f"Releases loaded: {len(project.releases)}")
+    if release_ids is not None:
+        typer.echo(f"Releases listed: {len(release_ids)}")
     if task is not None:
         i, n = task
-        typer.echo(f"Receptors of this task: {i}, {i + n}, {i + 2 * n}, ...")
+        typer.echo(f"Releases of this task: {i}, {i + n}, {i + 2 * n}, ...")
     typer.echo(f"Variants: {', '.join(project.variants)}")
     if task is not None or backend == "local":
-        typer.echo("Running here, one line per receptor as it finishes")
+        typer.echo("Running here, one line per release as it finishes")
     elif waits:
         typer.echo(
             "Submitting to Slurm and waiting for the job to finish (squeue shows its tasks)"

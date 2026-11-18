@@ -31,7 +31,7 @@ from stilt.exceptions import EmptyFootprint
 from stilt.footprint.config import FootprintConfig
 from stilt.footprint.foot import _near_field
 from stilt.particles import FOOTPRINT_COLUMNS, check_particles
-from stilt.receptors import Receptor
+from stilt.releases import Receptor
 from stilt.spatial import Grid, _east_edge, _grid_cell_starts, haversine_km, is_longlat
 from stilt.transforms import apply_transforms
 
@@ -60,22 +60,22 @@ _FOOTPRINT_INPUTS = ("particle", "age", "lon", "lat", "foot")
 
 
 #: How far a particle's first row may be from its release point, in km, before
-#: the particles are taken to come from another receptor: a margin, plus
+#: the particles are taken to come from another release: a margin, plus
 #: 100 m/s (6 km a minute, jet-stream speed) for the minutes to that row.
 _RELEASE_MARGIN_KM = 10.0
 _MAX_KM_PER_MINUTE = 6.0
 
 
-def _check_particles_for_footprint(particles: pd.DataFrame, receptor: Receptor) -> None:
+def _check_particles_for_footprint(particles: pd.DataFrame, release: Receptor) -> None:
     """
     Refuse a particle table that would give a wrong footprint, and warn about rows left out.
 
     Refused: an infinite ``foot``; two rows of one particle at one ``age``
-    (a table concatenated twice, or several receptors' particles); a
-    ``time`` column that does not equal the receptor time plus ``age``
-    (another receptor's time, or ``age`` in hours or seconds); and first
+    (a table concatenated twice, or several releases' particles); a
+    ``time`` column that does not equal the release time plus ``age``
+    (another release's time, or ``age`` in hours or seconds); and first
     positions farther from every release point than the particles could
-    have gone by then (another receptor's place). Rows with no ``particle``,
+    have gone by then (another release's place). Rows with no ``particle``,
     ``age``, ``lon``, ``lat`` or ``foot`` are left out of the footprint, with a
     warning that counts them.
     """
@@ -91,7 +91,7 @@ def _check_particles_for_footprint(particles: pd.DataFrame, receptor: Receptor) 
     if n_missing:
         columns = ", ".join(c for c in _FOOTPRINT_INPUTS if missing[c].any())
         warnings.warn(
-            f"{receptor.id}: {n_missing:,} of {len(p):,} particle rows have no "
+            f"{release.id}: {n_missing:,} of {len(p):,} particle rows have no "
             f"{columns} and are left out of the footprint.",
             stacklevel=3,
         )
@@ -105,14 +105,14 @@ def _check_particles_for_footprint(particles: pd.DataFrame, receptor: Receptor) 
             f"{int(repeated.sum()):,} particle rows repeat a particle at an age it "
             f"already has, the first particle {first['particle']:g} at age "
             f"{first['age']:g}. A particle has one row per time step: give one "
-            "receptor's particles, from one run, once."
+            "release's particles, from one run, once."
         )
-    _check_release_time(particles, receptor)
-    _check_release_point(p, receptor)
+    _check_release_time(particles, release)
+    _check_release_point(p, release)
 
 
-def _check_release_time(particles: pd.DataFrame, receptor: Receptor) -> None:
-    """Refuse particles whose ``time`` minus ``age`` is not the receptor time; a table without ``time`` passes."""
+def _check_release_time(particles: pd.DataFrame, release: Receptor) -> None:
+    """Refuse particles whose ``time`` minus ``age`` is not the release time; a table without ``time`` passes."""
     if "time" not in particles.columns or not pd.api.types.is_datetime64_any_dtype(
         particles["time"]
     ):
@@ -123,32 +123,32 @@ def _check_release_time(particles: pd.DataFrame, receptor: Receptor) -> None:
     released = (time - pd.to_timedelta(particles["age"], unit="min")).dropna()
     if released.empty:
         return
-    receptor_time = pd.Timestamp(receptor.time)
-    off = (released - receptor_time).abs() >= pd.Timedelta(minutes=1)
+    release_time = pd.Timestamp(release.time)
+    off = (released - release_time).abs() >= pd.Timedelta(minutes=1)
     if not off.any():
         return
     if released.max() - released.min() < pd.Timedelta(minutes=1):
         raise ValueError(
             f"These particles were released at {released.iloc[0]:%Y-%m-%d %H:%M} "
-            f"(their time minus age), not at the receptor's time, "
-            f"{receptor_time:%Y-%m-%d %H:%M}. Give the receptor they were "
+            f"(their time minus age), not at the release's time, "
+            f"{release_time:%Y-%m-%d %H:%M}. Give the release they were "
             "released from."
         )
     raise ValueError(
         f"age does not agree with time on {int(off.sum()):,} of {len(off):,} "
-        "particle rows: time is the receptor time plus age, and age is in "
+        "particle rows: time is the release time plus age, and age is in "
         "minutes since release. Is age in hours or seconds?"
     )
 
 
-def _check_release_point(p: pd.DataFrame, receptor: Receptor) -> None:
+def _check_release_point(p: pd.DataFrame, release: Receptor) -> None:
     """Refuse particles whose first positions are farther from every release point than they could have gone."""
     first = (
         p.assign(_age=p["age"].abs())
         .sort_values("_age", kind="stable")
         .drop_duplicates(subset="particle")
     )
-    points = np.asarray(receptor.coords(), dtype=float)
+    points = np.asarray(release.coords(), dtype=float)
     distance = haversine_km(
         first["lon"].to_numpy(dtype=float)[:, None],
         first["lat"].to_numpy(dtype=float)[:, None],
@@ -161,8 +161,8 @@ def _check_release_point(p: pd.DataFrame, receptor: Receptor) -> None:
         where = "release point" if len(points) == 1 else "nearest release point"
         raise ValueError(
             f"These particles' first positions, {minutes:g} minutes from release, "
-            f"are a median {median:,.0f} km from the receptor's {where}, farther "
-            "than particles travel in that time. Give the receptor they were "
+            f"are a median {median:,.0f} km from the release's {where}, farther "
+            "than particles travel in that time. Give the release they were "
             "released from."
         )
 
@@ -221,7 +221,7 @@ def _interpolate_early_timesteps(
     """
     Add interpolated positions in the first 100 minutes when particles jump grid cells.
 
-    Near the receptor, particles can move more than a grid cell per output
+    Near the release, particles can move more than a grid cell per output
     step. When the median step does, along either axis of the grid,
     positions and ``foot`` are linearly interpolated onto finer times (every
     0.1 min to 10 min, 0.2 min to 20 min, and 0.5 min to 100 min). ``foot``
@@ -599,7 +599,7 @@ def _filter_and_rasterize_particles(
 
     Returns ``(p, layers)``. ``p`` has columns ``loi, lai, time, rtime,
     foot, layer``, and ``layers`` holds the sorted layer indices, each
-    *layer_minutes* minutes long from the receptor time. Both are empty
+    *layer_minutes* minutes long from the release time. Both are empty
     when no particle is on the padded grid. On a *longlat* grid a particle a whole turn from the
     padded grid is on it (``_onto_padded_axis``).
     """
@@ -782,7 +782,7 @@ def _accumulate_smoothed_footprint(
 
 def calc_footprint(
     particles: pd.DataFrame,
-    receptor: Receptor,
+    release: Receptor,
     grid: Grid,
     *,
     smooth_factor: float = 1.0,
@@ -799,7 +799,7 @@ def calc_footprint(
 
     The near-field correction is applied first (*hnf_plume*), then the
     particle *transforms*, in order, so the footprint records exactly what
-    it was made with. Near the receptor,
+    it was made with. Near the release,
     particle tracks are interpolated to finer times when particles cross
     more than a grid cell per step. Each particle's ``foot`` is added to the
     cell it is in, and each time step is smoothed with a Gaussian kernel
@@ -839,10 +839,10 @@ def calc_footprint(
 
     The particle table is checked first for mistakes that would otherwise
     give a plausible footprint. A particle with two rows at one ``age`` (a
-    table concatenated with itself, or several receptors' particles) is
+    table concatenated with itself, or several releases' particles) is
     refused, as is an infinite ``foot``. When the table has a ``time``
-    column, ``time`` minus ``age`` must be the receptor time, which catches
-    another receptor's particles and an ``age`` in hours or seconds; without
+    column, ``time`` minus ``age`` must be the release time, which catches
+    another release's particles and an ``age`` in hours or seconds; without
     one, the time is not checked. Each particle's first row must be within
     10 km of a release point, plus 6 km (100 m/s) for each minute since
     release. Rows with no ``particle``, ``age``, ``lon``, ``lat`` or
@@ -854,8 +854,8 @@ def calc_footprint(
         Particle table, such as :func:`stilt.run_trajectories` returns or
         ``sim.particles``, with columns ``particle``, ``age`` (minutes since
         release), ``lon``, ``lat``, and ``foot``.
-    receptor : Receptor
-        Receptor the particles were released from.
+    release : Receptor
+        Release the particles were released from.
     grid : Grid
         Domain and resolution of the footprint. Its longitudes count modulo
         360, so ``xmin=-10, xmax=190`` is a grid across 180 degrees. For a
@@ -865,11 +865,11 @@ def calc_footprint(
         Factor on the width of the Gaussian smoothing kernel. 0 turns
         smoothing off.
     tres : str or timedelta, default "1h"
-        Length of each time layer from the receptor time, a duration in
+        Length of each time layer from the release time, a duration in
         whole minutes such as ``"15min"``, ``"1h"`` or ``"1D"``. A particle
         row at ``age`` minutes falls in layer ``floor(age / minutes)``.
     hnf_plume : bool, default True
-        Correct ``foot`` for the thin plume near the receptor first
+        Correct ``foot`` for the thin plume near the release first
         (:func:`stilt.footprint.correct_near_field`), as STILT-R does by
         default. Particles without the columns it reads get no correction,
         and a warning is logged.
@@ -912,8 +912,8 @@ def calc_footprint(
     ValueError
         If *tres* is not a positive whole number of minutes, or the
         particles fail a check above: rows repeated, an infinite ``foot``,
-        a ``time`` that is not the receptor time plus ``age``, or first
-        positions too far from the receptor.
+        a ``time`` that is not the release time plus ``age``, or first
+        positions too far from the release.
     EmptyFootprint
         If no particle is over the grid, no row has a positive ``foot``,
         or the table has no rows. Its message says which.
@@ -924,7 +924,7 @@ def calc_footprint(
     ...     xmin=-113, xmax=-110.5, ymin=40, ymax=42, xres=0.01, yres=0.01
     ... )
     >>> foot = stilt.calc_footprint(
-    ...     particles, receptor, grid, smooth_factor=0.5
+    ...     particles, release, grid, smooth_factor=0.5
     ... )  # doctest: +SKIP
     """
     if grid is None:
@@ -946,11 +946,11 @@ def calc_footprint(
     )
     if not particles.empty:
         check_particles(particles, need=FOOTPRINT_COLUMNS)
-        _check_particles_for_footprint(particles, receptor)
+        _check_particles_for_footprint(particles, release)
         if config.hnf_plume:
-            particles = _near_field(particles, receptor, footprint_depth)
+            particles = _near_field(particles, release, footprint_depth)
     if config.transforms:
-        particles = apply_transforms(particles, config.transforms, receptor, directory)
+        particles = apply_transforms(particles, config.transforms, release, directory)
     crs = grid.crs
     xmin, xmax, xres = grid.xmin, grid.xmax, grid.xres
     ymin, ymax, yres = grid.ymin, grid.ymax, grid.yres
@@ -1065,4 +1065,4 @@ def calc_footprint(
     # file has the same coordinates as the one calculated.
     x_coords = np.round(glong + xres / 2, 10)
     y_coords = np.round(glati + yres / 2, 10)
-    return _footprint_array(values, layers, receptor, config, name, x_coords, y_coords)
+    return _footprint_array(values, layers, release, config, name, x_coords, y_coords)

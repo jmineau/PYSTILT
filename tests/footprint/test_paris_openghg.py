@@ -12,7 +12,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from .test_paris import LAT, LON, RECEPTOR_TIME, exits_table, layered, locations
+from .test_paris import LAT, LON, RELEASE_TIME, exits_table, layered, locations
 
 pytest.importorskip("openghg")
 
@@ -24,7 +24,7 @@ pytestmark = pytest.mark.filterwarnings(
 
 @pytest.fixture
 def paris_file(tmp_path):
-    """Two receptors an hour apart, 30 hourly layers each, written as one PARIS file."""
+    """Two releases an hour apart, 30 hourly layers each, written as one PARIS file."""
     exits = exits_table([(1, "n", -111.2, 43.0, 150.0), (2, "w", -113.0, 41.0, 2500.0)])
     datasets = []
     for k in range(2):
@@ -32,7 +32,7 @@ def paris_file(tmp_path):
         shift = pd.Timedelta(hours=k)
         foot = foot.assign_coords(
             time=foot.time + shift,
-            receptor=f"{RECEPTOR_TIME + shift:%Y%m%d%H%M}_-111.85_40.77_10",
+            release=f"{RELEASE_TIME + shift:%Y%m%d%H%M}_-111.85_40.77_10",
         )
         datasets.append(foot.stilt.to_paris().merge(locations(exits, 4)))
     ds = xr.concat(datasets, dim="time", combine_attrs="drop_conflicts")
@@ -100,9 +100,9 @@ def test_openghg_pairs_h_back_1_with_the_hour_before_the_footprint_time(paris_fi
         coords={"time": times, "lat": data.lat.values, "lon": data.lon.values},
     )
     windows = rolling(flux, data.fp_time_resolved)
-    at_receptor = windows.sel(time=RECEPTOR_TIME).isel(lat=0, lon=0)
-    expected = (RECEPTOR_TIME - times[0]) / pd.Timedelta(hours=1)
+    at_release = windows.sel(time=RELEASE_TIME).isel(lat=0, lon=0)
+    expected = (RELEASE_TIME - times[0]) / pd.Timedelta(hours=1)
     # The flux paired with H_back = 1 is the hour from 17:00 to 18:00, which
     # PYSTILT's layer -1 covers.
-    assert float(at_receptor.sel(H_back=1)) == expected - 1
-    assert float(at_receptor.sel(H_back=0)) == expected
+    assert float(at_release.sel(H_back=1)) == expected - 1
+    assert float(at_release.sel(H_back=0)) == expected

@@ -18,7 +18,7 @@ def release_coordinate(particles: pd.DataFrame, coordinate: str) -> pd.Series:
 
     Some columns, such as ``release_height``, are constant along a trajectory. Others,
     such as ``pres``, change at every time step. The release value is taken
-    from the row nearest the receptor time (smallest ``|time|``), or from the
+    from the row nearest the release time (smallest ``|time|``), or from the
     first row when there is no numeric ``age`` column.
     """
     p = particles

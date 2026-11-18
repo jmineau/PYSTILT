@@ -35,7 +35,7 @@ if TYPE_CHECKING:
 
 class Simulation(simulation.Simulation):
     """
-    One receptor run under one variant, with its footprint, background, and transport error.
+    One release run under one variant, with its footprint, background, and transport error.
 
     It is :class:`stilt.simulation.Simulation`, which knows where the
     particles and the file of each stage are and reads the particles, and it
@@ -44,11 +44,11 @@ class Simulation(simulation.Simulation):
     and :attr:`plot`. It changes nothing it inherits.
 
     You rarely build one yourself. Get it from a project instead, as in
-    ``project.simulation(receptor_id, "hrrr")``.
+    ``project.simulation(release_id, "hrrr")``.
 
     Parameters
     ----------
-    receptor : Receptor
+    release : Receptor
         Where and when particles are released.
     variant : Variant
         The variant, resolved: its configs, and the hashes that find its
@@ -131,7 +131,7 @@ class Simulation(simulation.Simulation):
         Calculate a footprint from the stored particles, without writing it.
 
         This is :func:`stilt.calc_footprint` with this simulation's
-        particles, receptor, and footprint settings filled in, as the
+        particles, release, and footprint settings filled in, as the
         footprint stage makes it: the particles get the ``foot`` those
         settings ask for (:func:`stilt.footprint.footprint_particles`).
         Each setting given replaces the variant's own. Use it to try other settings; the
@@ -168,7 +168,7 @@ class Simulation(simulation.Simulation):
         try:
             return gridding.calc_footprint(
                 particles,
-                self.receptor,
+                self.release,
                 grid,
                 smooth_factor=own.smooth_factor
                 if smooth_factor is None
@@ -208,7 +208,7 @@ class Simulation(simulation.Simulation):
 
     def background(self, field: xr.DataArray | pd.Series) -> Background:
         """
-        Return the background mole fraction at the receptor.
+        Return the background mole fraction at the release.
 
         The background is the field where each particle ends, averaged over
         the particles with the footprint's weights (its transforms), so it
@@ -230,7 +230,7 @@ class Simulation(simulation.Simulation):
             self.particles,
             field,
             transforms=self._transforms,
-            receptor=self.receptor,
+            release=self.release,
             directory=self.directory,
         )
 
@@ -244,7 +244,7 @@ class Simulation(simulation.Simulation):
         Return the transport error of this simulation's modeled enhancement.
 
         It is the extra spread in the per-particle enhancement that a
-        wind-error variant of the same receptor adds (Lin and Gerbig, 2005).
+        wind-error variant of the same release adds (Lin and Gerbig, 2005).
         See :func:`stilt.transport_error`, which documents the
         options (``levels``, ``length_scale``, ``percentile``,
         ``background``).
@@ -252,14 +252,14 @@ class Simulation(simulation.Simulation):
         Parameters
         ----------
         error : Simulation or sequence of Simulation
-            The same receptor under a wind-error variant, or every
+            The same release under a wind-error variant, or every
             realization of one.
         flux : xarray.DataArray
             Surface flux field, in µmol m⁻² s⁻¹.
 
         Examples
         --------
-        >>> err = project.simulation(sim.receptor.id, "hrrr-err")  # doctest: +SKIP
+        >>> err = project.simulation(sim.release.id, "hrrr-err")  # doctest: +SKIP
         >>> sim.transport_error(err, flux).variance  # doctest: +SKIP
         >>> ensemble = [
         ...     project.simulation(rid, "hrrr-err", k) for k in range(10)
@@ -273,7 +273,7 @@ class Simulation(simulation.Simulation):
             [simulation_particles(e, config) for e in sims],
             flux,
             transforms=self._transforms,
-            receptor=self.receptor,
+            release=self.release,
             directory=self.directory,
             **{**self._near_field_settings, **options},
         )

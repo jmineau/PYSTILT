@@ -1,10 +1,10 @@
 """
-The checks a receptor must pass, each written once for many points.
+The checks a release must pass, each written once for many points.
 
 Each check returns ``(bad, message)``: the points that fail it and why. A
-receptor runs the checks on its own points and raises the first failure
-(:mod:`stilt.receptors.models`). The receptor table runs them on a whole
-file and names the first bad row (:func:`stilt.receptors.table.receptor_rows`).
+release runs the checks on its own points and raises the first failure
+(:mod:`stilt.releases.models`). The release table runs them on a whole
+file and names the first bad row (:func:`stilt.releases.table.release_rows`).
 """
 
 from __future__ import annotations
@@ -15,13 +15,13 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-#: Why a multipoint receptor's points may not share a horizontal location.
+#: Why a multipoint release's points may not share a horizontal location.
 REPEATED_LOCATION = (
     "MultiPointReceptor points must have distinct horizontal locations "
     "(HYSPLIT collapses release locations that share a lat/lon into a "
     "single vertical line source and releases only between the last two "
     "heights). Use ColumnReceptor for a vertical column, or one "
-    "PointReceptor per height (distinct r_idx) for discrete release "
+    "PointReceptor per height (distinct group) for discrete release "
     "heights at one location."
 )
 
@@ -57,15 +57,13 @@ def column_errors(bottom: Any, top: Any) -> list[tuple[np.ndarray, str]]:
     return [(bad, "'bottom' must be less than 'top'.")]
 
 
-def multipoint_errors(
-    lon: Any, lat: Any, receptor: Any
-) -> list[tuple[np.ndarray, str]]:
+def multipoint_errors(lon: Any, lat: Any, release: Any) -> list[tuple[np.ndarray, str]]:
     """
-    Return the check a multipoint receptor must pass, as ``(bad, message)``.
+    Return the check a multipoint release must pass, as ``(bad, message)``.
 
-    No two points of one receptor may share a horizontal location, to 5
-    decimal places. *receptor* labels each point's receptor. A point is bad
-    when an earlier point of its receptor is at the same location.
+    No two points of one release may share a horizontal location, to 5
+    decimal places. *release* labels each point's release. A point is bad
+    when an earlier point of its release is at the same location.
 
     HYSPLIT joins consecutive release locations at one latitude and
     longitude into a vertical line source and releases only from the last
@@ -74,7 +72,7 @@ def multipoint_errors(
     """
     points = pd.DataFrame(
         {
-            "receptor": np.asarray(receptor),
+            "release": np.asarray(release),
             "lon": np.round(np.asarray(lon, dtype=float), 5),
             "lat": np.round(np.asarray(lat, dtype=float), 5),
         }

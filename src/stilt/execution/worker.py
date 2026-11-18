@@ -1,8 +1,8 @@
 """
-Worker functions that run one receptor, or many receptors.
+Worker functions that run one release, or many releases.
 
-Workers are handed receptors. :func:`run_receptor` runs every variant of
-one receptor. Variants with the same transport settings share one set of
+Workers are handed releases. :func:`run_release` runs every variant of
+one release. Variants with the same transport settings share one set of
 particles, so it groups them: the transport model runs once per group where the
 particles are missing (:func:`run_particles`), then each variant's stages
 make their files from the particles in memory (:func:`run_stages`). A stage
@@ -12,7 +12,7 @@ imports none.
 A failure is recorded with the simulation and the worker goes on, except
 a connection or I/O error that a retry may get past, which is not recorded as a
 failure: the simulation stays unfinished and the next run does it again.
-:func:`run_receptors` runs a list of receptors in this process or a
+:func:`run_releases` runs a list of releases in this process or a
 process pool. A :class:`~stilt.Simulation` itself runs nothing; these
 functions write through its output directory.
 """
@@ -133,7 +133,7 @@ def _failed(sim: Simulation, stage: str, error: Exception) -> str:
         record["traceback"] = traceback.format_exc()
     try:
         sim.output.record_failure(
-            stage, sim.variant, sim.receptor.id, record, sim.realization
+            stage, sim.variant, sim.release.id, record, sim.realization
         )
     except Exception:
         logger.exception("simulation %s: could not record the failure", sim)
@@ -173,7 +173,7 @@ def _unfinished(sim: Simulation, stage: str, error: Exception) -> str:
 
 def _succeeded(sim: Simulation, stage: str) -> None:
     """Remove *sim*'s failure record for *stage*, whose result is now written."""
-    sim.output.clear_failure(stage, sim.variant, sim.receptor.id, sim.realization)
+    sim.output.clear_failure(stage, sim.variant, sim.release.id, sim.realization)
 
 
 def run_particles(
@@ -217,7 +217,7 @@ def run_particles(
         :class:`~stilt.exceptions.MeteorologyError` when the met files are
         missing.
     """
-    output, rid = sim.output, sim.receptor.id
+    output, rid = sim.output, sim.release.id
     needs_workdir = getattr(get_model(sim.variant.model), "needs_workdir", True)
     if needs_workdir:
         # The model runs in an empty directory. The runner gives each run a
@@ -231,7 +231,7 @@ def run_particles(
     try:
         result = run_model(
             sim.variant.model,
-            sim.receptor,
+            sim.release,
             sim.transport,
             sim.variant.met_config,
             workdir if needs_workdir else None,
@@ -240,7 +240,7 @@ def run_particles(
         log = result.log
         output.write_particles(
             sim.variant,
-            sim.receptor,
+            sim.release,
             result.particles,
             result.met_files,
             sim.realization,
@@ -272,7 +272,7 @@ def _log_start(sim: Simulation) -> None:
     started = dt.datetime.now(dt.UTC).isoformat(timespec="seconds")
     sim.output.write_log(
         sim.variant,
-        sim.receptor.id,
+        sim.release.id,
         f"PYSTILT started this run at {started} on {socket.gethostname()}; "
         "the transport model's log replaces this line when the run ends.\n",
         sim.realization,
@@ -283,19 +283,19 @@ def run_particles_batch(
     sims: list[Simulation], *, timeout: int | None = None
 ) -> tuple[dict[str, pd.DataFrame], dict[str, str]]:
     """
-    Run a batched transport model once for many receptors, and write each one's particles.
+    Run a batched transport model once for many releases, and write each one's particles.
 
-    *sims* are simulations of one variant and realization, one per receptor,
+    *sims* are simulations of one variant and realization, one per release,
     so they share the transport settings. The model's one call
-    (:func:`stilt.transport.run_model_many`) gives each receptor its
+    (:func:`stilt.transport.run_model_many`) gives each release its
     particles or an error: the particles and the log are written, and a
     failure is recorded with its simulation.
 
     Returns
     -------
     tuple of (dict, dict)
-        The particles written, and a line saying why for each receptor
-        that failed, both by receptor id.
+        The particles written, and a line saying why for each release
+        that failed, both by release id.
     """
     first = sims[0]
     for sim in sims:
@@ -303,7 +303,7 @@ def run_particles_batch(
     try:
         results = run_model_many(
             first.variant.model,
-            [sim.receptor for sim in sims],
+            [sim.release for sim in sims],
             first.transport,
             first.variant.met_config,
             timeout=timeout,
@@ -313,13 +313,13 @@ def run_particles_batch(
         failed: dict[str, str] = {}
         for sim in sims:
             if log:
-                sim.output.write_log(sim.variant, sim.receptor.id, log, sim.realization)
-            failed[sim.receptor.id] = _failed(sim, "particles", error)
+                sim.output.write_log(sim.variant, sim.release.id, log, sim.realization)
+            failed[sim.release.id] = _failed(sim, "particles", error)
         return {}, failed
     written: dict[str, pd.DataFrame] = {}
     failed = {}
     for sim in sims:
-        rid = sim.receptor.id
+        rid = sim.release.id
         result = results[rid]
         if result.log:
             sim.output.write_log(sim.variant, rid, result.log, sim.realization)
@@ -328,7 +328,7 @@ def run_particles_batch(
             continue
         sim.output.write_particles(
             sim.variant,
-            sim.receptor,
+            sim.release,
             result.particles,
             result.met_files,
             sim.realization,
@@ -389,7 +389,7 @@ def run_stage(sim: Simulation, name: str) -> None:
         If the stage returned without writing its file.
     """
     variant = sim.variant
-    path = sim.output.make_path(name, variant, sim.receptor.id, sim.realization)
+    path = sim.output.make_path(name, variant, sim.release.id, sim.realization)
     stage = variant.stage(name)
     path.parent.mkdir(parents=True, exist_ok=True)
     with _stage_file(path, stage.suffix) as target:
@@ -410,7 +410,7 @@ def run_stages(
     skip_existing: bool = True,
 ) -> list[str]:
     """
-    Run the stages of the simulations of one receptor that share particles, and return what failed.
+    Run the stages of the simulations of one release that share particles, and return what failed.
 
     Each variant's stages run in the order :attr:`stilt.config.Variant.stage_order`
     gives, a stage after the ones it reads. A stage file that exists is
@@ -424,7 +424,7 @@ def run_stages(
     Parameters
     ----------
     sims : list of Simulation
-        One receptor under each variant that shares its particles, as one
+        One release under each variant that shares its particles, as one
         realization.
     particles : pandas.DataFrame, optional
         The particles, when they are in memory. Without them a stage reads
@@ -476,9 +476,9 @@ def run_stages(
     return problems
 
 
-def run_receptor(
+def run_release(
     project: Project,
-    receptor_id: str,
+    release_id: str,
     *,
     compute_root: Path,
     execution: ExecutionConfig | None = None,
@@ -486,7 +486,7 @@ def run_receptor(
     batched: bool = True,
 ) -> list[str]:
     """
-    Run every simulation of one receptor, and return what did not complete.
+    Run every simulation of one release, and return what did not complete.
 
     Each realization of an ensemble variant is a simulation of its own.
     Variants with the same transport settings share one set of particles
@@ -499,14 +499,14 @@ def run_receptor(
     A failure is recorded with the simulation (:attr:`stilt.Simulation.failure`)
     and does not stop the others; a failed transport model run fails every variant
     of its group. A ``KeyboardInterrupt``, such as a preempted job, stops
-    the receptor and is raised again.
+    the release and is raised again.
 
     Parameters
     ----------
     project : Project
-        Project the receptor belongs to.
-    receptor_id : str
-        Receptor to run.
+        Project the release belongs to.
+    release_id : str
+        Release to run.
     compute_root : Path
         Directory the workdirs are made in, a new one for each run, as
         :func:`~stilt.execution.runner.resolve_compute_root` returns it.
@@ -516,8 +516,8 @@ def run_receptor(
     skip_existing : bool, default True
         Keep particles and stage files that already exist.
     batched : bool, default True
-        Also run the variants of a batched transport model, one receptor
-        per call. :func:`run_receptors` runs those for all its receptors at
+        Also run the variants of a batched transport model, one release
+        per call. :func:`run_releases` runs those for all its releases at
         once first, and passes False.
 
     Returns
@@ -532,7 +532,7 @@ def run_receptor(
     for (_, k), names in _groups(project).items():
         if not batched and _is_batched(project, names[0]):
             continue
-        group = [project.simulation(receptor_id, n, k) for n in names]
+        group = [project.simulation(release_id, n, k) for n in names]
         problems += _run_group(
             project,
             group,
@@ -547,8 +547,8 @@ def _groups(project: Project) -> dict[tuple[str, int | None], list[str]]:
     """
     Return the variants that share particles, by particles hash and realization.
 
-    Each group's transport model runs once per receptor (or once for many
-    receptors, when it is batched), and each variant in it runs its stages
+    Each group's transport model runs once per release (or once for many
+    releases, when it is batched), and each variant in it runs its stages
     on those particles.
     """
     groups: dict[tuple[str, int | None], list[str]] = {}
@@ -559,39 +559,39 @@ def _groups(project: Project) -> dict[tuple[str, int | None], list[str]]:
 
 
 def _is_batched(project: Project, variant: str) -> bool:
-    """Whether a variant's transport model runs many receptors in one call."""
+    """Whether a variant's transport model runs many releases in one call."""
     model = get_model(project.variants[variant].model)
     return bool(getattr(model, "batched", False))
 
 
 def _run_batched(
     project: Project,
-    receptor_ids: list[str],
+    release_ids: list[str],
     *,
     execution: ExecutionConfig,
     skip_existing: bool,
 ) -> dict[str, list[str]]:
     """
-    Run the variants of batched transport models for many receptors, one model call per group.
+    Run the variants of batched transport models for many releases, one model call per group.
 
-    For each group of variants that share particles, the receptors whose
+    For each group of variants that share particles, the releases whose
     particles are missing (all of them, without *skip_existing*) run in one
     call (:func:`run_particles_batch`); then each variant's stages run
-    per receptor. Returns the failures by receptor id.
+    per release. Returns the failures by release id.
     """
-    problems: dict[str, list[str]] = {rid: [] for rid in receptor_ids}
+    problems: dict[str, list[str]] = {rid: [] for rid in release_ids}
     for (_, k), names in _groups(project).items():
         if not _is_batched(project, names[0]):
             continue
-        firsts = [project.simulation(rid, names[0], k) for rid in receptor_ids]
+        firsts = [project.simulation(rid, names[0], k) for rid in release_ids]
         todo = [s for s in firsts if not (skip_existing and s.has_particles)]
         written: dict[str, pd.DataFrame] = {}
         if todo:
             written, failed = run_particles_batch(todo, timeout=execution.timeout)
             for rid, line in failed.items():
                 problems[rid].append(line)
-        ran = {s.receptor.id for s in todo}
-        for rid in receptor_ids:
+        ran = {s.release.id for s in todo}
+        for rid in release_ids:
             if rid in ran and rid not in written:
                 continue  # its particles failed, so no stage has any to read
             sims = [project.simulation(rid, n, k) for n in names]
@@ -605,9 +605,9 @@ def _new_workdir(compute_root: Path, sim: Simulation) -> Path:
     """
     Return a workdir for one run of *sim*'s transport model: a new path in *compute_root*.
 
-    The name is the receptor id, the variant, and the realization (in an
+    The name is the release id, the variant, and the realization (in an
     ensemble), then a random part, so two runs never share a workdir. Another project can use
-    the same compute root with the same receptor and variant names, and the
+    the same compute root with the same release and variant names, and the
     same simulation can run twice at once.
     """
     return compute_root / f"{str(sim).replace('/', '_')}_{uuid.uuid4().hex[:8]}"
@@ -621,7 +621,7 @@ def _run_group(
     execution: ExecutionConfig,
     skip_existing: bool,
 ) -> list[str]:
-    """Run the simulations of one receptor that share particles: the transport model at most once, then each variant's stages."""
+    """Run the simulations of one release that share particles: the transport model at most once, then each variant's stages."""
     first = sims[0]
     particles: pd.DataFrame | None = None
     rerun = not (skip_existing and first.has_particles)
@@ -639,12 +639,12 @@ def _run_group(
     return run_stages(sims, particles, remade=rerun, skip_existing=skip_existing)
 
 
-def _log_progress(receptor_id: str, problems: list[str], done: int, total: int) -> None:
-    """Log one progress line for a finished receptor: complete, or its first problem."""
+def _log_progress(release_id: str, problems: list[str], done: int, total: int) -> None:
+    """Log one progress line for a finished release: complete, or its first problem."""
     if problems:
-        logger.info("[%d/%d] %s: %s", done, total, receptor_id, problems[0])
+        logger.info("[%d/%d] %s: %s", done, total, release_id, problems[0])
     else:
-        logger.info("[%d/%d] %s complete", done, total, receptor_id)
+        logger.info("[%d/%d] %s complete", done, total, release_id)
 
 
 # -- process pool -------------------------------------------------------------
@@ -666,13 +666,13 @@ def _init_pool_worker(
     """
     Open the worker process's Project, on the parent's output, and set how it stops.
 
-    The parent stops its workers with SIGTERM (:func:`run_receptors`). A
+    The parent stops its workers with SIGTERM (:func:`run_releases`). A
     worker that gets it ends the transport model run it is in the middle
     of and exits (:func:`_pool_run`). It ignores
     Ctrl-C, which the terminal also sends to it: the parent answers that.
 
-    *rows* are the receptor rows the parent took in place of
-    ``receptors.csv`` (a Slurm task's), if any.
+    *rows* are the release rows the parent took in place of
+    ``releases.csv`` (a Slurm task's), if any.
     """
     from stilt.project import Project
 
@@ -688,17 +688,17 @@ def _init_pool_worker(
 
 
 def _pool_run(item: tuple[int, str]) -> tuple[int, list[str]]:
-    """Run one receptor in a pool worker, returning its index and problems."""
-    idx, receptor_id = item
+    """Run one release in a pool worker, returning its index and problems."""
+    idx, release_id = item
     assert _POOL_PROJECT is not None and _POOL_COMPUTE_ROOT is not None
     try:
-        return idx, run_receptor(
+        return idx, run_release(
             _POOL_PROJECT,
-            receptor_id,
+            release_id,
             compute_root=_POOL_COMPUTE_ROOT,
             execution=_POOL_EXECUTION,
             skip_existing=_POOL_SKIP,
-            batched=False,  # run_receptors ran those first
+            batched=False,  # run_releases ran those first
         )
     except SystemExit:
         # SIGTERM (:func:`_exit_worker`), after the run's `finally` blocks
@@ -763,7 +763,7 @@ def _stop_workers(executor: ProcessPoolExecutor) -> None:
         process.join()
 
 
-#: Seconds the pool loop waits for a receptor to finish before it looks at the workers.
+#: Seconds the pool loop waits for a release to finish before it looks at the workers.
 _WORKER_CHECK_SECONDS = 2.0
 
 
@@ -775,7 +775,7 @@ def _a_worker_died(executor: ProcessPoolExecutor) -> bool:
     killer sends) by itself, but not always at once. On Python 3.14 it starts
     the second worker after waking the thread that watches the workers, which
     may already have made its list. If that worker is the one killed, the pool
-    learns of it only when another receptor finishes, which can be hours later
+    learns of it only when another release finishes, which can be hours later
     (#400). Workers stay alive until the loop in :func:`_run_in_pool` ends, so
     one that is not alive has died.
     """
@@ -784,7 +784,7 @@ def _a_worker_died(executor: ProcessPoolExecutor) -> bool:
 
 def _run_in_pool(
     project: Project,
-    receptor_ids: list[str],
+    release_ids: list[str],
     earlier: dict[str, list[str]],
     *,
     compute_root: Path,
@@ -792,15 +792,15 @@ def _run_in_pool(
     skip_existing: bool,
 ) -> None:
     """
-    Run *receptor_ids* in ``execution.cpus`` worker processes, one receptor in each at a time.
+    Run *release_ids* in ``execution.cpus`` worker processes, one release in each at a time.
 
-    Only as many receptors are given to the pool as there are workers, so a
-    receptor given to it is a receptor in progress. If a worker dies without
+    Only as many releases are given to the pool as there are workers, so a
+    release given to it is a release in progress. If a worker dies without
     Python's say (SIGKILL, as the out-of-memory killer sends), the pool cannot say which
-    receptor it held, and it cannot be used again: the run stops with
-    :class:`~stilt.exceptions.WorkerDied`, naming every receptor in progress.
+    release it held, and it cannot be used again: the run stops with
+    :class:`~stilt.exceptions.WorkerDied`, naming every release in progress.
     """
-    total = len(receptor_ids)
+    total = len(release_ids)
     _check_workers_can_start(execution.cpus)
     executor = ProcessPoolExecutor(
         execution.cpus,
@@ -814,7 +814,7 @@ def _run_in_pool(
             project._taken_rows,
         ),
     )
-    waiting = enumerate(receptor_ids)
+    waiting = enumerate(release_ids)
     running: dict[Future[tuple[int, list[str]]], int] = {}  # each one's index
     done = 0
     with _sigterm_as_interrupt():
@@ -838,7 +838,7 @@ def _run_in_pool(
                     idx, problems = future.result()
                     del running[future]
                     done += 1
-                    rid = receptor_ids[idx]
+                    rid = release_ids[idx]
                     _log_progress(rid, earlier.get(rid, []) + problems, done, total)
             # Normal completion: let the workers exit on their own.
             executor.shutdown()
@@ -846,19 +846,19 @@ def _run_in_pool(
             # Preempted or Ctrl-C: SIGTERM the workers, which end their runs
             # and exit; what finished is written.
             logger.info(
-                "stopped after %d of %d receptors; the rest did not run", done, total
+                "stopped after %d of %d releases; the rest did not run", done, total
             )
             _stop_workers(executor)
         except BrokenProcessPool as error:
-            # A receptor that finished in the same moment is not lost.
+            # A release that finished in the same moment is not lost.
             lost = [
-                receptor_ids[idx]
+                release_ids[idx]
                 for future, idx in running.items()
                 if not future.done() or future.exception() is not None
             ]
             _stop_workers(executor)
             raise WorkerDied(
-                f"A worker process died after {done} of {total} receptors finished, "
+                f"A worker process died after {done} of {total} releases finished, "
                 f"most likely killed for using too much memory. These were in progress, "
                 f"and the pool cannot say which one it held: {', '.join(lost)}. "
                 "The run stopped. What finished is kept; run it again to continue "
@@ -873,36 +873,36 @@ def _run_in_pool(
             raise
 
 
-def run_receptors(
+def run_releases(
     project: Project,
-    receptor_ids: list[str],
+    release_ids: list[str],
     *,
     compute_root: Path,
     execution: ExecutionConfig | None = None,
     skip_existing: bool = True,
 ) -> None:
     """
-    Run a list of receptors, in this process or in a process pool.
+    Run a list of releases, in this process or in a process pool.
 
     The variants of a batched transport model run first, one model call
-    for all the receptors that need their particles. Then each receptor
+    for all the releases that need their particles. Then each release
     runs its other variants. Pool workers open the project again from its
     directory, with the same output directory. Ctrl-C, or a SIGTERM such as Slurm preemption or a stopped
     pod, stops the batch: the transport model runs in progress are ended, the workers exit, and this logs
-    how many receptors had finished and returns. What finished is in the output directory, with a failure
+    how many releases had finished and returns. What finished is in the output directory, with a failure
     record for each simulation that failed; a run that was cut off leaves only its log line, so it is
     ``interrupted`` in :meth:`stilt.Project.status`.
 
-    An error that escapes a receptor's own handling (:func:`run_receptor` records a failure
+    An error that escapes a release's own handling (:func:`run_release` records a failure
     for one and goes on; this is anything outside that, such as a shared resource that stops
     answering) stops the batch too: the pool is terminated and the error raised to the caller.
 
     Parameters
     ----------
     project : Project
-        Project the receptors belong to.
-    receptor_ids : list of str
-        Receptors to run.
+        Project the releases belong to.
+    release_ids : list of str
+        Releases to run.
     compute_root : Path
         Directory the workdirs are made in, a new one for each run, as
         :func:`~stilt.execution.runner.resolve_compute_root` returns it.
@@ -913,10 +913,10 @@ def run_receptors(
     skip_existing : bool, default True
         Keep particles and stage files that already exist.
     """
-    if not receptor_ids:
+    if not release_ids:
         return
     execution = execution if execution is not None else project.config.execution
-    total = len(receptor_ids)
+    total = len(release_ids)
 
     earlier: dict[str, list[str]] = {}
     if any(_is_batched(project, names[0]) for names in _groups(project).values()):
@@ -924,7 +924,7 @@ def run_receptors(
             try:
                 earlier = _run_batched(
                     project,
-                    receptor_ids,
+                    release_ids,
                     execution=execution,
                     skip_existing=skip_existing,
                 )
@@ -934,25 +934,25 @@ def run_receptors(
 
     if execution.cpus <= 1:
         with _sigterm_as_interrupt():
-            for i, receptor_id in enumerate(receptor_ids, 1):
+            for i, release_id in enumerate(release_ids, 1):
                 try:
-                    problems = earlier.get(receptor_id, []) + run_receptor(
+                    problems = earlier.get(release_id, []) + run_release(
                         project,
-                        receptor_id,
+                        release_id,
                         compute_root=compute_root,
                         execution=execution,
                         skip_existing=skip_existing,
                         batched=False,
                     )
                 except KeyboardInterrupt:
-                    logger.info("stopped at %s; the rest did not run", receptor_id)
+                    logger.info("stopped at %s; the rest did not run", release_id)
                     return
-                _log_progress(receptor_id, problems, i, total)
+                _log_progress(release_id, problems, i, total)
         return
 
     _run_in_pool(
         project,
-        receptor_ids,
+        release_ids,
         earlier,
         compute_root=compute_root,
         execution=execution,
@@ -963,8 +963,8 @@ def run_receptors(
 __all__ = [
     "run_particles",
     "run_particles_batch",
-    "run_receptor",
-    "run_receptors",
+    "run_release",
+    "run_releases",
     "run_stage",
     "run_stages",
 ]

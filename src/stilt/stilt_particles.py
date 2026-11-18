@@ -39,7 +39,7 @@ class ParticlesAccessor(accessor.ParticlesAccessor):
         Return each particle's enhancement, ``foot`` times flux summed along its trajectory.
 
         The mean over particles, after any weighting, is the modeled
-        enhancement at the receptor. Unlike ``foot.stilt.enhancement``, the
+        enhancement at the release. Unlike ``foot.stilt.enhancement``, the
         flux is taken at each particle position, with no gridding or
         smoothing.
 

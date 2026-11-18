@@ -1,7 +1,7 @@
 """
 The averaging-kernel transform: weight each particle by a retrieval's kernel.
 
-A kernel is given inline as ``levels`` and ``values``, or per receptor in a
+A kernel is given inline as ``levels`` and ``values``, or per release in a
 table (:func:`averaging_kernel_table`, ``project.add_table``).
 :func:`ak_weights` holds X-STILT's kernel weighting, public so your own
 transforms can use it.
@@ -22,7 +22,7 @@ from numpy.typing import ArrayLike
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 if TYPE_CHECKING:
-    from stilt.receptors import Receptor
+    from stilt.releases import Receptor
 
 from stilt.transforms._common import release_coordinate
 
@@ -74,47 +74,47 @@ def ak_weights(
     return np.interp(coords, lv, va, left=va[0], right=va[-1])
 
 
-KERNEL_TABLE_COLUMNS = ("receptor", "level", "value")
+KERNEL_TABLE_COLUMNS = ("release", "level", "value")
 
 
 def averaging_kernel_table(
-    receptors: Iterable[Any],
+    releases: Iterable[Any],
     levels: Sequence[ArrayLike],
     values: Sequence[ArrayLike],
 ) -> pd.DataFrame:
     """
-    Return a table of averaging kernels, one per receptor, for :class:`AveragingKernel`.
+    Return a table of averaging kernels, one per release, for :class:`AveragingKernel`.
 
-    The table is in long form, with ``receptor``, ``level``, and ``value``
+    The table is in long form, with ``release``, ``level``, and ``value``
     columns and one row per kernel level. Add it to the project with
     ``project.add_table("kernels", table)`` and name it as ``table:
     kernels`` in the ``averaging_kernel`` transform.
 
     Parameters
     ----------
-    receptors : iterable
+    releases : iterable
         :class:`~stilt.Receptor` objects or their ids.
     levels : sequence of array-like
-        One array of levels per receptor, as for satellite soundings whose
-        pressure grids differ, or a single array shared by all receptors.
+        One array of levels per release, as for satellite soundings whose
+        pressure grids differ, or a single array shared by all releases.
     values : sequence of array-like
-        One array of kernel values per receptor.
+        One array of kernel values per release.
 
     Returns
     -------
     pandas.DataFrame
         The kernel table.
     """
-    ids = [str(getattr(r, "id", r)) for r in receptors]
+    ids = [str(getattr(r, "id", r)) for r in releases]
     value_arrays = [np.asarray(v, dtype=float).ravel() for v in values]
     if len(value_arrays) != len(ids):
         raise ValueError(
-            f"averaging_kernel_table: {len(ids)} receptors but "
+            f"averaging_kernel_table: {len(ids)} releases but "
             f"{len(value_arrays)} kernels."
         )
     try:
         shared = np.asarray(levels, dtype=float)
-    except (TypeError, ValueError):  # ragged: one array per receptor
+    except (TypeError, ValueError):  # ragged: one array per release
         shared = None
     if shared is not None and shared.ndim == 1:
         level_arrays = [shared] * len(ids)
@@ -122,17 +122,17 @@ def averaging_kernel_table(
         level_arrays = [np.asarray(lv, dtype=float).ravel() for lv in levels]
         if len(level_arrays) != len(ids):
             raise ValueError(
-                f"averaging_kernel_table: {len(ids)} receptors but "
+                f"averaging_kernel_table: {len(ids)} releases but "
                 f"{len(level_arrays)} level arrays."
             )
     frames = []
     for rid, lv, va in zip(ids, level_arrays, value_arrays, strict=True):
         if lv.size == 0 or lv.size != va.size:
             raise ValueError(
-                f"averaging_kernel_table: receptor {rid} has {lv.size} levels "
+                f"averaging_kernel_table: release {rid} has {lv.size} levels "
                 f"and {va.size} values."
             )
-        frames.append(pd.DataFrame({"receptor": rid, "level": lv, "value": va}))
+        frames.append(pd.DataFrame({"release": rid, "level": lv, "value": va}))
     return pd.concat(frames, ignore_index=True)
 
 
@@ -141,7 +141,7 @@ def _read_kernel_table(
     path: str, mtime: float
 ) -> dict[str, tuple[np.ndarray, np.ndarray]]:
     """
-    Read a per-receptor averaging-kernel table from parquet or CSV.
+    Read a per-release averaging-kernel table from parquet or CSV.
 
     Cached by ``path`` and its modification time ``mtime``, so an edited
     table is read again.
@@ -162,7 +162,7 @@ def _read_kernel_table(
             f"expected {list(KERNEL_TABLE_COLUMNS)} (see averaging_kernel_table)."
         )
     kernels = {}
-    for rid, group in table.groupby("receptor", sort=False):
+    for rid, group in table.groupby("release", sort=False):
         kernels[str(rid)] = (
             group["level"].to_numpy(dtype=float),
             group["value"].to_numpy(dtype=float),
@@ -175,9 +175,9 @@ class AveragingKernel(BaseModel):
     Transform that weights each particle's ``foot`` by an averaging kernel.
 
     Give the kernel as ``levels`` and ``values``, or name a ``table`` with
-    one kernel per receptor (see :func:`averaging_kernel_table`): a project
+    one kernel per release (see :func:`averaging_kernel_table`): a project
     table added with ``project.add_table``, or a file, whose relative path
-    is relative to the project root. A receptor missing from the table is
+    is relative to the project root. A release missing from the table is
     an error.
 
     ``levels`` are release heights above ground in meters by default. Set
@@ -199,7 +199,7 @@ class AveragingKernel(BaseModel):
     table: str | None = Field(
         default=None,
         description=(
-            "Table of kernels, one per receptor, with ``receptor``, ``level``, "
+            "Table of kernels, one per release, with ``release``, ``level``, "
             "and ``value`` columns: the name of a project table "
             "(``project.add_table``), such as ``kernels``, or a .parquet or .csv "
             "file. A relative path is relative to the project root."
@@ -236,7 +236,7 @@ class AveragingKernel(BaseModel):
     def _kernels(
         self, directory: str | Path | None
     ) -> dict[str, tuple[np.ndarray, np.ndarray]]:
-        """Return the kernels of ``table`` by receptor id; a relative path starts from *directory*."""
+        """Return the kernels of ``table`` by release id; a relative path starts from *directory*."""
         assert self.table is not None
         path = self.table
         if re.fullmatch(r"[A-Za-z0-9_-]+", path):  # a project table's name
@@ -245,9 +245,9 @@ class AveragingKernel(BaseModel):
             path = str(Path(directory) / path)
         return _read_kernel_table(path, os.stat(path).st_mtime)
 
-    def table_receptors(self, directory: str | Path | None = None) -> frozenset[str]:
+    def table_releases(self, directory: str | Path | None = None) -> frozenset[str]:
         """
-        Return the ids of the receptors the ``table`` has a kernel for.
+        Return the ids of the releases the ``table`` has a kernel for.
 
         A relative ``table`` path starts from *directory*, as for
         :meth:`kernel`.
@@ -256,7 +256,7 @@ class AveragingKernel(BaseModel):
         ------
         ValueError
             If the transform has no ``table``, or the table lacks the
-            ``receptor``, ``level``, or ``value`` column.
+            ``release``, ``level``, or ``value`` column.
         FileNotFoundError
             If the table's file does not exist.
         """
@@ -265,14 +265,14 @@ class AveragingKernel(BaseModel):
         return frozenset(self._kernels(directory))
 
     def check(
-        self, receptors: Sequence[str], directory: str | Path | None = None
+        self, releases: Sequence[str], directory: str | Path | None = None
     ) -> list[tuple[str, str | None, str]]:
         """
-        Return what is wrong with the ``table`` for a project's *receptors*, which ``stilt check`` reports.
+        Return what is wrong with the ``table`` for a project's *releases*, which ``stilt check`` reports.
 
-        Each finding is ``(check, receptor id or None, message)``: the table
+        Each finding is ``(check, release id or None, message)``: the table
         does not exist or cannot be read (``kernel_table``), has no kernel
-        for a receptor (``kernel_missing``), or holds one for a receptor the
+        for a release (``kernel_missing``), or holds one for a release the
         project lacks (``kernel_unused``). A kernel given as ``levels`` and
         ``values`` has nothing to check. A relative ``table`` path starts
         from *directory*.
@@ -280,7 +280,7 @@ class AveragingKernel(BaseModel):
         if self.table is None:
             return []
         try:
-            held = self.table_receptors(directory)
+            held = self.table_releases(directory)
         except FileNotFoundError as error:
             return [
                 (
@@ -295,55 +295,55 @@ class AveragingKernel(BaseModel):
             (
                 "kernel_missing",
                 rid,
-                f"table {self.table!r} has no kernel for this receptor",
+                f"table {self.table!r} has no kernel for this release",
             )
-            for rid in receptors
+            for rid in releases
             if rid not in held
         ] + [
             (
                 "kernel_unused",
                 rid,
-                f"table {self.table!r} has a kernel for a receptor the project does not have",
+                f"table {self.table!r} has a kernel for a release the project does not have",
             )
-            for rid in sorted(held - set(receptors))
+            for rid in sorted(held - set(releases))
         ]
 
     def kernel(
-        self, receptor: Receptor | None = None, directory: str | Path | None = None
+        self, release: Receptor | None = None, directory: str | Path | None = None
     ) -> tuple[list[float], list[float]]:
         """
-        Return ``(levels, values)`` of the kernel for *receptor*.
+        Return ``(levels, values)`` of the kernel for *release*.
 
-        A ``table`` is looked up by the receptor's id, and a relative
+        A ``table`` is looked up by the release's id, and a relative
         ``table`` path starts from *directory*.
         """
         if self.table is None:
             assert self.levels is not None and self.values is not None
             return self.levels, self.values
-        if receptor is None:
+        if release is None:
             raise ValueError(
-                "averaging_kernel with a table needs the receptor to know which "
+                "averaging_kernel with a table needs the release to know which "
                 "kernel to look up."
             )
         kernels = self._kernels(directory)
-        rid = str(receptor.id)
+        rid = str(release.id)
         try:
             levels, values = kernels[rid]
         except KeyError:
             raise KeyError(
                 f"averaging_kernel table {self.table!r} has no kernel for "
-                f"receptor {rid!r}."
+                f"release {rid!r}."
             ) from None
         return levels.tolist(), values.tolist()
 
     def apply(
         self,
         particles: pd.DataFrame,
-        receptor: Receptor | None = None,
+        release: Receptor | None = None,
         directory: str | Path | None = None,
     ) -> pd.DataFrame:
         """Return the particles with ``foot`` weighted by the averaging kernel."""
-        levels, values = self.kernel(receptor, directory)
+        levels, values = self.kernel(release, directory)
         weights = ak_weights(particles, levels, values, self.coordinate)
         out = particles.copy()
         out["ak_weight"] = weights

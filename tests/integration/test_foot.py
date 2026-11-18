@@ -34,7 +34,7 @@ from stilt.footprint import (
     footprint_particles,
 )
 from stilt.particles import PARTICLE_SCHEMA
-from stilt.receptors import PointReceptor
+from stilt.releases import PointReceptor
 from stilt.sampling import calc_pbl_height, sample_met
 from stilt.transport import ModelRun, run_model
 from stilt.transport.hysplit import HysplitConfig
@@ -57,7 +57,7 @@ def _run(
     met_dir: Path, workdir: Path, time: dt.datetime, kmixd: int = 3
 ) -> tuple[ModelRun, PointReceptor]:
     """Run HYSPLIT from the WBB tower for 6 hours, writing the columns foot is made from."""
-    receptor = PointReceptor(time=time, longitude=-112.0, latitude=40.5, altitude=5.0)
+    release = PointReceptor(time=time, longitude=-112.0, latitude=40.5, altitude=5.0)
     config = HysplitConfig(
         n_hours=-6,
         numpar=200,
@@ -78,20 +78,20 @@ def _run(
             "dens",
         ],
     )
-    run = run_model("hysplit", receptor, config, reference_met(met_dir), workdir, 900)
-    return run, receptor
+    run = run_model("hysplit", release, config, reference_met(met_dir), workdir, 900)
+    return run, release
 
 
-def _timed(particles: pd.DataFrame, receptor: PointReceptor) -> pd.DataFrame:
-    """Return *particles* with ``time``, the receptor time plus ``age``."""
+def _timed(particles: pd.DataFrame, release: PointReceptor) -> pd.DataFrame:
+    """Return *particles* with ``time``, the release time plus ``age``."""
     return particles.assign(
-        time=pd.Timestamp(receptor.time) + pd.to_timedelta(particles["age"], unit="min")
+        time=pd.Timestamp(release.time) + pd.to_timedelta(particles["age"], unit="min")
     )
 
 
-def _total(particles: pd.DataFrame, receptor: PointReceptor) -> xr.DataArray:
+def _total(particles: pd.DataFrame, release: PointReceptor) -> xr.DataArray:
     """Return the footprint of *particles*, summed over time."""
-    return calc_footprint(particles, receptor, reference_grid(), hnf_plume=False).sum(
+    return calc_footprint(particles, release, reference_grid(), hnf_plume=False).sum(
         "time"
     )
 
@@ -115,10 +115,10 @@ def hysplit_run(request, met_dir, tmp_path_factory):
 
 @integration
 def test_add_foot_with_hysplits_samt_and_mlht_reproduces_its_foot(hysplit_run):
-    run, receptor = hysplit_run
+    run, release = hysplit_run
     hysplit = run.particles
     ours = add_foot(
-        _timed(hysplit.drop(columns="foot"), receptor), run.met_files, VEGHT
+        _timed(hysplit.drop(columns="foot"), release), run.met_files, VEGHT
     )["foot"]
 
     positive = hysplit["foot"] > 0
@@ -139,22 +139,22 @@ def test_add_foot_with_hysplits_samt_and_mlht_reproduces_its_foot(hysplit_run):
 def test_a_positions_only_run_gets_a_foot_that_makes_a_footprint_near_hysplits(
     hysplit_run,
 ):
-    run, receptor = hysplit_run
+    run, release = hysplit_run
     hysplit = run.particles
     positions = hysplit[PARTICLE_SCHEMA.names]
 
     # What the footprint of a transport model that writes only positions is made from.
     computed = footprint_particles(
-        _timed(positions, receptor),
+        _timed(positions, release),
         FootprintConfig(footprint_depth=VEGHT),
         run.met_files,
     )
     assert computed["foot"].notna().all()
 
     whole_step = add_foot(
-        _timed(hysplit.drop(columns=["foot", "samt"]), receptor), run.met_files, VEGHT
+        _timed(hysplit.drop(columns=["foot", "samt"]), release), run.met_files, VEGHT
     )
-    reference = _total(hysplit, receptor)
+    reference = _total(hysplit, release)
     print()
     steps = {
         "whole step": whole_step,
@@ -162,7 +162,7 @@ def test_a_positions_only_run_gets_a_foot_that_makes_a_footprint_near_hysplits(
     }
     moved = {}
     for name, particles in steps.items():
-        moved[name] = _moved(_total(particles, receptor), reference)
+        moved[name] = _moved(_total(particles, release), reference)
         print(
             f"{name}: footprint total / HYSPLIT's {moved[name][0]:.4f}, "
             f"summed cell differences / HYSPLIT's total {moved[name][1]:.4f}"
@@ -183,12 +183,12 @@ def test_against_hysplit_on_the_mets_mixed_layer_the_footprint_moves_less(
     met_dir, tmp_path, time
 ):
     """With ``kmixd: 0`` HYSPLIT's mixed layer is the met's PBLH, at least ``kmix0``."""
-    run, receptor = _run(met_dir, tmp_path / "run", time, kmixd=0)
+    run, release = _run(met_dir, tmp_path / "run", time, kmixd=0)
     hysplit = run.particles
-    timed = _timed(hysplit[PARTICLE_SCHEMA.names], receptor)
+    timed = _timed(hysplit[PARTICLE_SCHEMA.names], release)
     sampled = sample_met(timed, run.met_files, ["mlht"], z_top=None)
     floored = sampled.assign(mlht=np.maximum(sampled["mlht"], KMIX0))
-    reference = _total(hysplit, receptor)
+    reference = _total(hysplit, release)
     print()
     moved = {}
     for name, particles in {
@@ -196,7 +196,7 @@ def test_against_hysplit_on_the_mets_mixed_layer_the_footprint_moves_less(
         f"floored at {KMIX0} m": floored,
     }.items():
         foot = add_foot(particles, run.met_files, VEGHT)
-        moved[name] = _moved(_total(foot, receptor), reference)
+        moved[name] = _moved(_total(foot, release), reference)
         print(
             f"kmixd 0, mlht {name}: footprint total / HYSPLIT's {moved[name][0]:.4f}, "
             f"summed cell differences / HYSPLIT's total {moved[name][1]:.4f}"
@@ -209,10 +209,10 @@ def test_against_hysplit_on_the_mets_mixed_layer_the_footprint_moves_less(
 @integration
 def test_calc_pbl_height_finds_the_mixed_layer_hysplit_finds(hysplit_run):
     """HYSPLIT's ``mlht`` with ``kmixd: 3`` is the Richardson-number height, at least ``kmix0``."""
-    run, receptor = hysplit_run
+    run, release = hysplit_run
     hysplit = run.particles["mlht"].to_numpy()
     ours = np.maximum(
-        calc_pbl_height(_timed(run.particles, receptor), run.met_files), KMIX0
+        calc_pbl_height(_timed(run.particles, release), run.met_files), KMIX0
     )
 
     ratio = ours / hysplit
@@ -229,9 +229,9 @@ def test_calc_pbl_height_finds_the_mixed_layer_hysplit_finds(hysplit_run):
 
 @integration
 def test_each_pbl_height_moves_a_positions_only_footprint_from_hysplits(hysplit_run):
-    run, receptor = hysplit_run
+    run, release = hysplit_run
     positions = run.particles[PARTICLE_SCHEMA.names]
-    reference = _total(run.particles, receptor)
+    reference = _total(run.particles, release)
     sources = {
         "met": ("met", 0.0),
         f"met, at least {KMIX0} m": ("met", KMIX0),
@@ -242,7 +242,7 @@ def test_each_pbl_height_moves_a_positions_only_footprint_from_hysplits(hysplit_
     moved = {}
     for name, (pbl_height, pbl_height_min) in sources.items():
         computed = footprint_particles(
-            _timed(positions, receptor),
+            _timed(positions, release),
             FootprintConfig(
                 footprint_depth=VEGHT,
                 pbl_height=pbl_height,
@@ -250,7 +250,7 @@ def test_each_pbl_height_moves_a_positions_only_footprint_from_hysplits(hysplit_
             ),
             run.met_files,
         )
-        moved[name] = _moved(_total(computed, receptor), reference)
+        moved[name] = _moved(_total(computed, release), reference)
         print(
             f"pbl_height {name}: footprint total / HYSPLIT's {moved[name][0]:.4f}, "
             f"summed cell differences / HYSPLIT's total {moved[name][1]:.4f}"
@@ -264,16 +264,16 @@ def test_each_pbl_height_moves_a_positions_only_footprint_from_hysplits(hysplit_
 
 @integration
 def test_pbl_height_set_replaces_hysplits_own_foot(hysplit_run, caplog):
-    run, receptor = hysplit_run
+    run, release = hysplit_run
     with caplog.at_level("INFO", logger="stilt.footprint.stage"):
         computed = footprint_particles(
-            _timed(run.particles, receptor),
+            _timed(run.particles, release),
             FootprintConfig(
                 footprint_depth=VEGHT, pbl_height="richardson", pbl_height_min=KMIX0
             ),
             run.met_files,
         )
-    total, cells = _moved(_total(computed, receptor), _total(run.particles, receptor))
+    total, cells = _moved(_total(computed, release), _total(run.particles, release))
     print(
         f"\nHYSPLIT's particles, foot from pbl_height richardson: footprint total / "
         f"HYSPLIT's {total:.4f}, summed cell differences / HYSPLIT's total {cells:.4f}"

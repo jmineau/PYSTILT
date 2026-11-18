@@ -13,7 +13,7 @@ from stilt import Project, transport
 from stilt.exceptions import MeteorologyError
 from stilt.meteorology import run_window
 from stilt.observations.placement import slant_points
-from stilt.receptors import (
+from stilt.releases import (
     ColumnReceptor,
     MultiPointReceptor,
     PointReceptor,
@@ -27,7 +27,7 @@ from tests.fixtures.factories import blocks
 from .fixtures.factories import (
     make_met_config,
     make_met_files,
-    make_receptor,
+    make_release,
     write_arl_file,
 )
 
@@ -40,16 +40,16 @@ GRID = Grid(xmin=-112.0, xmax=-111.0, ymin=40.0, ymax=41.0, xres=0.1, yres=0.1)
 # ---------------------------------------------------------------------------
 
 
-def _receptor(
+def _release(
     hour: float = 12, longitude: float = -111.85, latitude: float = 40.77
 ) -> PointReceptor:
     time = dt.datetime(2023, 1, 1) + dt.timedelta(hours=hour)
-    return make_receptor(time, longitude, latitude)
+    return make_release(time, longitude, latitude)
 
 
 def _project(
     tmp_path: Path,
-    receptors=None,
+    releases=None,
     *,
     met: dict[str, Any] | None = None,
     files: bool = True,
@@ -71,7 +71,7 @@ def _project(
     settings.setdefault("variants", {"hrrr": {}})
     return Project.init(
         tmp_path / "proj",
-        receptors=[_receptor()] if receptors is None else receptors,
+        releases=[_release()] if releases is None else releases,
         **blocks(mets={"hrrr": config}, n_hours=n_hours, **settings),
     )
 
@@ -89,31 +89,31 @@ def test_a_project_with_everything_in_place_has_nothing_to_check(tmp_path):
     table = _project(tmp_path).check()
 
     assert table.empty
-    assert list(table.columns) == ["check", "variant", "receptor", "message"]
+    assert list(table.columns) == ["check", "variant", "release", "message"]
 
 
-def test_a_project_with_no_receptors_is_listed_once(tmp_path):
+def test_a_project_with_no_releases_is_listed_once(tmp_path):
     """An empty project ran nothing, with no warning (#440)."""
     project = _project(tmp_path, variants={"hrrr": {}, "hrrr-zi": {"ziscale": 0.8}})
-    project.receptors_path.write_text("time,longitude,latitude,altitude\n")
+    project.releases_path.write_text("time,longitude,latitude,altitude\n")
     project = Project(project.directory)
 
     table = project.check()
 
-    assert list(table["check"]) == ["receptors"]
+    assert list(table["check"]) == ["releases"]
     assert list(table["variant"]) == ["hrrr, hrrr-zi"]
-    assert table["receptor"].isna().all()
-    assert "no receptors" in table["message"].iloc[0]
+    assert table["release"].isna().all()
+    assert "no releases" in table["message"].iloc[0]
 
 
 def test_each_stage_of_a_variant_checks_its_own_inputs(tmp_path):
     """The check asks a stage it does not import, and variants with equal settings share its findings."""
     from .fixtures.stages import COUNT
 
-    south = _receptor(latitude=-33.9)
+    south = _release(latitude=-33.9)
     project = Project.init(
         tmp_path / "proj",
-        receptors=[_receptor(), south],
+        releases=[_release(), south],
         mets={"hrrr": {"download": "hrrr", "directory": str(tmp_path / "met")}},
         models={"hysplit": {"n_hours": -3}},
         stages={"count": {"class": COUNT}},
@@ -127,20 +127,20 @@ def test_each_stage_of_a_variant_checks_its_own_inputs(tmp_path):
 
     table = _found(project.check(), "count")
 
-    assert list(table["receptor"]) == [south.id]
+    assert list(table["release"]) == [south.id]
     assert list(table["variant"]) == ["hrrr, hrrr-zi, tripled"]
     assert list(table["message"]) == ["is south of the equator"]
 
 
 def test_check_returns_one_row_for_each_thing_found(tmp_path):
-    inside, outside = _receptor(12), _receptor(12, longitude=-110.0)
+    inside, outside = _release(12), _release(12, longitude=-110.0)
     project = _project(tmp_path, [inside, outside])
 
     table = project.check()
 
     assert list(table["check"]) == ["grid"]
     assert list(table["variant"]) == ["hrrr"]
-    assert list(table["receptor"]) == [outside.id]
+    assert list(table["release"]) == [outside.id]
     assert "outside the footprint grid" in table["message"].iloc[0]
 
 
@@ -150,10 +150,10 @@ def test_check_returns_one_row_for_each_thing_found(tmp_path):
 
 
 def test_a_met_directory_that_does_not_exist_is_found_once_for_the_met(tmp_path):
-    receptors = [_receptor(12), _receptor(13)]
+    releases = [_release(12), _release(13)]
     project = _project(
         tmp_path,
-        receptors,
+        releases,
         met={"directory": str(tmp_path / "typo")},
         files=False,
     )
@@ -161,7 +161,7 @@ def test_a_met_directory_that_does_not_exist_is_found_once_for_the_met(tmp_path)
     table = project.check()
 
     assert list(table["check"]) == ["met_directory"]
-    assert table["receptor"].isna().all()
+    assert table["release"].isna().all()
     assert f"{tmp_path / 'typo'} does not exist" in table["message"].iloc[0]
 
 
@@ -193,15 +193,15 @@ def test_the_directory_is_only_a_download_destination_with_download(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_a_receptor_missing_a_met_file_is_listed_with_its_hours(tmp_path):
-    whole, short = _receptor(12), _receptor(20)
+def test_a_release_missing_a_met_file_is_listed_with_its_hours(tmp_path):
+    whole, short = _release(12), _release(20)
     project = _project(tmp_path, [whole, short])
     # The run of `short` covers 17:00 to 20:00; the files stop after 13:00.
 
     table = project.check()
 
     assert list(table["check"]) == ["met_files"]
-    assert list(table["receptor"]) == [short.id]
+    assert list(table["release"]) == [short.id]
     message = table["message"].iloc[0]
     assert message == "no met file for 2023-01-01 17:00 to 2023-01-01 20:00"
 
@@ -220,20 +220,20 @@ def test_met_files_that_hold_one_time_period_are_found_once_for_the_met(
     tmp_path, n_hours
 ):
     """HYSPLIT stops on a file with one time period, so every run of the met would fail (#286)."""
-    project = _project(tmp_path, [_receptor(12), _receptor(13)], n_hours=n_hours)
+    project = _project(tmp_path, [_release(12), _release(13)], n_hours=n_hours)
     _one_period_files(tmp_path)
 
     table = project.check()
 
     assert list(table["check"]) == ["met_periods"]
-    assert table["receptor"].isna().all()
+    assert table["release"].isna().all()
     message = table["message"].iloc[0]
     assert "holds one time period" in message
     assert "Only one time period of meteo data" in message
 
 
 def test_the_file_with_one_time_period_is_named(tmp_path):
-    project = _project(tmp_path, [_receptor(12)])
+    project = _project(tmp_path, [_release(12)])
     _one_period_files(tmp_path)
 
     table = project.check()
@@ -243,7 +243,7 @@ def test_the_file_with_one_time_period_is_named(tmp_path):
 
 
 def test_a_missing_first_file_is_not_also_a_file_with_one_time_period(tmp_path):
-    project = _project(tmp_path, [_receptor(12)])
+    project = _project(tmp_path, [_release(12)])
     _one_period_files(tmp_path)
     (tmp_path / "met" / "20230101_09").unlink()
 
@@ -253,19 +253,19 @@ def test_a_missing_first_file_is_not_also_a_file_with_one_time_period(tmp_path):
 def test_a_file_cut_partway_through_a_time_step_is_named(tmp_path):
     """Its size is no whole number of time steps, which the header and the size show."""
     _block_met(tmp_path, 6)
-    project = _project(tmp_path, [_receptor(9)], files=False)
+    project = _project(tmp_path, [_release(9)], files=False)
     block = (tmp_path / "met" / "block_06").resolve()
     block.write_bytes(block.read_bytes()[:-10])  # cut inside a record
 
     table = project.check()
 
     assert list(table["check"]) == ["met_cut"]
-    assert table["receptor"].isna().all()
+    assert table["release"].isna().all()
     assert str(block) in table["message"].iloc[0]
 
 
-def test_two_products_holding_one_time_are_found_for_the_receptors_they_stop(tmp_path):
-    project = _project(tmp_path, [_receptor(12)])
+def test_two_products_holding_one_time_are_found_for_the_releases_they_stop(tmp_path):
+    project = _project(tmp_path, [_release(12)])
     write_arl_file(
         tmp_path / "met" / "other_product",
         times=pd.date_range("2023-01-01 09:00", periods=2, freq="h"),
@@ -282,17 +282,17 @@ def test_checking_reads_no_met_file_past_its_header(tmp_path, monkeypatch):
     """A whole read of a file is the run's: the check reads what a header says."""
     import arlmet
 
-    project = _project(tmp_path, [_receptor(12), _receptor(13)])
+    project = _project(tmp_path, [_release(12), _release(13)])
     monkeypatch.setattr(arlmet, "File", MagicMock(side_effect=AssertionError))
 
     assert project.check().empty
 
 
 def test_checking_finds_files_added_since_the_catalog_was_kept(tmp_path):
-    project = _project(tmp_path, [_receptor(20)])
+    project = _project(tmp_path, [_release(20)])
     assert list(project.check()["check"]) == ["met_files"]
 
-    make_met_files(tmp_path / "met", _receptor(20).time, -3)
+    make_met_files(tmp_path / "met", _release(20).time, -3)
 
     assert project.check().empty
 
@@ -309,7 +309,7 @@ def _block_met(tmp_path, *starts):
 def test_a_met_file_the_hour_after_a_backward_run_needs_is_found_missing(tmp_path):
     """A backward run also reads the step after the release, which HYSPLIT interpolates."""
     _block_met(tmp_path, 6)
-    project = _project(tmp_path, [_receptor(11.5)], files=False)
+    project = _project(tmp_path, [_release(11.5)], files=False)
 
     table = project.check()
 
@@ -321,7 +321,7 @@ def test_a_met_file_the_hour_after_a_backward_run_needs_is_found_missing(tmp_pat
 def test_a_met_file_the_hour_after_a_forward_run_needs_is_found_missing(tmp_path):
     """A forward run reads the step after its end too, so `stilt check` lists it (#275)."""
     _block_met(tmp_path, 6)
-    project = _project(tmp_path, [_receptor(8.5)], n_hours=3, files=False)
+    project = _project(tmp_path, [_release(8.5)], n_hours=3, files=False)
 
     table = project.check()
 
@@ -331,7 +331,7 @@ def test_a_met_file_the_hour_after_a_forward_run_needs_is_found_missing(tmp_path
 
 
 @pytest.mark.parametrize("n_hours", [-3, -6, 4])
-def test_receptors_are_listed_when_the_run_would_stop_for_a_missing_file(
+def test_releases_are_listed_when_the_run_would_stop_for_a_missing_file(
     tmp_path, n_hours
 ):
     """The check and a run's own file search agree, on every hour of the files' 6 h span."""
@@ -342,20 +342,18 @@ def test_receptors_are_listed_when_the_run_would_stop_for_a_missing_file(
             met_dir / f"20230101_{hour}",
             times=pd.date_range(f"2023-01-01 {hour}:00", periods=6, freq="h"),
         )
-    receptors = [
-        _receptor(hour) for hour in (0, 1, 5, 6, 11, 12, 17, 18, 23, 24, 30, 35)
-    ]
+    releases = [_release(hour) for hour in (0, 1, 5, 6, 11, 12, 17, 18, 23, 24, 30, 35)]
     project = Project.init(
         tmp_path / "proj",
-        receptors=receptors,
+        releases=releases,
         **blocks(
             mets={"hrrr": config}, variants={"hrrr": {}}, n_hours=n_hours, grid=GRID
         ),
     )
     met = Met("hrrr", project.variants["hrrr"].met_config)
 
-    def fails(receptor) -> bool:
-        window = run_window(receptor.time, n_hours)
+    def fails(release) -> bool:
+        window = run_window(release.time, n_hours)
         try:
             met.files_for(window)
         except MeteorologyError:
@@ -364,15 +362,15 @@ def test_receptors_are_listed_when_the_run_would_stop_for_a_missing_file(
 
     table = project.check()
 
-    listed = set(_found(table, "met_files")["receptor"])
-    assert listed == {r.id for r in receptors if fails(r)}
-    assert listed and listed != {r.id for r in receptors}
+    listed = set(_found(table, "met_files")["release"])
+    assert listed == {r.id for r in releases if fails(r)}
+    assert listed and listed != {r.id for r in releases}
 
 
 def test_a_variant_with_a_longer_run_is_listed_for_its_own_files(tmp_path):
     project = _project(
         tmp_path,
-        [_receptor(12)],
+        [_release(12)],
         variants={"hrrr": {}, "hrrr-long": {"n_hours": -8}},
     )
 
@@ -385,7 +383,7 @@ def test_a_variant_with_a_longer_run_is_listed_for_its_own_files(tmp_path):
 def test_variants_that_share_a_met_and_a_run_length_share_their_rows(tmp_path):
     project = _project(
         tmp_path,
-        [_receptor(20)],
+        [_release(20)],
         variants={"hrrr": {}, "hrrr-zi": {"ziscale": 0.8}},
     )
 
@@ -412,20 +410,20 @@ def _cropped(tmp_path, **met) -> dict[str, Any]:
     }
 
 
-def test_a_receptor_outside_the_crop_box_is_listed(tmp_path):
-    west, inside = _receptor(12, longitude=-111.95), _receptor(12, longitude=-111.7)
+def test_a_release_outside_the_crop_box_is_listed(tmp_path):
+    west, inside = _release(12, longitude=-111.95), _release(12, longitude=-111.7)
     project = _project(tmp_path, [west, inside], met=_cropped(tmp_path), grid=None)
 
     table = project.check()
 
     assert list(table["check"]) == ["met_crop"]
-    assert list(table["receptor"]) == [west.id]
+    assert list(table["release"]) == [west.id]
     assert "outside subgrid_bounds" in table["message"].iloc[0]
 
 
 def test_the_crop_box_is_not_checked_when_the_crop_is_off(tmp_path):
     met = _cropped(tmp_path, subgrid_enable=False)
-    project = _project(tmp_path, [_receptor(12, longitude=-111.95)], met=met, grid=None)
+    project = _project(tmp_path, [_release(12, longitude=-111.95)], met=met, grid=None)
 
     assert project.check().empty
 
@@ -437,13 +435,13 @@ def test_a_downloaded_met_is_checked_for_its_crop_only(tmp_path):
         "subgrid_enable": True,
         "subgrid_bounds": _CROP,
     }
-    west = _receptor(12, longitude=-111.95)
+    west = _release(12, longitude=-111.95)
     project = _project(tmp_path, [west], met=met, files=False, grid=None)
 
     table = project.check()
 
     assert list(table["check"]) == ["met_crop"]
-    assert list(table["receptor"]) == [west.id]
+    assert list(table["release"]) == [west.id]
 
 
 # ---------------------------------------------------------------------------
@@ -451,24 +449,24 @@ def test_a_downloaded_met_is_checked_for_its_crop_only(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_a_receptor_outside_the_met_files_grid_is_listed(tmp_path):
+def test_a_release_outside_the_met_files_grid_is_listed(tmp_path):
     """HYSPLIT stopped such a run with "source point off grid", and check said nothing (#440)."""
     # The test met files' grid has points from 125 W to 106 W and 30 N to 49 N.
-    east = _receptor(12, longitude=-105.5)
-    north = _receptor(12, latitude=49.5)
-    edge = _receptor(12, longitude=-106.0, latitude=49.0)
-    inside = _receptor(12)
+    east = _release(12, longitude=-105.5)
+    north = _release(12, latitude=49.5)
+    edge = _release(12, longitude=-106.0, latitude=49.0)
+    inside = _release(12)
     project = _project(tmp_path, [east, north, edge, inside], grid=None)
 
     table = project.check()
 
     assert list(table["check"]) == ["met_domain", "met_domain"]
-    assert list(table["receptor"]) == [east.id, north.id]
+    assert list(table["release"]) == [east.id, north.id]
     assert "outside the met's domain" in table["message"].iloc[0]
 
 
 def test_a_cropped_met_is_checked_for_its_crop_box_not_its_domain(tmp_path):
-    east = _receptor(12, longitude=-105.5)
+    east = _release(12, longitude=-105.5)
     project = _project(tmp_path, [east], met=_cropped(tmp_path), grid=None)
 
     assert list(project.check()["check"]) == ["met_crop"]
@@ -479,21 +477,21 @@ def test_a_cropped_met_is_checked_for_its_crop_box_not_its_domain(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_a_receptor_outside_the_grid_is_listed(tmp_path):
-    east = _receptor(12, longitude=-110.9)
-    north = _receptor(12, latitude=42.0)
-    inside = _receptor(12, longitude=-111.5, latitude=40.5)
+def test_a_release_outside_the_grid_is_listed(tmp_path):
+    east = _release(12, longitude=-110.9)
+    north = _release(12, latitude=42.0)
+    inside = _release(12, longitude=-111.5, latitude=40.5)
     project = _project(tmp_path, [east, inside, north])
 
     table = project.check()
 
     assert list(table["check"]) == ["grid", "grid"]
-    assert list(table["receptor"]) == [east.id, north.id]
+    assert list(table["release"]) == [east.id, north.id]
     assert "outside the footprint grid" in table["message"].iloc[0]
 
 
-def test_a_receptor_on_the_edge_of_the_grid_is_inside_it(tmp_path):
-    edge = _receptor(12, longitude=GRID.xmin, latitude=GRID.ymax)
+def test_a_release_on_the_edge_of_the_grid_is_inside_it(tmp_path):
+    edge = _release(12, longitude=GRID.xmin, latitude=GRID.ymax)
 
     assert _project(tmp_path, [edge]).check().empty
 
@@ -510,7 +508,7 @@ def _grid_box(xmin, xmax, ymin=40.0, ymax=41.0):
         (170, -170, [175, -175, 0], [0]),
         (170, 190, [175, -175, 0], [0]),
         (-190, -170, [-175, 175, 0], [0]),
-        # A receptor on an edge is inside, however the edge is written.
+        # A release on an edge is inside, however the edge is written.
         (170, -170, [170, -170], []),
         (170, 190, [170, -170], []),
         (-190, -170, [-170, 170], []),
@@ -524,29 +522,29 @@ def _grid_box(xmin, xmax, ymin=40.0, ymax=41.0):
 def test_the_grid_counts_longitudes_modulo_360(
     tmp_path, xmin, xmax, longitudes, flagged
 ):
-    """A receptor is in the grid when its longitude, east of the grid's west edge, is within its width."""
+    """A release is in the grid when its longitude, east of the grid's west edge, is within its width."""
     grid = {**_grid_box(xmin, xmax), "xres": 0.5, "yres": 0.5}
-    receptors = [_receptor(12, longitude=lon, latitude=40.5) for lon in longitudes]
-    project = _project(tmp_path, receptors, grid=grid)
+    releases = [_release(12, longitude=lon, latitude=40.5) for lon in longitudes]
+    project = _project(tmp_path, releases, grid=grid)
 
     table = _found(project.check(), "grid")
 
-    ids = {r.id: lon for r, lon in zip(receptors, longitudes, strict=True)}
-    assert [ids[r] for r in table["receptor"]] == flagged
+    ids = {r.id: lon for r, lon in zip(releases, longitudes, strict=True)}
+    assert [ids[r] for r in table["release"]] == flagged
 
 
-def test_a_receptor_outside_a_grid_across_the_dateline_in_latitude_is_listed(tmp_path):
+def test_a_release_outside_a_grid_across_the_dateline_in_latitude_is_listed(tmp_path):
     grid = {**_grid_box(170, -170), "xres": 0.5, "yres": 0.5}
-    north = _receptor(12, longitude=175, latitude=42.0)
+    north = _release(12, longitude=175, latitude=42.0)
     project = _project(tmp_path, [north], grid=grid)
 
     table = _found(project.check(), "grid")
 
-    assert list(table["receptor"]) == [north.id]
+    assert list(table["release"]) == [north.id]
     assert "170 to -170 longitude, 40 to 41 latitude" in table["message"].iloc[0]
 
 
-def test_a_column_or_multipoint_receptor_with_a_point_outside_is_listed_once(tmp_path):
+def test_a_column_or_multipoint_release_with_a_point_outside_is_listed_once(tmp_path):
     column = ColumnReceptor(
         time=NOON, longitude=-110.0, latitude=40.5, bottom=0.0, top=3000.0
     )
@@ -560,13 +558,13 @@ def test_a_column_or_multipoint_receptor_with_a_point_outside_is_listed_once(tmp
 
     table = project.check()
 
-    assert sorted(table["receptor"]) == sorted([column.id, multi.id])
+    assert sorted(table["release"]) == sorted([column.id, multi.id])
 
 
 def test_a_variant_that_makes_no_footprint_has_no_grid_to_check(tmp_path):
     project = _project(
         tmp_path,
-        [_receptor(12, longitude=-110.0)],
+        [_release(12, longitude=-110.0)],
         variants={"hrrr": {"grid": None}},
     )
 
@@ -577,7 +575,7 @@ def test_variants_with_their_own_grid_are_checked_against_it(tmp_path):
     wide = {"xmin": -113.0, "xmax": -109.0, "ymin": 39.0, "ymax": 42.0}
     project = _project(
         tmp_path,
-        [_receptor(12, longitude=-110.0)],
+        [_release(12, longitude=-110.0)],
         variants={"hrrr": {}, "wide": {"grid": wide}},
     )
 
@@ -596,59 +594,59 @@ _KERNELS = {
 }
 
 
-def _kernels(project: Project, receptors) -> None:
+def _kernels(project: Project, releases) -> None:
     table = averaging_kernel_table(
-        receptors, levels=[0.0, 3000.0], values=[[1.0, 1.0]] * len(receptors)
+        releases, levels=[0.0, 3000.0], values=[[1.0, 1.0]] * len(releases)
     )
     project.add_table("kernels", table)
 
 
-def test_a_kernel_table_that_matches_the_receptors_has_nothing_to_check(tmp_path):
-    receptors = [_receptor(11), _receptor(12)]
-    project = _project(tmp_path, receptors, variants=_KERNELS)
-    _kernels(project, receptors)
+def test_a_kernel_table_that_matches_the_releases_has_nothing_to_check(tmp_path):
+    releases = [_release(11), _release(12)]
+    project = _project(tmp_path, releases, variants=_KERNELS)
+    _kernels(project, releases)
 
     assert project.check().empty
 
 
-def test_a_receptor_with_no_kernel_is_listed(tmp_path):
-    a, b = _receptor(11), _receptor(12)
+def test_a_release_with_no_kernel_is_listed(tmp_path):
+    a, b = _release(11), _release(12)
     project = _project(tmp_path, [a, b], variants=_KERNELS)
     _kernels(project, [a])
 
     table = project.check()
 
     assert list(table["check"]) == ["kernel_missing"]
-    assert list(table["receptor"]) == [b.id]
+    assert list(table["release"]) == [b.id]
     assert list(table["variant"]) == ["hrrr-ak"]
 
 
-def test_a_kernel_with_no_receptor_is_listed(tmp_path):
-    a, b = _receptor(11), _receptor(12)
+def test_a_kernel_with_no_release_is_listed(tmp_path):
+    a, b = _release(11), _release(12)
     project = _project(tmp_path, [a], variants=_KERNELS)
     _kernels(project, [a, b])
 
     table = project.check()
 
     assert list(table["check"]) == ["kernel_unused"]
-    assert list(table["receptor"]) == [b.id]
+    assert list(table["release"]) == [b.id]
 
 
 def test_a_kernel_table_that_does_not_exist_is_found_once(tmp_path):
-    project = _project(tmp_path, [_receptor(11), _receptor(12)], variants=_KERNELS)
+    project = _project(tmp_path, [_release(11), _release(12)], variants=_KERNELS)
 
     table = project.check()
 
     assert list(table["check"]) == ["kernel_table"]
-    assert table["receptor"].isna().all()
+    assert table["release"].isna().all()
     assert "'kernels' does not exist" in table["message"].iloc[0]
 
 
 def test_a_kernel_table_without_its_columns_is_found(tmp_path):
-    project = _project(tmp_path, [_receptor(11)], variants=_KERNELS)
+    project = _project(tmp_path, [_release(11)], variants=_KERNELS)
     path = project.table_path("kernels")
     path.parent.mkdir()
-    pd.DataFrame({"receptor": [_receptor(11).id]}).to_parquet(path)
+    pd.DataFrame({"release": [_release(11).id]}).to_parquet(path)
 
     table = project.check()
 
@@ -657,19 +655,19 @@ def test_a_kernel_table_without_its_columns_is_found(tmp_path):
 
 
 def test_a_kernel_table_given_as_a_file_is_read_from_the_project(tmp_path):
-    a, b = _receptor(11), _receptor(12)
+    a, b = _release(11), _release(12)
     variants = {
         "hrrr-ak": {"transforms": [{"kind": "averaging_kernel", "table": "k.csv"}]}
     }
     project = _project(tmp_path, [a, b], variants=variants)
     pd.DataFrame(
-        {"receptor": [a.id] * 2, "level": [0.0, 1.0], "value": [1.0, 1.0]}
+        {"release": [a.id] * 2, "level": [0.0, 1.0], "value": [1.0, 1.0]}
     ).to_csv(project.directory / "k.csv", index=False)
 
     table = project.check()
 
     assert list(table["check"]) == ["kernel_missing"]
-    assert list(table["receptor"]) == [b.id]
+    assert list(table["release"]) == [b.id]
 
 
 def test_an_inline_kernel_has_no_table_to_check(tmp_path):
@@ -707,7 +705,7 @@ def _multipoint(
     altitudes: tuple[float, ...] = (1500.0, 2200.0, 3000.0),
     step: float = 0.005,
 ) -> MultiPointReceptor:
-    """Return a multipoint receptor whose points are *step* degrees (about 425 m for 0.005) apart."""
+    """Return a multipoint release whose points are *step* degrees (about 425 m for 0.005) apart."""
     return MultiPointReceptor(
         time=NOON,
         longitudes=tuple(-111.50 - i * step for i in range(len(altitudes))),
@@ -728,15 +726,15 @@ def _column(altitude_ref: str) -> ColumnReceptor:
     )
 
 
-def test_a_receptor_above_sea_level_needs_zsfc_for_the_near_field_correction(tmp_path):
+def test_a_release_above_sea_level_needs_zsfc_for_the_near_field_correction(tmp_path):
     project = _project(tmp_path, [_above_sea_level_point()])
 
     table = _found(project.check(), "zsfc")
 
     assert len(table) == 1
-    assert pd.isna(table["receptor"].iloc[0])
+    assert pd.isna(table["release"].iloc[0])
     message = table["message"].iloc[0]
-    assert "1 receptor is above sea level" in message
+    assert "1 release is above sea level" in message
     assert "near-field correction" in message
     assert "pressure_weighting" not in message
     assert "multipoint" not in message
@@ -761,19 +759,19 @@ def test_the_default_varsiwant_line_keeps_the_defaults(tmp_path):
     assert message.count("zsfc") == 2
 
 
-def test_a_multipoint_receptor_above_sea_level_needs_zsfc_to_match_its_heights(
+def test_a_multipoint_release_above_sea_level_needs_zsfc_to_match_its_heights(
     tmp_path,
 ):
     project = _project(tmp_path, [_multipoint("msl")], hnf_plume=False)
 
     message = _found(project.check(), "zsfc")["message"].iloc[0]
 
-    assert "1 of them is a multipoint receptor" in message
+    assert "1 of them is a multipoint release" in message
     assert "less than 1 km apart and at different altitudes" in message
     assert "near-field" not in message
 
 
-def test_pressure_weighting_of_a_receptor_above_sea_level_needs_zsfc(tmp_path):
+def test_pressure_weighting_of_a_release_above_sea_level_needs_zsfc(tmp_path):
     project = _project(
         tmp_path,
         [_column("msl")],
@@ -787,7 +785,7 @@ def test_pressure_weighting_of_a_receptor_above_sea_level_needs_zsfc(tmp_path):
     assert "multipoint" not in message
 
 
-def test_a_slant_receptor_from_soundings_is_one_the_check_finds(tmp_path):
+def test_a_slant_release_from_soundings_is_one_the_check_finds(tmp_path):
     points = slant_points(
         -111.5, 40.5, [1500.0, 2200.0, 3000.0], zenith=40.0, azimuth=120.0
     )
@@ -802,7 +800,7 @@ def test_a_slant_receptor_from_soundings_is_one_the_check_finds(tmp_path):
     )
 
 
-def test_a_slant_receptor_alone_is_found_by_its_release_heights(tmp_path):
+def test_a_slant_release_alone_is_found_by_its_release_heights(tmp_path):
     points = slant_points(
         -111.5, 40.5, [1500.0, 2200.0, 3000.0], zenith=40.0, azimuth=120.0
     )
@@ -811,19 +809,19 @@ def test_a_slant_receptor_alone_is_found_by_its_release_heights(tmp_path):
 
     message = _found(project.check(), "zsfc")["message"].iloc[0]
 
-    assert "1 of them is a multipoint receptor" in message
+    assert "1 of them is a multipoint release" in message
     assert "near-field" not in message
     assert "pressure_weighting" not in message
 
 
-def test_a_multipoint_receptor_with_one_altitude_does_not_need_zsfc(tmp_path):
+def test_a_multipoint_release_with_one_altitude_does_not_need_zsfc(tmp_path):
     level = _multipoint("msl", altitudes=(2000.0, 2000.0, 2000.0))
     project = _project(tmp_path, [level], hnf_plume=False)
 
     assert _found(project.check(), "zsfc").empty
 
 
-def test_a_multipoint_receptor_with_two_points_at_one_altitude_does_not_need_zsfc(
+def test_a_multipoint_release_with_two_points_at_one_altitude_does_not_need_zsfc(
     tmp_path,
 ):
     shared = _multipoint("msl", altitudes=(1500.0, 1500.0, 3000.0))
@@ -832,14 +830,14 @@ def test_a_multipoint_receptor_with_two_points_at_one_altitude_does_not_need_zsf
     assert _found(project.check(), "zsfc").empty
 
 
-def test_a_multipoint_receptor_with_points_far_apart_does_not_need_zsfc(tmp_path):
+def test_a_multipoint_release_with_points_far_apart_does_not_need_zsfc(tmp_path):
     spread = _multipoint("msl", step=0.05)  # about 4 km
     project = _project(tmp_path, [spread], hnf_plume=False)
 
     assert _found(project.check(), "zsfc").empty
 
 
-def test_a_multipoint_receptor_with_one_altitude_still_needs_zsfc_for_the_rest(
+def test_a_multipoint_release_with_one_altitude_still_needs_zsfc_for_the_rest(
     tmp_path,
 ):
     level = _multipoint("msl", altitudes=(2000.0, 2000.0, 2000.0))
@@ -852,20 +850,20 @@ def test_a_multipoint_receptor_with_one_altitude_still_needs_zsfc_for_the_rest(
     assert "pressure_weighting" in message
 
 
-def test_only_the_receptors_above_sea_level_are_counted(tmp_path):
+def test_only_the_releases_above_sea_level_are_counted(tmp_path):
     project = _project(
         tmp_path,
-        [_receptor(), _above_sea_level_point()],
+        [_release(), _above_sea_level_point()],
         variants={"hrrr": _WEIGHTING},
     )
 
     message = _found(project.check(), "zsfc")["message"].iloc[0]
 
-    assert "1 receptor is above sea level" in message
+    assert "1 release is above sea level" in message
     assert "fails their footprints" in message
 
 
-def test_every_reason_is_named_once_for_all_the_receptors(tmp_path):
+def test_every_reason_is_named_once_for_all_the_releases(tmp_path):
     project = _project(
         tmp_path,
         [_above_sea_level_point(), _multipoint("msl")],
@@ -875,7 +873,7 @@ def test_every_reason_is_named_once_for_all_the_receptors(tmp_path):
     table = _found(project.check(), "zsfc")
 
     assert len(table) == 1
-    assert "2 receptors are above sea level" in table["message"].iloc[0]
+    assert "2 releases are above sea level" in table["message"].iloc[0]
 
 
 def test_no_zsfc_is_needed_when_it_is_in_varsiwant(tmp_path):
@@ -889,10 +887,10 @@ def test_no_zsfc_is_needed_when_it_is_in_varsiwant(tmp_path):
     assert _found(project.check(), "zsfc").empty
 
 
-def test_no_zsfc_is_needed_for_receptors_above_ground(tmp_path):
+def test_no_zsfc_is_needed_for_releases_above_ground(tmp_path):
     project = _project(
         tmp_path,
-        [_receptor(), _multipoint("agl"), _column("agl")],
+        [_release(), _multipoint("agl"), _column("agl")],
         variants={"hrrr": _WEIGHTING},
     )
 
@@ -935,14 +933,14 @@ def test_a_variant_with_zsfc_is_not_listed_with_one_without(tmp_path):
 
 
 def test_every_check_runs_for_every_variant(tmp_path):
-    a, b = _receptor(11), _receptor(20, longitude=-110.0)
+    a, b = _release(11), _release(20, longitude=-110.0)
     project = _project(tmp_path, [a, b], variants=_KERNELS)
     _kernels(project, [a])
 
     table = project.check()
 
     assert set(table["check"]) == {"met_files", "grid", "kernel_missing"}
-    assert set(table["receptor"]) == {b.id}
+    assert set(table["release"]) == {b.id}
 
 
 class _NoFilesMet(BaseModel):
@@ -978,7 +976,7 @@ def test_a_model_with_no_files_to_check_has_no_met_findings(tmp_path, monkeypatc
     monkeypatch.setitem(transport.MODELS, "toy", _NoFilesModel)
     project = _project(
         tmp_path,
-        [_receptor(20)],
+        [_release(20)],
         models={"toy": {"n_hours": -24}},
         variants={"toy": {"model": "toy", "met": "hrrr"}},
     )
@@ -999,13 +997,13 @@ class _SelfChecking(BaseModel):
 
     reads_zsfc: ClassVar[bool] = True
 
-    def apply(self, particles, receptor=None, directory=None):
+    def apply(self, particles, release=None, directory=None):
         return particles.copy()
 
-    def check(self, receptors, directory):
+    def check(self, releases, directory):
         return [
-            ("my_input", rid, f"no input for this receptor in {directory}")
-            for rid in receptors
+            ("my_input", rid, f"no input for this release in {directory}")
+            for rid in releases
         ]
 
 
@@ -1020,7 +1018,7 @@ def test_a_transform_checks_its_own_inputs_and_says_it_reads_zsfc(tmp_path):
     found = project.check()
 
     mine = _found(found, "my_input")
-    assert list(mine["receptor"]) == [str(project.receptors["receptor"].iloc[0])]
+    assert list(mine["release"]) == [str(project.releases["release"].iloc[0])]
     assert str(project.directory) in mine["message"].iloc[0]
     zsfc = _found(found, "zsfc")["message"].iloc[0]
     assert "the tests.test_check._SelfChecking transform fails their footprints" in zsfc

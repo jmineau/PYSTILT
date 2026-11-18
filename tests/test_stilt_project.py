@@ -70,17 +70,17 @@ def test_stilt_project_simulation_says_it_returns_stilts_simulation():
 
 
 @pytest.fixture
-def made(tmp_path, point_receptor):
-    """A STILT project with one receptor and a footprint grid."""
+def made(tmp_path, point_release):
+    """A STILT project with one release and a footprint grid."""
     config = blocks(
         mets={"hrrr": make_met_config(tmp_path / "met")},
         variants={"hrrr": {}},
         grid=_GRID,
     )
-    return stilt.Project.init(tmp_path / "proj", [point_receptor], **config)
+    return stilt.Project.init(tmp_path / "proj", [point_release], **config)
 
 
-def test_both_classes_open_the_same_project(made, point_receptor):
+def test_both_classes_open_the_same_project(made, point_release):
     particles_only = project.Project(made.directory)
 
     assert particles_only.config == made.config
@@ -88,11 +88,9 @@ def test_both_classes_open_the_same_project(made, point_receptor):
     assert particles_only.status().equals(made.status())
 
 
-def test_each_project_returns_its_own_simulation_of_the_same_files(
-    made, point_receptor
-):
-    sim = made.simulation(point_receptor.id, "hrrr")
-    plain = project.Project(made.directory).simulation(point_receptor.id, "hrrr")
+def test_each_project_returns_its_own_simulation_of_the_same_files(made, point_release):
+    sim = made.simulation(point_release.id, "hrrr")
+    plain = project.Project(made.directory).simulation(point_release.id, "hrrr")
 
     assert type(sim) is stilt.Simulation
     assert type(plain) is simulation.Simulation
@@ -102,19 +100,19 @@ def test_each_project_returns_its_own_simulation_of_the_same_files(
 
 
 def test_stilt_project_simulation_refuses_what_the_particle_part_refuses(
-    made, point_receptor
+    made, point_release
 ):
     with pytest.raises(KeyError, match="No variant 'nope'"):
-        made.simulation(point_receptor.id, "nope")
+        made.simulation(point_release.id, "nope")
     with pytest.raises(ValueError, match="realizations"):
-        made.simulation(point_receptor.id, "hrrr", 3)
+        made.simulation(point_release.id, "hrrr", 3)
 
 
-def test_one_simulation_is_equal_whichever_class_holds_it(made, point_receptor):
+def test_one_simulation_is_equal_whichever_class_holds_it(made, point_release):
     # The workers build the particle class; stilt.Project the subclass.
-    sim = made.simulation(point_receptor.id, "hrrr")
-    plain = project.Project(made.directory).simulation(point_receptor.id, "hrrr")
-    other = made.simulation(point_receptor.id, "hrrr")
+    sim = made.simulation(point_release.id, "hrrr")
+    plain = project.Project(made.directory).simulation(point_release.id, "hrrr")
+    other = made.simulation(point_release.id, "hrrr")
 
     assert sim == plain and plain == sim and sim == other
     assert hash(sim) == hash(plain)

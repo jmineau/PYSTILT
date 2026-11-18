@@ -11,7 +11,7 @@ from __future__ import annotations
 import datetime as dt
 from typing import get_args
 
-from stilt.receptors import PointReceptor
+from stilt.releases import PointReceptor
 from stilt.transport import run_model
 from stilt.transport.hysplit import HysplitConfig
 from stilt.transport.hysplit.driver import PARTICLE_COLUMNS
@@ -24,7 +24,7 @@ NAMES = list(get_args(get_args(HysplitConfig.model_fields["varsiwant"].annotatio
 
 @integration
 def test_hycs_std_writes_a_column_for_every_name_varsiwant_accepts(tmp_path, met_dir):
-    receptor = PointReceptor(
+    release = PointReceptor(
         time=dt.datetime(2021, 1, 15, 3, 0),
         longitude=-111.85,
         latitude=40.77,
@@ -32,7 +32,7 @@ def test_hycs_std_writes_a_column_for_every_name_varsiwant_accepts(tmp_path, met
     )
     config = HysplitConfig(n_hours=-2, numpar=20, varsiwant=NAMES)
 
-    run = run_model("hysplit", receptor, config, reference_met(met_dir), tmp_path, 600)
+    run = run_model("hysplit", release, config, reference_met(met_dir), tmp_path, 600)
 
     assert not run.particles.empty
     assert list(run.particles.columns) == [PARTICLE_COLUMNS.get(n, n) for n in NAMES]

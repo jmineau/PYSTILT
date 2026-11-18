@@ -21,7 +21,7 @@ import xarray as xr
 from scipy import sparse
 
 from stilt.footprint.config import FootprintConfig
-from stilt.receptors import parse_receptor_id
+from stilt.releases import parse_release_id
 from stilt.spatial import Grid, horizontal_dims
 
 from .io import UNITS, _naive_utc, _naive_utc_ns, _threads
@@ -187,16 +187,16 @@ def _row(
     )
 
 
-def _receptor_row(
+def _release_row(
     table: pa.Table,
-    receptor_id: str,
+    release_id: str,
     weights: sparse.csr_matrix,
     nx: int,
     edges: tuple[np.ndarray, np.ndarray],
     layer_minutes: int,
 ) -> sparse.csr_matrix | None:
     """
-    Return a receptor's Jacobian row from the stored cells of its footprint.
+    Return a release's Jacobian row from the stored cells of its footprint.
 
     *table* holds the footprint's ``hour``, ``y``, ``x``, and ``foot``
     columns, ``hour`` counting layers of *layer_minutes*. ``None`` when it
@@ -207,7 +207,7 @@ def _receptor_row(
     hour = table.column("hour").to_numpy()
     # The layers are few, so find each layer's bin once and look it up per cell.
     first, last = int(hour.min()), int(hour.max())
-    release = _naive_utc_ns([parse_receptor_id(receptor_id)[0]])
+    release = _naive_utc_ns([parse_release_id(release_id)[0]])
     step = np.int64(layer_minutes) * 60_000_000_000
     starts = release + np.arange(first, last + 1, dtype=np.int64) * step
     bin_idx = _time_bin(starts, *edges)[hour.astype(np.intp) - first]
@@ -218,16 +218,16 @@ def _receptor_row(
     return _row(weights, len(edges[0]), bin_idx, cell, table.column("foot").to_numpy())
 
 
-def _by_receptor(table: pa.Table) -> dict[str, pa.Table]:
-    """Return the rows of *table* split by receptor id, in one pass."""
+def _by_release(table: pa.Table) -> dict[str, pa.Table]:
+    """Return the rows of *table* split by release id, in one pass."""
     if not table.num_rows:
         return {}
-    receptor = table.column("receptor")
-    if not pa.types.is_dictionary(receptor.type):
-        receptor = receptor.dictionary_encode()
-    receptor = receptor.unify_dictionaries().combine_chunks()
-    ids: list[str] = receptor.dictionary.to_pylist()
-    idx = receptor.indices.to_numpy()
+    release = table.column("release")
+    if not pa.types.is_dictionary(release.type):
+        release = release.dictionary_encode()
+    release = release.unify_dictionaries().combine_chunks()
+    ids: list[str] = release.dictionary.to_pylist()
+    idx = release.indices.to_numpy()
     order = np.argsort(idx, kind="stable")
     bounds = np.searchsorted(idx[order], np.arange(len(ids) + 1))
     ordered = table.take(order)
@@ -240,36 +240,36 @@ def _by_receptor(table: pa.Table) -> dict[str, pa.Table]:
 
 class Jacobian(NamedTuple):
     """
-    Footprints of many receptors summed onto a target, as one sparse matrix.
+    Footprints of many releases summed onto a target, as one sparse matrix.
 
     Attributes
     ----------
     data : scipy.sparse.csr_matrix
-        Shape ``(n_receptors, n_bins * n_cells)``. Row ``i`` is
-        ``receptors[i]``; the columns run through every target cell for the
+        Shape ``(n_releases, n_bins * n_cells)``. Row ``i`` is
+        ``releases[i]``; the columns run through every target cell for the
         first time bin, then the second, in ``columns`` order.
-    receptors : pandas.Index
-        Receptor ids of the rows.
+    releases : pandas.Index
+        Release ids of the rows.
     columns : pandas.MultiIndex
         Each column's time bin and target cell. The first level, ``time``,
         is the left edge of the time bin; the others are the target's cell
         index: ``lon`` and ``lat`` (``x`` and ``y`` when projected) for a
         grid, ``cell`` for a mesh or zones.
     empty : list of str
-        Receptors whose footprint is empty. They have no row.
+        Releases whose footprint is empty. They have no row.
     missing : list of str
-        Requested receptors that have no footprint file. They have no row.
+        Requested releases that have no footprint file. They have no row.
     """
 
     data: sparse.csr_matrix
-    receptors: pd.Index
+    releases: pd.Index
     columns: pd.MultiIndex
     empty: list[str]
     missing: list[str]
 
     def to_frame(self, sparse: bool = False) -> pd.DataFrame:
         """
-        Return the matrix as a DataFrame, receptors by :attr:`columns`.
+        Return the matrix as a DataFrame, releases by :attr:`columns`.
 
         Parameters
         ----------
@@ -290,21 +290,21 @@ class Jacobian(NamedTuple):
                 j: pd.arrays.SparseArray(stored[j].array, fill_value=0.0)
                 for j in stored.columns
             }
-            frame = pd.DataFrame(columns, index=self.receptors)
+            frame = pd.DataFrame(columns, index=self.releases)
             frame.columns = self.columns
             return frame
         return pd.DataFrame(
-            self.data.toarray(), index=self.receptors, columns=self.columns
+            self.data.toarray(), index=self.releases, columns=self.columns
         )
 
     def to_xarray(self, dense: bool = False) -> xr.DataArray:
         """
-        Return the matrix as a DataArray with dims ``(receptor, time, cell)``.
+        Return the matrix as a DataArray with dims ``(release, time, cell)``.
 
         ``time`` is the left edge of each time bin and ``cell`` the target
         cell, as in ``columns``. For a grid, ``cell`` has the coordinates
         ``lon`` and ``lat`` (``x`` and ``y`` when projected), and
-        ``.unstack("cell")`` makes them dimensions. The receptors with an
+        ``.unstack("cell")`` makes them dimensions. The releases with an
         empty footprint and those not run yet are the attributes ``empty``
         and ``missing``.
 
@@ -319,12 +319,12 @@ class Jacobian(NamedTuple):
         Examples
         --------
         >>> H = project.jacobian(july, zones, bins).to_xarray()  # doctest: +SKIP
-        >>> (H * flux).sum(["time", "cell"])  # ppm at each receptor  # doctest: +SKIP
+        >>> (H * flux).sum(["time", "cell"])  # ppm at each release  # doctest: +SKIP
         """
         times = pd.unique(self.columns.get_level_values("time"))
         n_cells = len(self.columns) // len(times) if len(times) else 0
         cells = self.columns.droplevel("time")[:n_cells]
-        shape = (len(self.receptors), len(times), n_cells)
+        shape = (len(self.releases), len(times), n_cells)
         if dense:
             values = self.data.toarray().reshape(shape)
         else:
@@ -340,10 +340,10 @@ class Jacobian(NamedTuple):
             cell_coords = xr.Coordinates.from_pandas_multiindex(cells, "cell")
         else:
             cell_coords = xr.Coordinates({"cell": np.asarray(cells)})
-        coords = xr.Coordinates({"receptor": self.receptors, "time": times})
+        coords = xr.Coordinates({"release": self.releases, "time": times})
         return xr.DataArray(
             values,
-            dims=("receptor", "time", "cell"),
+            dims=("release", "time", "cell"),
             coords=coords.merge(cell_coords).coords,
             name="jacobian",
             attrs={
@@ -359,7 +359,7 @@ def jacobian(
     config: FootprintConfig,
     target: Geometry,
     time_bins: pd.IntervalIndex,
-    receptors: list[str],
+    releases: list[str],
     missing: list[str] | None = None,
 ) -> Jacobian:
     """
@@ -367,14 +367,14 @@ def jacobian(
 
     The same operation as ``foot.stilt.aggregate``, for many footprints at
     once. *table* is what :meth:`stilt.output.Output.table` reads: the
-    stored non-zero cells of each receptor, all on the grid of *config*.
+    stored non-zero cells of each release, all on the grid of *config*.
     :meth:`stilt.Project.jacobian` reads a project's footprints one
-    receptor at a time instead, so a selection of any size fits in memory.
+    release at a time instead, so a selection of any size fits in memory.
 
     Parameters
     ----------
     table : pyarrow.Table
-        Footprint cells, with ``receptor``, ``hour``, ``y``, ``x``, ``foot``.
+        Footprint cells, with ``release``, ``hour``, ``y``, ``x``, ``foot``.
     config : FootprintConfig
         The footprints' settings, whose grid the cells index. When it names
         the geometry the grid was derived for (``geometry_hash``), a
@@ -385,11 +385,11 @@ def jacobian(
         Time intervals, closed on the left and each as long as the
         footprints' layers (``tres``) or longer. A layer that crosses a bin
         edge still goes into the bin where it starts.
-    receptors : list of str
-        Receptors to give rows, in row order. Those with no cells in *table*
+    releases : list of str
+        Releases to give rows, in row order. Those with no cells in *table*
         are empty footprints and get none.
     missing : list of str, optional
-        Receptors asked for that have no footprint file, to report.
+        Releases asked for that have no footprint file, to report.
 
     Returns
     -------
@@ -403,11 +403,11 @@ def jacobian(
         If *time_bins* is not closed on the left, or a bin is shorter than
         the footprints' layers (use a shorter ``tres``).
     """
-    cells = _by_receptor(table)
+    cells = _by_release(table)
     none = table.schema.empty_table()
     return _jacobian(
-        lambda receptor_id: cells.get(receptor_id, none),
-        receptors,
+        lambda release_id: cells.get(release_id, none),
+        releases,
         config,
         target,
         time_bins,
@@ -417,7 +417,7 @@ def jacobian(
 
 def _jacobian(
     read: Callable[[str], pa.Table],
-    receptors: list[str],
+    releases: list[str],
     config: FootprintConfig,
     target: Geometry,
     time_bins: pd.IntervalIndex,
@@ -426,12 +426,12 @@ def _jacobian(
     workers: int | None = None,
 ) -> Jacobian:
     """
-    Sum footprints onto a target one receptor at a time, and stack the rows into one Jacobian.
+    Sum footprints onto a target one release at a time, and stack the rows into one Jacobian.
 
-    ``read(receptor_id)`` returns the stored cells of that receptor's
-    footprint. Receptors are read and summed in *workers* threads (by
+    ``read(release_id)`` returns the stored cells of that release's
+    footprint. Releases are read and summed in *workers* threads (by
     default the CPUs this process may use, at most 8), each holding one
-    footprint at a time; the rows come back in *receptors* order.
+    footprint at a time; the rows come back in *releases* order.
     """
     workers = _threads(workers)
     edges = _bin_edges(time_bins)  # raises for bins not closed on the left
@@ -442,21 +442,21 @@ def _jacobian(
     x_axis, y_axis = grid.axes
     weights = _target_weights(target, grid, config.geometry_hash, x_axis, y_axis)
 
-    def one(receptor_id: str) -> sparse.csr_matrix | None:
-        return _receptor_row(
-            read(receptor_id),
-            receptor_id,
+    def one(release_id: str) -> sparse.csr_matrix | None:
+        return _release_row(
+            read(release_id),
+            release_id,
             weights,
             len(x_axis),
             edges,
             config.tres_minutes,
         )
 
-    if workers <= 1 or len(receptors) <= 1:
-        rows = [one(r) for r in receptors]
+    if workers <= 1 or len(releases) <= 1:
+        rows = [one(r) for r in releases]
     else:
         with ThreadPoolExecutor(max_workers=workers) as pool:
-            rows = list(pool.map(one, receptors))
+            rows = list(pool.map(one, releases))
     n_columns = len(time_bins) * len(target.index)
     blocks = [row for row in rows if row is not None]
     data = (
@@ -464,12 +464,12 @@ def _jacobian(
         if blocks
         else sparse.csr_matrix((0, n_columns))
     )
-    found = [r for r, row in zip(receptors, rows, strict=True) if row is not None]
-    empty = [r for r, row in zip(receptors, rows, strict=True) if row is None]
+    found = [r for r, row in zip(releases, rows, strict=True) if row is not None]
+    empty = [r for r, row in zip(releases, rows, strict=True) if row is None]
 
     columns = _columns(_naive_utc(time_bins.left), target.index)
     return Jacobian(
-        data, pd.Index(found, name="receptor"), columns, empty, list(missing or [])
+        data, pd.Index(found, name="release"), columns, empty, list(missing or [])
     )
 
 
@@ -522,7 +522,7 @@ def aggregate(
         target, foot.stilt.grid, foot.stilt.geometry_hash, x, y, foot.stilt.name
     )
 
-    # The footprint's non-zero cells, as one receptor's row of a Jacobian.
+    # The footprint's non-zero cells, as one release's row of a Jacobian.
     data = foot.transpose("time", y_dim, x_dim).to_numpy()
     t, iy, ix = np.nonzero(data)
     layer_bin = _time_bin(_naive_utc_ns(foot["time"].values), *edges)

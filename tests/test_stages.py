@@ -74,7 +74,7 @@ class _Renamed(CountStage):
 
 @pytest.mark.parametrize("suffix", ["", "txt", ".", None])
 def test_a_stage_suffix_must_be_a_file_extension(suffix):
-    """With no extension every receptor id would be read from the file names as empty."""
+    """With no extension every release id would be read from the file names as empty."""
     _Renamed.name = "renamed"
     _Renamed.suffix = suffix
     get_stage.cache_clear()

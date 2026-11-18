@@ -14,24 +14,24 @@ from stilt.execution.worker import (
 from stilt.footprint.config import FootprintConfig
 from stilt.footprint.io import _describe, read_footprint
 from stilt.footprint.targets import Mesh
-from stilt.receptors import PointReceptor, Receptor
+from stilt.releases import PointReceptor, Receptor
 from stilt.spatial import Grid
 
 
 def as_footprint(
     data: xr.DataArray,
-    receptor: Receptor,
+    release: Receptor,
     config: FootprintConfig,
     name: str = "",
 ) -> xr.DataArray:
     """
-    Return *data* as the footprint of *receptor*, with the attributes ``calc_footprint`` gives one.
+    Return *data* as the footprint of *release*, with the attributes ``calc_footprint`` gives one.
 
     PYSTILT has no public footprint constructor: a footprint is made from
     particles. Tests that need one with chosen values build it here, the one
     test module that reaches the private helper.
     """
-    return _describe(data, receptor, config, name)
+    return _describe(data, release, config, name)
 
 
 def run_footprint(sim, particles: pd.DataFrame) -> xr.DataArray | None:
@@ -51,9 +51,9 @@ def make_footprint(
     xres: float = 0.1, yres: float = 0.1, n_times: int = 1
 ) -> xr.DataArray:
     """Return a footprint of zeros at two cells of a small grid, from 2023-01-01 12 UTC, *n_times* hours long."""
-    receptor_time = dt.datetime(2023, 1, 1, 12)
-    receptor = PointReceptor(
-        time=receptor_time,
+    release_time = dt.datetime(2023, 1, 1, 12)
+    release = PointReceptor(
+        time=release_time,
         longitude=-111.85,
         latitude=40.77,
         altitude=5.0,
@@ -70,7 +70,7 @@ def make_footprint(
 
     lons = np.array([-113.95, -113.85])
     lats = np.array([39.05, 39.15])
-    times = [receptor_time + pd.Timedelta(hours=i) for i in range(n_times)]
+    times = [release_time + pd.Timedelta(hours=i) for i in range(n_times)]
 
     data = xr.DataArray(
         np.zeros((n_times, len(lats), len(lons))),
@@ -78,7 +78,7 @@ def make_footprint(
         coords={"time": times, "lat": lats, "lon": lons},
         attrs={"units": "ppm (umol-1 m2 s)"},
     )
-    return as_footprint(data, receptor, config, "slv")
+    return as_footprint(data, release, config, "slv")
 
 
 def windows_spec(shift: float = 0.0) -> dict:
@@ -98,4 +98,4 @@ def geometry_footprint() -> tuple[xr.DataArray, FootprintConfig, Mesh]:
     assert fc.geometry is not None
     mesh = Mesh.from_spec(fc.geometry)
     fc = fc.model_copy(update={"geometry_hash": mesh.hash})
-    return as_footprint(base, base.stilt.receptor, fc, "geo"), fc, mesh
+    return as_footprint(base, base.stilt.release, fc, "geo"), fc, mesh

@@ -3,7 +3,7 @@ The project config: what ``config.yaml`` holds, and the variants it declares.
 
 ``config.yaml`` is blocks: ``mets`` names the meteorology, ``models`` the
 transport models, ``stages`` what is made from each simulation's results
-(the footprint), and ``variants`` the settings every receptor runs under.
+(the footprint), and ``variants`` the settings every release runs under.
 A model's or a stage's block holds its settings, the defaults of every
 variant that uses it, and no setting sits at the top level. Each part has
 its own config class, next to the code that uses it: the transport model's
@@ -120,7 +120,7 @@ class Variant:
     results share one folder, a ``realization=k`` partition each.
 
     Variants with equal :attr:`particles_hash` share one run of the
-    transport model per receptor (and realization) and differ only in what
+    transport model per release (and realization) and differ only in what
     their stages make of it, such as their footprints. The hashes are
     computed once. Change a variant with :func:`dataclasses.replace`, which
     computes them again.
@@ -447,7 +447,7 @@ class ProjectConfig(BaseModel):
     execution: ExecutionConfig = Field(
         default_factory=lambda: ExecutionConfig.model_validate({}),
         description=(
-            "Where the receptors run and with what resources, such as "
+            "Where the releases run and with what resources, such as "
             "``backend: slurm`` and its options."
         ),
     )

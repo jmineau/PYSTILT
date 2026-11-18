@@ -3,7 +3,7 @@ Particle transforms that reweight ``foot`` before the footprint is computed.
 
 A column measurement needs its averaging kernel and pressure weighting,
 and a species lost on the way needs the fraction that survives to the
-receptor. List the transforms in ``config.yaml``; the built-ins are
+release. List the transforms in ``config.yaml``; the built-ins are
 pydantic models whose fields are their keys::
 
     transforms:
@@ -12,7 +12,7 @@ pydantic models whose fields are their keys::
         values: [1.0, 0.9, 0.7]
       - kind: pressure_weighting
 
-An averaging kernel that differs per receptor (every satellite sounding has
+An averaging kernel that differs per release (every satellite sounding has
 its own) comes from a table in the project instead::
 
       - kind: averaging_kernel
@@ -27,14 +27,14 @@ Each built-in transform is a module: :mod:`~stilt.transforms.averaging_kernel`,
 :mod:`~stilt.transforms.oxidation`. The functions they are built on are
 public so your own transforms can use them: :func:`particle_pwf` and
 :func:`ak_weights`, the column weighting ported from X-STILT;
-:func:`survival`, the fraction of a tracer that reaches the receptor for any
+:func:`survival`, the fraction of a tracer that reaches the release for any
 loss rate; and :func:`dry_deposition_survival`, that fraction for a
 depositing tracer. This module also loads transforms from a config and
 applies them.
 
 A transform of your own is any object with
-``apply(particles, receptor=None, directory=None) -> DataFrame``: the
-particle table, the receptor the particles were released from, and the
+``apply(particles, release=None, directory=None) -> DataFrame``: the
+particle table, the release the particles were released from, and the
 directory a relative file name in its settings starts from (the
 project's). A ``kind`` containing a dot is its import path (the "Writing
 your own transform" section of the Particle Weighting guide). The footprint
@@ -43,10 +43,10 @@ also add columns. The built-ins only scale ``foot``, which the background
 and the transport error rely on to read each particle's weight.
 
 Two optional parts let ``stilt check`` look at a project before it runs: a
-``check(receptors, directory)`` method that returns what is wrong with the
-transform's inputs for those receptor ids, as ``(check, receptor id or
+``check(releases, directory)`` method that returns what is wrong with the
+transform's inputs for those release ids, as ``(check, release id or
 None, message)`` tuples, and ``reads_zsfc = True`` for a transform that
-reads ``zsfc`` for a receptor above sea level.
+reads ``zsfc`` for a release above sea level.
 """
 
 from __future__ import annotations
@@ -71,7 +71,7 @@ from stilt.transforms.oxidation import Oxidation
 from stilt.transforms.pressure_weighting import PressureWeighting, particle_pwf
 
 if TYPE_CHECKING:
-    from stilt.receptors import Receptor
+    from stilt.releases import Receptor
 
 BuiltinTransform = Annotated[
     AveragingKernel
@@ -174,16 +174,16 @@ def dump_transform(transform: Any) -> dict[str, Any]:
 def apply_transforms(
     particles: pd.DataFrame,
     transforms: Sequence[Any],
-    receptor: Receptor | None = None,
+    release: Receptor | None = None,
     directory: str | Path | None = None,
 ) -> pd.DataFrame:
     """
-    Apply *transforms* in order, each with the receptor and the directory.
+    Apply *transforms* in order, each with the release and the directory.
 
     Returns ``particles`` itself when there are none.
     """
     for transform in transforms:
-        particles = transform.apply(particles, receptor, directory)
+        particles = transform.apply(particles, release, directory)
     return particles
 
 

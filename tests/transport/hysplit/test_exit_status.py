@@ -10,7 +10,7 @@ from stilt import Project
 from stilt.config import ProjectConfig
 from stilt.exceptions import SimulationError
 from stilt.meteorology import run_window
-from stilt.receptors import PointReceptor
+from stilt.releases import PointReceptor
 from stilt.transport.hysplit import FailureReason, HysplitConfig, HysplitModel
 from tests.fixtures.factories import blocks
 
@@ -18,7 +18,7 @@ from ...fixtures.factories import make_hysplit_dir, make_met_config, make_met_fi
 
 VARS = ["time", "indx", "long", "lati", "zagl", "foot"]
 N_HOURS = -24
-RECEPTOR = PointReceptor(
+RELEASE = PointReceptor(
     time=dt.datetime(2023, 1, 1, 12, 0), longitude=-111.85, latitude=40.77, altitude=5.0
 )
 
@@ -49,14 +49,14 @@ def _model_run(tmp_path: Path, build: Path, outdt: int):
         outdt=outdt,
         directory=build,
     )
-    make_met_files(tmp_path / "met", RECEPTOR.time, N_HOURS)
+    make_met_files(tmp_path / "met", RELEASE.time, N_HOURS)
     workdir = tmp_path / "run"
     workdir.mkdir()
     return HysplitModel().run(
-        RECEPTOR,
+        RELEASE,
         config,
         make_met_config(tmp_path / "met"),
-        run_window(RECEPTOR.time, N_HOURS),
+        run_window(RELEASE.time, N_HOURS),
         workdir,
         timeout=30,
     )
@@ -98,7 +98,7 @@ def test_a_hycs_std_that_exits_1_part_way_fails_with_its_status(tmp_path, outdt)
         "*ERROR* runset: Start height above mdl domain  Source - 1 Height - 100000.000",
     ],
 )
-def test_a_receptor_outside_the_met_fails_with_hysplits_own_line(tmp_path, line):
+def test_a_release_outside_the_met_fails_with_hysplits_own_line(tmp_path, line):
     """HYSPLIT exits 132 for both and names the cause in its log (#367)."""
     build = _fake_hycs_std(tmp_path / "build", f"echo '{line}'\nexit 132\n")
 
@@ -138,7 +138,7 @@ def test_a_killed_simulation_stores_no_particles_and_a_rerun_runs_it_again(tmp_p
         f"if [ -e {flag} ]; then cp {partial} PARTICLE_STILT.DAT; kill -KILL $$; fi\n"
         f"cp {full} PARTICLE_STILT.DAT\n",
     )
-    make_met_files(tmp_path / "met", RECEPTOR.time, N_HOURS)
+    make_met_files(tmp_path / "met", RELEASE.time, N_HOURS)
     config = ProjectConfig(
         **blocks(
             mets={"hrrr": make_met_config(tmp_path / "met")},
@@ -150,7 +150,7 @@ def test_a_killed_simulation_stores_no_particles_and_a_rerun_runs_it_again(tmp_p
             variants={"hrrr": {}},
         )
     )
-    project = Project.init(tmp_path / "project", config=config, receptors=[RECEPTOR])
+    project = Project.init(tmp_path / "project", config=config, releases=[RELEASE])
 
     project.run(compute_root=tmp_path / "work")
 

@@ -29,7 +29,7 @@ def run_window(r_time: Any, n_hours: int) -> tuple[pd.Timestamp, pd.Timestamp]:
     """
     Return the time a run covers, ``(start, end)`` in time order.
 
-    From the receptor time *r_time* to *n_hours* later, or earlier for a
+    From the release time *r_time* to *n_hours* later, or earlier for a
     backward run. This is what a transport model's meteorology must cover.
     """
     start = _time(r_time)

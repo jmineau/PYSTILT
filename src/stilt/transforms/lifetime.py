@@ -15,17 +15,17 @@ from pydantic import BaseModel, ConfigDict, Field
 from stilt.transforms._common import step_minutes
 
 if TYPE_CHECKING:
-    from stilt.receptors import Receptor
+    from stilt.releases import Receptor
 
 
 def survival(particles: pd.DataFrame, rate: ArrayLike) -> pd.Series:
     r"""
-    Return the fraction of a tracer that survives from each row to the receptor.
+    Return the fraction of a tracer that survives from each row to the release.
 
     Use it for a loss whose rate is known at every row and does not depend
     on how much tracer the particle carries: a reaction with an oxidant,
     deposition, rain-out, or a lifetime from your own chemistry model. The
-    fraction emitted at a row is the fraction that reaches the receptor, so
+    fraction emitted at a row is the fraction that reaches the release, so
     ``foot`` times it is still a footprint.
 
     Parameters
@@ -101,7 +101,7 @@ class FirstOrderLifetime(BaseModel):
     def apply(
         self,
         particles: pd.DataFrame,
-        receptor: Receptor | None = None,
+        release: Receptor | None = None,
         directory: str | Path | None = None,
     ) -> pd.DataFrame:
         """Return the particles with ``foot`` decayed by age."""

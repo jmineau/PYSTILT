@@ -1,10 +1,10 @@
 """
-Background mole fraction at a receptor, from a field sampled where the particles end.
+Background mole fraction at a release, from a field sampled where the particles end.
 
-A back-trajectory ends where the receptor's air came from. Sampling a
+A back-trajectory ends where the release's air came from. Sampling a
 mole-fraction field, such as CarbonTracker or CAMS, at every particle's
 endpoint and averaging over the particles gives the background: what the
-receptor would see with no fluxes inside the domain. Adding the modeled
+release would see with no fluxes inside the domain. Adding the modeled
 enhancement gives the modeled mole fraction. X-STILT does the same in
 ``endpts.trajfoot``, and CT-STILT does it with CarbonTracker.
 
@@ -26,7 +26,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from stilt.receptors import Receptor
+from stilt.releases import Receptor
 from stilt.sampling import sample_field, vertical_dim
 from stilt.transforms import apply_transforms
 
@@ -34,12 +34,12 @@ from stilt.transforms import apply_transforms
 @dataclass(frozen=True)
 class Background:
     """
-    Background at a receptor, returned by :func:`background`.
+    Background at a release, returned by :func:`background`.
 
     Attributes
     ----------
     value : float
-        Background at the receptor, weighted like the footprint:
+        Background at the release, weighted like the footprint:
         ``Σ weights × per_particle``. Particles with no value count as the
         weighted mean of the others.
     per_particle : pandas.Series
@@ -89,7 +89,7 @@ def _particle_background(particles: pd.DataFrame, field: xr.DataArray) -> pd.Ser
 def _endpoint_weights(
     particles: pd.DataFrame,
     transforms: Sequence[Any] = (),
-    receptor: Receptor | None = None,
+    release: Receptor | None = None,
     directory: str | Path | None = None,
 ) -> pd.Series:
     """
@@ -103,7 +103,7 @@ def _endpoint_weights(
     transforms = list(transforms)
     if transforms:
         particles = apply_transforms(
-            particles.assign(foot=1.0), transforms, receptor, directory
+            particles.assign(foot=1.0), transforms, release, directory
         )
         ends = particles.stilt.endpoints()
         weights = ends["foot"].to_numpy(dtype=float)
@@ -142,15 +142,15 @@ def _background(
     field: xr.DataArray | pd.Series,
     *,
     transforms: Sequence[Any] = (),
-    receptor: Receptor | None = None,
+    release: Receptor | None = None,
     directory: str | Path | None = None,
 ) -> Background:
-    """Return the background at a receptor (:func:`background`, which documents it)."""
+    """Return the background at a release (:func:`background`, which documents it)."""
     if isinstance(field, pd.Series):
         per_particle = field.rename("background")
     else:
         per_particle = _particle_background(particles, field)
-    weights = _endpoint_weights(particles, transforms, receptor, directory)
+    weights = _endpoint_weights(particles, transforms, release, directory)
     weights = weights / len(weights)
     filled = _fill_missing(per_particle, weights)
     value = float((weights * filled).sum()) if np.isfinite(filled).any() else np.nan
@@ -164,11 +164,11 @@ def background(
     field: xr.DataArray | pd.Series,
     *,
     transforms: Sequence[Any] = (),
-    receptor: Receptor | None = None,
+    release: Receptor | None = None,
     directory: str | Path | None = None,
 ) -> Background:
     """
-    Return the background mole fraction at a receptor.
+    Return the background mole fraction at a release.
 
     The background is the field at each particle's endpoint, averaged over
     the particles with the footprint's weights.
@@ -193,9 +193,9 @@ def background(
     transforms : sequence, optional
         The footprint's particle transforms (``sim.variant.stages["footprint"].transforms``), so
         the background is weighted like the footprint and adds to its
-        enhancement. A tower receptor has none.
-    receptor : Receptor, optional
-        The receptor (``sim.receptor``), for the transforms. An averaging
+        enhancement. A tower release has none.
+    release : Receptor, optional
+        The release (``sim.release``), for the transforms. An averaging
         kernel read from a table needs it, and pressure weighting reads its
         ``altitude_ref``.
     directory : str or Path, optional
@@ -214,5 +214,5 @@ def background(
     same field.
     """
     return _background(
-        particles, field, transforms=transforms, receptor=receptor, directory=directory
+        particles, field, transforms=transforms, release=release, directory=directory
     )

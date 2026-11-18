@@ -1,8 +1,8 @@
 """
-The receptor table: one row per release point, as ``receptors.csv`` holds it.
+The release table: one row per release point, as ``releases.csv`` holds it.
 
-:func:`receptor_rows` checks a table quickly, without building receptors,
-and the functions here convert between tables, CSV files, and receptors.
+:func:`release_rows` checks a table quickly, without building releases,
+and the functions here convert between tables, CSV files, and releases.
 """
 
 from __future__ import annotations
@@ -29,12 +29,12 @@ from .models import (
 )
 from .validation import column_errors, multipoint_errors, point_errors
 
-#: The columns of a receptor table, one row per release point.
-COLUMNS = ("r_idx", "time", "longitude", "latitude", "altitude", "altitude_ref")
+#: The columns of a release table, one row per release point.
+COLUMNS = ("group", "time", "longitude", "latitude", "altitude", "altitude_ref")
 
-#: Column names :func:`read_receptors` accepts for each field, in any case.
+#: Column names :func:`read_releases` accepts for each field, in any case.
 ALIASES: dict[str, tuple[str, ...]] = {
-    "r_idx": ("r_idx",),
+    "group": ("group",),
     "time": ("time",),
     "longitude": ("longitude", "long", "lon"),
     "latitude": ("latitude", "lati", "lat"),
@@ -44,24 +44,24 @@ ALIASES: dict[str, tuple[str, ...]] = {
 
 
 # ---------------------------------------------------------------------------
-# The receptor table
+# The release table
 # ---------------------------------------------------------------------------
 
 
-def receptors_to_frame(receptors: Iterable[Receptor]) -> pd.DataFrame:
+def releases_to_frame(releases: Iterable[Receptor]) -> pd.DataFrame:
     """
-    Return receptors as one table with a row per release point.
+    Return releases as one table with a row per release point.
 
-    The columns are ``r_idx`` (the receptor's position, shared by the rows
-    of a column or multipoint receptor), ``time``, ``longitude``,
+    The columns are ``group`` (the release's position, shared by the rows
+    of a column or multipoint release), ``time``, ``longitude``,
     ``latitude``, ``altitude``, ``altitude_ref``, and one column per label
-    in any receptor's ``attrs``.
+    in any release's ``attrs``.
     """
-    receptors = list(receptors)
-    labels = list(dict.fromkeys(k for r in receptors for k in r.attrs))
+    releases = list(releases)
+    labels = list(dict.fromkeys(k for r in releases for k in r.attrs))
     rows = [
         {
-            "r_idx": idx,
+            "group": idx,
             "time": r.time,
             "longitude": lon,
             "latitude": lat,
@@ -69,7 +69,7 @@ def receptors_to_frame(receptors: Iterable[Receptor]) -> pd.DataFrame:
             "altitude_ref": r.altitude_ref,
             **{k: r.attrs.get(k) for k in labels},
         }
-        for idx, r in enumerate(receptors)
+        for idx, r in enumerate(releases)
         for lat, lon, alt in r.coords()
     ]
     frame = pd.DataFrame(rows, columns=[*COLUMNS, *labels])
@@ -78,11 +78,22 @@ def receptors_to_frame(receptors: Iterable[Receptor]) -> pd.DataFrame:
 
 def _normalize_columns(frame: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, str]]:
     """
-    Return *frame* with the receptor columns under their standard names.
+    Return *frame* with the release columns under their standard names.
 
     Also returns the file's own spelling of each standard column. Any other
     column is kept as it is. A ``zmsl`` altitude column implies ``msl``.
+
+    Raises
+    ------
+    ValueError
+        If a column is named ``r_idx``, the old name of ``group``.
     """
+    old = [str(c) for c in frame.columns if str(c).lower() == "r_idx"]
+    if old:
+        raise ValueError(
+            f"The column {old[0]!r} is not read. Rename it to 'group': rows "
+            "that share a group make one column or multipoint release."
+        )
     spelling: dict[str, str] = {}
     for field, aliases in ALIASES.items():
         for col in frame.columns:
@@ -120,42 +131,42 @@ def _refuse_misnamed_altitude_ref(frame: pd.DataFrame, implied: str) -> None:
             )
 
 
-#: Columns :func:`receptor_rows` adds; a receptors file may not use these names.
-ROW_COLUMNS = ("receptor", "kind", "location")
+#: Columns :func:`release_rows` adds; a releases file may not use these names.
+ROW_COLUMNS = ("release", "kind", "location")
 
 
-def receptor_rows(frame: pd.DataFrame) -> pd.DataFrame:
+def release_rows(frame: pd.DataFrame) -> pd.DataFrame:
     """
-    Check a receptor table and return it with each row's receptor id, kind, and location.
+    Check a release table and return it with each row's release id, kind, and location.
 
-    The table has a row per release point, as ``receptors.csv`` does, with
+    The table has a row per release point, as ``releases.csv`` does, with
     ``time``, ``longitude``, ``latitude``, and ``altitude`` columns in any of
-    the accepted spellings (see :func:`receptors_from_frame`). The result has
+    the accepted spellings (see :func:`releases_from_frame`). The result has
     the standard column names, ``altitude_ref``, and three more columns:
-    ``receptor`` (the id), ``kind`` (``point``, ``column``, or
-    ``multipoint``), and ``location`` (the location id). A receptor listed
-    twice keeps its first rows. No receptor object is built, so this is quick
-    on a large file; :func:`receptors_from_rows` builds the receptors.
+    ``release`` (the id), ``kind`` (``point``, ``column``, or
+    ``multipoint``), and ``location`` (the location id). A release listed
+    twice keeps its first rows. No release object is built, so this is quick
+    on a large file; :func:`releases_from_rows` builds the releases.
 
     Raises
     ------
     ValueError
-        For anything a receptor would refuse: a missing column, a longitude
+        For anything a release would refuse: a missing column, a longitude
         or latitude out of range or empty, a height that is empty or not
         finite, a negative height above ground, rows of one group that
         differ in time or altitude reference, a column whose two heights are
-        equal, a multipoint receptor with two points at one location, or two
-        different receptors with one id. Also for a misnamed
-        ``altitude_ref`` column (:func:`receptors_from_frame`).
+        equal, a multipoint release with two points at one location, or two
+        different releases with one id. Also for a misnamed
+        ``altitude_ref`` column (:func:`releases_from_frame`).
     """
     frame, _ = _normalize_columns(frame)
     required = ("time", "longitude", "latitude", "altitude")
     if any(c not in frame.columns for c in required):
-        raise ValueError(f"Receptor table must contain columns: {list(required)}")
+        raise ValueError(f"Release table must contain columns: {list(required)}")
     clash = [c for c in frame.columns if c in ROW_COLUMNS]
     if clash:
         raise ValueError(
-            f"A receptors file may not have a column named {clash}; PYSTILT uses "
+            f"A releases file may not have a column named {clash}; PYSTILT uses "
             "those names. Rename the column."
         )
     n = len(frame)
@@ -164,10 +175,10 @@ def receptor_rows(frame: pd.DataFrame) -> pd.DataFrame:
     alt = frame["altitude"].to_numpy(dtype=float)
     ref = frame["altitude_ref"].astype(str).str.lower().to_numpy()
     # Group keys as text: a file that mixes numeric and string ids must not
-    # split one receptor into two. Without r_idx, every row is a receptor.
+    # split one release into two. Without a group column, every row is a release.
     keys = (
-        frame["r_idx"].astype(str).to_numpy()
-        if "r_idx" in frame.columns
+        frame["group"].astype(str).to_numpy()
+        if "group" in frame.columns
         else np.arange(n).astype(str)
     )
     codes, uniques = pd.factorize(keys)
@@ -177,7 +188,7 @@ def receptor_rows(frame: pd.DataFrame) -> pd.DataFrame:
         if mask.any():
             where = int(np.flatnonzero(mask)[0])
             label = (
-                f"r_idx={uniques[codes[where]]}" if "r_idx" in frame else f"row {where}"
+                f"group={uniques[codes[where]]}" if "group" in frame else f"row {where}"
             )
             raise ValueError(f"{label}: {message}")
 
@@ -199,11 +210,11 @@ def receptor_rows(frame: pd.DataFrame) -> pd.DataFrame:
     size = g["code"].transform("size").to_numpy()
     fail(
         g["ref"].transform("nunique").to_numpy() > 1,
-        "All rows in one receptor group must share the same altitude_ref.",
+        "All rows in one release group must share the same altitude_ref.",
     )
     fail(
         g["time"].transform("nunique").to_numpy() > 1,
-        "All rows in one receptor group must share the same release time.",
+        "All rows in one release group must share the same release time.",
     )
     same_xy = (g["lon"].transform("nunique").to_numpy() == 1) & (
         g["lat"].transform("nunique").to_numpy() == 1
@@ -217,7 +228,7 @@ def receptor_rows(frame: pd.DataFrame) -> pd.DataFrame:
     for bad, message in column_errors(bottom, top):
         fail((kind == "column") & bad, message)
 
-    # Ids are made once per receptor, from its first row (or all its rows for
+    # Ids are made once per release, from its first row (or all its rows for
     # a multipoint), then spread to its rows. Python floats round much faster
     # than numpy scalars, and give the same result.
     _, first_rows = np.unique(codes, return_index=True)  # groups are 0, 1, ... in order
@@ -251,31 +262,31 @@ def receptor_rows(frame: pd.DataFrame) -> pd.DataFrame:
     location = group_location[codes]
     ids = group_ids[codes]
     out = frame.assign(
-        time=time, altitude_ref=ref, receptor=ids, kind=kind, location=location
+        time=time, altitude_ref=ref, release=ids, kind=kind, location=location
     )
 
-    # A receptor id names its result files: one id, one receptor.
+    # A release id names its result files: one id, one release.
     repeated = np.flatnonzero(pd.Index(group_ids).duplicated(keep=False))
     if len(repeated):
-        # Build every repeated group's receptor in one call, each group on
+        # Build every repeated group's release in one call, each group on
         # its own (keyed by its code, not its id), in code order.
         rows = np.isin(codes, repeated)
-        built = receptors_from_rows(out.loc[rows].assign(receptor=codes[rows]))
-        receptor_of = dict(zip(repeated.tolist(), built, strict=True))
+        built = releases_from_rows(out.loc[rows].assign(release=codes[rows]))
+        release_of = dict(zip(repeated.tolist(), built, strict=True))
         by_id: dict[str, list[int]] = {}
         for code in repeated.tolist():
             by_id.setdefault(str(group_ids[code]), []).append(code)
         drop: list[int] = []
         for group in by_id.values():
-            check_distinct_ids([receptor_of[code] for code in group])
-            drop.extend(group[1:])  # the same receptor listed again
+            check_distinct_ids([release_of[code] for code in group])
+            drop.extend(group[1:])  # the same release listed again
         out = out.loc[~np.isin(codes, drop)]
     return out
 
 
 def _times(column: pd.Series, fail: Callable[[np.ndarray, str], None]) -> pd.Series:
     """
-    Return a receptor table's times as naive UTC times, calling *fail* on a row that has none.
+    Return a release table's times as naive UTC times, calling *fail* on a row that has none.
 
     Text must be ISO 8601 or ``YYYYMMDDHHMM`` (:func:`_parse_time_text`);
     datetimes are taken as they are, an aware one converted to UTC.
@@ -310,10 +321,10 @@ def _build(
     alt: np.ndarray,
 ) -> Receptor:
     """
-    Return the receptor of one group of checked rows, given as plain values.
+    Return the release of one group of checked rows, given as plain values.
 
-    The rows passed :func:`receptor_rows`, which runs every check a receptor
-    runs, so the receptor is built without running them again.
+    The rows passed :func:`release_rows`, which runs every check a release
+    runs, so the release is built without running them again.
     """
     common = {"time": time, "altitude_ref": altitude_ref, "attrs": attrs}
     if kind == "point":
@@ -339,17 +350,17 @@ def _build(
     )
 
 
-def receptors_from_rows(rows: pd.DataFrame) -> list[Receptor]:
+def releases_from_rows(rows: pd.DataFrame) -> list[Receptor]:
     """
-    Build the receptors of a table that :func:`receptor_rows` checked.
+    Build the releases of a table that :func:`release_rows` checked.
 
-    The rows are not checked again. Each receptor's labels (``attrs``) are
+    The rows are not checked again. Each release's labels (``attrs``) are
     the other columns of its first row.
 
     Returns
     -------
     list of Receptor
-        In table order, one per receptor id.
+        In table order, one per release id.
     """
     names = [str(c) for c in rows.columns if c not in COLUMNS and c not in ROW_COLUMNS]
     labels = rows[names].astype(object).to_numpy()
@@ -359,14 +370,14 @@ def receptors_from_rows(rows: pd.DataFrame) -> list[Receptor]:
     alt = rows["altitude"].to_numpy(dtype=float)
     kind = rows["kind"].to_numpy()
     ref = rows["altitude_ref"].to_numpy()
-    receptors = []
-    for idx in rows.groupby("receptor", sort=False).indices.values():
+    releases = []
+    for idx in rows.groupby("release", sort=False).indices.values():
         i = idx[0]
         attrs = {
             k: (None if pd.isna(v) else v)
             for k, v in zip(names, labels[i], strict=True)
         }
-        receptors.append(
+        releases.append(
             _build(
                 str(kind[i]),
                 times[i],
@@ -377,16 +388,16 @@ def receptors_from_rows(rows: pd.DataFrame) -> list[Receptor]:
                 alt[idx],
             )
         )
-    return receptors
+    return releases
 
 
-def receptors_from_frame(frame: pd.DataFrame) -> list[Receptor]:
+def releases_from_frame(frame: pd.DataFrame) -> list[Receptor]:
     """
-    Check a table with a row per release point and build its receptors.
+    Check a table with a row per release point and build its releases.
 
     The table needs ``time``, ``longitude``, ``latitude``, and ``altitude``
-    columns. Each row is one :class:`PointReceptor`, unless an ``r_idx``
-    column groups rows into one receptor: a group of two rows at one
+    columns. Each row is one :class:`PointReceptor`, unless a ``group``
+    column groups rows into one release: a group of two rows at one
     location is a :class:`ColumnReceptor`, any other group a
     :class:`MultiPointReceptor`.
 
@@ -397,13 +408,13 @@ def receptors_from_frame(frame: pd.DataFrame) -> list[Receptor]:
     longitude               ``longitude``, ``long``, ``lon``
     latitude                ``latitude``, ``lati``, ``lat``
     altitude (m)            ``altitude``, ``zagl``, ``zmsl``, ``z``
-    receptor group          ``r_idx``
+    release group           ``group``
     altitude reference      ``altitude_ref``, ``height_ref``
     ======================  =============================================
 
     Without an ``altitude_ref`` column, altitudes are above mean sea level
     when the column is named ``zmsl`` and above ground level otherwise. Any
-    other column becomes a label in each receptor's ``attrs``. For a group,
+    other column becomes a label in each release's ``attrs``. For a group,
     labels come from its first row. Without an ``altitude_ref`` column, a
     label column that holds only ``agl`` and ``msl``, such as ``alt_ref``,
     is refused, since its heights would be read with the wrong reference.
@@ -411,29 +422,29 @@ def receptors_from_frame(frame: pd.DataFrame) -> list[Receptor]:
     Returns
     -------
     list of Receptor
-        In table order. A receptor listed twice appears once.
+        In table order. A release listed twice appears once.
 
     Raises
     ------
     ValueError
-        As :func:`receptor_rows` raises.
+        As :func:`release_rows` raises.
     """
-    return receptors_from_rows(receptor_rows(frame))
+    return releases_from_rows(release_rows(frame))
 
 
-def check_distinct_ids(receptors: Iterable[Receptor]) -> None:
+def check_distinct_ids(releases: Iterable[Receptor]) -> None:
     """
-    Raise if two different receptors share an id.
+    Raise if two different releases share an id.
 
-    An id names a receptor's result files, so two receptors with one id
-    would overwrite each other. Equal receptors listed twice are fine.
+    An id names a release's result files, so two releases with one id
+    would overwrite each other. Equal releases listed twice are fine.
     """
     seen: dict[str, Receptor] = {}
-    for r in receptors:
+    for r in releases:
         other = seen.setdefault(r.id, r)
         if other is not r and other != r:
             raise ValueError(
-                f"Two different receptors share the id {r.id!r}: {other!r} and {r!r}."
+                f"Two different releases share the id {r.id!r}: {other!r} and {r!r}."
             )
 
 
@@ -442,29 +453,29 @@ def check_distinct_ids(receptors: Iterable[Receptor]) -> None:
 # ---------------------------------------------------------------------------
 
 
-def read_receptor_frame(path: str | Path | IO[str]) -> pd.DataFrame:
-    """Read a receptors CSV as a table, with ``r_idx`` and ``time`` as text, without building receptors."""
+def read_release_frame(path: str | Path | IO[str]) -> pd.DataFrame:
+    """Read a releases CSV as a table, with ``group`` and ``time`` as text, without building releases."""
     header = pd.read_csv(path, nrows=0).columns
     if hasattr(path, "seek"):
         path.seek(0)
     # With type inference, pandas types each chunk of a large file on its
-    # own, so an r_idx column that mixes numbers and text would come back
+    # own, so a group column that mixes numbers and text would come back
     # part int and part str.
-    # Times are read as text, and parsed by receptor_rows in the forms the
+    # Times are read as text, and parsed by release_rows in the forms the
     # docs give, never guessed: pandas would read 05/07/2023 month-first.
     dtype: dict[Any, Any] = {
-        c: str for c in header if str(c).lower() in ("r_idx", "time")
+        c: str for c in header if str(c).lower() in ("group", "time")
     }
     return pd.read_csv(path, dtype=dtype)
 
 
-def read_receptors(path: str | Path | IO[str]) -> list[Receptor]:
+def read_releases(path: str | Path | IO[str]) -> list[Receptor]:
     """
-    Read receptors from a CSV file.
+    Read releases from a CSV file.
 
     The file needs columns for time, longitude, latitude, and altitude, and
-    may group rows into one receptor with ``r_idx``. See
-    :func:`receptors_from_frame` for the rules and the accepted column
+    may group rows into one release with ``group``. See
+    :func:`releases_from_frame` for the rules and the accepted column
     names.
 
     Parameters
@@ -477,39 +488,39 @@ def read_receptors(path: str | Path | IO[str]) -> list[Receptor]:
     list of Receptor
         In file order.
     """
-    return receptors_from_frame(read_receptor_frame(path))
+    return releases_from_frame(read_release_frame(path))
 
 
-def _csv_frame(receptors: Iterable[Receptor]) -> pd.DataFrame:
-    """Return the receptor table with times as the text written to CSV."""
-    frame = receptors_to_frame(receptors)
+def _csv_frame(releases: Iterable[Receptor]) -> pd.DataFrame:
+    """Return the release table with times as the text written to CSV."""
+    frame = releases_to_frame(releases)
     return frame.assign(
         time=pd.DatetimeIndex(frame["time"]).strftime("%Y-%m-%d %H:%M:%S")
     )
 
 
-def receptors_to_csv(receptors: Iterable[Receptor]) -> str:
-    """Return receptors as CSV text that :func:`read_receptors` reads back."""
-    return _csv_frame(receptors).to_csv(index=False, lineterminator="\n")
+def releases_to_csv(releases: Iterable[Receptor]) -> str:
+    """Return releases as CSV text that :func:`read_releases` reads back."""
+    return _csv_frame(releases).to_csv(index=False, lineterminator="\n")
 
 
-def write_receptors(receptors: Iterable[Receptor], path: str | Path) -> Path:
-    """Write receptors to a CSV file that :func:`read_receptors` reads, and return its path."""
+def write_releases(releases: Iterable[Receptor], path: str | Path) -> Path:
+    """Write releases to a CSV file that :func:`read_releases` reads, and return its path."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(receptors_to_csv(receptors))
+    path.write_text(releases_to_csv(releases))
     return path
 
 
-def append_receptors_csv(text: str, receptors: Iterable[Receptor]) -> str:
+def append_releases_csv(text: str, releases: Iterable[Receptor]) -> str:
     """
-    Return the text of a receptors CSV with rows for more receptors appended.
+    Return the text of a releases CSV with rows for more releases appended.
 
     The existing header sets the columns and their order, so a hand-written
-    file keeps its column names and ``r_idx`` values, and its rows are kept
-    as written. Label columns are filled from each receptor's ``attrs`` or
-    left empty. New receptors are numbered after the largest ``r_idx`` in
-    the file. When a new receptor's heights are above sea level and the file
+    file keeps its column names and ``group`` values, and its rows are kept
+    as written. Label columns are filled from each release's ``attrs`` or
+    left empty. New releases are numbered after the largest ``group`` in
+    the file. When a new release's heights are above sea level and the file
     has no ``altitude_ref`` column, the column is added, with ``agl`` on the
     existing rows.
 
@@ -517,34 +528,34 @@ def append_receptors_csv(text: str, receptors: Iterable[Receptor]) -> str:
     ------
     ValueError
         If the file lacks a time, longitude, latitude, or altitude column,
-        has no ``r_idx`` column for a column or multipoint receptor, or
+        has no ``group`` column for a column or multipoint release, or
         names its altitude column ``zagl``/``zmsl`` for a different altitude
-        reference than a new receptor uses.
+        reference than a new release uses.
     """
-    receptors = list(receptors)
+    releases = list(releases)
     if not text.strip():
-        return receptors_to_csv(receptors)
+        return releases_to_csv(releases)
     columns = list(pd.read_csv(StringIO(text), nrows=0).columns)
     _, spelling = _normalize_columns(pd.DataFrame(columns=columns))
     missing = [
         f for f in ("time", "longitude", "latitude", "altitude") if f not in spelling
     ]
     if missing:
-        raise ValueError(f"receptors.csv lacks a column for {missing}; cannot append.")
-    if "r_idx" not in spelling and any(len(r.coords()) > 1 for r in receptors):
+        raise ValueError(f"releases.csv lacks a column for {missing}; cannot append.")
+    if "group" not in spelling and any(len(r.coords()) > 1 for r in releases):
         raise ValueError(
-            "receptors.csv has no r_idx column, so a column or multipoint receptor "
-            "cannot be appended; add an r_idx column to the file."
+            "releases.csv has no group column, so a column or multipoint release "
+            "cannot be appended; add a group column to the file."
         )
     if "altitude_ref" not in spelling:
         file_ref = {"zagl": "agl", "zmsl": "msl"}.get(spelling["altitude"].lower())
-        for r in receptors:
+        for r in releases:
             if file_ref is not None and r.altitude_ref != file_ref:
                 raise ValueError(
-                    f"receptors.csv altitudes are {file_ref}; receptor {r.id} is "
+                    f"releases.csv altitudes are {file_ref}; release {r.id} is "
                     f"{r.altitude_ref}. Add an altitude_ref column to mix them."
                 )
-        if file_ref is None and any(r.altitude_ref != "agl" for r in receptors):
+        if file_ref is None and any(r.altitude_ref != "agl" for r in releases):
             # The one case that rewrites the existing rows: they gain the column.
             existing = pd.read_csv(StringIO(text), dtype=str, keep_default_na=False)
             text = existing.assign(altitude_ref="agl").to_csv(
@@ -553,16 +564,16 @@ def append_receptors_csv(text: str, receptors: Iterable[Receptor]) -> str:
             columns.append("altitude_ref")
             spelling["altitude_ref"] = "altitude_ref"
 
-    new = _csv_frame(receptors)
-    if "r_idx" in spelling:
+    new = _csv_frame(releases)
+    if "group" in spelling:
         ids = pd.read_csv(
             StringIO(text),
-            usecols=[spelling["r_idx"]],
+            usecols=[spelling["group"]],
             dtype=str,
             keep_default_na=False,
         ).iloc[:, 0]
         numbers = [int(v) for v in ids if v.strip().lstrip("-").isdigit()]
-        new["r_idx"] += max(numbers, default=-1) + 1
+        new["group"] += max(numbers, default=-1) + 1
     new = new.rename(columns=spelling).reindex(columns=columns)
     rows = new.astype(object).where(new.notna(), "")
     body = text if text.endswith("\n") else text + "\n"
