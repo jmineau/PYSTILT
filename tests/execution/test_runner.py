@@ -561,6 +561,8 @@ def test_a_slurm_run_needs_a_time_limit():
         ExecutionConfig(backend="slurm")
     ExecutionConfig()  # a local run has none
     ExecutionConfig(backend="slurm", slurm={"time": "1-00"})
+    # A time written as null is no time limit, not a bad one.
+    assert SlurmConfig(time=None, fetch={"time": None}).time is None
 
 
 @pytest.mark.parametrize(

@@ -205,6 +205,58 @@ def test_a_stage_blocks_name_is_what_a_variant_calls_it(tmp_path, grid):
         )
 
 
+@pytest.mark.parametrize(
+    ("block", "what"),
+    [("models", "Model"), ("stages", "Stage")],
+    ids=["model", "stage"],
+)
+def test_a_blocks_name_is_plain_as_a_variants_is(tmp_path, grid, block, what):
+    """A model's or a stage's name is what a variant writes, so it follows the variants' rule."""
+    settings = {"class": FOOTPRINT_STAGE, "grid": grid} if block == "stages" else {}
+    with pytest.raises(ValueError, match=f"{what} name 'Not_Plain' must match"):
+        ProjectConfig(
+            mets=_met_config(tmp_path),
+            variants={"hrrr": {}},
+            **{block: {"Not_Plain": settings}},
+        )
+
+
+def test_a_variants_stages_is_a_mapping(tmp_path, grid):
+    """A list of stage names is refused: a variant gets every stage, and says only what it changes."""
+    with pytest.raises(
+        ValueError,
+        match="Variant 'hrrr': stages must map a stage's name to the settings it changes",
+    ):
+        ProjectConfig(
+            mets=_met_config(tmp_path),
+            stages={"footprint": {"class": FOOTPRINT_STAGE, "grid": grid}},
+            variants={"hrrr": {"stages": ["footprint"]}},
+        )
+
+
+def test_a_met_no_variant_uses_is_still_checked(tmp_path):
+    """With one model, that model's met config checks every met, used or not."""
+    mets = {**_met_config(tmp_path), "spare": {"subgrid_enable": "maybe"}}
+    with pytest.raises(
+        ValueError, match=r"Met 'spare' \(hysplit\): [\s\S]*subgrid_enable"
+    ):
+        ProjectConfig(mets=mets, variants={"hrrr": {}})
+
+
+def test_a_config_or_a_block_that_is_not_a_mapping_is_an_error(tmp_path):
+    """The checks of keys leave anything that is not a mapping to pydantic's own message."""
+    from stilt.execution.config import ExecutionConfig, SlurmConfig
+
+    with pytest.raises(ValidationError, match="ProjectConfig"):
+        ProjectConfig.model_validate(["mets", "variants"])
+    with pytest.raises(ValidationError, match="mets"):
+        ProjectConfig(mets=str(tmp_path / "met"), variants={"hrrr": {}})
+    with pytest.raises(ValidationError, match="ExecutionConfig"):
+        ExecutionConfig.model_validate("slurm")
+    with pytest.raises(ValidationError, match="SlurmConfig"):
+        SlurmConfig.model_validate("02:00:00")
+
+
 def test_the_footprint_stage_is_at_the_path_a_config_names():
     import importlib
 

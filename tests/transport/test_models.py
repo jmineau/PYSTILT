@@ -148,6 +148,40 @@ def test_a_variant_names_its_model_when_there_are_several(tmp_path, toy):
     assert only.resolve()["hrrr"].model.name == "toy"
 
 
+def test_a_met_is_checked_by_the_model_that_reads_it(tmp_path, toy):
+    """``met_config`` takes the name of a models block, and needs it when there are several."""
+    one = ProjectConfig(mets=_mets(tmp_path), models={"toy": {}}, variants={"hrrr": {}})
+    assert isinstance(one.met_config("hrrr"), ToyMet)  # the only model
+
+    both = ProjectConfig(
+        mets=_mets(tmp_path),
+        models={"hysplit": {}, "toy": {}},
+        variants={"hrrr": {"model": "hysplit"}},
+    )
+    assert isinstance(both.met_config("hrrr", "toy"), ToyMet)
+    assert not isinstance(both.met_config("hrrr", "hysplit"), ToyMet)
+    with pytest.raises(
+        ValueError,
+        match=r"Name the model that reads met 'hrrr': one of \['hysplit', 'toy'\]",
+    ):
+        both.met_config("hrrr")
+    with pytest.raises(ValueError, match="There is no model 'nope' under models:"):
+        both.met_config("hrrr", "nope")
+
+
+def test_with_several_models_a_met_no_variant_uses_is_not_checked(tmp_path, toy):
+    """No variant pairs the spare met with a model, so there is no met config to check it with."""
+    mets = {**_mets(tmp_path), "spare": {"subgrid_enable": "maybe"}}
+    config = ProjectConfig(
+        mets=mets,
+        models={"hysplit": {}, "toy": {}},
+        variants={"hrrr": {"model": "hysplit"}},
+    )
+    # HYSPLIT's met config refuses it once it is asked.
+    with pytest.raises(ValueError, match=r"Met 'spare' \(hysplit\)"):
+        config.met_config("spare", "hysplit")
+
+
 def test_a_models_block_must_name_a_model(tmp_path, toy):
     with pytest.raises(
         ValueError, match="models: nope: 'nope' is not a built-in transport model"
