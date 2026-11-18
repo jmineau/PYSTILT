@@ -69,7 +69,7 @@ classes: its methods take the kind (`particles` or a stage's name).
 
 **`stilt.Project` and `stilt.Simulation` only add reads** to the particle part's
 classes (`stilt_project.py`, `stilt_simulation.py`); they override only
-`simulation_class` and `init` (`tests/test_stilt_project.py`). Workers and stages
+`simulation` (returns `stilt.Simulation`) and `init` (`tests/test_stilt_project.py`). Workers and stages
 get the particle classes; nothing on disk names the subclasses.
 
 ```

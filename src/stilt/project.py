@@ -23,7 +23,7 @@ import re
 from collections.abc import Iterable, Iterator
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Self
+from typing import TYPE_CHECKING, Any, Self
 
 import numpy as np
 import pandas as pd
@@ -183,11 +183,6 @@ class Project:
     directory : Path
         The project directory, absolute.
     """
-
-    #: The class of the simulations :meth:`simulation` returns. A subclass
-    #: that adds reads to the simulation sets it, as :class:`stilt.Project`
-    #: does with :class:`stilt.Simulation`.
-    simulation_class: ClassVar[type[Simulation]] = Simulation
 
     def __init__(self, path: str | Path, *, output: str | Path | None = None) -> None:
         self.directory = absolute(path)
@@ -583,7 +578,7 @@ class Project:
             raise KeyError(
                 f"No variant {variant!r}; the variants are {list(self.variants)}."
             )
-        return self.simulation_class(
+        return Simulation(
             self.receptor(receptor_id),
             self.variants[variant],
             self.output,

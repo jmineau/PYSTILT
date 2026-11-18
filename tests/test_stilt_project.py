@@ -33,8 +33,8 @@ def _overridden(cls: type) -> set[str]:
 
 
 def test_stilt_project_changes_only_which_simulation_it_returns_and_the_new_projects_values():
-    # simulation_class is the one hook; init writes STILT-R's HYSPLIT values.
-    assert _overridden(stilt.Project) == {"simulation_class", "init"}
+    # simulation returns stilt.Simulation; init writes STILT-R's HYSPLIT values.
+    assert _overridden(stilt.Project) == {"simulation", "init"}
 
 
 def test_stilt_simulation_changes_nothing_it_inherits():
@@ -44,8 +44,8 @@ def test_stilt_simulation_changes_nothing_it_inherits():
 def test_the_subclasses_are_the_ones_stilt_exports():
     assert issubclass(stilt.Project, project.Project)
     assert issubclass(stilt.Simulation, simulation.Simulation)
-    assert stilt.Project.simulation_class is stilt.Simulation
-    assert project.Project.simulation_class is simulation.Simulation
+    # The particle part has no hook a subclass sets.
+    assert not hasattr(project.Project, "simulation_class")
 
 
 def test_the_particle_part_has_none_of_stilts_reads():
@@ -63,11 +63,10 @@ def test_the_particle_part_has_none_of_stilts_reads():
         assert not hasattr(simulation.Simulation, name)
 
 
-def test_stilt_project_simulation_is_typed_as_stilts_for_editors():
-    # A typing-only declaration: at run time the method is the particle part's.
-    assert "simulation" not in vars(stilt.Project)
-    source = inspect.getsource(stilt.stilt_project)
-    assert "if TYPE_CHECKING:" in source and ") -> Simulation:" in source
+def test_stilt_project_simulation_says_it_returns_stilts_simulation():
+    # A real annotation, so editors and pyrefly see the reads.
+    hints = inspect.get_annotations(stilt.Project.simulation, eval_str=True)
+    assert hints["return"] is stilt.Simulation
 
 
 @pytest.fixture
@@ -100,6 +99,15 @@ def test_each_project_returns_its_own_simulation_of_the_same_files(
     assert sim.id == plain.id
     assert sim.path("footprint") == plain.path("footprint") == sim.footprint_path
     assert sim.has("footprint") is plain.has("footprint") is sim.has_footprint
+
+
+def test_stilt_project_simulation_refuses_what_the_particle_part_refuses(
+    made, point_receptor
+):
+    with pytest.raises(KeyError, match="No variant 'nope'"):
+        made.simulation(point_receptor.id, "nope")
+    with pytest.raises(ValueError, match="realizations"):
+        made.simulation(point_receptor.id, "hrrr", 3)
 
 
 def test_one_simulation_is_equal_whichever_class_holds_it(made, point_receptor):
