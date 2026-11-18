@@ -31,7 +31,7 @@ from .io import (
     write_empty_footprint,
     write_footprint,
 )
-from .stage import FootprintStage
+from .stage import FootprintStage, footprint_particles
 from .targets import Geometry, Mesh, Zones, check_resolution, overlap_weights
 
 __all__ = [
@@ -46,6 +46,7 @@ __all__ = [
     "Zones",
     "calc_footprint",
     "check_resolution",
+    "footprint_particles",
     "jacobian",
     "open_footprints",
     "overlap_weights",

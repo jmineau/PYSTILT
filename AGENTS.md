@@ -292,6 +292,9 @@ The reasons are in `docs/development/architecture.rst` ("Implementation notes").
   (`HysplitConfig.maxpar_for`), so it is recorded unset; `check_release` fails
   a multipoint run whose `WARNING` says `exceeding puff limit` (a one-location
   run writes it too, harmlessly).
+- **Two depths**: HYSPLIT's `foot` uses `veght`; the footprint stage computes
+  its own (`footprint_depth`, `pbl_height`) when it needs one and stores it
+  nowhere. On HYSPLIT's `foot`, `resolve` takes `veght` as `footprint_depth`.
 - **Pressure weighting fits `ln p = b + a·z`** (`particle_pwf`); never use raw
   `pres` (`tests/integration/test_pressure_weighting.py` guards it).
 - **Release heights come from the `age = 0` row** (`add_release_heights`), with

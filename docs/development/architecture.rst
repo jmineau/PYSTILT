@@ -437,12 +437,19 @@ there is refused with a message naming its block.
   ``model`` (needed with several models), ``realizations`` and ``stages``;
   every other key is a setting of its model. Each model's block holds all of
   its parameters, the ones PYSTILT's own code reads among them (the base
-  ``TransportConfig``: ``n_hours``, ``seed``, ``footprint_depth``,
-  ``pbl_height``, ``pbl_height_min``). ``hnf_plume`` is a footprint field:
-  the near-field correction is applied when a footprint is made, so a stored
-  particle file holds the model's ``foot``. A
-  parameter goes on the base only when the core reads it; ``numpar`` and
-  every ``SETUP.CFG`` setting are HYSPLIT's.
+  ``TransportConfig``: ``n_hours``, ``seed``). A parameter goes on the base
+  only when the core reads it; ``numpar`` and every ``SETUP.CFG`` setting,
+  ``veght`` among them, are HYSPLIT's.
+- A stored particle file holds what the model wrote. The footprint's own
+  fields say what is done with it afterwards: ``hnf_plume`` (the near-field
+  correction, applied when a footprint is made), and ``footprint_depth``,
+  ``pbl_height`` and ``pbl_height_min``, with which the footprint stage
+  computes ``foot`` when it needs one (``pbl_height`` set, or particles
+  without ``foot``) and stores it nowhere. On the model's own ``foot`` the
+  stage's ``resolve`` takes the run's ``veght`` as ``footprint_depth``, for
+  the near-field correction and the record, and refuses a different one
+  written in the config. So variants that differ only in how ``foot`` is
+  computed share one run, and no stage sets a model setting.
 - When it loads, ``ProjectConfig`` checks each block and each declared
   variant (names, met, model, ``realizations``, stage overrides) and rejects
   an unknown key with the nearest known one (``difflib``), reading no other

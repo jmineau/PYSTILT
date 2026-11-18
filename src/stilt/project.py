@@ -34,8 +34,8 @@ from stilt.execution.config import ExecutionConfig
 from stilt.fetch import fetch_project
 from stilt.footprint import Geometry, Jacobian
 from stilt.footprint.aggregation import _jacobian
-from stilt.footprint.config import FootprintConfig
 from stilt.footprint.io import _threads, open_footprints
+from stilt.footprint.stage import stored_particles, variant_footprint
 from stilt.output import Output, completed
 from stilt.particles import particles_from_table, read_particles
 from stilt.receptors import Receptor, read_receptors
@@ -1258,10 +1258,17 @@ class Project:
             if r in have and (ks := [k for k, found in ran.items() if r in found])
         }
 
+        footprint = variant_footprint(variant)
+
         def particles(v: Variant, rid: str, k: int | None) -> pd.DataFrame:
             path = self.output.path("particles", v, rid, k)
             assert path is not None  # the listing found the file
-            return read_particles(path)
+            return stored_particles(
+                read_particles(path),
+                footprint,
+                path,
+                z_top=getattr(v.transport, "z_top", None),
+            )
 
         def read(rid: str) -> tuple[pd.DataFrame, list[pd.DataFrame]]:
             return (
@@ -1269,9 +1276,6 @@ class Project:
                 [particles(perturbed, rid, k) for k in runs[rid]],
             )
 
-        footprint = variant.stages.get("footprint") or FootprintConfig.model_validate(
-            {}
-        )
         found = _transport_errors(
             read,
             list(self._receptors(runs).values()),
@@ -1281,7 +1285,7 @@ class Project:
             workers=_threads(workers),
             **{
                 "hnf_plume": footprint.hnf_plume,
-                "footprint_depth": variant.transport.footprint_depth,
+                "footprint_depth": footprint.footprint_depth,
                 **options,
             },
         )

@@ -224,11 +224,19 @@ and are written in its block under ``models:`` (``hysplit`` when the config
 has no ``models``). HYSPLIT's are in
 :class:`stilt.transport.hysplit.HysplitConfig`, under HYSPLIT's names (see
 :doc:`hysplit`). Each model's block holds all of its settings, the ones
-PYSTILT reads itself among them (``n_hours``, ``seed``,
-``footprint_depth``, ``pbl_height``, and ``pbl_height_min``): nothing passes
-from one model's block to another's. ``hnf_plume``, the near-field
-correction, is a footprint setting: it is applied when the footprint is
-made, so it does not change the particles or their settings folder.
+PYSTILT reads itself among them (``n_hours`` and ``seed``): nothing passes
+from one model's block to another's.
+
+What is done with the particles afterwards is the footprint stage's, under
+``stages: footprint:``, and does not change the particles or their settings
+folder: ``hnf_plume``, the near-field correction, applied when the
+footprint is made, and ``footprint_depth``, ``pbl_height`` and
+``pbl_height_min``, which say how PYSTILT computes ``foot`` when the
+footprint needs one (:doc:`particles`). HYSPLIT computes its own ``foot``
+with ``veght``, a HYSPLIT setting. A footprint made from that ``foot`` reads
+``veght`` for the near-field correction, so a ``footprint_depth`` written
+for it must equal ``veght``; a different one is refused, saying to set
+``veght``, or ``pbl_height`` so that PYSTILT computes ``foot``.
 
 
 Geometry specifications

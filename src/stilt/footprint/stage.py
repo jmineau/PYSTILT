@@ -10,10 +10,12 @@ PYSTILT has.
 
 from __future__ import annotations
 
+import datetime as dt
 import functools
+import logging
 import os
 import weakref
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -24,7 +26,7 @@ from pydantic import TypeAdapter
 from stilt._paths import absolute
 from stilt.exceptions import EmptyFootprint
 from stilt.identity import file_stamp
-from stilt.particles import HNF_PLUME_COLUMNS
+from stilt.particles import HNF_PLUME_COLUMNS, add_foot, particles_metadata
 from stilt.receptors import Receptor
 from stilt.spatial import Grid
 
@@ -43,6 +45,8 @@ if TYPE_CHECKING:
     from stilt.config import Variant
     from stilt.output import Output
     from stilt.simulation import Simulation
+
+logger = logging.getLogger(__name__)
 
 #: One thing :meth:`FootprintStage.check` found: the check, the receptor it is about (or ``None``), and what is wrong.
 _Finding = tuple[str, str | None, str]
@@ -104,12 +108,20 @@ class FootprintStage:
         only by a geometry is derived from it (:meth:`stilt.Mesh.to_grid`).
         A relative geometry file starts from *directory*.
 
+        When the footprint is made from the transport model's own ``foot``
+        (``pbl_height`` unset, and a model that records the depth it made
+        ``foot`` with, HYSPLIT's ``veght``), ``footprint_depth`` becomes
+        that depth: the near-field correction reads it, and the footprint
+        records it.
+
         Raises
         ------
         ValueError
-            If the settings have neither a grid nor a geometry, or the
-            near-field correction is on and the transport model is not
-            asked for a particle column it reads (HYSPLIT's ``varsiwant``).
+            If the settings have neither a grid nor a geometry, the
+            near-field correction is on and the transport model is not asked
+            for a particle column it reads (HYSPLIT's ``varsiwant``), or a
+            ``footprint_depth`` is written for a footprint made from the
+            model's ``foot`` and differs from the model's depth.
         """
         if config.grid is None and config.geometry is None:
             raise ValueError(
@@ -127,6 +139,19 @@ class FootprintStage:
                     "hnf_plume: false."
                 )
         update: dict[str, Any] = {"geometry_hash": None}
+        depth = model_foot_depth(config, model_settings)
+        if depth is not None:
+            written = "footprint_depth" in config.model_fields_set
+            if written and config.footprint_depth != depth:
+                raise ValueError(
+                    f"footprint_depth is {config.footprint_depth:g}, and the "
+                    f"footprint is made from the {model} model's own foot, "
+                    f"which it made with veght {depth:g}. Set veght: "
+                    f"{config.footprint_depth:g} in the model's settings for "
+                    "that depth, or set pbl_height so that PYSTILT computes "
+                    "foot with footprint_depth."
+                )
+            update["footprint_depth"] = depth
         if config.geometry is not None:
             mesh = _mesh(config.geometry, directory)
             update["geometry_hash"] = mesh.hash
@@ -175,7 +200,10 @@ class FootprintStage:
         """
         Calculate a simulation's footprint from its particles and write it at *path*.
 
-        The near-field correction reads the run's ``footprint_depth``. A
+        The particles get the ``foot`` the settings ask for
+        (:func:`footprint_particles`): the transport model's own, or one
+        computed from the met files the run read, which is used and not
+        stored. The near-field correction reads ``footprint_depth``. A
         relative file name in a transform's settings starts from the
         project directory (``sim.directory``). When no particle reaches the
         grid, the file written has no rows and is marked ``stilt:empty``: a
@@ -187,13 +215,13 @@ class FootprintStage:
             raise ValueError(f"The footprint of {sim} has no grid.")
         try:
             foot = calc_footprint(
-                sim.particles,
+                simulation_particles(sim, config),
                 sim.receptor,
                 config.grid,
                 smooth_factor=config.smooth_factor,
                 tres=config.tres,
                 hnf_plume=config.hnf_plume,
-                footprint_depth=sim.variant.transport.footprint_depth,
+                footprint_depth=config.footprint_depth,
                 transforms=config.transforms,
                 name=sim.variant.name,
                 directory=sim.directory,
@@ -204,6 +232,192 @@ class FootprintStage:
         _write(
             path, config, sim.variant, sim.receptor, foot, sim.realization, self.name
         )
+
+
+def footprint_particles(
+    particles: pd.DataFrame,
+    config: FootprintConfig,
+    met_files: Iterable[str | os.PathLike[str]],
+    *,
+    z_top: float | None = None,
+) -> pd.DataFrame:
+    """
+    Return the particles a footprint under *config* is made from, with the ``foot`` it uses.
+
+    The particles are returned as they are when they have ``foot`` and
+    ``pbl_height`` is unset: the transport model's own ``foot``, such as
+    HYSPLIT's. Otherwise PYSTILT computes ``foot`` with ``footprint_depth``,
+    ``pbl_height`` and ``pbl_height_min`` (:func:`stilt.particles.add_foot`),
+    in place of the model's, and returns a copy with it. The particles
+    passed in are not changed, and the computed ``foot`` is stored
+    nowhere: each footprint computes it again.
+
+    Parameters
+    ----------
+    particles : pandas.DataFrame
+        A particle table, such as ``sim.particles``.
+    config : FootprintConfig
+        The footprint settings.
+    met_files : iterable of path-like
+        The met files the run read, which a particle file records
+        (:func:`stilt.particles.particles_metadata`). They are read only
+        when ``foot`` is computed, and must still be at those paths then.
+    z_top : float, optional
+        The top of the run's domain, HYSPLIT's ``z_top``, which
+        ``pbl_height: richardson`` reads.
+
+    Returns
+    -------
+    pandas.DataFrame
+        The particles, with ``foot``.
+
+    Raises
+    ------
+    FileNotFoundError
+        If ``foot`` is computed and the run named no met files, or one of
+        them is no longer there.
+
+    Examples
+    --------
+    >>> meta = stilt.particles.particles_metadata(sim.particles_path)  # doctest: +SKIP
+    >>> config = stilt.FootprintConfig(
+    ...     grid=grid, pbl_height="richardson"
+    ... )  # doctest: +SKIP
+    >>> particles = stilt.footprint.footprint_particles(
+    ...     sim.particles, config, meta.met_files
+    ... )  # doctest: +SKIP
+    """
+    if not _computes_foot(particles, config):
+        return particles
+    files = [Path(f) for f in met_files]
+    if not files:
+        raise FileNotFoundError(
+            "The footprint needs a foot computed by PYSTILT, from the met "
+            "files the run read, and the run named none."
+        )
+    gone = [f for f in files if not f.exists()]
+    if gone:
+        raise FileNotFoundError(
+            f"The footprint needs a foot computed by PYSTILT from the met files "
+            f"the run read, and {gone[0]} is not there any more"
+            f"{f' (nor {len(gone) - 1} more)' if len(gone) > 1 else ''}. Put the "
+            "met files back where the run read them."
+        )
+    had_foot = "foot" in particles.columns
+    out = particles.drop(columns="foot") if had_foot else particles
+    out = add_foot(
+        out,
+        files,
+        config.footprint_depth,
+        pbl_height=config.pbl_height,
+        pbl_height_min=config.pbl_height_min,
+        z_top=z_top,
+    )
+    logger.info(
+        "foot computed by PYSTILT from %s and the air below it in the met files "
+        "(stilt.particles.add_foot)%s",
+        _mixed_layer(particles, config),
+        " in place of the model's foot" if had_foot else "",
+    )
+    return out
+
+
+def _mixed_layer(particles: pd.DataFrame, config: FootprintConfig) -> str:
+    """Say where the mixed-layer height of a ``foot`` PYSTILT computes comes from."""
+    pbl_height = config.pbl_height
+    if pbl_height is None and "mlht" in particles.columns:
+        return "the model's mlht"
+    if pbl_height is None or pbl_height == "met":
+        found = "the met's PBLH"
+    elif pbl_height == "richardson":
+        found = "the mixed layer found from the met's profile (HYSPLIT's kmixd 3)"
+    else:
+        found = f"a mixed layer of {pbl_height:g} m"
+    if config.pbl_height_min > 0:
+        found += f", at least {config.pbl_height_min:g} m,"
+    return found
+
+
+def stored_particles(
+    particles: pd.DataFrame,
+    config: FootprintConfig,
+    path: Location | None,
+    *,
+    start: dt.datetime | pd.Timestamp | None = None,
+    z_top: float | None = None,
+) -> pd.DataFrame:
+    """
+    Return particles read from the file at *path* with the ``foot`` a footprint under *config* uses (:func:`footprint_particles`).
+
+    The met files are read from the particle file's metadata only when
+    ``foot`` is computed. For that, particles without ``time`` (the run's
+    own, in memory) get it from *start*, the receptor time, and lose it
+    again.
+    """
+    if not _computes_foot(particles, config):
+        return particles
+    met_files = [] if path is None else particles_metadata(path).met_files
+    added_time = "time" not in particles.columns and start is not None
+    if added_time:
+        particles = particles.assign(
+            time=pd.Timestamp(start)
+            + pd.to_timedelta(particles["age"].to_numpy(), unit="min")
+        )
+    out = footprint_particles(particles, config, met_files, z_top=z_top)
+    return out.drop(columns="time") if added_time else out
+
+
+def simulation_particles(sim: Simulation, config: FootprintConfig) -> pd.DataFrame:
+    """Return a simulation's particles with the ``foot`` a footprint under *config* uses (:func:`stored_particles`)."""
+    return stored_particles(
+        sim.particles,
+        config,
+        sim.particles_path,
+        start=sim.receptor.time,
+        z_top=getattr(sim.transport, "z_top", None),
+    )
+
+
+def variant_footprint(variant: Variant) -> FootprintConfig:
+    """
+    Return *variant*'s footprint settings, or the defaults when it has no footprint.
+
+    The defaults get the depth of the transport model's own ``foot``, as
+    :meth:`FootprintStage.resolve` gives it (:func:`model_foot_depth`), so a
+    footprint made from particles of a variant without one corrects the
+    near field as its run would.
+    """
+    own = variant.stages.get("footprint")
+    if own is not None:
+        return own
+    own = FootprintConfig.model_validate({})
+    depth = model_foot_depth(own, variant.transport.settings())
+    return own if depth is None else own.model_copy(update={"footprint_depth": depth})
+
+
+def _computes_foot(particles: pd.DataFrame, config: FootprintConfig) -> bool:
+    """Whether a footprint under *config* is made from a ``foot`` PYSTILT computes: ``pbl_height`` is set, or *particles* have none."""
+    return config.pbl_height is not None or "foot" not in particles.columns
+
+
+def model_foot_depth(
+    config: FootprintConfig, model_settings: Mapping[str, Any]
+) -> float | None:
+    """
+    Return the depth the transport model made its ``foot`` with when the footprint uses that ``foot``, else ``None``.
+
+    The depth is HYSPLIT's ``veght``. A model that records none, or that is
+    not asked for ``foot`` (HYSPLIT's ``varsiwant``), or ``pbl_height``
+    set, gives ``None``: then PYSTILT computes ``foot`` with
+    ``footprint_depth``.
+    """
+    depth = model_settings.get("veght")
+    columns = model_settings.get("varsiwant")
+    if config.pbl_height is not None or depth is None:
+        return None
+    if columns is not None and "foot" not in columns:
+        return None
+    return float(depth)
 
 
 def store_footprint(
@@ -328,4 +542,13 @@ def _outside(rows: pd.DataFrame, grid: Grid) -> list[_Finding]:
     ]
 
 
-__all__ = ["FootprintStage", "store_empty_footprint", "store_footprint"]
+__all__ = [
+    "FootprintStage",
+    "footprint_particles",
+    "model_foot_depth",
+    "simulation_particles",
+    "stored_particles",
+    "variant_footprint",
+    "store_empty_footprint",
+    "store_footprint",
+]

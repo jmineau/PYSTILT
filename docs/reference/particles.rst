@@ -44,26 +44,35 @@ A footprint also needs ``foot``:
    The particle's sensitivity to surface fluxes accumulated over the output
    step, in ppm per (µmol m⁻² s⁻¹): the time the particle spent in the
    surface layer, divided by the depth the flux is mixed through times the
-   mean air density below it (Lin et al., 2003). The surface layer is
-   ``footprint_depth`` of the mixed layer, or ``footprint_depth`` meters
-   when that is more than 1; above it ``foot`` is zero.
+   mean air density below it (Lin et al., 2003). The surface layer is a
+   fraction of the mixed layer, or that many meters when the number is more
+   than 1: HYSPLIT's ``veght`` for HYSPLIT's own ``foot``, the footprint's
+   ``footprint_depth`` for one PYSTILT computes. Above it ``foot`` is zero.
    :func:`stilt.calc_footprint` adds each particle's ``foot`` into its grid
    cell and divides by the number of particles.
 
 Where ``foot`` comes from:
 
 - **HYSPLIT** computes it in STILT mode, as STILT-R's runs do, when
-  ``varsiwant`` has ``foot`` (the default). PYSTILT keeps it as written.
-- **Any other model whose particles have no** ``foot``, such as one that
-  writes only positions, gets it from PYSTILT after the run
-  (:func:`add_foot`), from ``zagl``, ``mlht``, the output step, and the
+  ``varsiwant`` has ``foot`` (the default), with its ``veght``. PYSTILT
+  keeps it as written.
+- **Particles with no** ``foot``, such as those of a model that writes only
+  positions, get it from the footprint stage when it makes the footprint
+  (:func:`stilt.footprint.footprint_particles`, which calls
+  :func:`add_foot`), from ``zagl``, ``mlht``, the output step, and the
   pressure drop from the ground to the surface layer's top in the met files
-  the run read. The run's log says so. A particle counts for the whole step
+  the run read. PYSTILT's log says so. A particle counts for the whole step
   when it ends the step inside the layer, where HYSPLIT counts the minutes
   it spent there. When the model wrote no ``mlht``, the met's
   boundary-layer height (``PBLH``) is used, unless ``pbl_height`` says
   otherwise. :doc:`/development/validation` says how far this moves a
   footprint.
+
+A ``foot`` PYSTILT computes is stored nowhere: the particle file keeps what
+the model wrote, and each footprint computes it again. It reads the met
+files at the paths the particle file records (``stilt:met_files``), so
+they must still be there when the footprint is made; a footprint made from
+HYSPLIT's own ``foot`` needs no met files.
 
 The mixed-layer height
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -71,22 +80,28 @@ The mixed-layer height
 ``foot`` depends on the mixed-layer height, the ``mlht`` column, through the
 depth surface fluxes are mixed through (``footprint_depth`` of it). The
 ``pbl_height`` setting says where PYSTILT takes that height from when it
-computes ``foot``; ``pbl_height`` and ``mlht`` name the same quantity.
+computes ``foot``; ``pbl_height`` and ``mlht`` name the same quantity. The
+three are settings of the footprint stage, so variants that differ only in
+them share one transport model run:
 
 .. code-block:: yaml
 
-   models:
-     hysplit:
+   stages:
+     footprint:
+       class: stilt.footprint.FootprintStage
+       grid: {xmin: -113.0, xmax: -110.5, ymin: 40.0, ymax: 42.0, xres: 0.01, yres: 0.01}
        pbl_height: richardson   # or met, or a height in meters
        pbl_height_min: 150      # the lowest height, in meters
+       footprint_depth: 0.5     # the default
 
 - **Unset** (the default), PYSTILT stays as close to the model as its
   output allows: it keeps the model's ``foot`` (HYSPLIT's, which STILT-R
   parity covers); for a model that writes no ``foot`` it uses the model's
   ``mlht``, or the met's ``PBLH`` when the model wrote none.
-- **Set**, PYSTILT computes ``foot`` itself, with that height, for any
-  model's particles, HYSPLIT's included, and replaces the model's ``foot``
-  and ``mlht``. The run's log says which height it used. ``met`` is the
+- **Set**, PYSTILT computes ``foot`` itself, with that height and
+  ``footprint_depth``, for any model's particles, HYSPLIT's included, and
+  makes the footprint from it in place of the model's ``foot`` and ``mlht``.
+  PYSTILT's log says which height it used. ``met`` is the
   met's ``PBLH``; ``richardson`` finds the height from the met's profile
   with a bulk Richardson number, as HYSPLIT's default ``kmixd: 3`` does
   (:func:`stilt.sampling.calc_pbl_height`), on HYSPLIT's internal levels for
@@ -203,7 +218,9 @@ Columns PYSTILT adds
    X-STILT call it ``xhgt``.
 
 ``foot``
-   When the model wrote none (:func:`add_foot`), as above.
+   When the model wrote none, or ``pbl_height`` is set (:func:`add_foot`),
+   as above: only to the particles a footprint is made from, never to a
+   stored particle file.
 
 ``foot_no_hnf_dilution``
    ``foot`` before the near-field correction, added by
@@ -230,14 +247,15 @@ Checking a table
 After a run
 -----------
 
-After a run PYSTILT adds the release heights to any model's particles, and
-``foot`` to particles that have none. That is what a particle file stores
-and ``sim.particles`` returns.
+After a run PYSTILT adds the release heights to any model's particles.
+That, with the columns the model wrote, is what a particle file stores and
+``sim.particles`` returns: a model that writes no ``foot`` has none there.
 
 The near-field correction is not stored. :func:`stilt.calc_footprint`
-applies it when ``hnf_plume`` is set (the default), with the run's
-``footprint_depth``, and the transport error does the same, so its
-enhancement is the footprint's. Anything else that reads ``foot`` from the
+applies it when ``hnf_plume`` is set (the default), with the footprint's
+``footprint_depth``, which for HYSPLIT's own ``foot`` is the run's
+``veght``. The transport error does the same, with the same ``foot``, so
+its enhancement is the footprint's. Anything else that reads ``foot`` from the
 stored particles, such as ``particles.stilt.enhancement``, reads it
 uncorrected: call :func:`correct_near_field` first to match the footprint.
 The correction reads ``samt``, ``sigw`` and ``tlgr``, which only HYSPLIT

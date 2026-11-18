@@ -1,8 +1,8 @@
 """
 ``foot`` computed by PYSTILT (:func:`stilt.particles.add_foot`) against the ``foot`` HYSPLIT wrote.
 
-Both compute STILT's footprint: the minutes a particle spends below ``footprint_depth``
-of the mixed layer, over the air below that height. HYSPLIT adds up the dry
+Both compute STILT's footprint: the minutes a particle spends below ``veght``
+(``footprint_depth`` for PYSTILT's) of the mixed layer, over the air below that height. HYSPLIT adds up the dry
 air over its levels in each turbulence step, with 28.84 g/mol; ``add_foot``
 takes the air from the drop in pressure between the ground and the depth in
 the met files, with 28.97 g/mol. With HYSPLIT's own ``samt`` and ``mlht``
@@ -27,11 +27,11 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from stilt.footprint import calc_footprint
+from stilt.footprint import FootprintConfig, calc_footprint, footprint_particles
 from stilt.particles import PARTICLE_SCHEMA, add_foot
 from stilt.receptors import PointReceptor
 from stilt.sampling import calc_pbl_height, sample_met
-from stilt.transport import ModelRun, TransportConfig, _finish, run_model
+from stilt.transport import ModelRun, run_model
 from stilt.transport.hysplit import HysplitConfig
 
 from ..conftest import integration
@@ -58,7 +58,7 @@ def _run(
         numpar=200,
         krand=2,
         seed=42,
-        footprint_depth=VEGHT,
+        veght=VEGHT,
         kmixd=kmixd,
         kmix0=KMIX0,
         varsiwant=[
@@ -138,14 +138,13 @@ def test_a_positions_only_run_gets_a_foot_that_makes_a_footprint_near_hysplits(
     hysplit = run.particles
     positions = hysplit[PARTICLE_SCHEMA.names]
 
-    # What a transport model that writes only positions gets after its run.
-    finished = _finish(
-        ModelRun(positions, met_files=run.met_files),
-        receptor,
-        TransportConfig(n_hours=-24, footprint_depth=VEGHT),
+    # What the footprint of a transport model that writes only positions is made from.
+    computed = footprint_particles(
+        _timed(positions, receptor),
+        FootprintConfig(footprint_depth=VEGHT),
+        run.met_files,
     )
-    assert "from the met's PBLH" in finished.log
-    assert finished.particles["foot"].notna().all()
+    assert computed["foot"].notna().all()
 
     whole_step = add_foot(
         _timed(hysplit.drop(columns=["foot", "samt"]), receptor), run.met_files, VEGHT
@@ -154,7 +153,7 @@ def test_a_positions_only_run_gets_a_foot_that_makes_a_footprint_near_hysplits(
     print()
     steps = {
         "whole step": whole_step,
-        "whole step, the met's PBLH": finished.particles,
+        "whole step, the met's PBLH": computed,
     }
     moved = {}
     for name, particles in steps.items():
@@ -237,17 +236,16 @@ def test_each_pbl_height_moves_a_positions_only_footprint_from_hysplits(hysplit_
     print()
     moved = {}
     for name, (pbl_height, pbl_height_min) in sources.items():
-        finished = _finish(
-            ModelRun(positions, met_files=run.met_files),
-            receptor,
-            TransportConfig(
-                n_hours=-24,
+        computed = footprint_particles(
+            _timed(positions, receptor),
+            FootprintConfig(
                 footprint_depth=VEGHT,
                 pbl_height=pbl_height,
                 pbl_height_min=pbl_height_min,
             ),
+            run.met_files,
         )
-        moved[name] = _moved(_total(finished.particles, receptor), reference)
+        moved[name] = _moved(_total(computed, receptor), reference)
         print(
             f"pbl_height {name}: footprint total / HYSPLIT's {moved[name][0]:.4f}, "
             f"summed cell differences / HYSPLIT's total {moved[name][1]:.4f}"
@@ -260,24 +258,20 @@ def test_each_pbl_height_moves_a_positions_only_footprint_from_hysplits(hysplit_
 
 
 @integration
-def test_pbl_height_set_replaces_hysplits_own_foot(hysplit_run):
+def test_pbl_height_set_replaces_hysplits_own_foot(hysplit_run, caplog):
     run, receptor = hysplit_run
-    finished = _finish(
-        ModelRun(run.particles, met_files=run.met_files),
-        receptor,
-        TransportConfig(
-            n_hours=-24,
-            footprint_depth=VEGHT,
-            pbl_height="richardson",
-            pbl_height_min=KMIX0,
-        ),
-    )
-    total, cells = _moved(
-        _total(finished.particles, receptor), _total(run.particles, receptor)
-    )
+    with caplog.at_level("INFO", logger="stilt.footprint.stage"):
+        computed = footprint_particles(
+            _timed(run.particles, receptor),
+            FootprintConfig(
+                footprint_depth=VEGHT, pbl_height="richardson", pbl_height_min=KMIX0
+            ),
+            run.met_files,
+        )
+    total, cells = _moved(_total(computed, receptor), _total(run.particles, receptor))
     print(
         f"\nHYSPLIT's particles, foot from pbl_height richardson: footprint total / "
         f"HYSPLIT's {total:.4f}, summed cell differences / HYSPLIT's total {cells:.4f}"
     )
-    assert "in place of the model's foot and mlht" in finished.log
+    assert "in place of the model's foot" in caplog.text
     assert total == pytest.approx(1.0, abs=0.03)

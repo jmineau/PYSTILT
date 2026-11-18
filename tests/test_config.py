@@ -620,27 +620,89 @@ def test_time_integrate_is_refused_saying_what_to_do_instead(tmp_path, grid, whe
         )
 
 
-@pytest.mark.parametrize("where", ["top", "variant"])
-def test_veght_is_refused_naming_footprint_depth(tmp_path, where):
-    top = {"veght": 0.3} if where == "top" else {}
-    variant = {} if where == "top" else {"veght": 0.3}
-    with pytest.raises(ValueError, match="veght was renamed footprint_depth"):
-        ProjectConfig(
-            **blocks(mets=_met_config(tmp_path), variants={"hrrr": variant}, **top)
-        )
-
-
-def test_footprint_depth_goes_to_hysplit_as_veght(tmp_path):
+@pytest.mark.parametrize("where", ["block", "variant"])
+def test_veght_is_hysplits_and_goes_to_setup_cfg(tmp_path, where):
     from stilt.transport.hysplit.driver import setup_entries
 
+    block = {"n_hours": -24, "veght": 0.3} if where == "block" else {"n_hours": -24}
+    variant = {} if where == "block" else {"veght": 0.3}
     config = ProjectConfig(
         mets=_met_config(tmp_path),
-        models={"hysplit": {"n_hours": -24, "footprint_depth": 0.3}},
-        variants={"hrrr": {}},
+        models={"hysplit": block},
+        variants={"hrrr": variant},
     )
     entries = setup_entries(config.resolve()["hrrr"].transport)
     assert entries["veght"] == 0.3
     assert "footprint_depth" not in entries
+
+
+@pytest.mark.parametrize("setting", ["footprint_depth", "pbl_height", "pbl_height_min"])
+def test_a_foot_setting_written_for_the_model_is_refused_naming_its_stage(
+    tmp_path, setting, grid
+):
+    with pytest.raises(ValueError, match=rf"{setting}' is a footprint setting.*stages"):
+        ProjectConfig(
+            mets=_met_config(tmp_path),
+            models={"hysplit": {"n_hours": -24, setting: 100.0}},
+            stages={"footprint": {"class": FOOTPRINT_STAGE, "grid": grid}},
+            variants={"hrrr": {}},
+        )
+
+
+def test_veght_written_for_the_footprint_is_refused_naming_the_model(tmp_path, grid):
+    with pytest.raises(ValueError, match=r"'veght' is a hysplit setting.*models"):
+        ProjectConfig(
+            mets=_met_config(tmp_path),
+            models={"hysplit": {"n_hours": -24}},
+            stages={
+                "footprint": {"class": FOOTPRINT_STAGE, "grid": grid, "veght": 0.3}
+            },
+            variants={"hrrr": {}},
+        )
+
+
+def test_a_footprint_depth_unlike_veght_is_refused_for_hysplits_foot(tmp_path, grid):
+    with pytest.raises(
+        ValueError,
+        match=r"Variant 'hrrr', stages: footprint: footprint_depth is 0.3.*veght 0.5.*pbl_height",
+    ):
+        ProjectConfig(
+            mets=_met_config(tmp_path),
+            models={"hysplit": {"n_hours": -24}},
+            stages={
+                "footprint": {
+                    "class": FOOTPRINT_STAGE,
+                    "grid": grid,
+                    "footprint_depth": 0.3,
+                }
+            },
+            variants={"hrrr": {}},
+        ).resolve()
+
+
+def test_variants_that_differ_in_the_footprints_foot_share_the_run(tmp_path, grid):
+    config = ProjectConfig(
+        mets=_met_config(tmp_path),
+        models={"hysplit": {"n_hours": -24, "veght": 0.3}},
+        stages={"footprint": {"class": FOOTPRINT_STAGE, "grid": grid}},
+        variants={
+            "hrrr": {},
+            "rich": {
+                "stages": {
+                    "footprint": {"pbl_height": "richardson", "footprint_depth": 0.5}
+                }
+            },
+            "fixed": {"stages": {"footprint": {"pbl_height": 800.0}}},
+        },
+    )
+    variants = config.resolve()
+
+    assert len({v.particles_hash for v in variants.values()}) == 1
+    assert len({v.stage_hashes["footprint"] for v in variants.values()}) == 3
+    # On HYSPLIT's foot the footprint takes the run's veght; computing its
+    # own, the footprint's footprint_depth.
+    depths = {n: v.stages["footprint"].footprint_depth for n, v in variants.items()}
+    assert depths == {"hrrr": 0.3, "rich": 0.5, "fixed": 0.5}
 
 
 def test_hnf_plume_needs_its_columns_in_varsiwant_only_with_a_footprint(tmp_path, grid):

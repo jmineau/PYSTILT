@@ -10,7 +10,9 @@ One receptor, without a project
 
 :func:`run_trajectories` runs the transport model for one receptor and
 returns its particles, and :func:`calc_footprint` makes a footprint from
-them. A project runs the same two steps for each of its receptors and
+them. :func:`footprint.footprint_particles` gives the particles the
+``foot`` a footprint's settings ask for, as a project's footprint stage
+does. A project runs the same two steps for each of its receptors and
 stores the results.
 
 .. code-block:: python
@@ -24,6 +26,7 @@ stores the results.
 
    run_trajectories
    calc_footprint
+   footprint.footprint_particles
 
 Project interface
 -----------------
