@@ -1,5 +1,0 @@
-runtraj.transport.hysplit.Met.check\_releases
-=============================================
-
-.. currentmodule:: runtraj.transport.hysplit
-.. automethod:: Met.check_releases

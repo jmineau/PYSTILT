@@ -1,5 +1,0 @@
-runtraj.transport.hysplit.Met.fetch
-===================================
-
-.. currentmodule:: runtraj.transport.hysplit
-.. automethod:: Met.fetch

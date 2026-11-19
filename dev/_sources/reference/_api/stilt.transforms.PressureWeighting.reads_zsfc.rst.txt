@@ -1,6 +1,0 @@
-stilt.transforms.PressureWeighting.reads\_zsfc
-==============================================
-
-.. currentmodule:: stilt.transforms
-
-.. autoattribute:: PressureWeighting.reads_zsfc

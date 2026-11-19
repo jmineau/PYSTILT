@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=515c717f"></script>
+    <script src="../_static/documentation_options.js?v=452eb2bb"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -66,7 +66,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev34+g6ac3d5f10" />
+  <meta name="docsearch:version" content="0.1.0a30.dev37+gb0c8d6f65" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -521,9 +521,9 @@
   <section id="particle-weighting-transforms">
 <h1>Particle Weighting (Transforms)<a class="headerlink" href="#particle-weighting-transforms" title="Link to this heading">#</a></h1>
 <p>A footprint is the mean surface influence of a simulation’s particles. A
-<em>transform</em> changes how much each particle counts in that mean, by scaling
-the <code class="docutils literal notranslate"><span class="pre">foot</span></code> column of the particle table before the footprint is made. You
-need one in two cases:</p>
+<em>transform</em> changes how much each particle counts in that mean. It
+multiplies the particle table’s <code class="docutils literal notranslate"><span class="pre">weight</span></code> column, and the footprint is made
+from <code class="docutils literal notranslate"><span class="pre">foot</span></code> times <code class="docutils literal notranslate"><span class="pre">weight</span></code>. You need one in two cases:</p>
 <ul class="simple">
 <li><p><strong>A column measurement</strong> (satellite, TCCON, EM27/SUN). List
 <code class="docutils literal notranslate"><span class="pre">averaging_kernel</span></code> and then <code class="docutils literal notranslate"><span class="pre">pressure_weighting</span></code>, so the footprint
@@ -537,7 +537,10 @@ particle counts equally, which is the standard STILT footprint.</p>
 <p>List transforms in <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> as the footprint’s <code class="docutils literal notranslate"><span class="pre">transforms</span></code> (in its
 block under <code class="docutils literal notranslate"><span class="pre">stages:</span></code> as the default, or under a variant’s <code class="docutils literal notranslate"><span class="pre">stages</span></code>), or
 pass them to <a class="reference internal" href="../reference/_api/stilt.Simulation.calc_footprint.html#stilt.Simulation.calc_footprint" title="stilt.Simulation.calc_footprint"><code class="xref py py-meth docutils literal notranslate"><span class="pre">stilt.Simulation.calc_footprint()</span></code></a>. They run once, in order,
-starting from the unweighted particles. They are footprint settings, so a
+starting from the unweighted particles. The transforms are runtraj’s
+(<code class="xref py py-mod docutils literal notranslate"><span class="pre">runtraj.transforms</span></code>), the package that makes PYSTILT’s particle
+runs, so the same ones work on particles with no footprint. In a PYSTILT
+project they are footprint settings, so a
 variant that adds one shares the particles of the variant without it, and
 no transport model runs again. Each footprint file records the transforms it
 was made with.</p>
@@ -563,7 +566,7 @@ was made with.</p>
 </pre></div>
 </div>
 <dl>
-<dt><code class="docutils literal notranslate"><span class="pre">averaging_kernel</span></code> (<a class="reference internal" href="../reference/_api/stilt.transforms.AveragingKernel.html#stilt.transforms.AveragingKernel" title="stilt.transforms.AveragingKernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.transforms.AveragingKernel</span></code></a>)</dt><dd><p>Multiplies each particle’s <code class="docutils literal notranslate"><span class="pre">foot</span></code> by the kernel, interpolated to the
+<dt><code class="docutils literal notranslate"><span class="pre">averaging_kernel</span></code> (<a class="reference internal" href="../reference/_api/runtraj.transforms.AveragingKernel.html#runtraj.transforms.AveragingKernel" title="runtraj.transforms.AveragingKernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">runtraj.transforms.AveragingKernel</span></code></a>)</dt><dd><p>Multiplies each particle’s weight by the kernel, interpolated to the
 particle’s release height (<code class="docutils literal notranslate"><span class="pre">release_height</span></code>). The <code class="docutils literal notranslate"><span class="pre">levels</span></code> are in
 meters in the release’s vertical reference: above ground, or above sea level for a
 release built with <code class="docutils literal notranslate"><span class="pre">altitude_ref=&quot;msl&quot;</span></code>. For a kernel on pressure
@@ -571,7 +574,7 @@ levels (hPa), set <code class="docutils literal notranslate"><span class="pre">c
 keeps its end values. Fold any instrument-specific factor, such as
 TCCON’s wet-air scaling, into <code class="docutils literal notranslate"><span class="pre">values</span></code>. Adds an <code class="docutils literal notranslate"><span class="pre">ak_weight</span></code> column.</p>
 </dd>
-<dt><code class="docutils literal notranslate"><span class="pre">pressure_weighting</span></code> (<a class="reference internal" href="../reference/_api/stilt.transforms.PressureWeighting.html#stilt.transforms.PressureWeighting" title="stilt.transforms.PressureWeighting"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.transforms.PressureWeighting</span></code></a>)</dt><dd><p>Weights each particle by the share of the column’s air mass it stands
+<dt><code class="docutils literal notranslate"><span class="pre">pressure_weighting</span></code> (<a class="reference internal" href="../reference/_api/runtraj.transforms.PressureWeighting.html#runtraj.transforms.PressureWeighting" title="runtraj.transforms.PressureWeighting"><code class="xref py py-class docutils literal notranslate"><span class="pre">runtraj.transforms.PressureWeighting</span></code></a>)</dt><dd><p>Weights each particle by the share of the column’s air mass it stands
 for. A column instrument averages over air mass. HYSPLIT releases
 column particles evenly in height, so an unweighted mean gives too much
 weight to the thin air near the column top.</p>
@@ -604,11 +607,11 @@ starts above the ground still measures the air below it, so that
 particle carries the whole sub-column. Start the release at or near
 the surface unless that is what you want.</p>
 </dd>
-<dt><code class="docutils literal notranslate"><span class="pre">first_order_lifetime</span></code> (<a class="reference internal" href="../reference/_api/stilt.transforms.FirstOrderLifetime.html#stilt.transforms.FirstOrderLifetime" title="stilt.transforms.FirstOrderLifetime"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.transforms.FirstOrderLifetime</span></code></a>)</dt><dd><p>Scales <code class="docutils literal notranslate"><span class="pre">foot</span></code> by <span class="math notranslate nohighlight">\(\exp(-\text{age} / \tau)\)</span>, where
+<dt><code class="docutils literal notranslate"><span class="pre">first_order_lifetime</span></code> (<a class="reference internal" href="../reference/_api/runtraj.transforms.FirstOrderLifetime.html#runtraj.transforms.FirstOrderLifetime" title="runtraj.transforms.FirstOrderLifetime"><code class="xref py py-class docutils literal notranslate"><span class="pre">runtraj.transforms.FirstOrderLifetime</span></code></a>)</dt><dd><p>Multiplies the weight by <span class="math notranslate nohighlight">\(\exp(-\text{age} / \tau)\)</span>, where
 <span class="math notranslate nohighlight">\(\tau\)</span> is <code class="docutils literal notranslate"><span class="pre">lifetime_hours</span></code>. The age is the particle’s time since
 release, its <code class="docutils literal notranslate"><span class="pre">age</span></code> column.</p>
 </dd>
-<dt><code class="docutils literal notranslate"><span class="pre">dry_deposition</span></code> (<a class="reference internal" href="../reference/_api/stilt.transforms.DryDeposition.html#stilt.transforms.DryDeposition" title="stilt.transforms.DryDeposition"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.transforms.DryDeposition</span></code></a>)</dt><dd><p>Scales <code class="docutils literal notranslate"><span class="pre">foot</span></code> by the fraction of a depositing tracer that survives
+<dt><code class="docutils literal notranslate"><span class="pre">dry_deposition</span></code> (<a class="reference internal" href="../reference/_api/runtraj.transforms.DryDeposition.html#runtraj.transforms.DryDeposition" title="runtraj.transforms.DryDeposition"><code class="xref py py-class docutils literal notranslate"><span class="pre">runtraj.transforms.DryDeposition</span></code></a>)</dt><dd><p>Multiplies the weight by the fraction of a depositing tracer that survives
 from the particle’s position to the release. Use it for a soluble gas
 or a fine aerosol. While a particle is below <code class="docutils literal notranslate"><span class="pre">surface_layer_depth</span></code>
 (default 50 m), the tracer is lost at the rate <code class="docutils literal notranslate"><span class="pre">velocity</span></code> (m/s)
@@ -625,11 +628,11 @@ night, 30 m gave a surviving fraction of 0.53 after 6 h and 75 m gave
 <code class="docutils literal notranslate"><span class="pre">outdt:</span> <span class="pre">0</span></code>, the default. It refuses hourly particles, which do not say
 how long a particle stayed near the ground. Wet removal and
 gravitational settling are not included.
-<a class="reference internal" href="../reference/_api/stilt.transforms.dry_deposition_survival.html#stilt.transforms.dry_deposition_survival" title="stilt.transforms.dry_deposition_survival"><code class="xref py py-func docutils literal notranslate"><span class="pre">dry_deposition_survival()</span></code></a> gives the surviving
+<a class="reference internal" href="../reference/_api/runtraj.transforms.dry_deposition_survival.html#runtraj.transforms.dry_deposition_survival" title="runtraj.transforms.dry_deposition_survival"><code class="xref py py-func docutils literal notranslate"><span class="pre">dry_deposition_survival()</span></code></a> gives the surviving
 fraction for each row of the particle table, if you want the particles
 rather than a footprint.</p>
 </dd>
-<dt><code class="docutils literal notranslate"><span class="pre">oxidation</span></code> (<a class="reference internal" href="../reference/_api/stilt.transforms.Oxidation.html#stilt.transforms.Oxidation" title="stilt.transforms.Oxidation"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.transforms.Oxidation</span></code></a>)</dt><dd><p>Scales <code class="docutils literal notranslate"><span class="pre">foot</span></code> by the fraction of the tracer that survives a reaction
+<dt><code class="docutils literal notranslate"><span class="pre">oxidation</span></code> (<a class="reference internal" href="../reference/_api/runtraj.transforms.Oxidation.html#runtraj.transforms.Oxidation" title="runtraj.transforms.Oxidation"><code class="xref py py-class docutils literal notranslate"><span class="pre">runtraj.transforms.Oxidation</span></code></a>)</dt><dd><p>Multiplies the weight by the fraction of the tracer that survives a reaction
 with an oxidant on its way from the particle’s position to the
 release. Use it for a species lost mainly to OH, such as CO or ethane.
 At each row the loss rate is <span class="math notranslate nohighlight">\(k(T) [X]\)</span>: the rate constant
@@ -654,7 +657,7 @@ footprint changes by less than 0.1 %.</p>
 <h3>Other losses<a class="headerlink" href="#other-losses" title="Link to this heading">#</a></h3>
 <p>Any loss whose rate you can compute at every row works the same way, as
 long as the rate does not depend on how much tracer the particle carries.
-<a class="reference internal" href="../reference/_api/stilt.transforms.survival.html#stilt.transforms.survival" title="stilt.transforms.survival"><code class="xref py py-func docutils literal notranslate"><span class="pre">survival()</span></code></a> takes a rate per row, in s⁻¹, and
+<a class="reference internal" href="../reference/_api/runtraj.transforms.survival.html#runtraj.transforms.survival" title="runtraj.transforms.survival"><code class="xref py py-func docutils literal notranslate"><span class="pre">survival()</span></code></a> takes a rate per row, in s⁻¹, and
 returns the fraction that reaches the release; the built-in lifetime,
 deposition and oxidation transforms are special cases of it. Use it in your
 own transform for rain-out, photolysis, or a lifetime from a chemistry
@@ -678,9 +681,9 @@ footprint’s block:</p>
 </div>
 <p>The table has a <code class="docutils literal notranslate"><span class="pre">release</span></code> column with the release id, and one row per
 kernel point with its <code class="docutils literal notranslate"><span class="pre">level</span></code> and <code class="docutils literal notranslate"><span class="pre">value</span></code>. Build it with
-<a class="reference internal" href="../reference/_api/stilt.transforms.averaging_kernel_table.html#stilt.transforms.averaging_kernel_table" title="stilt.transforms.averaging_kernel_table"><code class="xref py py-func docutils literal notranslate"><span class="pre">averaging_kernel_table()</span></code></a> from the releases you
+<a class="reference internal" href="../reference/_api/runtraj.transforms.averaging_kernel_table.html#runtraj.transforms.averaging_kernel_table" title="runtraj.transforms.averaging_kernel_table"><code class="xref py py-func docutils literal notranslate"><span class="pre">averaging_kernel_table()</span></code></a> from the releases you
 added and the kernels in your product, and add it to the project:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">averaging_kernel_table</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.transforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">averaging_kernel_table</span>
 
 <span class="n">table</span> <span class="o">=</span> <span class="n">averaging_kernel_table</span><span class="p">(</span><span class="n">releases</span><span class="p">,</span> <span class="n">levels</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">ak_pressure</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">ak</span><span class="p">)</span>
 <span class="n">project</span><span class="o">.</span><span class="n">add_table</span><span class="p">(</span><span class="s2">"kernels"</span><span class="p">,</span> <span class="n">table</span><span class="p">)</span>     <span class="c1"># tables/kernels.parquet</span>
@@ -699,7 +702,7 @@ Parquet or CSV file, relative to the project root.</p>
 <section id="in-python">
 <h2>In Python<a class="headerlink" href="#in-python" title="Link to this heading">#</a></h2>
 <p>The same classes work directly on a simulation:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">AveragingKernel</span><span class="p">,</span> <span class="n">PressureWeighting</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.transforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">AveragingKernel</span><span class="p">,</span> <span class="n">PressureWeighting</span>
 
 <span class="n">foot</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">calc_footprint</span><span class="p">(</span>
     <span class="n">transforms</span><span class="o">=</span><span class="p">[</span>
@@ -735,7 +738,7 @@ set in YAML. Return a new table and leave the one you are given unchanged.</p>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">release_coordinate</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.transforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">release_coordinate</span><span class="p">,</span> <span class="n">weigh</span>
 
 
 <span class="k">class</span><span class="w"> </span><span class="nc">BoundaryLayerOnly</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
@@ -746,9 +749,7 @@ set in YAML. Return a new table and leave the one you are given unchanged.</p>
     <span class="k">def</span><span class="w"> </span><span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="n">release</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">directory</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="n">z</span> <span class="o">=</span> <span class="n">release_coordinate</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="s2">"release_height"</span><span class="p">)</span> <span class="c1"># one value per particle</span>
         <span class="n">keep</span> <span class="o">=</span> <span class="n">z</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">particles</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_height</span>
-        <span class="n">out</span> <span class="o">=</span> <span class="n">particles</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-        <span class="n">out</span><span class="p">[</span><span class="s2">"foot"</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">keep</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">out</span><span class="p">[</span><span class="s2">"foot"</span><span class="p">],</span> <span class="mf">0.0</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">out</span>
+        <span class="k">return</span> <span class="n">weigh</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">keep</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">))</span>
 </pre></div>
 </div>
 <p>In the footprint’s block of <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>, set <code class="docutils literal notranslate"><span class="pre">kind</span></code> to the class’s
@@ -760,19 +761,19 @@ import path. The other keys are the model’s fields:</p>
 </div>
 <section id="what-a-transform-may-do">
 <h3>What a transform may do<a class="headerlink" href="#what-a-transform-may-do" title="Link to this heading">#</a></h3>
-<p>The footprint is gridded from <code class="docutils literal notranslate"><span class="pre">foot</span></code>, so a transform changes the
-footprint through <code class="docutils literal notranslate"><span class="pre">foot</span></code> alone. It may add columns as well, such as a
-chemistry step’s per-particle concentrations, and leave <code class="docutils literal notranslate"><span class="pre">foot</span></code> as it was.
-The built-in transforms only scale <code class="docutils literal notranslate"><span class="pre">foot</span></code>. <code class="docutils literal notranslate"><span class="pre">sim.background</span></code> and
-<code class="docutils literal notranslate"><span class="pre">sim.transport_error</span></code> rely on that: they apply the transforms to
-particles whose <code class="docutils literal notranslate"><span class="pre">foot</span></code> is 1 and read each particle’s weight from the
-result. A transform that does more than scale <code class="docutils literal notranslate"><span class="pre">foot</span></code> makes those weights
-something other than a weight.</p>
+<p>The footprint is gridded from <code class="docutils literal notranslate"><span class="pre">foot</span></code> times <code class="docutils literal notranslate"><span class="pre">weight</span></code>, so a transform
+changes the footprint by multiplying <code class="docutils literal notranslate"><span class="pre">weight</span></code>, with
+<a class="reference internal" href="../reference/_api/runtraj.transforms.weigh.html#runtraj.transforms.weigh" title="runtraj.transforms.weigh"><code class="xref py py-func docutils literal notranslate"><span class="pre">runtraj.transforms.weigh()</span></code></a>. It may add columns as well, such as a
+chemistry step’s per-particle concentrations. <code class="docutils literal notranslate"><span class="pre">sim.background</span></code> reads
+each particle’s weight at its endpoint, and <code class="docutils literal notranslate"><span class="pre">sim.transport_error</span></code>
+weights its enhancements the same way as the footprint, so a transform that
+changes <code class="docutils literal notranslate"><span class="pre">foot</span></code> itself, rather than <code class="docutils literal notranslate"><span class="pre">weight</span></code>, changes the footprint but
+not the background’s weights.</p>
 <p>A few rules keep custom transforms working everywhere:</p>
 <ul class="simple">
 <li><p><strong>Return a copy.</strong> <code class="docutils literal notranslate"><span class="pre">sim.particles</span></code> must still hold the unweighted
-particles after a footprint is made. The built-ins all call
-<code class="docutils literal notranslate"><span class="pre">particles.copy()</span></code> first.</p></li>
+particles after a footprint is made. <a class="reference internal" href="../reference/_api/runtraj.transforms.weigh.html#runtraj.transforms.weigh" title="runtraj.transforms.weigh"><code class="xref py py-func docutils literal notranslate"><span class="pre">weigh()</span></code></a>
+returns one.</p></li>
 <li><p><strong>Make it importable wherever it runs.</strong> Workers open the project from
 <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>, so <code class="docutils literal notranslate"><span class="pre">mypkg</span></code> must be installed on the Slurm nodes or in
 the container. A project config that names a transform PYSTILT cannot
@@ -799,10 +800,12 @@ lacks it.</p></li>
 PYSTILT writes it back out to the footprint folder’s <code class="docutils literal notranslate"><span class="pre">_settings.yaml</span></code>
 and to each footprint file. A config that names a plain class fails to
 load. The Python <code class="docutils literal notranslate"><span class="pre">transforms=</span></code> argument takes any object with <code class="docutils literal notranslate"><span class="pre">apply</span></code>.</p>
-<p>The functions the built-ins use are public in <code class="xref py py-mod docutils literal notranslate"><span class="pre">stilt.transforms</span></code>:
-<a class="reference internal" href="../reference/_api/stilt.transforms.release_coordinate.html#stilt.transforms.release_coordinate" title="stilt.transforms.release_coordinate"><code class="xref py py-func docutils literal notranslate"><span class="pre">release_coordinate()</span></code></a>,
-<a class="reference internal" href="../reference/_api/stilt.transforms.particle_pwf.html#stilt.transforms.particle_pwf" title="stilt.transforms.particle_pwf"><code class="xref py py-func docutils literal notranslate"><span class="pre">particle_pwf()</span></code></a>, and
-<a class="reference internal" href="../reference/_api/stilt.transforms.ak_weights.html#stilt.transforms.ak_weights" title="stilt.transforms.ak_weights"><code class="xref py py-func docutils literal notranslate"><span class="pre">ak_weights()</span></code></a>. Build on them before writing your own
+<p>The functions the built-ins use are public in <code class="xref py py-mod docutils literal notranslate"><span class="pre">runtraj.transforms</span></code>:
+<a class="reference internal" href="../reference/_api/runtraj.transforms.weigh.html#runtraj.transforms.weigh" title="runtraj.transforms.weigh"><code class="xref py py-func docutils literal notranslate"><span class="pre">weigh()</span></code></a>,
+<a class="reference internal" href="../reference/_api/runtraj.transforms.release_coordinate.html#runtraj.transforms.release_coordinate" title="runtraj.transforms.release_coordinate"><code class="xref py py-func docutils literal notranslate"><span class="pre">release_coordinate()</span></code></a>,
+<a class="reference internal" href="../reference/_api/runtraj.transforms.particle_pwf.html#runtraj.transforms.particle_pwf" title="runtraj.transforms.particle_pwf"><code class="xref py py-func docutils literal notranslate"><span class="pre">particle_pwf()</span></code></a>,
+<a class="reference internal" href="../reference/_api/runtraj.transforms.ak_weights.html#runtraj.transforms.ak_weights" title="runtraj.transforms.ak_weights"><code class="xref py py-func docutils literal notranslate"><span class="pre">ak_weights()</span></code></a>, and
+<a class="reference internal" href="../reference/_api/runtraj.transforms.survival.html#runtraj.transforms.survival" title="runtraj.transforms.survival"><code class="xref py py-func docutils literal notranslate"><span class="pre">survival()</span></code></a>. Build on them before writing your own
 weighting from scratch.</p>
 </section>
 </section>

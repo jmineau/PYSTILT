@@ -1,0 +1,5 @@
+runtraj.models.hysplit.HysplitConfig.maxpar\_for
+================================================
+
+.. currentmodule:: runtraj.models.hysplit
+.. automethod:: HysplitConfig.maxpar_for

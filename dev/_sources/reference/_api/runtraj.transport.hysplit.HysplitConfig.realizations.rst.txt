@@ -1,5 +1,0 @@
-runtraj.transport.hysplit.HysplitConfig.realizations
-====================================================
-
-.. currentmodule:: runtraj.transport.hysplit
-.. automethod:: HysplitConfig.realizations

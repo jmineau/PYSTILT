@@ -2,9 +2,9 @@ Particle Weighting (Transforms)
 ===============================
 
 A footprint is the mean surface influence of a simulation's particles. A
-*transform* changes how much each particle counts in that mean, by scaling
-the ``foot`` column of the particle table before the footprint is made. You
-need one in two cases:
+*transform* changes how much each particle counts in that mean. It
+multiplies the particle table's ``weight`` column, and the footprint is made
+from ``foot`` times ``weight``. You need one in two cases:
 
 - **A column measurement** (satellite, TCCON, EM27/SUN). List
   ``averaging_kernel`` and then ``pressure_weighting``, so the footprint
@@ -19,7 +19,10 @@ particle counts equally, which is the standard STILT footprint.
 List transforms in ``config.yaml`` as the footprint's ``transforms`` (in its
 block under ``stages:`` as the default, or under a variant's ``stages``), or
 pass them to :meth:`stilt.Simulation.calc_footprint`. They run once, in order,
-starting from the unweighted particles. They are footprint settings, so a
+starting from the unweighted particles. The transforms are runtraj's
+(:mod:`runtraj.transforms`), the package that makes PYSTILT's particle
+runs, so the same ones work on particles with no footprint. In a PYSTILT
+project they are footprint settings, so a
 variant that adds one shares the particles of the variant without it, and
 no transport model runs again. Each footprint file records the transforms it
 was made with.
@@ -47,8 +50,8 @@ Built-in transforms
            e_over_r: 1775
            oxidant: oh.nc
 
-``averaging_kernel`` (:class:`stilt.transforms.AveragingKernel`)
-   Multiplies each particle's ``foot`` by the kernel, interpolated to the
+``averaging_kernel`` (:class:`runtraj.transforms.AveragingKernel`)
+   Multiplies each particle's weight by the kernel, interpolated to the
    particle's release height (``release_height``). The ``levels`` are in
    meters in the release's vertical reference: above ground, or above sea level for a
    release built with ``altitude_ref="msl"``. For a kernel on pressure
@@ -56,7 +59,7 @@ Built-in transforms
    keeps its end values. Fold any instrument-specific factor, such as
    TCCON's wet-air scaling, into ``values``. Adds an ``ak_weight`` column.
 
-``pressure_weighting`` (:class:`stilt.transforms.PressureWeighting`)
+``pressure_weighting`` (:class:`runtraj.transforms.PressureWeighting`)
    Weights each particle by the share of the column's air mass it stands
    for. A column instrument averages over air mass. HYSPLIT releases
    column particles evenly in height, so an unweighted mean gives too much
@@ -96,13 +99,13 @@ Built-in transforms
    particle carries the whole sub-column. Start the release at or near
    the surface unless that is what you want.
 
-``first_order_lifetime`` (:class:`stilt.transforms.FirstOrderLifetime`)
-   Scales ``foot`` by :math:`\exp(-\text{age} / \tau)`, where
+``first_order_lifetime`` (:class:`runtraj.transforms.FirstOrderLifetime`)
+   Multiplies the weight by :math:`\exp(-\text{age} / \tau)`, where
    :math:`\tau` is ``lifetime_hours``. The age is the particle's time since
    release, its ``age`` column.
 
-``dry_deposition`` (:class:`stilt.transforms.DryDeposition`)
-   Scales ``foot`` by the fraction of a depositing tracer that survives
+``dry_deposition`` (:class:`runtraj.transforms.DryDeposition`)
+   Multiplies the weight by the fraction of a depositing tracer that survives
    from the particle's position to the release. Use it for a soluble gas
    or a fine aerosol. While a particle is below ``surface_layer_depth``
    (default 50 m), the tracer is lost at the rate ``velocity`` (m/s)
@@ -121,12 +124,12 @@ Built-in transforms
    ``outdt: 0``, the default. It refuses hourly particles, which do not say
    how long a particle stayed near the ground. Wet removal and
    gravitational settling are not included.
-   :func:`~stilt.transforms.dry_deposition_survival` gives the surviving
+   :func:`~runtraj.transforms.dry_deposition_survival` gives the surviving
    fraction for each row of the particle table, if you want the particles
    rather than a footprint.
 
-``oxidation`` (:class:`stilt.transforms.Oxidation`)
-   Scales ``foot`` by the fraction of the tracer that survives a reaction
+``oxidation`` (:class:`runtraj.transforms.Oxidation`)
+   Multiplies the weight by the fraction of the tracer that survives a reaction
    with an oxidant on its way from the particle's position to the
    release. Use it for a species lost mainly to OH, such as CO or ethane.
    At each row the loss rate is :math:`k(T) [X]`: the rate constant
@@ -153,7 +156,7 @@ Other losses
 
 Any loss whose rate you can compute at every row works the same way, as
 long as the rate does not depend on how much tracer the particle carries.
-:func:`~stilt.transforms.survival` takes a rate per row, in s⁻¹, and
+:func:`~runtraj.transforms.survival` takes a rate per row, in s⁻¹, and
 returns the fraction that reaches the release; the built-in lifetime,
 deposition and oxidation transforms are special cases of it. Use it in your
 own transform for rain-out, photolysis, or a lifetime from a chemistry
@@ -179,12 +182,12 @@ footprint's block:
 
 The table has a ``release`` column with the release id, and one row per
 kernel point with its ``level`` and ``value``. Build it with
-:func:`~stilt.transforms.averaging_kernel_table` from the releases you
+:func:`~runtraj.transforms.averaging_kernel_table` from the releases you
 added and the kernels in your product, and add it to the project:
 
 .. code-block:: python
 
-   from stilt.transforms import averaging_kernel_table
+   from runtraj.transforms import averaging_kernel_table
 
    table = averaging_kernel_table(releases, levels=df.ak_pressure, values=df.ak)
    project.add_table("kernels", table)     # tables/kernels.parquet
@@ -206,7 +209,7 @@ The same classes work directly on a simulation:
 
 .. code-block:: python
 
-   from stilt.transforms import AveragingKernel, PressureWeighting
+   from runtraj.transforms import AveragingKernel, PressureWeighting
 
    foot = sim.calc_footprint(
        transforms=[
@@ -247,7 +250,7 @@ set in YAML. Return a new table and leave the one you are given unchanged.
    import pandas as pd
    from pydantic import BaseModel
 
-   from stilt.transforms import release_coordinate
+   from runtraj.transforms import release_coordinate, weigh
 
 
    class BoundaryLayerOnly(BaseModel):
@@ -258,9 +261,7 @@ set in YAML. Return a new table and leave the one you are given unchanged.
        def apply(self, particles, release=None, directory=None):
            z = release_coordinate(particles, "release_height") # one value per particle
            keep = z.reindex(particles["particle"].to_numpy()) <= self.max_height
-           out = particles.copy()
-           out["foot"] = np.where(keep.to_numpy(), out["foot"], 0.0)
-           return out
+           return weigh(particles, np.where(keep.to_numpy(), 1.0, 0.0))
 
 In the footprint's block of ``config.yaml``, set ``kind`` to the class's
 import path. The other keys are the model's fields:
@@ -274,20 +275,20 @@ import path. The other keys are the model's fields:
 What a transform may do
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-The footprint is gridded from ``foot``, so a transform changes the
-footprint through ``foot`` alone. It may add columns as well, such as a
-chemistry step's per-particle concentrations, and leave ``foot`` as it was.
-The built-in transforms only scale ``foot``. ``sim.background`` and
-``sim.transport_error`` rely on that: they apply the transforms to
-particles whose ``foot`` is 1 and read each particle's weight from the
-result. A transform that does more than scale ``foot`` makes those weights
-something other than a weight.
+The footprint is gridded from ``foot`` times ``weight``, so a transform
+changes the footprint by multiplying ``weight``, with
+:func:`runtraj.transforms.weigh`. It may add columns as well, such as a
+chemistry step's per-particle concentrations. ``sim.background`` reads
+each particle's weight at its endpoint, and ``sim.transport_error``
+weights its enhancements the same way as the footprint, so a transform that
+changes ``foot`` itself, rather than ``weight``, changes the footprint but
+not the background's weights.
 
 A few rules keep custom transforms working everywhere:
 
 - **Return a copy.** ``sim.particles`` must still hold the unweighted
-  particles after a footprint is made. The built-ins all call
-  ``particles.copy()`` first.
+  particles after a footprint is made. :func:`~runtraj.transforms.weigh`
+  returns one.
 - **Make it importable wherever it runs.** Workers open the project from
   ``config.yaml``, so ``mypkg`` must be installed on the Slurm nodes or in
   the container. A project config that names a transform PYSTILT cannot
@@ -316,8 +317,10 @@ PYSTILT writes it back out to the footprint folder's ``_settings.yaml``
 and to each footprint file. A config that names a plain class fails to
 load. The Python ``transforms=`` argument takes any object with ``apply``.
 
-The functions the built-ins use are public in :mod:`stilt.transforms`:
-:func:`~stilt.transforms.release_coordinate`,
-:func:`~stilt.transforms.particle_pwf`, and
-:func:`~stilt.transforms.ak_weights`. Build on them before writing your own
+The functions the built-ins use are public in :mod:`runtraj.transforms`:
+:func:`~runtraj.transforms.weigh`,
+:func:`~runtraj.transforms.release_coordinate`,
+:func:`~runtraj.transforms.particle_pwf`,
+:func:`~runtraj.transforms.ak_weights`, and
+:func:`~runtraj.transforms.survival`. Build on them before writing your own
 weighting from scratch.

@@ -1,5 +1,0 @@
-runtraj.transport.hysplit.HysplitConfig.maxpar\_for
-===================================================
-
-.. currentmodule:: runtraj.transport.hysplit
-.. automethod:: HysplitConfig.maxpar_for

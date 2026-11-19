@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=515c717f"></script>
+    <script src="../../../_static/documentation_options.js?v=452eb2bb"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev34+g6ac3d5f10" />
+  <meta name="docsearch:version" content="0.1.0a30.dev37+gb0c8d6f65" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -470,11 +470,13 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterable</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.releases</span><span class="w"> </span><span class="kn">import</span> <span class="n">PointRelease</span><span class="p">,</span> <span class="n">Release</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.transforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">WEIGHT</span><span class="p">,</span> <span class="n">apply_transforms</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.sampling</span><span class="w"> </span><span class="kn">import</span> <span class="n">calc_pbl_height</span><span class="p">,</span> <span class="n">sample_met</span>
 
@@ -804,6 +806,28 @@
         <span class="p">)</span>
         <span class="k">return</span> <span class="n">particles</span>
     <span class="k">return</span> <span class="n">correct_near_field</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">footprint_depth</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_weighted</span><span class="p">(</span>
+    <span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+    <span class="n">transforms</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span>
+    <span class="n">release</span><span class="p">:</span> <span class="n">Release</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">directory</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return the particles with *transforms* applied and ``foot`` multiplied by their ``weight``.</span>
+
+<span class="sd">    A transform multiplies the ``weight`` column (:mod:`runtraj.transforms`);</span>
+<span class="sd">    the footprint is gridded from ``foot``, so the two meet here. Returns</span>
+<span class="sd">    ``particles`` itself when there are no transforms.</span>
+<span class="sd">    """</span>
+    <span class="n">transforms</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">transforms</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">transforms</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">particles</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">apply_transforms</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">transforms</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">directory</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">WEIGHT</span> <span class="ow">in</span> <span class="n">out</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">foot</span><span class="o">=</span><span class="n">out</span><span class="p">[</span><span class="s2">"foot"</span><span class="p">]</span> <span class="o">*</span> <span class="n">out</span><span class="p">[</span><span class="n">WEIGHT</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">out</span>
 
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"HNF_PLUME_COLUMNS"</span><span class="p">,</span> <span class="s2">"add_foot"</span><span class="p">,</span> <span class="s2">"correct_near_field"</span><span class="p">]</span>

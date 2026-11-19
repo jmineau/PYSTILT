@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=515c717f"></script>
+    <script src="../../../_static/documentation_options.js?v=452eb2bb"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev34+g6ac3d5f10" />
+  <meta name="docsearch:version" content="0.1.0a30.dev37+gb0c8d6f65" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -731,7 +731,7 @@
 <span class="sd">        Return the modeled enhancement at the release, footprint times flux summed over the grid.</span>
 
 <span class="sd">        The flux is taken at each footprint cell center from the nearest</span>
-<span class="sd">        flux cell (:func:`stilt.sampling.sample_field`). That is right for</span>
+<span class="sd">        flux cell (:func:`runtraj.sampling.sample_field`). That is right for</span>
 <span class="sd">        flux cells as large as the footprint's or larger. A finer flux is</span>
 <span class="sd">        an error, since each footprint cell would take one small flux cell</span>
 <span class="sd">        in place of the mean over its area: put the flux on the footprint</span>
@@ -748,7 +748,7 @@
 <span class="sd">            Surface flux on a ``lat``/``lon`` grid (``y``/``x`` for a</span>
 <span class="sd">            projected footprint), in µmol m⁻² s⁻¹ for an enhancement in</span>
 <span class="sd">            ppm. When the flux's ``time`` coordinate carries CF time bounds</span>
-<span class="sd">            (:func:`stilt.sampling.sample_field`'s ``step_starts``: its</span>
+<span class="sd">            (:func:`runtraj.sampling.sample_field`'s ``step_starts``: its</span>
 <span class="sd">            ``time`` is a :class:`pandas.IntervalIndex`), each footprint</span>
 <span class="sd">            layer takes the step whose bounds hold its start; a layer before</span>
 <span class="sd">            the first bound, after the last, or in a gap between bounds gets</span>
@@ -796,7 +796,7 @@
 <span class="sd">            the flux's time labels do not strictly increase (a repeated</span>
 <span class="sd">            label is an error), or if its CF time bounds overlap.</span>
 <span class="sd">        """</span>
-        <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.sampling</span><span class="w"> </span><span class="kn">import</span> <span class="n">sample_field</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.sampling</span><span class="w"> </span><span class="kn">import</span> <span class="n">sample_field</span>
 
         <span class="n">foot</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_foot</span>
         <span class="n">y_dim</span><span class="p">,</span> <span class="n">x_dim</span> <span class="o">=</span> <span class="n">horizontal_dims</span><span class="p">(</span><span class="n">foot</span><span class="p">)</span>

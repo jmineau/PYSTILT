@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=515c717f"></script>
+    <script src="../../../_static/documentation_options.js?v=452eb2bb"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev34+g6ac3d5f10" />
+  <meta name="docsearch:version" content="0.1.0a30.dev37+gb0c8d6f65" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -524,7 +524,7 @@
 <span class="sd">    step's length from its bounds, and plain labels, which start their</span>
 <span class="sd">    steps, from the gaps between them. A single label has no gaps (a static</span>
 <span class="sd">    flux), so nothing is checked, and labels that do not strictly increase</span>
-<span class="sd">    are left for :func:`stilt.sampling.sample_field` to refuse.</span>
+<span class="sd">    are left for :func:`runtraj.sampling.sample_field` to refuse.</span>
 <span class="sd">    """</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">steps</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">IntervalIndex</span><span class="p">):</span>
         <span class="n">lengths</span> <span class="o">=</span> <span class="n">steps</span><span class="o">.</span><span class="n">right</span> <span class="o">-</span> <span class="n">steps</span><span class="o">.</span><span class="n">left</span>

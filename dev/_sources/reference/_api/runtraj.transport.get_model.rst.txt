@@ -1,6 +1,0 @@
-﻿runtraj.transport.get\_model
-============================
-
-.. currentmodule:: runtraj.transport
-
-.. autofunction:: get_model

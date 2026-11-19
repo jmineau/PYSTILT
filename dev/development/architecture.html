@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=515c717f"></script>
+    <script src="../_static/documentation_options.js?v=452eb2bb"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev34+g6ac3d5f10" />
+  <meta name="docsearch:version" content="0.1.0a30.dev37+gb0c8d6f65" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -594,11 +594,9 @@ project whose <code class="docutils literal notranslate"><span class="pre">stage
     targets.py       the geometries footprints are summed onto (Mesh,
                      Zones), the overlap weights, and to_grid
     accessor.py      the .stilt xarray accessor
-  sampling.py        sampling a gridded field (a flux, a mole fraction) at
-                     points; sample_met, ARL met at particle positions
-  transforms/        pre-footprint particle transforms, one module each
-                     (averaging_kernel, pressure_weighting, lifetime); the
-                     loader, YAML I/O, and apply_transforms in __init__.py
+  sampling.py        sample_met and calc_pbl_height, ARL met at particle
+                     positions (a gridded field at points is runtraj's
+                     sample_field)
   exceptions.py      EmptyFootprint, the exception PYSTILT adds to runtraj's
   observations/      the X-STILT port: product readers and SOUNDING_SCHEMA,
                      overpass grouping and sounding selection, slant
@@ -800,8 +798,8 @@ of every variant that runs it. The block’s name is the handle a variant
 uses (<code class="docutils literal notranslate"><span class="pre">model:</span></code>); the model is the block’s <code class="docutils literal notranslate"><span class="pre">class</span></code> (an import path) or,
 without one, the built-in model of the block’s name. A class has one
 block. The parameters are checked by the model’s own config class
-(<code class="docutils literal notranslate"><span class="pre">runtraj.transport.hysplit.HysplitConfig</span></code>), reached through
-<code class="docutils literal notranslate"><span class="pre">runtraj.transport.get_model</span></code>: by name when the file loads, and by value
+(<code class="docutils literal notranslate"><span class="pre">runtraj.models.hysplit.HysplitConfig</span></code>), reached through
+<code class="docutils literal notranslate"><span class="pre">runtraj.models.get_model</span></code>: by name when the file loads, and by value
 as a variant runs them (at load for a variant that changes none, else in
 <code class="docutils literal notranslate"><span class="pre">resolve</span></code>), since a block need not be complete (the <code class="docutils literal notranslate"><span class="pre">stilt-r</span></code> model
 has no defaults, and <code class="docutils literal notranslate"><span class="pre">n_hours</span></code> has none in any model). Without
@@ -857,7 +855,7 @@ grid. The transport model’s build is read on first use
 <code class="docutils literal notranslate"><span class="pre">stilt.footprint.config</span></code>, <code class="docutils literal notranslate"><span class="pre">ExecutionConfig</span></code> in
 <code class="docutils literal notranslate"><span class="pre">runtraj.execution.config</span></code>, and a model’s config and met config in its
 package (<code class="docutils literal notranslate"><span class="pre">met_config_class</span></code>; HYSPLIT’s <code class="docutils literal notranslate"><span class="pre">MetConfig</span></code> is in
-<code class="docutils literal notranslate"><span class="pre">runtraj.transport.hysplit</span></code>). <code class="docutils literal notranslate"><span class="pre">ProjectConfig.mets</span></code> holds each met as
+<code class="docutils literal notranslate"><span class="pre">runtraj.models.hysplit</span></code>). <code class="docutils literal notranslate"><span class="pre">ProjectConfig.mets</span></code> holds each met as
 written, and <code class="docutils literal notranslate"><span class="pre">ProjectConfig.met_config(name,</span> <span class="pre">model)</span></code> checks it with the
 met config of the model that reads it (<code class="docutils literal notranslate"><span class="pre">model</span></code> a <code class="docutils literal notranslate"><span class="pre">models</span></code> block’s
 name). With several models, a met no variant uses is not checked. <code class="docutils literal notranslate"><span class="pre">Bounds</span></code> and <code class="docutils literal notranslate"><span class="pre">Grid</span></code> are in
@@ -900,9 +898,11 @@ included; only <code class="docutils literal notranslate"><span class="pre">time
 A backend’s setting written outside its block is refused. The <code class="docutils literal notranslate"><span class="pre">slurm</span></code>
 block takes any other key as an <code class="docutils literal notranslate"><span class="pre">sbatch</span></code> option, and refuses one that
 reads as a misspelled setting.</p></li>
-<li><p>Particle transforms are declared as a default or per variant
-(<code class="docutils literal notranslate"><span class="pre">transforms:</span> <span class="pre">[{kind:</span> <span class="pre">...}]</span></code>); <code class="docutils literal notranslate"><span class="pre">kind</span></code> may also be the import path of a
-user class.</p></li>
+<li><p>Particle transforms are runtraj’s (<code class="docutils literal notranslate"><span class="pre">runtraj.transforms</span></code>), declared as a
+footprint setting, a default or per variant (<code class="docutils literal notranslate"><span class="pre">transforms:</span> <span class="pre">[{kind:</span>
+<span class="pre">...}]</span></code>); <code class="docutils literal notranslate"><span class="pre">kind</span></code> may also be the import path of a user class. Each
+multiplies the particles’ <code class="docutils literal notranslate"><span class="pre">weight</span></code>, and the footprint, background and
+transport error multiply <code class="docutils literal notranslate"><span class="pre">foot</span></code> by it (<code class="docutils literal notranslate"><span class="pre">stilt.footprint.foot._weighted</span></code>).</p></li>
 </ul>
 </section>
 <section id="implementation-notes">

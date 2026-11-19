@@ -1,5 +1,0 @@
-runtraj.transport.hysplit.HysplitConfig.hourly\_ziscale
-=======================================================
-
-.. currentmodule:: runtraj.transport.hysplit
-.. automethod:: HysplitConfig.hourly_ziscale

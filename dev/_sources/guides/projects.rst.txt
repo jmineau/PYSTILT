@@ -522,7 +522,7 @@ which your editor can autocomplete and check:
 
 .. code-block:: python
 
-   from runtraj.transport.hysplit import MetConfig
+   from runtraj.models.hysplit import MetConfig
 
    config = stilt.ProjectConfig(
        mets={"hrrr": MetConfig(directory="/data/arl/hrrr")},

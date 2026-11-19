@@ -1,5 +1,0 @@
-runtraj.transport.TransportModel.sha256
-=======================================
-
-.. currentmodule:: runtraj.transport
-.. automethod:: TransportModel.sha256

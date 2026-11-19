@@ -1,5 +1,0 @@
-stilt.transforms.Oxidation.field
-================================
-
-.. currentmodule:: stilt.transforms
-.. automethod:: Oxidation.field

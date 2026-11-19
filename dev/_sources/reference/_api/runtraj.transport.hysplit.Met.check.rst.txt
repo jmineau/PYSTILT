@@ -1,5 +1,0 @@
-runtraj.transport.hysplit.Met.check
-===================================
-
-.. currentmodule:: runtraj.transport.hysplit
-.. automethod:: Met.check

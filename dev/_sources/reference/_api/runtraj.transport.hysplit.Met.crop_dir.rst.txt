@@ -1,6 +1,0 @@
-runtraj.transport.hysplit.Met.crop\_dir
-=======================================
-
-.. currentmodule:: runtraj.transport.hysplit
-
-.. autoproperty:: Met.crop_dir

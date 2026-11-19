@@ -1,0 +1,29 @@
+﻿runtraj.transforms.DryDeposition
+================================
+
+.. currentmodule:: runtraj.transforms
+
+
+
+
+
+
+.. class-signature:: runtraj.transforms.DryDeposition
+
+
+.. class-parameters:: runtraj.transforms.DryDeposition
+
+
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~DryDeposition.apply
+
+
+

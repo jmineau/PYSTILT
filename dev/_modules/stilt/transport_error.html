@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=515c717f"></script>
+    <script src="../../_static/documentation_options.js?v=452eb2bb"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev34+g6ac3d5f10" />
+  <meta name="docsearch:version" content="0.1.0a30.dev37+gb0c8d6f65" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -487,10 +487,10 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.releases</span><span class="w"> </span><span class="kn">import</span> <span class="n">Release</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.transforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">release_coordinate</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.background</span><span class="w"> </span><span class="kn">import</span> <span class="n">_background</span><span class="p">,</span> <span class="n">_fill_missing</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.foot</span><span class="w"> </span><span class="kn">import</span> <span class="n">_near_field</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">apply_transforms</span><span class="p">,</span> <span class="n">release_coordinate</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.foot</span><span class="w"> </span><span class="kn">import</span> <span class="n">_near_field</span><span class="p">,</span> <span class="n">_weighted</span>
 
 <span class="c1">#: X-STILT's empirical mean vertical correlation length of transport errors, m.</span>
 <span class="n">DEFAULT_LENGTH_SCALE</span> <span class="o">=</span> <span class="mf">356.0</span>
@@ -917,11 +917,7 @@
         <span class="k">if</span> <span class="n">hnf_plume</span><span class="p">:</span>
             <span class="k">assert</span> <span class="n">release</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>  <span class="c1"># checked above</span>
             <span class="n">table</span> <span class="o">=</span> <span class="n">_near_field</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">footprint_depth</span><span class="p">)</span>
-        <span class="n">weighted</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">apply_transforms</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">transforms</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">directory</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">transforms</span>
-            <span class="k">else</span> <span class="n">table</span>
-        <span class="p">)</span>
+        <span class="n">weighted</span> <span class="o">=</span> <span class="n">_weighted</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">transforms</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">directory</span><span class="p">)</span>
         <span class="n">x</span> <span class="o">=</span> <span class="n">weighted</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">enhancement</span><span class="p">(</span><span class="n">flux</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">background</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">x</span><span class="p">,</span> <span class="n">_release_heights</span><span class="p">(</span><span class="n">weighted</span><span class="p">),</span> <span class="mf">0.0</span>

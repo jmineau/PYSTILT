@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=515c717f"></script>
+    <script src="../../_static/documentation_options.js?v=452eb2bb"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev34+g6ac3d5f10" />
+  <meta name="docsearch:version" content="0.1.0a30.dev37+gb0c8d6f65" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -454,24 +454,14 @@
                   
   <h1>Source code for stilt.sampling</h1><div class="highlight"><pre>
 <span></span><span class="sd">"""</span>
-<span class="sd">Sampling gridded fields, such as a surface flux or a mole fraction, at points.</span>
+<span class="sd">Sampling ARL met files at particle positions.</span>
 
-<span class="sd">A field is an :class:`xarray.DataArray` on a regular ``lat``/``lon`` grid</span>
-<span class="sd">(``y``/``x`` for a projected footprint grid), with an optional vertical</span>
-<span class="sd">dimension and an optional ``time`` dimension. Each point takes the value of</span>
-<span class="sd">the cell it falls in. ``foot.stilt.enhancement`` and</span>
-<span class="sd">``particles.stilt.enhancement`` sample a surface flux this way, taking the</span>
-<span class="sd">flux step that starts at or before each time, or, when the flux's ``time``</span>
-<span class="sd">coordinate carries CF time bounds, the step whose bounds hold the time, and</span>
-<span class="sd">:func:`stilt.background` a mole-fraction field, taking the</span>
-<span class="sd">nearest time. PYSTILT does</span>
-<span class="sd">not convert units. A flux in µmol m⁻² s⁻¹ times a footprint in ppm per</span>
-<span class="sd">(µmol m⁻² s⁻¹) gives ppm.</span>
-
-<span class="sd">:func:`sample_met` samples ARL met files at particle positions, for the</span>
-<span class="sd">particle columns a transport model can write from the met (``mlht``,</span>
-<span class="sd">``dens``, ``pres``, ``zsfc``), and :func:`calc_pbl_height` finds the</span>
-<span class="sd">mixed-layer height from the met's profile, as HYSPLIT does by default.</span>
+<span class="sd">:func:`sample_met` gives the particle columns a transport model can write</span>
+<span class="sd">from the met (``mlht``, ``dens``, ``pres``, ``zsfc``), for a model that</span>
+<span class="sd">writes only positions, and :func:`calc_pbl_height` finds the mixed-layer</span>
+<span class="sd">height from the met's profile, as HYSPLIT does by default. A gridded field</span>
+<span class="sd">such as a surface flux or a mole fraction is read at points with</span>
+<span class="sd">:func:`runtraj.sampling.sample_field`.</span>
 <span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
@@ -481,222 +471,6 @@
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">numpy.typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">ArrayLike</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">pandas.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">InvalidIndexError</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.spatial</span><span class="w"> </span><span class="kn">import</span> <span class="n">horizontal_dims</span>
-
-
-<div class="viewcode-block" id="nearest_cell">
-<a class="viewcode-back" href="../../reference/_api/stilt.sampling.nearest_cell.html#stilt.sampling.nearest_cell">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">nearest_cell</span><span class="p">(</span><span class="n">coords</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">values</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Return the index of the cell nearest each value, or ``-1`` outside the cells.</span>
-
-<span class="sd">    Each cell reaches halfway to its neighbors. The end cells reach the</span>
-<span class="sd">    same distance beyond their centers. With a single cell, every finite</span>
-<span class="sd">    value is inside it.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    coords : numpy.ndarray</span>
-<span class="sd">        Cell centers along one axis, ascending or descending.</span>
-<span class="sd">    values : numpy.ndarray</span>
-<span class="sd">        Positions to look up.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    numpy.ndarray</span>
-<span class="sd">        Index into *coords* for each value.</span>
-<span class="sd">    """</span>
-    <span class="n">coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">coords</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">coords</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">coords</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Field coordinates must be a non-empty 1-D array."</span><span class="p">)</span>
-    <span class="n">ascending</span> <span class="o">=</span> <span class="n">coords</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">coords</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-    <span class="n">c</span> <span class="o">=</span> <span class="n">coords</span> <span class="k">if</span> <span class="n">ascending</span> <span class="k">else</span> <span class="n">coords</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-    <span class="k">if</span> <span class="n">c</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-        <span class="n">inside</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">inside</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
-    <span class="n">mids</span> <span class="o">=</span> <span class="p">(</span><span class="n">c</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">c</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span> <span class="o">/</span> <span class="mf">2.0</span>
-    <span class="n">lo</span> <span class="o">=</span> <span class="n">c</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="p">(</span><span class="n">c</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">c</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="mf">2.0</span>
-    <span class="n">hi</span> <span class="o">=</span> <span class="n">c</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="p">(</span><span class="n">c</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">c</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">])</span> <span class="o">/</span> <span class="mf">2.0</span>
-    <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">mids</span><span class="p">,</span> <span class="n">values</span><span class="p">)</span>
-    <span class="n">inside</span> <span class="o">=</span> <span class="p">(</span><span class="n">values</span> <span class="o">&gt;=</span> <span class="n">lo</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">values</span> <span class="o">&lt;=</span> <span class="n">hi</span><span class="p">)</span>
-    <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">inside</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">ascending</span><span class="p">:</span>
-        <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">idx</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">c</span><span class="o">.</span><span class="n">size</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">idx</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">idx</span></div>
-
-
-
-<div class="viewcode-block" id="vertical_dim">
-<a class="viewcode-back" href="../../reference/_api/stilt.sampling.vertical_dim.html#stilt.sampling.vertical_dim">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">vertical_dim</span><span class="p">(</span><span class="n">field</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Return the name of a field's vertical dimension.</span>
-
-<span class="sd">    That is the one dimension that is neither horizontal nor ``time``.</span>
-<span class="sd">    Returns ``None`` for a field without one, such as a column mean or a</span>
-<span class="sd">    surface field, and raises if there is more than one candidate.</span>
-<span class="sd">    """</span>
-    <span class="n">y_dim</span><span class="p">,</span> <span class="n">x_dim</span> <span class="o">=</span> <span class="n">horizontal_dims</span><span class="p">(</span><span class="n">field</span><span class="p">)</span>
-    <span class="n">extra</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">d</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">field</span><span class="o">.</span><span class="n">dims</span> <span class="k">if</span> <span class="n">d</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="n">y_dim</span><span class="p">,</span> <span class="n">x_dim</span><span class="p">,</span> <span class="s2">"time"</span><span class="p">)]</span>
-    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">extra</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">"Expected at most one vertical dimension besides </span><span class="si">{</span><span class="n">y_dim</span><span class="si">!r}</span><span class="s2">/</span><span class="si">{</span><span class="n">x_dim</span><span class="si">!r}</span><span class="s2"> "</span>
-            <span class="sa">f</span><span class="s2">"and 'time'; got </span><span class="si">{</span><span class="n">extra</span><span class="si">}</span><span class="s2">."</span>
-        <span class="p">)</span>
-    <span class="k">return</span> <span class="n">extra</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">extra</span> <span class="k">else</span> <span class="kc">None</span></div>
-
-
-
-<span class="k">def</span><span class="w"> </span><span class="nf">_bounds_indexer</span><span class="p">(</span>
-    <span class="n">bounds</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">IntervalIndex</span><span class="p">,</span> <span class="n">stamps</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DatetimeIndex</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Return each stamp's step index from a flux's CF time bounds, and whether it falls in one.</span>
-
-<span class="sd">    A stamp before the first bound, after the last, or in a gap between</span>
-<span class="sd">    bounds falls in none: the bounds say where every step starts and ends,</span>
-<span class="sd">    so there is nothing to guess at either edge.</span>
-<span class="sd">    """</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="n">it</span> <span class="o">=</span> <span class="n">bounds</span><span class="o">.</span><span class="n">get_indexer</span><span class="p">(</span><span class="n">stamps</span><span class="p">)</span>
-    <span class="k">except</span> <span class="n">InvalidIndexError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="s2">"The field's time bounds overlap, so a time can fall in more than "</span>
-            <span class="s2">"one step. Two bounds cannot cover the same instant."</span>
-        <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
-    <span class="n">in_step</span> <span class="o">=</span> <span class="n">it</span> <span class="o">&gt;=</span> <span class="mi">0</span>
-    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">in_step</span><span class="p">,</span> <span class="n">it</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">in_step</span>
-
-
-<div class="viewcode-block" id="sample_field">
-<a class="viewcode-back" href="../../reference/_api/stilt.sampling.sample_field.html#stilt.sampling.sample_field">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">sample_field</span><span class="p">(</span>
-    <span class="n">field</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">,</span>
-    <span class="n">x</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">,</span>
-    <span class="n">y</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">,</span>
-    <span class="n">z</span><span class="p">:</span> <span class="n">ArrayLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">times</span><span class="p">:</span> <span class="n">ArrayLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">fill_value</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span>
-    <span class="n">step_starts</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Return the field's value in the cell nearest each point.</span>
-
-<span class="sd">    A point outside the field horizontally, or in a missing cell, gives</span>
-<span class="sd">    ``fill_value``. Longitudes are wrapped to the field's convention (-180</span>
-<span class="sd">    to 180 or 0 to 360).</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    field : xarray.DataArray</span>
-<span class="sd">        Field with horizontal dimensions (``lat`` and ``lon``, or ``y`` and</span>
-<span class="sd">        ``x``), and optionally a vertical dimension and ``time``.</span>
-<span class="sd">    x, y : array-like</span>
-<span class="sd">        Point coordinates: longitude and latitude for a ``lat``/``lon``</span>
-<span class="sd">        field.</span>
-<span class="sd">    z : array-like, optional</span>
-<span class="sd">        Vertical coordinate of each point, in the units of the field's</span>
-<span class="sd">        vertical dimension. Required when the field has one. Matched to the</span>
-<span class="sd">        nearest level, so a point above the top level takes the top level.</span>
-<span class="sd">    times : array-like, optional</span>
-<span class="sd">        Time of each point. Required when the field has a ``time``</span>
-<span class="sd">        dimension. By default matched to the nearest time, so times</span>
-<span class="sd">        outside the field's span take the first or last step. See</span>
-<span class="sd">        ``step_starts``.</span>
-<span class="sd">    fill_value : float, default NaN</span>
-<span class="sd">        Value for points outside the field and for missing cells. Use 0 for</span>
-<span class="sd">        a surface flux, where no data means no emission. ``NaN`` suits a</span>
-<span class="sd">        mole fraction, which is unknown there.</span>
-<span class="sd">    step_starts : bool, default False</span>
-<span class="sd">        Whether the field's ``time`` labels are the starts of steps, as a</span>
-<span class="sd">        flux inventory's are. A point then takes the last step that starts</span>
-<span class="sd">        at or before its time, the rule of ``foot.stilt.aggregate`` and</span>
-<span class="sd">        ``project.jacobian``. A point before the first label takes</span>
-<span class="sd">        ``fill_value`` and a point after the last takes the last step, since</span>
-<span class="sd">        the labels do not say where it ends. The labels must strictly</span>
-<span class="sd">        increase: a repeated label is an error. When ``field["time"]`` is a</span>
-<span class="sd">        :class:`pandas.IntervalIndex` (its CF time bounds, read as each</span>
-<span class="sd">        step's start and end), a point is matched by which step's bounds</span>
-<span class="sd">        hold it instead: one before the first bound, after the last, or in</span>
-<span class="sd">        a gap between bounds takes ``fill_value``, since the bounds say</span>
-<span class="sd">        where every step starts and ends and there is nothing to guess at</span>
-<span class="sd">        either edge. The bounds must not overlap.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    numpy.ndarray</span>
-<span class="sd">        One value per point.</span>
-<span class="sd">    """</span>
-    <span class="n">y_dim</span><span class="p">,</span> <span class="n">x_dim</span> <span class="o">=</span> <span class="n">horizontal_dims</span><span class="p">(</span><span class="n">field</span><span class="p">)</span>
-    <span class="n">xs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
-    <span class="n">ys</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
-    <span class="k">if</span> <span class="n">xs</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">ys</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"x and y must have the same length."</span><span class="p">)</span>
-    <span class="n">lons</span> <span class="o">=</span> <span class="n">field</span><span class="p">[</span><span class="n">x_dim</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
-    <span class="k">if</span> <span class="n">x_dim</span> <span class="o">==</span> <span class="s2">"lon"</span><span class="p">:</span>
-        <span class="n">xs</span> <span class="o">=</span> <span class="n">xs</span> <span class="o">%</span> <span class="mf">360.0</span> <span class="k">if</span> <span class="n">lons</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mf">180.0</span> <span class="k">else</span> <span class="p">((</span><span class="n">xs</span> <span class="o">+</span> <span class="mf">180.0</span><span class="p">)</span> <span class="o">%</span> <span class="mf">360.0</span><span class="p">)</span> <span class="o">-</span> <span class="mf">180.0</span>
-    <span class="n">ix</span> <span class="o">=</span> <span class="n">nearest_cell</span><span class="p">(</span><span class="n">lons</span><span class="p">,</span> <span class="n">xs</span><span class="p">)</span>
-    <span class="n">iy</span> <span class="o">=</span> <span class="n">nearest_cell</span><span class="p">(</span><span class="n">field</span><span class="p">[</span><span class="n">y_dim</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">ys</span><span class="p">)</span>
-    <span class="n">inside</span> <span class="o">=</span> <span class="p">(</span><span class="n">ix</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">iy</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span>
-
-    <span class="n">indexers</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-        <span class="n">x_dim</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">inside</span><span class="p">,</span> <span class="n">ix</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">dims</span><span class="o">=</span><span class="s2">"points"</span><span class="p">),</span>
-        <span class="n">y_dim</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">inside</span><span class="p">,</span> <span class="n">iy</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">dims</span><span class="o">=</span><span class="s2">"points"</span><span class="p">),</span>
-    <span class="p">}</span>
-    <span class="n">zdim</span> <span class="o">=</span> <span class="n">vertical_dim</span><span class="p">(</span><span class="n">field</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">zdim</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">z</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"field has a </span><span class="si">{</span><span class="n">zdim</span><span class="si">!r}</span><span class="s2"> dimension; pass z."</span><span class="p">)</span>
-        <span class="n">zs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
-        <span class="k">if</span> <span class="n">zs</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">xs</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"z must have the same length as x and y."</span><span class="p">)</span>
-        <span class="n">indexers</span><span class="p">[</span><span class="n">zdim</span><span class="p">]</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">_nearest_level</span><span class="p">(</span><span class="n">field</span><span class="p">[</span><span class="n">zdim</span><span class="p">],</span> <span class="n">zs</span><span class="p">),</span> <span class="n">dims</span><span class="o">=</span><span class="s2">"points"</span><span class="p">)</span>
-    <span class="k">if</span> <span class="s2">"time"</span> <span class="ow">in</span> <span class="n">field</span><span class="o">.</span><span class="n">dims</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">times</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"field has a time dimension; pass times."</span><span class="p">)</span>
-        <span class="n">stamps</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DatetimeIndex</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">times</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()))</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">stamps</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">xs</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"times must have the same length as x and y."</span><span class="p">)</span>
-        <span class="n">index</span> <span class="o">=</span> <span class="n">field</span><span class="o">.</span><span class="n">indexes</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span>
-        <span class="k">if</span> <span class="n">step_starts</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">IntervalIndex</span><span class="p">):</span>
-                <span class="n">it</span><span class="p">,</span> <span class="n">in_step</span> <span class="o">=</span> <span class="n">_bounds_indexer</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">stamps</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="n">index</span><span class="o">.</span><span class="n">is_monotonic_increasing</span><span class="p">:</span>
-                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                        <span class="s2">"The field's time labels must strictly increase to be read "</span>
-                        <span class="s2">"as step starts."</span>
-                    <span class="p">)</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="n">index</span><span class="o">.</span><span class="n">is_unique</span><span class="p">:</span>
-                    <span class="n">repeated</span> <span class="o">=</span> <span class="n">index</span><span class="p">[</span><span class="n">index</span><span class="o">.</span><span class="n">duplicated</span><span class="p">()][</span><span class="mi">0</span><span class="p">]</span>
-                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                        <span class="s2">"The field's time labels must strictly increase to be read "</span>
-                        <span class="sa">f</span><span class="s2">"as step starts, but </span><span class="si">{</span><span class="n">repeated</span><span class="si">}</span><span class="s2"> is repeated. Two steps "</span>
-                        <span class="s2">"cannot start at the same time; drop one, such as the "</span>
-                        <span class="s2">"overlap of two concatenated files."</span>
-                    <span class="p">)</span>
-                <span class="n">it</span> <span class="o">=</span> <span class="n">index</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">stamps</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="s2">"right"</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
-                <span class="n">in_step</span> <span class="o">=</span> <span class="n">it</span> <span class="o">&gt;=</span> <span class="mi">0</span>
-                <span class="n">it</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">it</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-            <span class="n">inside</span> <span class="o">=</span> <span class="n">inside</span> <span class="o">&amp;</span> <span class="n">in_step</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">it</span> <span class="o">=</span> <span class="n">index</span><span class="o">.</span><span class="n">get_indexer</span><span class="p">(</span><span class="n">stamps</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">"nearest"</span><span class="p">)</span>
-        <span class="n">indexers</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">it</span><span class="p">,</span> <span class="n">dims</span><span class="o">=</span><span class="s2">"points"</span><span class="p">)</span>
-    <span class="n">sampled</span> <span class="o">=</span> <span class="n">field</span><span class="o">.</span><span class="n">isel</span><span class="p">(</span><span class="n">indexers</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">inside</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">sampled</span><span class="p">),</span> <span class="n">sampled</span><span class="p">,</span> <span class="n">fill_value</span><span class="p">)</span></div>
-
-
-
-<span class="k">def</span><span class="w"> </span><span class="nf">_nearest_level</span><span class="p">(</span><span class="n">levels</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">,</span> <span class="n">z</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Return the index of the level nearest each ``z``."""</span>
-    <span class="n">coords</span> <span class="o">=</span> <span class="n">levels</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">coords</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">coords</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"The vertical coordinate must be a non-empty 1-D array."</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">coords</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">z</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">])</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-
 
 <span class="c1">#: The ARL variables each particle column is computed from, by :func:`sample_met`.</span>
 <span class="c1">#: ``pres`` is the ``PRES`` field, not arlmet's virtual ``"pressure"``, which</span>
@@ -758,13 +532,13 @@
 <span class="sd">        returned, add it: the release time plus ``age`` minutes.</span>
 <span class="sd">    files : iterable of path-like</span>
 <span class="sd">        ARL met files that cover the particles' times, such as the files the</span>
-<span class="sd">        run read (``met_files`` of :class:`runtraj.transport.ModelRun` or of</span>
+<span class="sd">        run read (``met_files`` of :class:`runtraj.models.ModelRun` or of</span>
 <span class="sd">        :func:`runtraj.particles.particles_metadata`).</span>
 <span class="sd">    columns : iterable of str, default ("mlht", "dens", "pres", "zsfc")</span>
 <span class="sd">        The columns to add.</span>
 <span class="sd">    z_top : float or None, default 25000</span>
 <span class="sd">        The top of the run's domain in meters (``z_top`` of</span>
-<span class="sd">        :class:`runtraj.transport.hysplit.HysplitConfig`), since HYSPLIT's</span>
+<span class="sd">        :class:`runtraj.models.hysplit.HysplitConfig`), since HYSPLIT's</span>
 <span class="sd">        internal levels depend on it. A stored run records it:</span>
 <span class="sd">        ``particles_metadata(path).settings["z_top"]``. ``None`` reads the</span>
 <span class="sd">        met's own levels, for a transport model that is not HYSPLIT; a row</span>
@@ -896,6 +670,8 @@
 <span class="n">_CRITICAL_RICHARDSON</span> <span class="o">=</span> <span class="mf">0.25</span>
 
 
+<div class="viewcode-block" id="calc_pbl_height">
+<a class="viewcode-back" href="../../reference/_api/stilt.sampling.calc_pbl_height.html#stilt.sampling.calc_pbl_height">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">calc_pbl_height</span><span class="p">(</span>
     <span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
     <span class="n">files</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
@@ -939,7 +715,7 @@
 <span class="sd">        ``UMOF`` and ``VMOF``.</span>
 <span class="sd">    z_top : float, default 25000</span>
 <span class="sd">        The top of the domain in meters, which sets HYSPLIT's internal</span>
-<span class="sd">        levels (``z_top`` of :class:`runtraj.transport.hysplit.HysplitConfig`).</span>
+<span class="sd">        levels (``z_top`` of :class:`runtraj.models.hysplit.HysplitConfig`).</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -1076,7 +852,8 @@
     <span class="n">out</span> <span class="o">=</span> <span class="n">value</span><span class="p">[:</span><span class="n">n</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
     <span class="n">w</span> <span class="o">=</span> <span class="n">weight</span><span class="p">[</span><span class="n">later</span><span class="p">]</span>
     <span class="n">out</span><span class="p">[</span><span class="n">later</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">w</span><span class="p">)</span> <span class="o">*</span> <span class="n">out</span><span class="p">[</span><span class="n">later</span><span class="p">]</span> <span class="o">+</span> <span class="n">w</span> <span class="o">*</span> <span class="n">value</span><span class="p">[</span><span class="n">n</span><span class="p">:]</span>
-    <span class="k">return</span> <span class="n">out</span>
+    <span class="k">return</span> <span class="n">out</span></div>
+
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_richardson_mixed_layer</span><span class="p">(</span>
@@ -1144,10 +921,7 @@
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
     <span class="s2">"calc_pbl_height"</span><span class="p">,</span>
-    <span class="s2">"nearest_cell"</span><span class="p">,</span>
-    <span class="s2">"sample_field"</span><span class="p">,</span>
     <span class="s2">"sample_met"</span><span class="p">,</span>
-    <span class="s2">"vertical_dim"</span><span class="p">,</span>
 <span class="p">]</span>
 </pre></div>
 

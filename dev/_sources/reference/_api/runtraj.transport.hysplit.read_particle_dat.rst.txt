@@ -1,6 +1,0 @@
-﻿runtraj.transport.hysplit.read\_particle\_dat
-=============================================
-
-.. currentmodule:: runtraj.transport.hysplit
-
-.. autofunction:: read_particle_dat

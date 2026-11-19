@@ -1,5 +1,0 @@
-runtraj.transport.hysplit.HysplitModel.sha256
-=============================================
-
-.. currentmodule:: runtraj.transport.hysplit
-.. automethod:: HysplitModel.sha256

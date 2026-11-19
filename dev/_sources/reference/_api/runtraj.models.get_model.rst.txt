@@ -1,0 +1,6 @@
+﻿runtraj.models.get\_model
+=========================
+
+.. currentmodule:: runtraj.models
+
+.. autofunction:: get_model

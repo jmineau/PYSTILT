@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=515c717f"></script>
+    <script src="../../_static/documentation_options.js?v=452eb2bb"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev34+g6ac3d5f10" />
+  <meta name="docsearch:version" content="0.1.0a30.dev37+gb0c8d6f65" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -462,8 +462,8 @@
 <span class="sd">A model's or a stage's block holds its settings, the defaults of every</span>
 <span class="sd">variant that uses it, and no setting sits at the top level. Each part has</span>
 <span class="sd">its own config class, next to the code that uses it: the transport model's</span>
-<span class="sd">and its met config (such as :class:`~runtraj.transport.hysplit.HysplitConfig`</span>
-<span class="sd">and :class:`~runtraj.transport.hysplit.MetConfig`), a stage's, and</span>
+<span class="sd">and its met config (such as :class:`~runtraj.models.hysplit.HysplitConfig`</span>
+<span class="sd">and :class:`~runtraj.models.hysplit.MetConfig`), a stage's, and</span>
 <span class="sd">:class:`~runtraj.execution.ExecutionConfig`. A stage is named by the import</span>
 <span class="sd">path of its class (:mod:`runtraj.stages`), so this module imports none.</span>
 <span class="sd">:class:`ProjectConfig` reads the file and checks it without reading any</span>
@@ -501,13 +501,13 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">runtraj._paths</span><span class="w"> </span><span class="kn">import</span> <span class="n">absolute</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.execution.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExecutionConfig</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.identity</span><span class="w"> </span><span class="kn">import</span> <span class="n">canonical</span><span class="p">,</span> <span class="n">run_settings</span><span class="p">,</span> <span class="n">settings_hash</span><span class="p">,</span> <span class="n">stage_hash</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.stages</span><span class="w"> </span><span class="kn">import</span> <span class="n">Stage</span><span class="p">,</span> <span class="n">get_stage</span><span class="p">,</span> <span class="n">ordered</span><span class="p">,</span> <span class="n">reads</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.transport</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.models</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">MODELS</span><span class="p">,</span>
     <span class="n">ModelInfo</span><span class="p">,</span>
     <span class="n">TransportConfig</span><span class="p">,</span>
     <span class="n">get_model</span><span class="p">,</span>
 <span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.stages</span><span class="w"> </span><span class="kn">import</span> <span class="n">Stage</span><span class="p">,</span> <span class="n">get_stage</span><span class="p">,</span> <span class="n">ordered</span><span class="p">,</span> <span class="n">reads</span>
 
 <span class="c1">#: Pattern for variant and met names, which become directory names.</span>
 <span class="n">VARIANT_NAME_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"^[a-z0-9][a-z0-9-]*$"</span><span class="p">)</span>
@@ -545,7 +545,7 @@
 
     <span class="n">met</span><span class="p">:</span> <span class="nb">str</span>
     <span class="n">block</span><span class="p">:</span> <span class="nb">str</span>  <span class="c1"># the name of its model's block under models:</span>
-    <span class="n">model</span><span class="p">:</span> <span class="nb">str</span>  <span class="c1"># the model, as runtraj.transport.get_model names it</span>
+    <span class="n">model</span><span class="p">:</span> <span class="nb">str</span>  <span class="c1"># the model, as runtraj.models.get_model names it</span>
     <span class="n">realizations</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span>
     <span class="n">transport</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
     <span class="n">stages</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>  <span class="c1"># each stage's checked settings, by the stage's name</span>
@@ -586,7 +586,7 @@
 <span class="sd">        with absolute directories when resolved for a project.</span>
 <span class="sd">    transport : TransportConfig</span>
 <span class="sd">        The transport model's config, such as a</span>
-<span class="sd">        :class:`~runtraj.transport.hysplit.HysplitConfig`, with the base seed.</span>
+<span class="sd">        :class:`~runtraj.models.hysplit.HysplitConfig`, with the base seed.</span>
 <span class="sd">    model : str</span>
 <span class="sd">        The transport model that runs it, as ``config.yaml`` names it: a</span>
 <span class="sd">        built-in name such as ``hysplit``, or a model class's import path.</span>
@@ -837,7 +837,7 @@
             <span class="s2">"Meteorology by name, such as ``hrrr``: the folder of its files, or "</span>
             <span class="s2">"a mapping of its settings. At least one is required. Each is "</span>
             <span class="s2">"checked by the met config of the transport model that reads it "</span>
-            <span class="s2">"(:class:`runtraj.transport.hysplit.MetConfig` for HYSPLIT)."</span>
+            <span class="s2">"(:class:`runtraj.models.hysplit.MetConfig` for HYSPLIT)."</span>
         <span class="p">),</span>
     <span class="p">)</span>
     <span class="n">models</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
@@ -1303,7 +1303,7 @@
 <span class="sd">    *stages* is the ``stages`` block as written, to say where a stage's</span>
 <span class="sd">    setting belongs.</span>
 
-<span class="sd">    The model is as :func:`runtraj.transport.get_model` names it: the block's</span>
+<span class="sd">    The model is as :func:`runtraj.models.get_model` names it: the block's</span>
 <span class="sd">    ``class``, or the block's own name for a built-in model. The settings</span>
 <span class="sd">    are checked by name here, and by value as a variant runs them.</span>
 

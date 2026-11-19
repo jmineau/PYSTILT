@@ -1,5 +1,0 @@
-runtraj.transport.hysplit.HysplitModel.run
-==========================================
-
-.. currentmodule:: runtraj.transport.hysplit
-.. automethod:: HysplitModel.run

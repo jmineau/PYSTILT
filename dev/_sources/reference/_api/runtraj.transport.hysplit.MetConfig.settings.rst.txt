@@ -1,5 +1,0 @@
-runtraj.transport.hysplit.MetConfig.settings
-============================================
-
-.. currentmodule:: runtraj.transport.hysplit
-.. automethod:: MetConfig.settings

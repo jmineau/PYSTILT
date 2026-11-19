@@ -1,0 +1,6 @@
+﻿runtraj.transforms.transform\_kind
+==================================
+
+.. currentmodule:: runtraj.transforms
+
+.. autofunction:: transform_kind

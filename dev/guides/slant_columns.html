@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=515c717f"></script>
+    <script src="../_static/documentation_options.js?v=452eb2bb"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -66,7 +66,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev34+g6ac3d5f10" />
+  <meta name="docsearch:version" content="0.1.0a30.dev37+gb0c8d6f65" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -634,11 +634,11 @@ kernels. Take them from the run’s <code class="docutils literal notranslate"><
 <a class="reference internal" href="../reference/_api/stilt.observations.read_ggg_netcdf.html#stilt.observations.read_ggg_netcdf" title="stilt.observations.read_ggg_netcdf"><code class="xref py py-func docutils literal notranslate"><span class="pre">read_ggg_netcdf()</span></code></a>, which expands GGG’s kernel
 table for each spectrum. You can also use a site table keyed by solar
 zenith angle, as PROFFAST provides. Make the table with
-<a class="reference internal" href="../reference/_api/stilt.transforms.averaging_kernel_table.html#stilt.transforms.averaging_kernel_table" title="stilt.transforms.averaging_kernel_table"><code class="xref py py-func docutils literal notranslate"><span class="pre">averaging_kernel_table()</span></code></a> and add it to the project
+<a class="reference internal" href="../reference/_api/runtraj.transforms.averaging_kernel_table.html#runtraj.transforms.averaging_kernel_table" title="runtraj.transforms.averaging_kernel_table"><code class="xref py py-func docutils literal notranslate"><span class="pre">averaging_kernel_table()</span></code></a> and add it to the project
 with <code class="docutils literal notranslate"><span class="pre">project.add_table</span></code>. The <code class="docutils literal notranslate"><span class="pre">averaging_kernel</span></code> transform then looks
 up each release’s kernel:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">stilt.observations</span><span class="w"> </span><span class="kn">import</span> <span class="n">read_ggg_netcdf</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">averaging_kernel_table</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.transforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">averaging_kernel_table</span>
 
 <span class="n">ak</span> <span class="o">=</span> <span class="n">read_ggg_netcdf</span><span class="p">(</span><span class="s2">"ha20230715_20230715.private.nc"</span><span class="p">,</span> <span class="s2">"xch4"</span><span class="p">)</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">"time"</span><span class="p">)</span>
 <span class="c1"># one kernel per window: the spectrum nearest the window's midpoint</span>

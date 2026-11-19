@@ -131,14 +131,14 @@ kernels. Take them from the run's ``*.private.nc`` with
 :func:`~stilt.observations.read_ggg_netcdf`, which expands GGG's kernel
 table for each spectrum. You can also use a site table keyed by solar
 zenith angle, as PROFFAST provides. Make the table with
-:func:`~stilt.transforms.averaging_kernel_table` and add it to the project
+:func:`~runtraj.transforms.averaging_kernel_table` and add it to the project
 with ``project.add_table``. The ``averaging_kernel`` transform then looks
 up each release's kernel:
 
 .. code-block:: python
 
    from stilt.observations import read_ggg_netcdf
-   from stilt.transforms import averaging_kernel_table
+   from runtraj.transforms import averaging_kernel_table
 
    ak = read_ggg_netcdf("ha20230715_20230715.private.nc", "xch4").set_index("time")
    # one kernel per window: the spectrum nearest the window's midpoint

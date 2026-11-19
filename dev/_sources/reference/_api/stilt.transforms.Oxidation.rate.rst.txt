@@ -1,5 +1,0 @@
-stilt.transforms.Oxidation.rate
-===============================
-
-.. currentmodule:: stilt.transforms
-.. automethod:: Oxidation.rate

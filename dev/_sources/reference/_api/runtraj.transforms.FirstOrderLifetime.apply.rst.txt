@@ -1,0 +1,5 @@
+runtraj.transforms.FirstOrderLifetime.apply
+===========================================
+
+.. currentmodule:: runtraj.transforms
+.. automethod:: FirstOrderLifetime.apply

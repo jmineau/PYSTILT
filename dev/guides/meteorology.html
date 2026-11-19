@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=515c717f"></script>
+    <script src="../_static/documentation_options.js?v=452eb2bb"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev34+g6ac3d5f10" />
+  <meta name="docsearch:version" content="0.1.0a30.dev37+gb0c8d6f65" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -591,7 +591,7 @@ run’s hours. For a release at 19:00 UTC on 14 January 2021, followed 12
 hours back:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [1]: </span><span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.meteorology</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_window</span>
 
-<span class="gp">In [2]: </span><span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.transport.hysplit</span><span class="w"> </span><span class="kn">import</span> <span class="n">Met</span><span class="p">,</span> <span class="n">MetConfig</span>
+<span class="gp">In [2]: </span><span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.models.hysplit</span><span class="w"> </span><span class="kn">import</span> <span class="n">Met</span><span class="p">,</span> <span class="n">MetConfig</span>
 
 <span class="gp">In [3]: </span><span class="n">hrrr</span> <span class="o">=</span> <span class="n">Met</span><span class="p">(</span><span class="s2">"hrrr"</span><span class="p">,</span> <span class="n">MetConfig</span><span class="p">(</span><span class="n">directory</span><span class="o">=</span><span class="n">met_dir</span><span class="p">))</span>
 
@@ -632,10 +632,10 @@ the region, which is the kind of detail a coarser product would lose:</p>
 <span class="gp">In [12]: </span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">layout</span><span class="o">=</span><span class="s2">"constrained"</span><span class="p">)</span>
 
 <span class="gp">In [13]: </span><span class="n">pblh</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="s2">"lon"</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s2">"lat"</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span> <span class="n">cbar_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s2">"label"</span><span class="p">:</span> <span class="s2">"mixed-layer height (m)"</span><span class="p">})</span>
-<span class="gh">Out[13]: </span><span class="go">&lt;matplotlib.collections.QuadMesh at 0x78cca481fed0&gt;</span>
+<span class="gh">Out[13]: </span><span class="go">&lt;matplotlib.collections.QuadMesh at 0x7e54fe1cfb10&gt;</span>
 
 <span class="gp">In [14]: </span><span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="o">-</span><span class="mf">111.848</span><span class="p">,</span> <span class="mf">40.766</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="s2">"*"</span><span class="p">,</span> <span class="n">markersize</span><span class="o">=</span><span class="mi">14</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"white"</span><span class="p">,</span> <span class="n">markeredgecolor</span><span class="o">=</span><span class="s2">"black"</span><span class="p">)</span>
-<span class="gh">Out[14]: </span><span class="go">[&lt;matplotlib.lines.Line2D at 0x78cc8a2c8590&gt;]</span>
+<span class="gh">Out[14]: </span><span class="go">[&lt;matplotlib.lines.Line2D at 0x7e54fd6cc980&gt;]</span>
 
 <span class="gp">In [15]: </span><span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">"HRRR, 14 January 2021, 19:00 UTC"</span><span class="p">);</span>
 </pre></div>

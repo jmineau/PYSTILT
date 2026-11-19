@@ -3,14 +3,14 @@ HYSPLIT Integration
 
 HYSPLIT is the transport model behind every simulation, unless a variant
 names another. The worker gets it as
-:class:`runtraj.transport.hysplit.HysplitModel` (see :doc:`execution`), which
+:class:`runtraj.models.hysplit.HysplitModel` (see :doc:`execution`), which
 picks the met files, writes HYSPLIT's input files, runs ``hycs_std``, and
 reads the particles it writes.
 
 Config
 ------
 
-:class:`runtraj.transport.hysplit.HysplitConfig` holds every setting that
+:class:`runtraj.models.hysplit.HysplitConfig` holds every setting that
 shapes the particles HYSPLIT makes. In ``config.yaml`` they are the keys
 of the ``hysplit`` block under ``models:``.
 
@@ -18,19 +18,19 @@ of the ``hysplit`` block under ``models:``.
    :toctree: _api
    :nosignatures:
 
-   runtraj.transport.hysplit.HysplitConfig
+   runtraj.models.hysplit.HysplitConfig
 
 The HYSPLIT build
 -----------------
 
-PYSTILT includes no HYSPLIT. :func:`~runtraj.transport.hysplit.find_hycs_std`
+PYSTILT includes no HYSPLIT. :func:`~runtraj.models.hysplit.find_hycs_std`
 returns the ``hycs_std`` a run uses: ``exec/hycs_std`` under ``directory``, or else the
 first on ``PATH`` (:doc:`../getting_started/installation`).
-:meth:`HysplitModel.sha256 <runtraj.transport.hysplit.HysplitModel.sha256>`
+:meth:`HysplitModel.sha256 <runtraj.models.hysplit.HysplitModel.sha256>`
 is its checksum, part of each run's settings, and
-:meth:`HysplitModel.version <runtraj.transport.hysplit.HysplitModel.version>`
+:meth:`HysplitModel.version <runtraj.models.hysplit.HysplitModel.version>`
 the version it prints when it starts, recorded beside them.
-:func:`~runtraj.transport.hysplit.data_tables` gives HYSPLIT's data tables a
+:func:`~runtraj.models.hysplit.data_tables` gives HYSPLIT's data tables a
 run uses, from the ``bdyfiles/`` folder of ``directory`` or beside the
 ``hycs_std`` on ``PATH``.
 
@@ -38,22 +38,22 @@ run uses, from the ``bdyfiles/`` folder of ``directory`` or beside the
    :toctree: _api
    :nosignatures:
 
-   runtraj.transport.hysplit.find_hycs_std
-   runtraj.transport.hysplit.data_tables
+   runtraj.models.hysplit.find_hycs_std
+   runtraj.models.hysplit.data_tables
 
 Running HYSPLIT
 ---------------
 
-:func:`~runtraj.transport.hysplit.write_inputs` writes everything
+:func:`~runtraj.models.hysplit.write_inputs` writes everything
 ``hycs_std`` reads into a folder: ``CONTROL``, ``SETUP.CFG``, and the error
 and mixed-layer files when the settings call for them. It takes what
 ``CONTROL`` starts from: a release time and release locations (latitude,
 longitude and height, in ``CONTROL``'s order), with ``kmsl`` 0 for heights
 above ground and 1 above sea level, as ``SETUP.CFG``'s ``KMSL``.
-:class:`~runtraj.transport.hysplit.HysplitModel` passes a release's time,
+:class:`~runtraj.models.hysplit.HysplitModel` passes a release's time,
 release points (``release.coords()``) and ``altitude_ref``.
-:func:`~runtraj.transport.hysplit.run_hycs_std` runs ``hycs_std`` in the
-folder, and :func:`~runtraj.transport.hysplit.read_particle_dat` reads its
+:func:`~runtraj.models.hysplit.run_hycs_std` runs ``hycs_std`` in the
+folder, and :func:`~runtraj.models.hysplit.read_particle_dat` reads its
 ``PARTICLE_STILT.DAT`` as a particle table. Use them to look at or change
 the input files of a run. A project run then adds the release heights and,
 when it makes the footprint, the near-field correction
@@ -65,7 +65,7 @@ when it makes the footprint, the near-field correction
 
    from stilt.footprint import correct_near_field
    from runtraj.particles import add_release_heights
-   from runtraj.transport.hysplit import (
+   from runtraj.models.hysplit import (
        HysplitConfig,
        read_particle_dat,
        run_hycs_std,
@@ -90,9 +90,9 @@ when it makes the footprint, the near-field correction
    :toctree: _api
    :nosignatures:
 
-   runtraj.transport.hysplit.write_inputs
-   runtraj.transport.hysplit.run_hycs_std
-   runtraj.transport.hysplit.read_particle_dat
+   runtraj.models.hysplit.write_inputs
+   runtraj.models.hysplit.run_hycs_std
+   runtraj.models.hysplit.read_particle_dat
 
 Failure reasons
 ---------------
@@ -104,7 +104,7 @@ out (``MET_COVERAGE``), since particles that leave the domain end at its
 edge (:doc:`/development/validation`). A known failure, a timeout, or a run
 without particle output raises a
 :class:`~runtraj.exceptions.SimulationError` whose ``reason`` is a
-:class:`runtraj.transport.hysplit.FailureReason`. The worker records it, and
+:class:`runtraj.models.hysplit.FailureReason`. The worker records it, and
 :attr:`stilt.Simulation.failure` and ``stilt status`` report it.
 
 Each reason, what happened, and what to do:
@@ -187,4 +187,4 @@ Each reason, what happened, and what to do:
    :toctree: _api
    :nosignatures:
 
-   runtraj.transport.hysplit.FailureReason
+   runtraj.models.hysplit.FailureReason

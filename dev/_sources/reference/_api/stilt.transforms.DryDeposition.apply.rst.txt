@@ -1,5 +1,0 @@
-stilt.transforms.DryDeposition.apply
-====================================
-
-.. currentmodule:: stilt.transforms
-.. automethod:: DryDeposition.apply

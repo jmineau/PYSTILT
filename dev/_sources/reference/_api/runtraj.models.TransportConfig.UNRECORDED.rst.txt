@@ -1,0 +1,6 @@
+runtraj.models.TransportConfig.UNRECORDED
+=========================================
+
+.. currentmodule:: runtraj.models
+
+.. autoattribute:: TransportConfig.UNRECORDED

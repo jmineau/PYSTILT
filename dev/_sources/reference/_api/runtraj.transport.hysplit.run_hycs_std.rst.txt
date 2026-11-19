@@ -1,6 +1,0 @@
-﻿runtraj.transport.hysplit.run\_hycs\_std
-========================================
-
-.. currentmodule:: runtraj.transport.hysplit
-
-.. autofunction:: run_hycs_std

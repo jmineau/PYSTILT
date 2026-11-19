@@ -1,0 +1,5 @@
+runtraj.models.hysplit.HysplitModel.check\_met
+==============================================
+
+.. currentmodule:: runtraj.models.hysplit
+.. automethod:: HysplitModel.check_met

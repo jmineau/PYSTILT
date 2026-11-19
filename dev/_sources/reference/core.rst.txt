@@ -200,18 +200,18 @@ so each geometry's weights are computed once per footprint grid.
 Sampling fields
 ---------------
 
-:mod:`stilt.sampling` looks up a gridded field at points: a surface flux
-under a footprint or along particle paths (``foot.stilt.enhancement``,
-``particles.stilt.enhancement``), or a mole-fraction field at particle
-endpoints (:func:`stilt.background`). :func:`~stilt.sampling.sample_met`
-reads ARL met files at particle positions, for the particle columns a
-transport model can write from the met.
+:func:`runtraj.sampling.sample_field` looks up a gridded field at points:
+a surface flux under a footprint or along particle paths
+(``foot.stilt.enhancement``, ``particles.stilt.enhancement``), or a
+mole-fraction field at particle endpoints (:func:`stilt.background`); it
+is listed with the transforms (:doc:`transforms`).
+:func:`~stilt.sampling.sample_met` reads ARL met files at particle
+positions, for the particle columns a transport model can write from the
+met.
 
 .. autosummary::
    :toctree: _api
    :nosignatures:
 
-   sampling.sample_field
    sampling.sample_met
-   sampling.vertical_dim
-   sampling.nearest_cell
+   sampling.calc_pbl_height

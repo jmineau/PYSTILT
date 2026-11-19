@@ -1,0 +1,42 @@
+﻿runtraj.models.TransportConfig
+==============================
+
+.. currentmodule:: runtraj.models
+
+
+
+
+
+
+.. class-signature:: runtraj.models.TransportConfig
+
+
+Parameters
+----------
+
+.. config-model:: runtraj.models.TransportConfig
+
+
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+   :nosignatures:
+
+   ~TransportConfig.UNRECORDED
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~TransportConfig.realizations
+   ~TransportConfig.settings
+
+
+

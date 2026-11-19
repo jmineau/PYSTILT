@@ -1,6 +1,0 @@
-﻿runtraj.transport.hysplit.write\_inputs
-=======================================
-
-.. currentmodule:: runtraj.transport.hysplit
-
-.. autofunction:: write_inputs

@@ -1,0 +1,29 @@
+﻿runtraj.transforms.FirstOrderLifetime
+=====================================
+
+.. currentmodule:: runtraj.transforms
+
+
+
+
+
+
+.. class-signature:: runtraj.transforms.FirstOrderLifetime
+
+
+.. class-parameters:: runtraj.transforms.FirstOrderLifetime
+
+
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~FirstOrderLifetime.apply
+
+
+

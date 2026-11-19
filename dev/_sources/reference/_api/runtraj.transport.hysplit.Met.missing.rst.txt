@@ -1,5 +1,0 @@
-runtraj.transport.hysplit.Met.missing
-=====================================
-
-.. currentmodule:: runtraj.transport.hysplit
-.. automethod:: Met.missing

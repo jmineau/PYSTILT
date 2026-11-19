@@ -1,0 +1,21 @@
+﻿runtraj.models.ModelRun
+=======================
+
+.. currentmodule:: runtraj.models
+
+
+
+
+
+
+.. class-signature:: runtraj.models.ModelRun
+
+
+.. class-parameters:: runtraj.models.ModelRun
+
+
+
+
+
+
+

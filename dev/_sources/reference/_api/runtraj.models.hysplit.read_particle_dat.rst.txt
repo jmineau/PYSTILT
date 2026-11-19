@@ -1,0 +1,6 @@
+﻿runtraj.models.hysplit.read\_particle\_dat
+==========================================
+
+.. currentmodule:: runtraj.models.hysplit
+
+.. autofunction:: read_particle_dat

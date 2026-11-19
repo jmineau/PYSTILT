@@ -1,5 +1,0 @@
-runtraj.transport.hysplit.HysplitModel.data\_files
-==================================================
-
-.. currentmodule:: runtraj.transport.hysplit
-.. automethod:: HysplitModel.data_files
