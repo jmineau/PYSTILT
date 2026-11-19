@@ -3903,7 +3903,7 @@ requires-dist = [
     { name = "numpy", specifier = ">=1.26" },
     { name = "pandas", specifier = ">=2.1" },
     { name = "pyarrow", specifier = ">=14.0" },
-    { name = "pydantic", specifier = ">=2.1.0" },
+    { name = "pydantic", specifier = ">=2.5.3" },
     { name = "pyproj", specifier = ">=3.5" },
     { name = "pystilt", extras = ["download"], marker = "extra == 'complete'" },
     { name = "pystilt", extras = ["geometry"], marker = "extra == 'complete'" },
@@ -3912,7 +3912,7 @@ requires-dist = [
     { name = "pystilt", extras = ["visualization"], marker = "extra == 'complete'" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "rdata", marker = "extra == 'stilt-r'", specifier = ">=1.0" },
-    { name = "runtraj", git = "https://github.com/jmineau/runtraj?rev=7ef2bda2c7c48f19798cfd5a568d40c7364c374f" },
+    { name = "runtraj", git = "https://github.com/jmineau/runtraj?rev=6cf5707112076c9a18b34d80f1df78ac97251b38" },
     { name = "scipy", specifier = ">=1.10" },
     { name = "shapely", specifier = ">=2.0" },
     { name = "sparse", marker = "extra == 'sparse'", specifier = ">=0.15" },
@@ -4237,8 +4237,8 @@ wheels = [
 
 [[package]]
 name = "runtraj"
-version = "0.0.1.dev692+g7ef2bda2c"
-source = { git = "https://github.com/jmineau/runtraj?rev=7ef2bda2c7c48f19798cfd5a568d40c7364c374f#7ef2bda2c7c48f19798cfd5a568d40c7364c374f" }
+version = "0.0.1.dev701+g6cf570711"
+source = { git = "https://github.com/jmineau/runtraj?rev=6cf5707112076c9a18b34d80f1df78ac97251b38#6cf5707112076c9a18b34d80f1df78ac97251b38" }
 dependencies = [
     { name = "arlmet" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
