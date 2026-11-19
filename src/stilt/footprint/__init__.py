@@ -9,6 +9,8 @@ Footprints of releases, calculated from particles and applied to surface fluxes.
     Summing footprints onto other grids or polygons (:func:`jacobian`).
 ``stage``
     :class:`FootprintStage`, what a ``stages`` block of ``config.yaml`` names.
+``maps``
+    :class:`MapStage`, the stage that draws each footprint for a web map.
 ``foot``
     What the stage computes from particles before gridding them:
     :func:`add_foot` and the near-field correction (:func:`correct_near_field`).
@@ -36,12 +38,14 @@ from .io import (
     write_empty_footprint,
     write_footprint,
 )
+from .maps import MAP_STAGE, MapConfig, MapStage
 from .stage import FOOTPRINT_STAGE, FootprintStage, footprint_particles
 from .targets import Geometry, Mesh, Zones, check_resolution, overlap_weights
 
 __all__ = [
     "FOOTPRINT_SCHEMA",
     "FOOTPRINT_STAGE",
+    "MAP_STAGE",
     "HNF_PLUME_COLUMNS",
     "UNITS",
     "FootprintAccessor",
@@ -50,6 +54,8 @@ __all__ = [
     "Geometry",
     "Grid",
     "Jacobian",
+    "MapConfig",
+    "MapStage",
     "Mesh",
     "Zones",
     "add_foot",
