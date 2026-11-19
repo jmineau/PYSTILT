@@ -1273,7 +1273,6 @@ def test_init_config_omits_advanced_and_internal_knobs(tmp_path):
 
     assert "ichem" not in text
     assert "idsp" not in text
-    assert "kagl" not in text
 
 
 def test_init_aborts_when_config_exists(tmp_path):

@@ -916,8 +916,8 @@ def _hysplit_settings(folder: Path, control: ControlFile) -> tuple[dict[str, Any
     but for ``WINDERRTF``, so that flag is returned on its own. STILT-R
     writes no ``SEED``: HYSPLIT seeded its random numbers itself, which is
     ``seed: null``. The entries of
-    :data:`~runtraj.models.hysplit.config.FIXED_SETUP` are left out: they
-    cannot change the particles, and PYSTILT has no setting for them.
+    :data:`~runtraj.models.hysplit.config.FIXED_SETUP` (``ICHEM`` and
+    ``IDSP``) are left out: every run writes them, and they are no settings.
     """
     path = folder / _SETUP
     if not path.is_file():

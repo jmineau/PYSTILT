@@ -99,10 +99,9 @@ The workflow side by side
    * - HYSPLIT settings (``capemin``, ``kmix0``, ``tlfrac``, ``veght``, …)
      - same names, under ``models: hysplit:``. The footprint reads
        ``veght`` for the near-field correction, as STILT-R does.
-   * - HYSPLIT settings that cannot change the particles (``delt``,
-       ``cmass``, ``conage``, ``ichem``, ``kagl``, …)
-     - no setting: PYSTILT writes STILT-R's values to ``SETUP.CFG`` in
-       every run
+   * - ``ichem``, ``idsp``
+     - no setting: every run writes STILT-R's ``ICHEM=8`` and ``IDSP=2``,
+       the only values with which HYSPLIT writes particles
    * - wind and mixing-depth error settings (``siguverr``, ``tluverr``,
        ``sigzierr``, …)
      - same names, usually on a variant of their own
@@ -157,6 +156,14 @@ HYSPLIT with other values for a few settings. So ``stilt init`` and
        krand: 4
        vscales: -1
        wvert: false
+       conage: 48
+       cpack: 1
+       delt: 1.0
+       kagl: 1
+       mhrs: 9999
+       pinbc: ""
+       pinpf: ""
+       poutf: ""
        varsiwant: [time, indx, long, lati, zagl, foot, mlht, pres, dens, samt, sigw, tlgr]
 
 A config you write by hand without these lines runs HYSPLIT's defaults, and
@@ -191,6 +198,16 @@ give it.
      - 5, 3, -1
      - unset; HYSPLIT chooses the same values when it runs. They are written
        so that ``SETUP.CFG`` matches STILT-R's entry for entry.
+   * - ``conage``, ``cpack``, ``delt``, ``kagl``, ``mhrs``
+     - 48, 1, 1, 1, 9999
+     - 24, unset, 0, 0, 0. None changes the particles: HYSPLIT steps 1
+       minute whatever ``delt`` is, and the others are read only for puffs,
+       the concentration grid or HYSPLIT's trajectory model. Written so that
+       ``SETUP.CFG`` matches STILT-R's.
+   * - ``pinbc``, ``pinpf``, ``poutf``
+     - blank
+     - ``PARINBC``, ``PARINIT``, ``PARDUMP``: particle files a run has none
+       of and writes none of. Written so that ``SETUP.CFG`` matches STILT-R's.
 
 Every other HYSPLIT setting has the same default in both. These are the
 values of STILT-R's ``run_stilt.r`` at the commit PYSTILT is tested against
