@@ -24,7 +24,6 @@ import yaml
 from runtraj import project
 from runtraj.config import ProjectConfig, Variant
 from runtraj.particles import read_particles
-from runtraj.project import _rows
 from runtraj.releases import Release
 
 from stilt.footprint import Geometry, Jacobian
@@ -158,6 +157,21 @@ output: ./output
 #     cpus: 1         # releases at once in each task
 #     time: "02:00:00"
 """
+
+
+def _realization(value: Any) -> int | None:
+    """Return a ``realization`` cell as an int, or ``None`` for a single run."""
+    return None if pd.isna(value) else int(value)
+
+
+def _rows(frame: pd.DataFrame) -> list[tuple[str, str, int | None]]:
+    """Return each row's ``(release, variant, realization)``."""
+    return [
+        (str(r), str(v), _realization(k))
+        for r, v, k in zip(
+            frame["release"], frame["variant"], frame["realization"], strict=True
+        )
+    ]
 
 
 def _one_group(frame: pd.DataFrame, what: str) -> tuple[str, int | None]:

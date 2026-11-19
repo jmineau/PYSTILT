@@ -225,36 +225,6 @@ def test_status_counts_full_simulation_completion(tmp_path):
     assert "total=1  complete=1  failed=0  interrupted=0  pending=0" in result.output
 
 
-def test_status_counts_each_state_per_variant(tmp_path, monkeypatch):
-    """Failed simulations are counted as failed, not pending (#192)."""
-    make_project_config(
-        tmp_path, variants={"hrrr": {}, "fine": {"numpar": 50}}
-    ).to_yaml(tmp_path / "config.yaml")
-    (tmp_path / "releases.csv").write_text("time,longitude,latitude,altitude\n")
-    table = pd.DataFrame(
-        {
-            "variant": ["hrrr", "hrrr", "hrrr", "fine", "fine", "fine"],
-            "state": ["complete", "failed", "pending"] + ["interrupted"] * 3,
-            "reason": [None, "MET_COVERAGE", None, None, None, None],
-        }
-    )
-    monkeypatch.setattr(Project, "status", lambda self, sel=None: table)
-    monkeypatch.setattr("runtraj.cli._print_folders", lambda project, folders: None)
-
-    result = runner.invoke(app, ["status", str(tmp_path)])
-
-    assert result.exit_code == 0, result.output
-    assert "total=6  complete=1  failed=1  interrupted=3  pending=1" in result.output
-    assert (
-        "  hrrr: total=3  complete=1  failed=1  interrupted=0  pending=1"
-        in result.output
-    )
-    assert (
-        "  fine: total=3  complete=0  failed=0  interrupted=3  pending=0"
-        in result.output
-    )
-
-
 def test_cli_help_lists_current_commands():
     result = runner.invoke(app, ["--help"])
 

@@ -324,7 +324,8 @@ def test_stilt_fetch_gets_only_the_releases_it_is_given(tmp_path, archive):
 def test_stilt_fetch_reads_a_submissions_releases_parquet(tmp_path, archive):
     """The fetch job of ``stilt submit`` reads the rows the array reads (#436)."""
     import pyarrow as pa
-    from runtraj._paths import write_parquet
+
+    from stilt._paths import write_parquet
 
     project = _project(tmp_path, RELEASES, n_hours=-6)
     rows = project._rows_of([RELEASES[-1].id])

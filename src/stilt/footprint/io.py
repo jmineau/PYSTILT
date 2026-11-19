@@ -22,11 +22,11 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 import xarray as xr
-from runtraj._paths import location, readable, write_parquet
 from runtraj.particles.table import stored_release
 from runtraj.releases import Release
 from runtraj.spatial import horizontal_dims
 
+from stilt._paths import location, readable, write_parquet
 from stilt.footprint.config import (
     FootprintConfig,
     footprint_settings,

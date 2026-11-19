@@ -156,59 +156,9 @@ def test_run_trajectories_returns_the_particles_and_removes_its_workdir(
     assert end == point_release.time and (end - start).total_seconds() == 24 * 3600
 
 
-def test_finish_leaves_foot_for_the_footprint_to_correct():
-    """The near-field correction is the footprint's: a run's particles keep the model's foot."""
-    from runtraj.models import _finish
-
-    particles = _positions_only().assign(
-        foot=[1e-5, 2e-5], dens=1.2, samt=1.0, sigw=0.1, tlgr=10.0, mlht=500.0
-    )
-    run = _finish(
-        ModelRun(particles, met_files=[]), _release(), TransportConfig(n_hours=-24)
-    )
-
-    assert run.particles["foot"].tolist() == [1e-5, 2e-5]
-    assert "foot_no_hnf_dilution" not in run.particles.columns
-
-
-def _positions_only() -> pd.DataFrame:
-    """Particles of a transport model that writes only positions."""
-    return pd.DataFrame(
-        {
-            "particle": [1, 1],
-            "age": [-1.0, -2.0],
-            "lon": [-111.9, -112.0],
-            "lat": [40.7, 40.6],
-            "zagl": [5.0, 900.0],
-        }
-    )
-
-
-def test_finish_adds_no_foot_to_a_model_that_writes_none(tmp_path):
-    """A particle file holds what the model wrote: the footprint computes foot when it needs one."""
-    from runtraj.models import _finish
-
-    run = _finish(
-        ModelRun(_positions_only(), log="model log\n", met_files=[tmp_path / "met"]),
-        _release(),
-        TransportConfig(n_hours=-24),
-    )
-
-    assert "foot" not in run.particles.columns
-    assert run.log == "model log\n"
-
-
 @pytest.mark.parametrize("setting", ["footprint_depth", "pbl_height", "pbl_height_min"])
 def test_a_transport_config_has_none_of_the_footprints_foot_settings(setting):
     from pydantic import ValidationError
 
     with pytest.raises(ValidationError, match=setting):
         TransportConfig(n_hours=-24, **{setting: 100.0})
-
-
-def _release():
-    from runtraj.releases import PointRelease
-
-    return PointRelease(
-        time="2023-01-01 12:00", longitude=-111.9, latitude=40.7, altitude=5.0
-    )

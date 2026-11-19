@@ -22,11 +22,11 @@ from typing import TYPE_CHECKING, Any
 import pandas as pd
 import xarray as xr
 from pydantic import TypeAdapter
-from runtraj._paths import absolute
 from runtraj.identity import file_stamp
 from runtraj.particles import particles_metadata
 from runtraj.releases import Release
 
+from stilt._paths import absolute
 from stilt.exceptions import EmptyFootprint
 from stilt.footprint.foot import HNF_PLUME_COLUMNS, add_foot
 from stilt.footprint.grid import Grid

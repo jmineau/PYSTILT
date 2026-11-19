@@ -156,6 +156,7 @@ layers = [
     "visualization",
     "sampling",
     "exceptions",
+    "_plotting | _paths",
 ]
 
 [tool.pyrefly]

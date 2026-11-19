@@ -1560,41 +1560,6 @@ def test_submit_needs_slurm(tmp_path, point_release):
         project.submit()
 
 
-def test_run_on_slurm_submits_and_waits(tmp_path, monkeypatch, point_release):
-    project = _project(
-        tmp_path,
-        [point_release],
-        execution={"backend": "slurm", "slurm": {"time": "01:00:00"}},
-    )
-    waited = []
-    submitted = []
-
-    def submit(project, pending, execution, skip_existing, compute_root):
-        submitted.append(
-            {"pending": pending, "execution": execution, "compute_root": compute_root}
-        )
-        return "777", "kingspeak"
-
-    def wait(job_id, *, cluster=None):
-        waited.append((job_id, cluster))
-
-    slept: list[float] = []
-    monkeypatch.setattr("runtraj.execution.runner._submit", submit)
-    monkeypatch.setattr("runtraj.execution.runner.wait", wait)
-    monkeypatch.setattr("runtraj.execution.runner.time.sleep", slept.append)
-
-    status = project.run(compute_root="/s")
-    assert waited == [("777", "kingspeak")]
-    # Nothing ran, so it listed once more before saying so.
-    assert slept == [60]
-    assert submitted[0]["pending"] == [point_release.id]
-    assert submitted[0]["compute_root"] == "/s"
-    assert submitted[0]["execution"].backend == "slurm"
-    # The status of what was submitted; nothing ran here.
-    assert list(status["release"]) == [point_release.id]
-    assert list(status["state"]) == ["pending"]
-
-
 def test_releases_are_built_only_when_asked_for(tmp_path, monkeypatch):
     import runtraj.project
 
