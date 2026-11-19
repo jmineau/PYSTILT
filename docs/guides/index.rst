@@ -23,7 +23,7 @@ you are new to PYSTILT, start with :doc:`../getting_started/quickstart`.
 
 - :doc:`running`: run on your computer, and the commands
 - :doc:`slurm`: run thousands of simulations on an HPC cluster
-- :doc:`containers`: run with Kubernetes or another scheduler
+- :doc:`containers`: run in Docker, Kubernetes or another scheduler
 - :doc:`checking`: which simulations finished, why some failed, and what
   to do when a footprint looks wrong
 

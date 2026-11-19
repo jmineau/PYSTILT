@@ -1,0 +1,9 @@
+# The image needs the package and its lock only: leave out the docs, tests,
+# environments and caches (tests/met_cache alone is gigabytes).
+*
+!pyproject.toml
+!uv.lock
+!README.md
+!LICENSE
+!src/
+src/**/__pycache__
