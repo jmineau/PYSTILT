@@ -205,7 +205,9 @@ under a footprint or along particle paths (``foot.stilt.enhancement``,
 ``particles.stilt.enhancement``), or a mole-fraction field at particle
 endpoints (:func:`stilt.background`). :func:`~stilt.sampling.sample_met`
 reads ARL met files at particle positions, for the particle columns a
-transport model can write from the met.
+transport model can write from the met; :func:`~stilt.sampling.sample_grib_pressure`
+reads the pressure from GFS or ERA5 GRIB files (``pip install "pystilt[grib]"``),
+which ``foot`` needs for a model that reads GRIB, such as FLEXPART.
 
 .. autosummary::
    :toctree: _api
@@ -213,5 +215,7 @@ transport model can write from the met.
 
    sampling.sample_field
    sampling.sample_met
+   sampling.sample_grib_pressure
+   sampling.is_grib
    sampling.vertical_dim
    sampling.nearest_cell

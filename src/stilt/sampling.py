@@ -17,6 +17,8 @@ not convert units. A flux in µmol m⁻² s⁻¹ times a footprint in ppm per
 particle columns a transport model can write from the met (``mlht``,
 ``dens``, ``pres``, ``zsfc``), and :func:`calc_pbl_height` finds the
 mixed-layer height from the met's profile, as HYSPLIT does by default.
+:func:`sample_grib_pressure` reads the pressure from GFS or ERA5 GRIB
+files, the met FLEXPART runs on, through cfgrib.
 """
 
 from __future__ import annotations
@@ -678,7 +680,333 @@ def _richardson_mixed_layer(
 __all__ = [
     "calc_pbl_height",
     "nearest_cell",
+    "is_grib",
     "sample_field",
+    "sample_grib_pressure",
     "sample_met",
     "vertical_dim",
 ]
+
+
+# -- GRIB met (GFS, ERA5) -------------------------------------------------------------
+
+
+def is_grib(path: str | os.PathLike[str]) -> bool:
+    """
+    Return whether *path* is a GRIB file, by the ``GRIB`` its first message starts with.
+
+    A path that is not a file is not GRIB, so the ARL reader reports it.
+    """
+    if not os.path.isfile(path):
+        return False
+    with open(path, "rb") as f:
+        return f.read(4) == b"GRIB"
+
+
+def sample_grib_pressure(
+    particles: pd.DataFrame, files: Iterable[str | os.PathLike[str]]
+) -> np.ndarray:
+    """
+    Return the pressure at each particle's position from GFS or ERA5 GRIB files, in hPa.
+
+    For a transport model that reads GRIB, such as FLEXPART, this is what
+    :func:`sample_met` is for ARL files. Each row is sampled at its ``lon``,
+    ``lat``, ``zagl``, and ``time``: bilinear across the grid, then linear
+    in time between the two files around the particle's. In a column,
+    ``ln p`` is linear in height from the surface pressure ``sp`` at the
+    terrain, so ``zagl = 0`` gives ``sp`` itself, up through:
+
+    - GFS: the pressure levels whose geopotential height ``gh`` is above the
+      terrain ``orog``. Geopotential meters are taken as meters.
+    - ERA5, as flex_extract writes it: the model levels' half levels,
+      ``p = a + b·sp``, whose heights above the terrain (the surface
+      geopotential ``z`` over g) come from the hypsometric equation with
+      each level's virtual temperature, ``t (1 + 0.608 q)``.
+
+    Reading needs cfgrib (``pip install "pystilt[grib]"``). Each file is
+    read once per call; a GFS 0.5° file takes a few seconds.
+
+    Parameters
+    ----------
+    particles : pandas.DataFrame
+        Rows with ``lon``, ``lat``, ``zagl`` (m above ground), and ``time``.
+    files : iterable of path-like
+        GRIB files, one valid time each, covering the particles' times: GFS
+        (``pgrb2``) with ``sp`` and ``orog`` at the surface and ``gh`` on
+        pressure levels, or ERA5 with ``sp`` and ``z`` at the surface and
+        ``t`` and ``q`` on model levels.
+
+    Returns
+    -------
+    numpy.ndarray
+        Pressure in hPa, one per row. A row above the highest level, or
+        with no height, is NaN.
+
+    Raises
+    ------
+    ImportError
+        If cfgrib is not installed.
+    ValueError
+        If two files have the same valid time, or a row's time is outside
+        the files' times.
+    """
+    try:
+        import cfgrib  # noqa: F401
+    except ImportError as err:
+        raise ImportError(
+            'Reading GRIB met needs cfgrib: pip install "pystilt[grib]"'
+        ) from err
+    by_time: dict[np.datetime64, str] = {}
+    for path in files:
+        valid = _grib_valid_time(os.fspath(path))
+        if valid in by_time:
+            raise ValueError(
+                f"{by_time[valid]} and {os.fspath(path)} are both for {valid}."
+            )
+        by_time[valid] = os.fspath(path)
+    times = np.array(sorted(by_time), dtype="datetime64[ns]")
+    when = particles["time"].to_numpy(dtype="datetime64[ns]")
+    if len(times) == 0 or when.min() < times[0] or when.max() > times[-1]:
+        raise ValueError(
+            "The particles' times run outside the GRIB files' valid times "
+            f"({times[0] if len(times) else None} to "
+            f"{times[-1] if len(times) else None})."
+        )
+    # The file at or before each row, and the weight of the next one.
+    # One file covers only its own time, so it is both.
+    after = np.clip(
+        np.searchsorted(times, when, side="right"),
+        min(1, len(times) - 1),
+        len(times) - 1,
+    )
+    before = np.maximum(after - 1, 0)
+    span = (times[after] - times[before]).astype(float)
+    weight = (when - times[before]).astype(float) / np.where(span > 0, span, 1.0)
+
+    lon = particles["lon"].to_numpy(dtype=float)
+    lat = particles["lat"].to_numpy(dtype=float)
+    zagl = particles["zagl"].to_numpy(dtype=float)
+    out = np.zeros(len(particles))
+    columns: dict[int, dict] = {}
+    for k in np.unique(np.r_[before, after]):
+        rows = (before == k) | (after == k)
+        share = np.where(before == k, 1.0 - weight, 0.0) + np.where(
+            after == k, weight, 0.0
+        )
+        if k not in columns:
+            columns[k] = _grib_columns(by_time[times[k]])
+        ln_p = _grib_ln_pressure(columns[k], lon[rows], lat[rows], zagl[rows])
+        out[rows] += share[rows] * ln_p
+    return np.exp(out)
+
+
+def _grib_valid_time(path: str) -> np.datetime64:
+    """Return the valid time of a GRIB file's surface pressure."""
+    with _open_grib(path, "surface", "sp") as ds:
+        return ds["valid_time"].values.astype("datetime64[ns]").reshape(-1)[0]
+
+
+def _open_grib(path: str, level: str, name: str) -> xr.Dataset:
+    """Open one field of a GRIB file with cfgrib, writing no index file beside it."""
+    return xr.open_dataset(
+        path,
+        engine="cfgrib",
+        backend_kwargs={
+            "filter_by_keys": {"typeOfLevel": level, "shortName": name},
+            "indexpath": "",
+        },
+    )
+
+
+#: Gas constant of dry air, J kg⁻¹ K⁻¹, for ERA5's model-level heights.
+_DRY_AIR_GAS_CONSTANT = 287.06
+
+
+def _grib_columns(path: str) -> dict:
+    """
+    Read one file's columns: GFS on pressure levels, or ERA5 on model levels.
+
+    GFS gives the grid, ``sp`` (Pa), ``orog`` (m), the levels (hPa), and
+    ``gh`` (m). ERA5, as flex_extract writes it, gives ``sp``, the surface
+    geopotential ``z`` (as meters), ``t`` and ``q`` on the model levels from
+    the top down, and the levels' ``a`` and ``b`` coefficients (Pa, and none).
+    """
+    with _open_grib(path, "surface", "sp") as ds:
+        sp = ds["sp"].values.astype(float)
+        lats = ds["latitude"].values.astype(float)
+        lons = ds["longitude"].values.astype(float)
+    grid = {"lats": lats, "lons": lons, "sp": sp}
+    if _has_field(path, "isobaricInhPa", "gh"):
+        with _open_grib(path, "surface", "orog") as ds:
+            orog = ds["orog"].values.astype(float)
+        with _open_grib(path, "isobaricInhPa", "gh") as ds:
+            levels = ds["isobaricInhPa"].values.astype(float)
+            gh = ds["gh"].values.astype(float)
+        order = np.argsort(-levels)  # bottom up: pressure falls with height
+        return {
+            **grid,
+            "kind": "pressure",
+            "orog": orog,
+            "levels": levels[order],
+            "gh": gh[order],
+        }
+    with _open_grib(path, "surface", "z") as ds:
+        orog = ds["z"].values.astype(float) / 9.80665
+    with _open_grib(path, "hybrid", "t") as ds:
+        model_levels = ds["hybrid"].values.astype(int)
+        t = ds["t"].values.astype(float)
+    with _open_grib(path, "hybrid", "q") as ds:
+        q = ds["q"].values.astype(float)
+    a, b = _hybrid_coefficients(path)
+    order = np.argsort(model_levels)  # from the top down, as a and b are
+    return {
+        **grid,
+        "kind": "hybrid",
+        "orog": orog,
+        "t": t[order],
+        "q": q[order],
+        "levels": model_levels[order],
+        "a": a,
+        "b": b,
+    }
+
+
+def _has_field(path: str, level: str, name: str) -> bool:
+    """Return whether the GRIB file at *path* has the field *name* on *level*."""
+    import eccodes
+
+    with open(path, "rb") as f:
+        while (handle := eccodes.codes_grib_new_from_file(f)) is not None:
+            try:
+                if (
+                    eccodes.codes_get(handle, "shortName") == name
+                    and eccodes.codes_get(handle, "typeOfLevel") == level
+                ):
+                    return True
+            finally:
+                eccodes.codes_release(handle)
+    return False
+
+
+def _hybrid_coefficients(path: str) -> tuple[np.ndarray, np.ndarray]:
+    """Return the model levels' half-level ``a`` (Pa) and ``b``, from the top, from the first model-level message."""
+    import eccodes
+
+    with open(path, "rb") as f:
+        while (handle := eccodes.codes_grib_new_from_file(f)) is not None:
+            try:
+                if eccodes.codes_get(handle, "typeOfLevel") == "hybrid":
+                    pv = np.asarray(eccodes.codes_get_array(handle, "pv"), dtype=float)
+                    half = len(pv) // 2
+                    return pv[:half], pv[half:]
+            finally:
+                eccodes.codes_release(handle)
+    raise ValueError(
+        f"{path} has no model-level field to read the level coefficients from."
+    )
+
+
+def _profile(
+    columns: dict, lon: np.ndarray, lat: np.ndarray
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Return each point's terrain (m), and its column's heights above sea level (m) and ``ln`` pressures (hPa), from the ground up.
+
+    GFS: the surface, then the pressure levels above the terrain; a level
+    below it takes the surface's height and pressure, so the profile only
+    rises. ERA5: the half levels, ``p = a + b·sp``, with heights from the
+    hypsometric equation on each model level's virtual temperature,
+    ``T (1 + 0.608 q)``; the top half level (``p = 0``) is left out.
+    """
+    corners = _bilinear_corners(columns["lats"], columns["lons"], lat, lon)
+
+    def at(field: np.ndarray) -> np.ndarray:
+        out = 0.0
+        for i, j, w in corners:
+            out = out + (
+                w * field[i, j] if field.ndim == 2 else w[:, None] * field[:, i, j].T
+            )
+        return np.asarray(out)
+
+    sp_at = at(columns["sp"])
+    orog_at = at(columns["orog"])
+    if columns["kind"] == "pressure":
+        gh_at = at(columns["gh"])
+        above = gh_at > orog_at[:, None]
+        height = np.column_stack([orog_at, np.where(above, gh_at, orog_at[:, None])])
+        ln_p = np.column_stack(
+            [
+                np.log(sp_at / 100.0),
+                np.where(
+                    above,
+                    np.log(columns["levels"])[None, :],
+                    np.log(sp_at / 100.0)[:, None],
+                ),
+            ]
+        )
+        return orog_at, height, ln_p
+    a, b = columns["a"], columns["b"]
+    levels = columns[
+        "levels"
+    ]  # model levels n, from the top; half levels n - 1 and n bound them
+    tv = at(columns["t"]) * (1.0 + 0.608 * at(columns["q"]))
+    half = a[None, :] + b[None, :] * sp_at[:, None]  # (rows, half levels from the top)
+    upper, lower = half[:, levels - 1], half[:, levels]
+    with np.errstate(divide="ignore"):
+        ratio = np.where(
+            upper > 0, np.log(lower / np.where(upper > 0, upper, 1.0)), np.log(2.0)
+        )
+    thickness = _DRY_AIR_GAS_CONSTANT * tv / 9.80665 * ratio
+    # Heights of the lower half levels from the ground up: the ground, then each layer's top.
+    tops = orog_at[:, None] + np.cumsum(thickness[:, ::-1], axis=1)
+    height = np.column_stack([orog_at, tops[:, :-1]])
+    ln_p = np.log(lower[:, ::-1] / 100.0)
+    return orog_at, height, ln_p
+
+
+def _grib_ln_pressure(
+    columns: dict, lon: np.ndarray, lat: np.ndarray, zagl: np.ndarray
+) -> np.ndarray:
+    """Return ``ln`` of the pressure in hPa at each point, linear in height through its column."""
+    orog_at, height, ln_p = _profile(columns, lon, lat)
+    z = orog_at + zagl
+    upper = (height < z[:, None]).sum(axis=1)
+    rows = np.arange(len(z))
+    top = upper >= height.shape[1]
+    upper = np.clip(upper, 1, height.shape[1] - 1)
+    h0, h1 = height[rows, upper - 1], height[rows, upper]
+    p0, p1 = ln_p[rows, upper - 1], ln_p[rows, upper]
+    frac = np.where(h1 > h0, (z - h0) / np.where(h1 > h0, h1 - h0, 1.0), 0.0)
+    result = p0 + np.clip(frac, 0.0, 1.0) * (p1 - p0)
+    return np.where(top | np.isnan(z), np.nan, result)
+
+
+def _bilinear_corners(
+    lats: np.ndarray, lons: np.ndarray, lat: np.ndarray, lon: np.ndarray
+) -> list[tuple[np.ndarray, np.ndarray, np.ndarray]]:
+    """
+    Return the four (lat index, lon index, weight) of each point on a regular grid.
+
+    A global grid wraps across its last longitude; a point off a regional
+    grid takes its nearest edge.
+    """
+    dlat = lats[1] - lats[0]
+    dlon = lons[1] - lons[0]
+    fi = (lat - lats[0]) / dlat
+    fj = ((lon - lons[0]) % 360.0) / dlon
+    i0 = np.clip(np.floor(fi).astype(int), 0, len(lats) - 2)
+    wi = np.clip(fi - i0, 0.0, 1.0)
+    if np.isclose(len(lons) * dlon, 360.0):
+        j0 = np.floor(fj).astype(int) % len(lons)
+        j1 = (j0 + 1) % len(lons)
+        wj = fj - np.floor(fj)
+    else:
+        j0 = np.clip(np.floor(fj).astype(int), 0, len(lons) - 2)
+        j1 = j0 + 1
+        wj = np.clip(fj - j0, 0.0, 1.0)
+    return [
+        (i0, j0, (1 - wi) * (1 - wj)),
+        (i0, j1, (1 - wi) * wj),
+        (i0 + 1, j0, wi * (1 - wj)),
+        (i0 + 1, j1, wi * wj),
+    ]

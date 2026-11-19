@@ -62,12 +62,19 @@ sparse = [
 stilt-r = [
     "rdata>=1.0",
 ]
+grib = [
+    "cfgrib>=0.9.15",
+    "eccodes>=2.39",
+    # eccodes' pure-Python wheel does not name its C library, so uv leaves it out.
+    "eccodeslib>=2.39; platform_system != 'Windows'",
+]
 complete = [
     "pystilt[geometry]",
     "pystilt[visualization]",
     "pystilt[download]",
     "pystilt[sparse]",
     "pystilt[stilt-r]",
+    "pystilt[grib]",
 ]
 
 [dependency-groups]

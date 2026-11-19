@@ -21,7 +21,12 @@ import numpy as np
 import pandas as pd
 from runtraj.releases import PointRelease, Release
 
-from stilt.sampling import calc_pbl_height, sample_met
+from stilt.sampling import (
+    calc_pbl_height,
+    is_grib,
+    sample_grib_pressure,
+    sample_met,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +87,10 @@ def add_foot(
     dry air, t the time in seconds, and ρ̄ the mean air density below the
     depth. ρ̄ · depth, the mass of air in the layer, is the drop in pressure
     from the ground to the depth over g, from the met files under the
-    particle. The time is ``samt`` when the table has it. Otherwise the
+    particle: ARL files through arlmet, or GRIB files (GFS, or ERA5 as
+    flex_extract writes it, the met FLEXPART reads) through cfgrib
+    (:func:`stilt.sampling.sample_grib_pressure`). The time is ``samt``
+    when the table has it. Otherwise the
     particle counts for the whole step when it is below the depth at the
     end of the step, and not at all when it is above. A step is the time
     since the particle's previous row, or since its release for its first
@@ -110,9 +118,10 @@ def add_foot(
         minutes. A ``mlht`` column (m above ground) is used as it is
         unless *pbl_height* is set.
     met_files : iterable of path-like
-        ARL met files that cover the particles' times, such as the files
-        the run read. They are read on their own levels, which start at the
-        ground.
+        ARL or GRIB met files that cover the particles' times, such as the
+        files the run read. ARL files are read on their own levels, which
+        start at the ground. With GRIB files the mixed layer must be the
+        particles' ``mlht`` or *pbl_height* in meters.
     footprint_depth : float
         Height that surface fluxes are mixed through (``VEGHT`` in HYSPLIT
         and STILT-R): a fraction of the mixed-layer height when 1 or less,
@@ -143,7 +152,8 @@ def add_foot(
     ------
     ValueError
         If *particles* has a ``foot`` column already, has no ``time``
-        column, or has a row outside the files' times.
+        column, or has a row outside the files' times; or, with GRIB met
+        files, if *pbl_height* asks for the met's mixed layer.
 
     Examples
     --------
@@ -161,6 +171,12 @@ def add_foot(
         )
     files = list(met_files)
     own_mlht = pbl_height is None and "mlht" in particles.columns
+    grib = bool(files) and is_grib(files[0])
+    if grib and (isinstance(pbl_height, str) or (pbl_height is None and not own_mlht)):
+        raise ValueError(
+            "With GRIB met files, foot needs the particles' own mlht or "
+            "pbl_height in meters: PYSTILT reads no mixed-layer height from GRIB."
+        )
     out = particles.copy()
     if not own_mlht:
         found = _pbl_height(
@@ -175,7 +191,10 @@ def add_foot(
     ends = pd.concat(
         [where.assign(zagl=0.0), where.assign(zagl=depth)], ignore_index=True
     )
-    pres = sample_met(ends, files, ["pres"], z_top=None)["pres"].to_numpy()
+    if grib:
+        pres = sample_grib_pressure(ends, files)
+    else:
+        pres = sample_met(ends, files, ["pres"], z_top=None)["pres"].to_numpy()
     air = 100.0 * (pres[: len(out)] - pres[len(out) :]) / _GRAVITY  # kg m⁻²
     if own_mlht and "samt" in out.columns:
         minutes = out["samt"].to_numpy(dtype=float)
