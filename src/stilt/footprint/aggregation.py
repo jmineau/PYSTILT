@@ -69,7 +69,7 @@ def _check_steps_hold_layers(
     step's length from its bounds, and plain labels, which start their
     steps, from the gaps between them. A single label has no gaps (a static
     flux), so nothing is checked, and labels that do not strictly increase
-    are left for :func:`stilt.sampling.sample_field` to refuse.
+    are left for :func:`runtraj.sampling.sample_field` to refuse.
     """
     if isinstance(steps, pd.IntervalIndex):
         lengths = steps.right - steps.left

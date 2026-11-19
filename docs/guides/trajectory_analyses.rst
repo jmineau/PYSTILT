@@ -211,7 +211,7 @@ Some variations:
 - **A source that moves or switches on and off,** such as a fire's daily
   hotspots: make ``inside`` from a 0/1 field with a ``time`` dimension,
   ``sample_field(mask, particles["lon"], particles["lat"], times=particles["time"], fill_value=0) > 0``
-  (:func:`~stilt.sampling.sample_field`).
+  (:func:`~runtraj.sampling.sample_field`).
 - **Weighting by emissions.** With an emission field, ``foot`` times the
   emission at each row is what that row picked up, and the mean of
   ``hours`` weighted by it is the age of what was emitted into the air.

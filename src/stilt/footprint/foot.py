@@ -15,11 +15,13 @@ from __future__ import annotations
 import logging
 import os
 from collections.abc import Iterable
+from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pandas as pd
 from runtraj.releases import PointRelease, Release
+from runtraj.transforms import WEIGHT, apply_transforms
 
 from stilt.sampling import calc_pbl_height, sample_met
 
@@ -343,6 +345,28 @@ def _near_field(
         )
         return particles
     return correct_near_field(particles, release, footprint_depth)
+
+
+def _weighted(
+    particles: pd.DataFrame,
+    transforms: Iterable[Any],
+    release: Release | None = None,
+    directory: str | Path | None = None,
+) -> pd.DataFrame:
+    """
+    Return the particles with *transforms* applied and ``foot`` multiplied by their ``weight``.
+
+    A transform multiplies the ``weight`` column (:mod:`runtraj.transforms`);
+    the footprint is gridded from ``foot``, so the two meet here. Returns
+    ``particles`` itself when there are no transforms.
+    """
+    transforms = list(transforms)
+    if not transforms:
+        return particles
+    out = apply_transforms(particles, transforms, release, directory)
+    if WEIGHT in out.columns:
+        out = out.assign(foot=out["foot"] * out[WEIGHT])
+    return out
 
 
 __all__ = ["HNF_PLUME_COLUMNS", "add_foot", "correct_near_field"]

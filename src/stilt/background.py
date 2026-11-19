@@ -26,9 +26,8 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from runtraj.releases import Release
-
-from stilt.sampling import sample_field, vertical_dim
-from stilt.transforms import apply_transforms
+from runtraj.sampling import sample_field, vertical_dim
+from runtraj.transforms import WEIGHT, apply_transforms
 
 
 @dataclass(frozen=True)
@@ -95,20 +94,18 @@ def _endpoint_weights(
     """
     Return each particle's transform weight at its endpoint, indexed by ``particle``.
 
-    Transforms multiply ``foot``, so applying them to particles whose
-    ``foot`` is 1 leaves each particle's weight: its averaging kernel and
-    pressure weight, and the fraction surviving from its endpoint. Without
-    transforms every weight is 1.
+    Transforms multiply the ``weight`` column (:mod:`runtraj.transforms`), so
+    at the endpoint it is each particle's averaging kernel and pressure
+    weight, and the fraction surviving from there. Without transforms every
+    weight is 1.
     """
     transforms = list(transforms)
     if transforms:
-        particles = apply_transforms(
-            particles.assign(foot=1.0), transforms, release, directory
-        )
-        ends = particles.stilt.endpoints()
-        weights = ends["foot"].to_numpy(dtype=float)
+        particles = apply_transforms(particles, transforms, release, directory)
+    ends = particles.stilt.endpoints()
+    if WEIGHT in ends.columns:
+        weights = ends[WEIGHT].to_numpy(dtype=float)
     else:
-        ends = particles.stilt.endpoints()
         weights = np.ones(len(ends))
     return pd.Series(
         weights,

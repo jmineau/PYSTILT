@@ -9,6 +9,12 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 from runtraj.config import ProjectConfig
 from runtraj.exceptions import MissingClass
 from runtraj.spatial import Grid
+from runtraj.transforms import (
+    AveragingKernel,
+    FirstOrderLifetime,
+    PressureWeighting,
+    weigh,
+)
 
 from stilt.footprint import FOOTPRINT_STAGE
 from stilt.footprint.config import (
@@ -17,7 +23,6 @@ from stilt.footprint.config import (
     read_footprint_settings,
 )
 from stilt.footprint.targets import Mesh
-from stilt.transforms import AveragingKernel, FirstOrderLifetime, PressureWeighting
 from tests.fixtures.factories import blocks
 
 from .fixtures.factories import make_met_config, write_arl_file
@@ -37,9 +42,7 @@ class ScaleFoot(BaseModel):
     factor: float = 1.0
 
     def apply(self, particles, release=None, directory=None):
-        out = particles.copy()
-        out["foot"] = out["foot"] * self.factor
-        return out
+        return weigh(particles, self.factor)
 
 
 SCALE_FOOT_KIND = f"{__name__}.ScaleFoot"
@@ -932,7 +935,7 @@ def _all_keys(node) -> set[str]:
 
 
 def test_to_yaml_writes_only_what_was_set(tmp_path, grid):
-    from stilt.transforms import FirstOrderLifetime
+    from runtraj.transforms import FirstOrderLifetime
 
     cfg = _variant_config(
         tmp_path,

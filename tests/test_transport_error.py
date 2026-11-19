@@ -5,11 +5,11 @@ import pandas as pd
 import pytest
 import xarray as xr
 from runtraj.releases import PointRelease
+from runtraj.transforms import AveragingKernel
 
 from stilt import TransportError
 from stilt import transport_error as _transport_error
 from stilt.footprint import correct_near_field
-from stilt.transforms import AveragingKernel
 
 
 def transport_error(*args, **kwargs):

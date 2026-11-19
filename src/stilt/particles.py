@@ -11,8 +11,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from runtraj.particles import accessor
-
-from stilt.sampling import sample_field
+from runtraj.sampling import sample_field
 
 
 def _need_foot(particles: pd.DataFrame) -> None:

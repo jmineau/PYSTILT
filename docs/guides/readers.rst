@@ -161,7 +161,7 @@ All readers except :func:`~stilt.observations.read_ggg_oof` also return:
      - The averaging kernel and the pressures it is given at, one array per
        row. For a layer product (TROPOMI) the pressures are the layer
        midpoints. Pass both to
-       :func:`~stilt.transforms.averaging_kernel_table` and set
+       :func:`~runtraj.transforms.averaging_kernel_table` and set
        ``coordinate: pres`` on the ``averaging_kernel`` transform.
    * - ``pressure_levels``
      - The retrieval's own pressure grid, for

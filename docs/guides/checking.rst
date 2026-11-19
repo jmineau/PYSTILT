@@ -100,7 +100,7 @@ stop on it.
      - The ``averaging_kernel`` table is missing, lacks a column, has no
        kernel for a release, or has one for an id that is no release.
      - Make the table with ``project.add_table("kernels", table)``
-       (:func:`~stilt.transforms.averaging_kernel_table`). Ids that differ
+       (:func:`~runtraj.transforms.averaging_kernel_table`). Ids that differ
        from the releases' in a digit were made from other coordinates.
    * - ``oxidant_file``
      - The ``oxidation`` transform's ``oxidant`` file does not exist, cannot

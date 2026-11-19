@@ -260,7 +260,7 @@ class FootprintAccessor:
         Return the modeled enhancement at the release, footprint times flux summed over the grid.
 
         The flux is taken at each footprint cell center from the nearest
-        flux cell (:func:`stilt.sampling.sample_field`). That is right for
+        flux cell (:func:`runtraj.sampling.sample_field`). That is right for
         flux cells as large as the footprint's or larger. A finer flux is
         an error, since each footprint cell would take one small flux cell
         in place of the mean over its area: put the flux on the footprint
@@ -277,7 +277,7 @@ class FootprintAccessor:
             Surface flux on a ``lat``/``lon`` grid (``y``/``x`` for a
             projected footprint), in µmol m⁻² s⁻¹ for an enhancement in
             ppm. When the flux's ``time`` coordinate carries CF time bounds
-            (:func:`stilt.sampling.sample_field`'s ``step_starts``: its
+            (:func:`runtraj.sampling.sample_field`'s ``step_starts``: its
             ``time`` is a :class:`pandas.IntervalIndex`), each footprint
             layer takes the step whose bounds hold its start; a layer before
             the first bound, after the last, or in a gap between bounds gets
@@ -325,7 +325,7 @@ class FootprintAccessor:
             the flux's time labels do not strictly increase (a repeated
             label is an error), or if its CF time bounds overlap.
         """
-        from stilt.sampling import sample_field
+        from runtraj.sampling import sample_field
 
         foot = self._foot
         y_dim, x_dim = horizontal_dims(foot)

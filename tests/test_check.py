@@ -17,10 +17,10 @@ from runtraj.releases import (
     Release,
 )
 from runtraj.spatial import Grid
+from runtraj.transforms import averaging_kernel_table
 
 from stilt import Project
 from stilt.observations.placement import slant_points
-from stilt.transforms import averaging_kernel_table
 from tests.fixtures.factories import blocks
 
 from .fixtures.factories import (

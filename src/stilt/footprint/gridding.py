@@ -38,9 +38,8 @@ from runtraj.spatial import (
 
 from stilt.exceptions import EmptyFootprint
 from stilt.footprint.config import FootprintConfig
-from stilt.footprint.foot import _near_field
+from stilt.footprint.foot import _near_field, _weighted
 from stilt.particles import _need_foot
-from stilt.transforms import apply_transforms
 
 from .io import _footprint_array
 
@@ -957,8 +956,7 @@ def calc_footprint(
         _check_particles_for_footprint(particles, release)
         if config.hnf_plume:
             particles = _near_field(particles, release, footprint_depth)
-    if config.transforms:
-        particles = apply_transforms(particles, config.transforms, release, directory)
+    particles = _weighted(particles, config.transforms, release, directory)
     crs = grid.crs
     xmin, xmax, xres = grid.xmin, grid.xmax, grid.xres
     ymin, ymax, yres = grid.ymin, grid.ymax, grid.yres

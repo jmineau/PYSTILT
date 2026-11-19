@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from netCDF4 import Dataset
+from runtraj.transforms import averaging_kernel_table
 
 import stilt
 from stilt.observations import (
@@ -21,7 +22,6 @@ from stilt.observations import (
     releases_from_soundings,
     slant_points,
 )
-from stilt.transforms import averaging_kernel_table
 
 DATA = Path(__file__).parent / "data" / "products"
 TROPOMI = (
