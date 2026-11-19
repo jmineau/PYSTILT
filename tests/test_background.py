@@ -4,10 +4,9 @@ import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
+from runtraj.transforms import FirstOrderLifetime, Oxidation, PressureWeighting, weigh
 
 from stilt import Background, background
-from stilt.sampling import sample_field, vertical_dim
-from stilt.transforms import FirstOrderLifetime, Oxidation, PressureWeighting
 
 
 def _field(values=None, lons=(-112.0, -111.0, -110.0), lats=(40.0, 41.0)):
@@ -76,54 +75,6 @@ def test_endpoints_handle_forward_runs_and_duplicate_index():
     assert p.iloc[0:0].stilt.endpoints().empty
 
 
-# -- vertical_dim / sample_field -----------------------------------------------------
-
-
-def test_vertical_dim_is_the_one_dimension_besides_horizontal_and_time():
-    assert vertical_dim(_field()) is None
-    assert vertical_dim(_field_3d()) == "pres"
-    timed = _field_3d().expand_dims(time=pd.to_datetime(["2023-01-01"]))
-    assert vertical_dim(timed) == "pres"
-    with pytest.raises(ValueError, match="at most one vertical"):
-        vertical_dim(_field_3d().expand_dims(ens=[0, 1]))
-
-
-def test_sample_field_is_nearest_cell_and_nan_outside():
-    sampled = sample_field(
-        _field(),
-        x=[-112.0, -111.4, -110.6, -109.4, -111.0],
-        y=[40.0, 40.4, 40.6, 41.0, 41.6],
-    )
-    assert sampled[:3].tolist() == [0.0, 1.0, 4.0]
-    assert np.isnan(sampled[3:]).all()
-
-
-def test_sample_field_vertical_is_nearest_level_held_at_the_ends():
-    sampled = sample_field(
-        _field_3d(),
-        x=[-112.0] * 4,
-        y=[40.0] * 4,
-        z=[1000.0, 650.0, 500.0, 1100.0],  # exact, nearest, below bottom, above top
-    )
-    assert sampled.tolist() == [0.0, 200.0, 200.0, 0.0]
-
-
-def test_sample_field_wraps_longitudes_to_the_field_convention():
-    east = _field(lons=(248.0, 249.0, 250.0))  # 0..360
-    assert sample_field(east, x=[-111.0], y=[40.0]).tolist() == [1.0]
-    assert sample_field(_field(), x=[249.0], y=[40.0]).tolist() == [1.0]
-
-
-def test_sample_field_requires_z_and_times_when_the_field_has_them():
-    with pytest.raises(ValueError, match="pass z"):
-        sample_field(_field_3d(), x=[-112.0], y=[40.0])
-    timed = _field().expand_dims(time=pd.to_datetime(["2023-01-01"]))
-    with pytest.raises(ValueError, match="pass times"):
-        sample_field(timed, x=[-112.0], y=[40.0])
-    with pytest.raises(ValueError, match="same length"):
-        sample_field(_field_3d(), x=[-112.0], y=[40.0], z=[1.0, 2.0])
-
-
 # -- sampling the field ---------------------------------------------------------------
 
 
@@ -164,6 +115,19 @@ def test_background_without_transforms_is_the_mean_over_particles():
     assert result.value == pytest.approx(np.mean(ENDPOINT_VALUES))
     assert result.weights.tolist() == pytest.approx([1 / 3] * 3)
     assert result.per_particle.tolist() == ENDPOINT_VALUES
+
+
+def test_background_reads_each_particles_weight_at_its_endpoint():
+    class DropThird:
+        """A transform that writes only the weight: particle 3 counts for nothing."""
+
+        def apply(self, particles, release=None, directory=None):
+            return weigh(particles, (particles["particle"] != 3).astype(float))
+
+    result = background(_particles(), _field_3d(), transforms=[DropThird()])
+
+    assert result.weights.tolist() == pytest.approx([1 / 3, 1 / 3, 0.0])
+    assert result.value == pytest.approx(sum(ENDPOINT_VALUES[:2]) / 3)
 
 
 def test_background_accepts_values_sampled_elsewhere():

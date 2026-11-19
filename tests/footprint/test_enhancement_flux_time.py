@@ -4,9 +4,9 @@ import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
+from runtraj.sampling import sample_field
 
 import stilt
-from stilt.sampling import sample_field
 
 T0 = pd.Timestamp("2023-07-20 12:00")
 

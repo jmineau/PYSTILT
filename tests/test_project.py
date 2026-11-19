@@ -1726,7 +1726,7 @@ def test_status_says_why_the_failed_simulations_failed(tmp_path, point_release):
 
 
 def test_add_table_keeps_a_release_table_and_adds_only_new_releases(tmp_path):
-    from stilt.transforms import averaging_kernel_table
+    from runtraj.transforms import averaging_kernel_table
 
     a, b = _release(12), _release(13)
     project = _project(tmp_path, [a, b])

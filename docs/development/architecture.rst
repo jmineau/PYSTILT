@@ -125,11 +125,9 @@ project whose ``stages`` block names the footprint.
        targets.py       the geometries footprints are summed onto (Mesh,
                         Zones), the overlap weights, and to_grid
        accessor.py      the .stilt xarray accessor
-     sampling.py        sampling a gridded field (a flux, a mole fraction) at
-                        points; sample_met, ARL met at particle positions
-     transforms/        pre-footprint particle transforms, one module each
-                        (averaging_kernel, pressure_weighting, lifetime); the
-                        loader, YAML I/O, and apply_transforms in __init__.py
+     sampling.py        sample_met and calc_pbl_height, ARL met at particle
+                        positions (a gridded field at points is runtraj's
+                        sample_field)
      exceptions.py      EmptyFootprint, the exception PYSTILT adds to runtraj's
      observations/      the X-STILT port: product readers and SOUNDING_SCHEMA,
                         overpass grouping and sounding selection, slant
@@ -456,9 +454,11 @@ there is refused with a message naming its block.
   A backend's setting written outside its block is refused. The ``slurm``
   block takes any other key as an ``sbatch`` option, and refuses one that
   reads as a misspelled setting.
-- Particle transforms are declared as a default or per variant
-  (``transforms: [{kind: ...}]``); ``kind`` may also be the import path of a
-  user class.
+- Particle transforms are runtraj's (``runtraj.transforms``), declared as a
+  footprint setting, a default or per variant (``transforms: [{kind:
+  ...}]``); ``kind`` may also be the import path of a user class. Each
+  multiplies the particles' ``weight``, and the footprint, background and
+  transport error multiply ``foot`` by it (``stilt.footprint.foot._weighted``).
 
 Implementation notes
 --------------------

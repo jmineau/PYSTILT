@@ -35,7 +35,7 @@ the ones that have an equivalent.
      - ``averaging_kernel`` and ``pressure_weighting`` transforms (:doc:`/guides/transforms`)
    * - Per-sounding averaging kernels (``get.wgt.funcv3``)
      - ``wgt.trajec.foot*.r``
-     - ``averaging_kernel`` with ``table:`` (:func:`stilt.transforms.averaging_kernel_table`)
+     - ``averaging_kernel`` with ``table:`` (:func:`runtraj.transforms.averaging_kernel_table`)
    * - First-order chemistry
      - ``chem_lifetime``
      - ``first_order_lifetime`` transform

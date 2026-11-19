@@ -35,7 +35,7 @@ What a simulation's particles give is on the simulation:
 (:func:`stilt.background`, :func:`stilt.transport_error`). The wind-error
 statistics are in :mod:`runtraj.meteorology` (``variogram``,
 ``fit_variogram``), and particle weighting (averaging kernel, pressure
-weighting, loss on the way) is in :mod:`stilt.transforms`.
+weighting, loss on the way) is in :mod:`runtraj.transforms`.
 """
 
 from .columns import modelled_column

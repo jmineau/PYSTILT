@@ -20,8 +20,7 @@ import pytest
 from runtraj.models import run_model
 from runtraj.models.hysplit import HysplitConfig
 from runtraj.releases import ColumnRelease
-
-from stilt.transforms import PressureWeighting, particle_pwf, release_coordinate
+from runtraj.transforms import PressureWeighting, particle_pwf, release_coordinate
 
 from ..conftest import integration
 from ..fixtures.r_stilt_reference import (

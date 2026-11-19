@@ -8,10 +8,10 @@ from runtraj.models.hysplit import MetConfig
 from runtraj.output import Output
 from runtraj.particles import particles_metadata
 from runtraj.spatial import Grid
+from runtraj.transforms import FirstOrderLifetime, transform_kind, weigh
 
 from stilt import Simulation
 from stilt.footprint.config import FootprintConfig
-from stilt.transforms import FirstOrderLifetime, transform_kind
 
 from .fixtures.factories import make_met_config, make_variant
 from .fixtures.footprints import run_footprint
@@ -277,8 +277,10 @@ def test_calc_footprint_replaces_the_settings_given(point_release, tmp_path):
     _write_particles(sim)
 
     class Halve:
+        """A transform that writes only the weight, as runtraj's do."""
+
         def apply(self, particles, release=None, directory=None):
-            return particles.assign(foot=particles["foot"] * 0.5)
+            return weigh(particles, 0.5)
 
     base = sim.calc_footprint()
     halved = sim.calc_footprint(transforms=[Halve()])
@@ -312,7 +314,7 @@ def test_calc_footprint_returns_none_when_nothing_reaches_the_grid(
 def test_calc_footprint_uses_the_release_kernel_from_a_project_table(
     point_release, tmp_path
 ):
-    from stilt.transforms import AveragingKernel
+    from runtraj.transforms import AveragingKernel
 
     rid = str(point_release.id)
     table = pd.DataFrame(

@@ -32,10 +32,10 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from runtraj.releases import Release
+from runtraj.transforms import release_coordinate
 
 from stilt.background import _background, _fill_missing
-from stilt.footprint.foot import _near_field
-from stilt.transforms import apply_transforms, release_coordinate
+from stilt.footprint.foot import _near_field, _weighted
 
 #: X-STILT's empirical mean vertical correlation length of transport errors, m.
 DEFAULT_LENGTH_SCALE = 356.0
@@ -457,11 +457,7 @@ def transport_error(
         if hnf_plume:
             assert release is not None  # checked above
             table = _near_field(table, release, footprint_depth)
-        weighted = (
-            apply_transforms(table, transforms, release, directory)
-            if transforms
-            else table
-        )
+        weighted = _weighted(table, transforms, release, directory)
         x = weighted.stilt.enhancement(flux)
         if background is None:
             return x, _release_heights(weighted), 0.0

@@ -31,8 +31,10 @@ guarantees before v1.0**, so prefer the clean design over a compatibility shim.
 - **Two packages.** runtraj makes the particle runs: projects of releases
   and variants, settings folders, completion by file, `run` and `submit`,
   realizations, the met catalog, the transport models. PYSTILT is what STILT
-  adds to the particles: footprints, the near-field correction, transforms,
-  transport error, background, observations, the STILT-R reader. runtraj
+  adds to the particles: footprints, the near-field correction, transport
+  error, background, observations, the STILT-R reader. The particle
+  transforms are runtraj's; each multiplies a `weight` column, and the
+  footprint is gridded from `foot` times it. runtraj
   never imports `stilt`; its `AGENTS.md` has its architecture and gotchas.
   A change that crosses the line is two pull requests, runtraj's first.
 - **Names.** Say `pystilt` (the PyPI name) only for installing, the
@@ -88,7 +90,6 @@ src/stilt/
   visualization.py  footprint and simulation plots
   footprint/      FootprintConfig, FootprintStage, calc_footprint (gridding.py), foot (add_foot,
                   the near-field correction), aggregation, io, targets
-  transforms/     pre-footprint particle transforms, one module each
   migration.py    read_stilt_r, import_stilt_r: STILT-R and X-STILT by-id output, read with rdata
   stilt_r.py      StiltRModel, the stilt-r model of imported runs (runs nothing), named by import path
   observations/   the X-STILT port (readers, sounding selection, slant releases, columns);

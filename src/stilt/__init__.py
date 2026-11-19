@@ -34,7 +34,8 @@ from .simulation import Simulation
 
 # Registers particles.stilt, with STILT's methods (stilt.particles.ParticlesAccessor).
 from . import particles  # noqa: F401  # isort: skip
-from .transforms import averaging_kernel_table
+from runtraj.transforms import averaging_kernel_table
+
 from .transport_error import TransportError, transport_error
 
 try:

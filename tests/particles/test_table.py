@@ -145,7 +145,7 @@ def test_calc_footprint_regenerates_a_footprint_on_a_new_grid(tmp_path):
     )
     traj = finished(particles, release)
     grid = Grid(xmin=-114.0, xmax=-113.0, ymin=39.0, ymax=40.0, xres=0.1, yres=0.1)
-    from stilt.transforms import FirstOrderLifetime
+    from runtraj.transforms import FirstOrderLifetime
 
     fp = calc_footprint(traj, release, grid, name="coarse")
     assert fp.stilt.name == "coarse"

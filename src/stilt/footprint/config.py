@@ -48,8 +48,7 @@ from pydantic import (
 )
 from runtraj.identity import canonical
 from runtraj.spatial import Bounds, Grid
-
-from stilt.transforms import dump_transform, load_transform, transform_kind
+from runtraj.transforms import dump_transform, load_transform, transform_kind
 
 
 class _GeometrySpec(BaseModel):

@@ -19,9 +19,8 @@ import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
 from runtraj.releases import ColumnRelease, Release
+from runtraj.transforms import averaging_kernel_table
 from shapely.geometry import Point, Polygon
-
-from stilt.transforms import averaging_kernel_table
 
 JitterMethod = Literal["regular", "random"]
 
@@ -290,7 +289,7 @@ def releases_from_soundings(
         an attribute (a column of ``releases.csv``).
     kernels : pandas.DataFrame or None
         The averaging kernels by release
-        (:func:`~stilt.transforms.averaging_kernel_table`), for
+        (:func:`~runtraj.transforms.averaging_kernel_table`), for
         ``project.add_table("kernels", kernels)``. ``None`` when the
         soundings have no kernel (GGG ``.oof`` files).
 
