@@ -166,10 +166,14 @@ jobs:
       - name: Build and check the sdist and wheel
         run: uv run just dist
 
+      # runtraj has no release on PyPI yet, so the wheel's requirement is met
+      # from the commit pyproject.toml takes it from ([tool.uv.sources]).
       - name: Install the wheel in a clean environment
         run: |
+          runtraj="$(sed -nE 's/^runtraj = \{ git = "([^"]+)", rev = "([0-9a-f]{40})" \}$/git+\1@\2/p' pyproject.toml)"
+          test -n "$runtraj"
           uv venv .pkgtest
-          uv pip install --python .pkgtest dist/*.whl
+          uv pip install --python .pkgtest dist/*.whl "runtraj @ $runtraj"
 
       - name: Smoke test the installed package
         run: |
@@ -196,8 +200,8 @@ jobs:
       - name: Without hycs_std, the installed package says what to set
         run: |
           .pkgtest/bin/python - <<'PY'
-          from stilt.exceptions import HYSPLITNotFoundError
-          from stilt.transport.hysplit import find_hycs_std
+          from runtraj.exceptions import HYSPLITNotFoundError
+          from runtraj.transport.hysplit import find_hycs_std
 
           try:
               find_hycs_std()
