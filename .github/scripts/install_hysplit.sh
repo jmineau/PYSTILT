@@ -18,6 +18,7 @@ for table in ASCDATA.CFG LANDUSE.ASC ROUGLEN.ASC TERRAIN.ASC; do
   curl -fsSL --retry 3 -o "$tmp/bdyfiles/$table" "$base/exe/$table"
 done
 chmod +x "$tmp/exec/hycs_std"
+chmod 755 "$tmp"  # mktemp -d makes it 700; the container image runs as another user
 sudo mkdir -p /opt
 sudo mv "$tmp" /opt/hysplit
 sudo ln -sf /opt/hysplit/exec/hycs_std /usr/local/bin/hycs_std
