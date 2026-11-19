@@ -349,7 +349,9 @@ STILT-R project folder:
    receptors = import_stilt_r("my_project/out/by-id", "output", version="1d936c1")
 
 It prints the blocks that name the imported folders, for ``config.yaml``:
-the met, the ``stilt-r`` model, the footprint stage, and the variant.
+the met, the ``stilt-r`` model (PYSTILT's model of imported runs, named by
+its import path, :class:`stilt.stilt_r.StiltRModel`), the footprint stage,
+and the variant.
 
 .. code-block:: yaml
 
@@ -357,7 +359,7 @@ the met, the ``stilt-r`` model, the footprint stage, and the variant.
      stilt-r:
        met_path: /data/hrrr
    models:
-     stilt-r: {}
+     stilt-r: {class: stilt.stilt_r.StiltRModel}
    stages:
      footprint: {class: stilt.footprint.FootprintStage}
    variants:
@@ -395,6 +397,11 @@ its ``model``. Then add the receptors:
 A ``stilt-r`` variant reads what the import wrote and runs nothing: a run of
 one fails (``NOT_RUNNABLE``), so its receptors that STILT-R did not run stay
 failed. Run them with a ``hysplit`` variant instead.
+
+Runs imported with PYSTILT 0.1.0a29 or earlier name the model ``stilt-r``,
+from before it was named by its class, so a project does not find them:
+listing their folders warns that the model could not be loaded. Run
+``import_stilt_r`` again, and use the blocks it prints.
 
 Every folder of an output directory is named by the hash of its settings
 (:doc:`../projects`), so an imported run's settings hold only what STILT-R's

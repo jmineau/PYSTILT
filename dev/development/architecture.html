@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=8fa7a052"></script>
+    <script src="../_static/documentation_options.js?v=5ff965c5"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev20+g100216f09" />
+  <meta name="docsearch:version" content="0.1.0a30.dev25+g739e87834" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -531,16 +531,36 @@ data. <code class="docutils literal notranslate"><span class="pre">Output</span>
 <code class="docutils literal notranslate"><span class="pre">make_path</span></code>, <code class="docutils literal notranslate"><span class="pre">read</span></code>, <code class="docutils literal notranslate"><span class="pre">present</span></code>, <code class="docutils literal notranslate"><span class="pre">complete</span></code>, <code class="docutils literal notranslate"><span class="pre">table</span></code>, and the
 failure records) take the kind of result (<code class="docutils literal notranslate"><span class="pre">&quot;particles&quot;</span></code>, or the name of a
 stage such as <code class="docutils literal notranslate"><span class="pre">&quot;footprint&quot;</span></code>), the variant, and receptor ids.</p>
+<p>The classes a STILT user holds, <code class="docutils literal notranslate"><span class="pre">stilt.Project</span></code> and <code class="docutils literal notranslate"><span class="pre">stilt.Simulation</span></code>,
+are the particle part’s <code class="docutils literal notranslate"><span class="pre">stilt.project.Project</span></code> and
+<code class="docutils literal notranslate"><span class="pre">stilt.simulation.Simulation</span></code> with STILT’s reads added
+(<code class="docutils literal notranslate"><span class="pre">stilt.stilt_project</span></code>, <code class="docutils literal notranslate"><span class="pre">stilt.stilt_simulation</span></code>): <code class="docutils literal notranslate"><span class="pre">footprints</span></code>,
+<code class="docutils literal notranslate"><span class="pre">jacobian</span></code> and <code class="docutils literal notranslate"><span class="pre">transport_error</span></code> on the project; <code class="docutils literal notranslate"><span class="pre">footprint</span></code>,
+<code class="docutils literal notranslate"><span class="pre">has_footprint</span></code>, <code class="docutils literal notranslate"><span class="pre">calc_footprint</span></code>, <code class="docutils literal notranslate"><span class="pre">background</span></code>, <code class="docutils literal notranslate"><span class="pre">transport_error</span></code>
+and <code class="docutils literal notranslate"><span class="pre">plot</span></code> on a simulation. They change nothing they inherit, which a test
+holds, with two exceptions, both on the project and neither a read:
+<code class="docutils literal notranslate"><span class="pre">stilt.Project.simulation</span></code> returns a <code class="docutils literal notranslate"><span class="pre">stilt.Simulation</span></code> (the particle
+part’s, with the reads; the two compare equal), and <code class="docutils literal notranslate"><span class="pre">stilt.Project.init</span></code>
+writes STILT-R’s HYSPLIT values into a new project. The particle part has
+no hook for a subclass.
+The workers and the stages use the particle part, and nothing on disk names
+the subclasses, so <code class="docutils literal notranslate"><span class="pre">stilt.project.Project(path)</span></code> opens the same project.</p>
 <p><code class="docutils literal notranslate"><span class="pre">stilt.__all__</span></code>, plus the <code class="docutils literal notranslate"><span class="pre">__all__</span></code> of each subpackage, is the public
 surface. Everything else is internal and can change.</p>
 </section>
 <section id="module-map">
 <h2>Module map<a class="headerlink" href="#module-map" title="Link to this heading">#</a></h2>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>src/stilt/
-  cli.py             Typer CLI; a thin adapter over Project and execution
-  project.py         Project: the project directory, its receptors and
-                     simulations (DataFrames), run/submit, and a
-                     selection's status, particles, footprints, Jacobian
+  cli.py             Typer CLI, the particle commands (check, fetch, run,
+                     submit, status); a thin adapter over Project and
+                     execution
+  stilt_cli.py       the stilt command: stilt init, which writes the
+                     starter config, and cli.py's commands
+  project.py         Project, the particle part: the project directory,
+                     its receptors and simulations (DataFrames),
+                     run/submit, and a selection's status and particles
+  stilt_project.py   stilt.Project: adds a selection's footprints, Jacobian
+                     and transport error; init writes STILT-R's values
   check.py           check_project: what would stop a project's runs,
                      found from its inputs before any run (Project.check,
                      stilt check); a transport model's check_met finds the
@@ -561,8 +581,13 @@ surface. Everything else is internal and can change.</p>
                      receptors, particle tables, and footprints;
                      import_stilt_r writes it into an output directory
                      with the settings its files record
-  simulation.py      Simulation: a frozen value (receptor, variant, output)
-                     that knows where its results are and whether they exist
+  stilt_r.py         StiltRModel, the stilt-r model of imported STILT-R
+                     runs, named by its import path; it runs nothing
+  simulation.py      Simulation, the particle part: a frozen value
+                     (receptor, variant, output) that knows where its
+                     results are and whether they exist (path, has)
+  stilt_simulation.py stilt.Simulation: adds the footprint, calc_footprint,
+                     the background, the transport error, and plot
   background.py      background: the mole fraction at a receptor from a
                      field sampled where the particles end (sim.background)
   transport_error.py transport_error: the transport error of the
@@ -586,10 +611,10 @@ surface. Everything else is internal and can change.</p>
     validation.py    the checks a receptor must pass, written once for many
                      points and shared by the models and the table
   particles/         the particle table (a DataFrame)
-    table.py         its columns, particle files, release heights, foot for
-                     a model that writes none, the near-field plume correction
-                     (which calc_footprint applies)
-    accessor.py      the .stilt pandas accessor
+    table.py         its columns, particle files, release heights
+    accessor.py      the particle part of the .stilt pandas accessor
+  stilt_particles.py the .stilt pandas accessor, registered: the particle
+                     part's methods and enhancement
   footprint/         the footprint (a DataArray)
     config.py        FootprintConfig and the geometry specs; the record
                      of a footprint's settings
@@ -600,6 +625,9 @@ surface. Everything else is internal and can change.</p>
     aggregation.py   aggregate and jacobian: footprints summed onto other
                      geometries, with time binning and target weights
     io.py            footprint files and CF-1.8 NetCDF; open_footprints
+    foot.py          add_foot (foot for a model that writes none, or
+                     with pbl_height) and the near-field plume correction,
+                     which the stage applies before gridding
     targets.py       the geometries footprints are summed onto (Mesh,
                      Zones), the overlap weights, and to_grid
     accessor.py      the .stilt xarray accessor
@@ -613,7 +641,9 @@ surface. Everything else is internal and can change.</p>
                      (averaging_kernel, pressure_weighting, lifetime); the
                      loader, YAML I/O, and apply_transforms in __init__.py
   exceptions.py      every exception class, all under StiltError
-  visualization.py   matplotlib helpers (optional dependency)
+  visualization.py   matplotlib plots of particles, receptors and
+                     projects, and their helpers (optional dependency)
+  stilt_visualization.py the plots of a footprint and of a simulation
   _paths.py          local paths and object-store paths behind one interface
   _plugins.py        import_class: a model or a stage class named by its
                      import path in config.yaml
@@ -630,9 +660,7 @@ surface. Everything else is internal and can change.</p>
   transport/         the TransportModel and TransportConfig protocols,
                      ModelRun, ModelInfo, get_model and its MODELS table,
                      run_model and run_trajectories (__init__.py); one
-                     subpackage per transport model, which owns its config;
-                     stilt_r.py, the stilt-r model of imported STILT-R
-                     runs, which runs nothing
+                     subpackage per transport model, which owns its config
     hysplit/         HYSPLIT: HysplitConfig (config.py); MetConfig and Met,
                      finding, downloading, and cropping ARL files through
                      arlmet (met.py); Catalog, what a folder's files hold,
@@ -755,7 +783,7 @@ machines, or with several projects sharing one output directory.</p>
 <h3>The result files are the record<a class="headerlink" href="#the-result-files-are-the-record" title="Link to this heading">#</a></h3>
 <p>PYSTILT keeps no separate list of which simulations have run. A simulation
 is complete when the model’s output file exists, and so does the file of
-every stage its variant uses (<a class="reference internal" href="../reference/_api/stilt.Simulation.is_complete.html#stilt.Simulation.is_complete" title="stilt.Simulation.is_complete"><code class="xref py py-attr docutils literal notranslate"><span class="pre">stilt.Simulation.is_complete</span></code></a>;
+every stage its variant uses (<code class="xref py py-attr docutils literal notranslate"><span class="pre">stilt.Simulation.is_complete</span></code>;
 <a class="reference internal" href="../reference/_api/stilt.output.completed.html#stilt.output.completed" title="stilt.output.completed"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.output.completed()</span></code></a> is the one rule, for one simulation and for
 many). For a variant with a footprint that is:</p>
 <ul class="simple">
@@ -828,20 +856,19 @@ results and runs nothing. STILT-R ran HYSPLIT, so the STILT-R reader and the
 <code class="docutils literal notranslate"><span class="pre">stilt-r</span></code> model are the named exceptions: they read HYSPLIT’s <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code>
 and <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> files and record HYSPLIT’s settings.</p>
 <p>A third short contract holds the line between the core that makes particle
-runs and what STILT adds on top of the particles: footprints, transforms,
-observations, sampling fields at particles, background, transport error and
-the STILT-R model. Outside those modules nothing imports them, except where
-the contract’s <code class="docutils literal notranslate"><span class="pre">ignore_imports</span></code> lists it, each with its reason:
-<code class="docutils literal notranslate"><span class="pre">Simulation</span></code>’s footprint, background and transport-error reads,
-<code class="docutils literal notranslate"><span class="pre">Project</span></code>’s bulk reads, and <code class="docutils literal notranslate"><span class="pre">add_foot</span></code>’s use of <code class="docutils literal notranslate"><span class="pre">sample_met</span></code>. The
-config, the settings records, the check, the output directory and the
-worker cross nowhere: a stage reaches them by the import path
-<code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> names. The list is the work a code
-boundary would leave; a new crossing fails <code class="docutils literal notranslate"><span class="pre">just</span> <span class="pre">imports</span></code>. Two crossings
-are not imports between modules, so the contract cannot see them: the
-near-field correction (which only the footprint side calls) and
-<code class="docutils literal notranslate"><span class="pre">add_foot</span></code> are functions in <code class="docutils literal notranslate"><span class="pre">stilt.particles.table</span></code>, and a package’s <code class="docutils literal notranslate"><span class="pre">__init__</span></code> importing its own
-module (the transport registry and the STILT-R model) is not checked.</p>
+runs and what STILT adds on top of the particles: footprints (<code class="docutils literal notranslate"><span class="pre">foot</span></code> and
+the near-field correction among them), transforms, observations, sampling
+fields at particles, background, transport error, the STILT-R model and
+reader, and the classes and commands a STILT user holds (<code class="docutils literal notranslate"><span class="pre">stilt.Project</span></code>,
+<code class="docutils literal notranslate"><span class="pre">stilt.Simulation</span></code>, the registered particle accessor, the footprint and
+simulation plots, <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">init</span></code> and <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">stilt</span></code>). The core imports
+none of it, and its <code class="docutils literal notranslate"><span class="pre">ignore_imports</span></code> lists only imports within STILT’s
+side. The config, the settings records, the check, the output directory and
+the worker reach a stage or a model by the import path <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>
+names. A new crossing fails <code class="docutils literal notranslate"><span class="pre">just</span> <span class="pre">imports</span></code>. The modules of STILT’s side
+that extend a module of the core take its name with <code class="docutils literal notranslate"><span class="pre">stilt_</span></code> in front
+(<code class="docutils literal notranslate"><span class="pre">stilt_project</span></code> over <code class="docutils literal notranslate"><span class="pre">project</span></code>). A package’s <code class="docutils literal notranslate"><span class="pre">__init__</span></code> importing its
+own modules is not checked.</p>
 </section>
 <section id="configuration">
 <h2>Configuration<a class="headerlink" href="#configuration" title="Link to this heading">#</a></h2>
@@ -865,8 +892,8 @@ has no defaults, and <code class="docutils literal notranslate"><span class="pre
 <code class="docutils literal notranslate"><span class="pre">FIXED_SETUP</span></code> sets. The settings HYSPLIT decides after reading
 <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> (<code class="docutils literal notranslate"><span class="pre">capemin</span></code>, <code class="docutils literal notranslate"><span class="pre">kblt</span></code>, <code class="docutils literal notranslate"><span class="pre">kmixd</span></code>, <code class="docutils literal notranslate"><span class="pre">krand</span></code>, <code class="docutils literal notranslate"><span class="pre">vscales</span></code>)
 default to unset and are then not written. STILT-R’s values are PYSTILT’s
-side: <code class="docutils literal notranslate"><span class="pre">stilt.config.STILT_R_HYSPLIT</span></code>, which <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">init</span></code> (the starter
-config) and <code class="docutils literal notranslate"><span class="pre">Project.init</span></code> write into the <code class="docutils literal notranslate"><span class="pre">hysplit</span></code> block where it
+side: <code class="docutils literal notranslate"><span class="pre">stilt.stilt_project.STILT_R_HYSPLIT</span></code>, which <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">init</span></code> (the starter
+config) and <code class="docutils literal notranslate"><span class="pre">stilt.Project.init</span></code> write into the <code class="docutils literal notranslate"><span class="pre">hysplit</span></code> block where it
 gives none, so what a project runs is in its file. <code class="docutils literal notranslate"><span class="pre">run_trajectories</span></code>
 and a hand-written config get HYSPLIT’s. A run records the resolved
 values, so a config that gives STILT-R’s values names the same settings

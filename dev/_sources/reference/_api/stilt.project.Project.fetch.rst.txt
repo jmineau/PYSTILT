@@ -1,0 +1,5 @@
+stilt.project.Project.fetch
+===========================
+
+.. currentmodule:: stilt.project
+.. automethod:: Project.fetch

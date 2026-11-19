@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=8fa7a052"></script>
+    <script src="../../_static/documentation_options.js?v=5ff965c5"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev20+g100216f09" />
+  <meta name="docsearch:version" content="0.1.0a30.dev25+g739e87834" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -457,10 +457,10 @@
 <span class="sd">The transport model interface.</span>
 
 <span class="sd">A transport model turns one receptor and one set of transport settings into</span>
-<span class="sd">a particle table. Each model is a subpackage or module here. HYSPLIT</span>
-<span class="sd">(:class:`stilt.transport.hysplit.HysplitModel`) is the one that runs;</span>
-<span class="sd">``stilt-r`` (:class:`stilt.transport.stilt_r.StiltRModel`) records the</span>
-<span class="sd">settings of runs imported from STILT-R and runs nothing. The worker reaches</span>
+<span class="sd">a particle table. HYSPLIT (:class:`stilt.transport.hysplit.HysplitModel`)</span>
+<span class="sd">is the one built in; a model in another package, or PYSTILT's model of runs</span>
+<span class="sd">imported from STILT-R (:class:`stilt.stilt_r.StiltRModel`), is named by its</span>
+<span class="sd">import path. The worker reaches</span>
 <span class="sd">a model through :func:`get_model` by the name a run's settings record, so</span>
 <span class="sd">another model needs no change to the worker.</span>
 <span class="sd">"""</span>
@@ -828,22 +828,36 @@
     <span class="k">return</span> <span class="n">HysplitModel</span><span class="p">()</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_stilt_r</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">TransportModel</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Return the model of imported STILT-R runs, importing it only when it is asked for."""</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transport.stilt_r</span><span class="w"> </span><span class="kn">import</span> <span class="n">StiltRModel</span>
-
-    <span class="k">return</span> <span class="n">StiltRModel</span><span class="p">()</span>
-
-
-<span class="c1">#: The transport models built into PYSTILT, by the name of their block under</span>
-<span class="c1">#: ``models:`` in ``config.yaml``: ``hysplit``, and ``stilt-r`` for runs</span>
-<span class="c1">#: imported from STILT-R (:func:`stilt.migration.import_stilt_r`), which</span>
-<span class="c1">#: cannot run. A model in its own package is named by its import path</span>
-<span class="c1">#: instead, the ``class`` of its block, as a transform's ``kind:`` is.</span>
+<span class="c1">#: The transport models built in, by the name of their block under</span>
+<span class="c1">#: ``models:`` in ``config.yaml``: ``hysplit``. Any other model, such as</span>
+<span class="c1">#: the one of runs imported from STILT-R (:class:`stilt.stilt_r.StiltRModel`),</span>
+<span class="c1">#: is named by its import path instead, the ``class`` of its block, as a</span>
+<span class="c1">#: transform's ``kind:`` is.</span>
 <span class="n">MODELS</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="n">TransportModel</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
     <span class="s2">"hysplit"</span><span class="p">:</span> <span class="n">_hysplit</span><span class="p">,</span>
-    <span class="s2">"stilt-r"</span><span class="p">:</span> <span class="n">_stilt_r</span><span class="p">,</span>
 <span class="p">}</span>
+
+<span class="c1">#: Names that were built-in models and are now a class named by its import</span>
+<span class="c1">#: path, so the message for a block or a stored run of that name says which.</span>
+<span class="n">_NAMED_BY_PATH</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"stilt-r"</span><span class="p">:</span> <span class="s2">"stilt.stilt_r.StiltRModel"</span><span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_named_by_path</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return what to write for a model *name* that is named by its import path now, or ``""``.</span>
+
+<span class="sd">    ``stilt-r`` was built in. Its block takes ``class:</span>
+<span class="sd">    stilt.stilt_r.StiltRModel``, and runs imported under the old name have to</span>
+<span class="sd">    be imported again, since their folders are named by the model.</span>
+<span class="sd">    """</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">_NAMED_BY_PATH</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">""</span>
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="sa">f</span><span class="s2">" </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> is the class </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> now: write class: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> in its "</span>
+        <span class="s2">"models: block. Runs imported under the old name are not found by "</span>
+        <span class="s2">"it; import them again with stilt.migration.import_stilt_r."</span>
+    <span class="p">)</span>
 
 
 <div class="viewcode-block" id="get_model">
@@ -873,7 +887,7 @@
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
             <span class="sa">f</span><span class="s2">"Unknown transport model </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2">. The built-in models are "</span>
             <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">MODELS</span><span class="p">)</span><span class="si">}</span><span class="s2">; another is named by its import path, such as "</span>
-            <span class="s2">"mypkg.models.MyModel."</span>
+            <span class="sa">f</span><span class="s2">"mypkg.models.MyModel.</span><span class="si">{</span><span class="n">_named_by_path</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
         <span class="p">)</span>
     <span class="k">return</span> <span class="n">factory</span><span class="p">()</span></div>
 
@@ -1057,7 +1071,7 @@
 <span class="sd">        ``numpar`` (:class:`stilt.transport.hysplit.HysplitConfig`).</span>
 <span class="sd">        ``n_hours`` is required; the others default to the model's own</span>
 <span class="sd">        values, which for HYSPLIT are not STILT-R's (see</span>
-<span class="sd">        :data:`stilt.config.STILT_R_HYSPLIT`).</span>
+<span class="sd">        :data:`stilt.stilt_project.STILT_R_HYSPLIT`).</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -1069,7 +1083,7 @@
 <span class="sd">        :func:`stilt.calc_footprint` applies it (``hnf_plume``), given</span>
 <span class="sd">        ``veght`` as its ``footprint_depth``. STILT-R's ``calc_trajectory``</span>
 <span class="sd">        applies it here. A model that writes no ``foot`` returns none:</span>
-<span class="sd">        :func:`stilt.particles.add_foot` computes one.</span>
+<span class="sd">        :func:`stilt.footprint.add_foot` computes one.</span>
 
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>

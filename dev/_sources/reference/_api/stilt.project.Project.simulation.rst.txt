@@ -1,0 +1,5 @@
+stilt.project.Project.simulation
+================================
+
+.. currentmodule:: stilt.project
+.. automethod:: Project.simulation

@@ -1,0 +1,6 @@
+stilt.stilt\_r.StiltRConfig.UNRECORDED
+======================================
+
+.. currentmodule:: stilt.stilt_r
+
+.. autoattribute:: StiltRConfig.UNRECORDED

@@ -1,0 +1,6 @@
+stilt.project.Project.variants
+==============================
+
+.. currentmodule:: stilt.project
+
+.. autoproperty:: Project.variants

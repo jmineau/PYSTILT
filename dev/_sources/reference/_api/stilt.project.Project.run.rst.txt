@@ -1,0 +1,5 @@
+stilt.project.Project.run
+=========================
+
+.. currentmodule:: stilt.project
+.. automethod:: Project.run

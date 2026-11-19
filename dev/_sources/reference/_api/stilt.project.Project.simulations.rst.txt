@@ -1,0 +1,6 @@
+stilt.project.Project.simulations
+=================================
+
+.. currentmodule:: stilt.project
+
+.. autoproperty:: Project.simulations

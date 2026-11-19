@@ -15,23 +15,6 @@
 
 
 
-Attributes
-----------
-
-.. autosummary::
-   :toctree:
-   :nosignatures:
-
-   ~Project.config
-   ~Project.config_path
-   ~Project.name
-   ~Project.output
-   ~Project.plot
-   ~Project.receptors
-   ~Project.receptors_path
-   ~Project.simulations
-   ~Project.variants
-
 
 
 Methods
@@ -40,23 +23,19 @@ Methods
 .. autosummary::
    :toctree:
 
-   ~Project.add_receptors
-   ~Project.add_table
-   ~Project.check
-   ~Project.fetch
-   ~Project.folders
    ~Project.footprints
-   ~Project.incomplete
    ~Project.init
    ~Project.jacobian
-   ~Project.particles
-   ~Project.receptor
-   ~Project.run
    ~Project.simulation
-   ~Project.status
-   ~Project.submit
-   ~Project.table_path
    ~Project.transport_error
 
+
+
+
+Inherited
+---------
+
+
+From :class:`~.Project`: :py:obj:`~.Project.add_receptors`, :py:obj:`~.Project.add_table`, :py:obj:`~.Project.check`, :py:obj:`~.Project.config`, :py:obj:`~.Project.config_path`, :py:obj:`~.Project.fetch`, :py:obj:`~.Project.folders`, :py:obj:`~.Project.incomplete`, :py:obj:`~.Project.name`, :py:obj:`~.Project.output`, :py:obj:`~.Project.particles`, :py:obj:`~.Project.plot`, :py:obj:`~.Project.receptor`, :py:obj:`~.Project.receptors`, :py:obj:`~.Project.receptors_path`, :py:obj:`~.Project.run`, :py:obj:`~.Project.simulations`, :py:obj:`~.Project.status`, :py:obj:`~.Project.submit`, :py:obj:`~.Project.table_path`, :py:obj:`~.Project.variants`
 
 

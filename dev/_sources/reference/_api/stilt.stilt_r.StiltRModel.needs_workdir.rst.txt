@@ -1,0 +1,6 @@
+stilt.stilt\_r.StiltRModel.needs\_workdir
+=========================================
+
+.. currentmodule:: stilt.stilt_r
+
+.. autoattribute:: StiltRModel.needs_workdir

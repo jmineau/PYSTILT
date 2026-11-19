@@ -1,0 +1,41 @@
+﻿stilt.stilt\_r.StiltRModel
+==========================
+
+.. currentmodule:: stilt.stilt_r
+
+
+
+
+
+
+.. class-signature:: stilt.stilt_r.StiltRModel
+
+
+.. class-parameters:: stilt.stilt_r.StiltRModel
+
+
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+   :nosignatures:
+
+   ~StiltRModel.needs_workdir
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~StiltRModel.data_files
+   ~StiltRModel.run
+   ~StiltRModel.sha256
+   ~StiltRModel.version
+
+
+

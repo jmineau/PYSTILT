@@ -63,7 +63,8 @@ when it makes the footprint, the near-field correction
 
    from pathlib import Path
 
-   from stilt.particles import add_release_heights, correct_near_field
+   from stilt.footprint import correct_near_field
+   from stilt.particles import add_release_heights
    from stilt.transport.hysplit import (
        HysplitConfig,
        read_particle_dat,

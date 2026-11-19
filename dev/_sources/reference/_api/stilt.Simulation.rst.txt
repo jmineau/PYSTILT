@@ -22,20 +22,10 @@ Attributes
    :toctree:
    :nosignatures:
 
-   ~Simulation.failure
    ~Simulation.footprint
    ~Simulation.footprint_path
    ~Simulation.has_footprint
-   ~Simulation.has_particles
-   ~Simulation.id
-   ~Simulation.is_complete
-   ~Simulation.kept_workdir
-   ~Simulation.log
-   ~Simulation.log_path
-   ~Simulation.particles
-   ~Simulation.particles_path
    ~Simulation.plot
-   ~Simulation.transport
 
 
 
@@ -47,9 +37,15 @@ Methods
 
    ~Simulation.background
    ~Simulation.calc_footprint
-   ~Simulation.has
-   ~Simulation.path
    ~Simulation.transport_error
 
+
+
+
+Inherited
+---------
+
+
+From :class:`~.Simulation`: :py:obj:`~.Simulation.failure`, :py:obj:`~.Simulation.has`, :py:obj:`~.Simulation.has_particles`, :py:obj:`~.Simulation.id`, :py:obj:`~.Simulation.is_complete`, :py:obj:`~.Simulation.kept_workdir`, :py:obj:`~.Simulation.log`, :py:obj:`~.Simulation.log_path`, :py:obj:`~.Simulation.particles`, :py:obj:`~.Simulation.particles_path`, :py:obj:`~.Simulation.path`, :py:obj:`~.Simulation.transport`
 
 

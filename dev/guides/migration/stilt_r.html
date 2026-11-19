@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=8fa7a052"></script>
+    <script src="../../_static/documentation_options.js?v=5ff965c5"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev20+g100216f09" />
+  <meta name="docsearch:version" content="0.1.0a30.dev25+g739e87834" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -899,12 +899,14 @@ STILT-R project folder:</p>
 </pre></div>
 </div>
 <p>It prints the blocks that name the imported folders, for <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>:
-the met, the <code class="docutils literal notranslate"><span class="pre">stilt-r</span></code> model, the footprint stage, and the variant.</p>
+the met, the <code class="docutils literal notranslate"><span class="pre">stilt-r</span></code> model (PYSTILT’s model of imported runs, named by
+its import path, <a class="reference internal" href="../../reference/_api/stilt.stilt_r.StiltRModel.html#stilt.stilt_r.StiltRModel" title="stilt.stilt_r.StiltRModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.stilt_r.StiltRModel</span></code></a>), the footprint stage,
+and the variant.</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">mets</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">stilt-r</span><span class="p">:</span>
 <span class="w">    </span><span class="nt">met_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data/hrrr</span>
 <span class="nt">models</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">stilt-r</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span>
+<span class="w">  </span><span class="nt">stilt-r</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">class</span><span class="p">:</span><span class="w"> </span><span class="nv">stilt.stilt_r.StiltRModel</span><span class="p p-Indicator">}</span>
 <span class="nt">stages</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">footprint</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">class</span><span class="p">:</span><span class="w"> </span><span class="nv">stilt.footprint.FootprintStage</span><span class="p p-Indicator">}</span>
 <span class="nt">variants</span><span class="p">:</span>
@@ -941,6 +943,10 @@ its <code class="docutils literal notranslate"><span class="pre">model</span></c
 <p>A <code class="docutils literal notranslate"><span class="pre">stilt-r</span></code> variant reads what the import wrote and runs nothing: a run of
 one fails (<code class="docutils literal notranslate"><span class="pre">NOT_RUNNABLE</span></code>), so its receptors that STILT-R did not run stay
 failed. Run them with a <code class="docutils literal notranslate"><span class="pre">hysplit</span></code> variant instead.</p>
+<p>Runs imported with PYSTILT 0.1.0a29 or earlier name the model <code class="docutils literal notranslate"><span class="pre">stilt-r</span></code>,
+from before it was named by its class, so a project does not find them:
+listing their folders warns that the model could not be loaded. Run
+<code class="docutils literal notranslate"><span class="pre">import_stilt_r</span></code> again, and use the blocks it prints.</p>
 <p>Every folder of an output directory is named by the hash of its settings
 (<a class="reference internal" href="../projects.html"><span class="doc">Projects And Variants</span></a>), so an imported run’s settings hold only what STILT-R’s
 files record, never a default in place of a value they do not give. Two

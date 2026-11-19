@@ -1,0 +1,5 @@
+stilt.project.Project.check
+===========================
+
+.. currentmodule:: stilt.project
+.. automethod:: Project.check

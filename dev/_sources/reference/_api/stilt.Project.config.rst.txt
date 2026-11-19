@@ -1,6 +1,0 @@
-stilt.Project.config
-====================
-
-.. currentmodule:: stilt
-
-.. autoproperty:: Project.config

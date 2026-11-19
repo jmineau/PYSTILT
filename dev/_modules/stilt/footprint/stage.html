@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=8fa7a052"></script>
+    <script src="../../../_static/documentation_options.js?v=5ff965c5"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev20+g100216f09" />
+  <meta name="docsearch:version" content="0.1.0a30.dev25+g739e87834" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -480,8 +480,9 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt._paths</span><span class="w"> </span><span class="kn">import</span> <span class="n">absolute</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">EmptyFootprint</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.foot</span><span class="w"> </span><span class="kn">import</span> <span class="n">HNF_PLUME_COLUMNS</span><span class="p">,</span> <span class="n">add_foot</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.identity</span><span class="w"> </span><span class="kn">import</span> <span class="n">file_stamp</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.particles</span><span class="w"> </span><span class="kn">import</span> <span class="n">HNF_PLUME_COLUMNS</span><span class="p">,</span> <span class="n">add_foot</span><span class="p">,</span> <span class="n">particles_metadata</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.particles</span><span class="w"> </span><span class="kn">import</span> <span class="n">particles_metadata</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.receptors</span><span class="w"> </span><span class="kn">import</span> <span class="n">Receptor</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.spatial</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grid</span>
 
@@ -678,6 +679,16 @@
 <span class="sd">        finished result, which ``sim.footprint`` reads as ``None``.</span>
 <span class="sd">        :meth:`stilt.Simulation.calc_footprint` makes footprints with other</span>
 <span class="sd">        settings, without writing them.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        config : FootprintConfig</span>
+<span class="sd">            The variant's footprint settings, as :meth:`resolve` returned them.</span>
+<span class="sd">        sim : stilt.simulation.Simulation</span>
+<span class="sd">            The simulation, as the worker gives it: the particle part, which</span>
+<span class="sd">            reads the particles.</span>
+<span class="sd">        path : Path or UPath</span>
+<span class="sd">            Where to write the footprint file.</span>
 <span class="sd">        """</span>
         <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">grid</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># resolve gives every footprint its grid</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"The footprint of </span><span class="si">{</span><span class="n">sim</span><span class="si">}</span><span class="s2"> has no grid."</span><span class="p">)</span>
@@ -719,7 +730,7 @@
 <span class="sd">    The particles are returned as they are when they have ``foot`` and</span>
 <span class="sd">    ``pbl_height`` is unset: the transport model's own ``foot``, such as</span>
 <span class="sd">    HYSPLIT's. Otherwise PYSTILT computes ``foot`` with ``footprint_depth``,</span>
-<span class="sd">    ``pbl_height`` and ``pbl_height_min`` (:func:`stilt.particles.add_foot`),</span>
+<span class="sd">    ``pbl_height`` and ``pbl_height_min`` (:func:`stilt.footprint.add_foot`),</span>
 <span class="sd">    in place of the model's, and returns a copy with it. The particles</span>
 <span class="sd">    passed in are not changed, and the computed ``foot`` is stored</span>
 <span class="sd">    nowhere: each footprint computes it again.</span>
@@ -787,7 +798,7 @@
     <span class="p">)</span>
     <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
         <span class="s2">"foot computed by PYSTILT from </span><span class="si">%s</span><span class="s2"> and the air below it in the met files "</span>
-        <span class="s2">"(stilt.particles.add_foot)</span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span>
+        <span class="s2">"(stilt.footprint.add_foot)</span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span>
         <span class="n">_mixed_layer</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">config</span><span class="p">),</span>
         <span class="s2">" in place of the model's foot"</span> <span class="k">if</span> <span class="n">had_foot</span> <span class="k">else</span> <span class="s2">""</span><span class="p">,</span>
     <span class="p">)</span>

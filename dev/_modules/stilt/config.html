@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=8fa7a052"></script>
+    <script src="../../_static/documentation_options.js?v=5ff965c5"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev20+g100216f09" />
+  <meta name="docsearch:version" content="0.1.0a30.dev25+g739e87834" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -507,6 +507,7 @@
     <span class="n">MODELS</span><span class="p">,</span>
     <span class="n">ModelInfo</span><span class="p">,</span>
     <span class="n">TransportConfig</span><span class="p">,</span>
+    <span class="n">_named_by_path</span><span class="p">,</span>
     <span class="n">get_model</span><span class="p">,</span>
 <span class="p">)</span>
 
@@ -899,10 +900,11 @@
         <span class="n">description</span><span class="o">=</span><span class="p">(</span>
             <span class="s2">"Transport models by name, each a block of its settings: the "</span>
             <span class="s2">"defaults of every variant that runs it. A block named "</span>
-            <span class="s2">"``hysplit`` or ``stilt-r`` (runs imported from STILT-R, which "</span>
-            <span class="s2">"cannot run) is that built-in model. A model class in another "</span>
-            <span class="s2">"package gets a block of any name that gives its import path as "</span>
-            <span class="s2">"``class``, such as ``class: mypkg.models.MyModel``. A model has "</span>
+            <span class="s2">"``hysplit`` is that built-in model. Any other model class gets a "</span>
+            <span class="s2">"block of any name that gives its import path as ``class``, such "</span>
+            <span class="s2">"as ``class: mypkg.models.MyModel``, or ``class: "</span>
+            <span class="s2">"stilt.stilt_r.StiltRModel`` for runs imported from STILT-R, "</span>
+            <span class="s2">"which cannot run. A model has "</span>
             <span class="s2">"one block. Left out, the project runs HYSPLIT with its defaults."</span>
         <span class="p">),</span>
     <span class="p">)</span>
@@ -1357,111 +1359,6 @@
 
 
 
-<span class="c1">#: STILT-R's HYSPLIT settings where they differ from what HYSPLIT does on its</span>
-<span class="c1">#: own: ``Project.init`` and ``stilt init`` write them into a new project's</span>
-<span class="c1">#: ``models: hysplit:`` block, so it runs HYSPLIT as STILT-R does. The values</span>
-<span class="c1">#: are those of STILT-R's ``run_stilt.r``. ``kblt``, ``kmixd`` and ``vscales``</span>
-<span class="c1">#: are what HYSPLIT chooses itself in STILT mode, and are written so that</span>
-<span class="c1">#: ``SETUP.CFG`` matches STILT-R's line for line. ``varsiwant`` is STILT-R's</span>
-<span class="c1">#: list with ``pres`` added, for pressure weighting.</span>
-<span class="n">STILT_R_HYSPLIT</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">"numpar"</span><span class="p">:</span> <span class="mi">1000</span><span class="p">,</span>
-    <span class="s2">"capemin"</span><span class="p">:</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">,</span>
-    <span class="s2">"kblt"</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span>
-    <span class="s2">"kmixd"</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
-    <span class="s2">"krand"</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span>
-    <span class="s2">"vscales"</span><span class="p">:</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">,</span>
-    <span class="s2">"wvert"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
-    <span class="s2">"varsiwant"</span><span class="p">:</span> <span class="p">[</span>
-        <span class="s2">"time"</span><span class="p">,</span>
-        <span class="s2">"indx"</span><span class="p">,</span>
-        <span class="s2">"long"</span><span class="p">,</span>
-        <span class="s2">"lati"</span><span class="p">,</span>
-        <span class="s2">"zagl"</span><span class="p">,</span>
-        <span class="s2">"foot"</span><span class="p">,</span>
-        <span class="s2">"mlht"</span><span class="p">,</span>
-        <span class="s2">"pres"</span><span class="p">,</span>
-        <span class="s2">"dens"</span><span class="p">,</span>
-        <span class="s2">"samt"</span><span class="p">,</span>
-        <span class="s2">"sigw"</span><span class="p">,</span>
-        <span class="s2">"tlgr"</span><span class="p">,</span>
-    <span class="p">],</span>
-<span class="p">}</span>
-
-<span class="c1">#: The commented ``config.yaml`` that ``Project.init(path, starter=True)`` and</span>
-<span class="c1">#: ``stilt init`` write, to edit by hand.</span>
-<span class="n">STARTER_CONFIG</span> <span class="o">=</span> <span class="s2">"""# PYSTILT project configuration</span>
-<span class="s2"># See docs for details: https://jmineau.github.io/PYSTILT</span>
-
-
-<span class="s2"># Meteorology, by name: the folder of your ARL files. To download them from NOAA</span>
-<span class="s2"># instead, write hrrr: {download: hrrr, directory: /path/to/keep/them}.</span>
-<span class="s2">mets:</span>
-<span class="s2">  hrrr: /path/to/arl/meteorology</span>
-
-
-<span class="s2"># Transport models, by name, each with its settings: the defaults of every</span>
-<span class="s2"># variant that runs it. Negative n_hours means backward in time.</span>
-<span class="s2">models:</span>
-<span class="s2">  hysplit:</span>
-<span class="s2">    n_hours: -24</span>
-<span class="s2">    # STILT-R's values where HYSPLIT's own defaults differ. A setting left</span>
-<span class="s2">    # out runs with HYSPLIT's default.</span>
-<span class="s2">    numpar: 1000</span>
-<span class="s2">    capemin: -1     # no convection</span>
-<span class="s2">    kblt: 5         # Hanna turbulence</span>
-<span class="s2">    kmixd: 3        # mixed-layer height from the bulk Richardson number</span>
-<span class="s2">    krand: 4        # random numbers seeded from the clock</span>
-<span class="s2">    vscales: -1     # Hanna timescale in a stable boundary layer</span>
-<span class="s2">    wvert: false</span>
-<span class="s2">    varsiwant: [time, indx, long, lati, zagl, foot, mlht, pres, dens, samt, sigw, tlgr]</span>
-
-
-<span class="s2"># Stages, by name: what is made from each simulation's particles. The footprint</span>
-<span class="s2"># stage grids them. Remove the stages block to make particles only.</span>
-<span class="s2">stages:</span>
-<span class="s2">  footprint:</span>
-<span class="s2">    class: stilt.footprint.FootprintStage</span>
-<span class="s2">    grid:</span>
-<span class="s2">      xmin: -113.0</span>
-<span class="s2">      xmax: -110.5</span>
-<span class="s2">      ymin: 40.0</span>
-<span class="s2">      ymax: 42.0</span>
-<span class="s2">      xres: 0.01</span>
-<span class="s2">      yres: 0.01</span>
-<span class="s2">    hnf_plume: true  # correct foot for the thin plume near the receptor before gridding</span>
-
-
-<span class="s2"># Variants. Every receptor runs once per variant, with the blocks above as</span>
-<span class="s2"># the defaults. An entry with no overrides runs the defaults as they are; add</span>
-<span class="s2"># others to run the same receptors under other settings, e.g. a mixed-layer</span>
-<span class="s2"># bracket or a wind-error ensemble (see the docs). A variant changes a</span>
-<span class="s2"># footprint setting under its own stages: key. Only the variants listed here</span>
-<span class="s2"># run.</span>
-<span class="s2">variants:</span>
-<span class="s2">  hrrr: </span><span class="si">{}</span>
-<span class="s2">#  hrrr-zi08: </span><span class="si">{ziscale: 0.8}</span>
-<span class="s2">#  hrrr-coarse: {stages: {footprint: {grid: {xres: 0.05, yres: 0.05}}}}</span>
-
-
-<span class="s2"># Results go to this directory, relative to the project unless absolute.</span>
-<span class="s2"># Several projects can name the same directory and share runs.</span>
-<span class="s2">output: ./output</span>
-
-
-<span class="s2"># Execution is optional. Local execution is the default. Each backend's</span>
-<span class="s2"># settings are in the block of its name, and only the backend's block is read.</span>
-<span class="s2"># execution:</span>
-<span class="s2">#   backend: local    # or "slurm"</span>
-<span class="s2">#   local:</span>
-<span class="s2">#     cpus: 1         # receptors at once</span>
-<span class="s2">#   slurm:</span>
-<span class="s2">#     n_workers: 1    # array tasks</span>
-<span class="s2">#     cpus: 1         # receptors at once in each task</span>
-<span class="s2">#     time: "02:00:00"</span>
-<span class="s2">"""</span>
-
-
 <span class="k">def</span><span class="w"> </span><span class="nf">_model_blocks</span><span class="p">(</span>
     <span class="n">models</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">],</span> <span class="n">stages</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]]:</span>
@@ -1506,6 +1403,7 @@
                 <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">model</span><span class="si">!r}</span><span class="s2"> is not a built-in transport model (they "</span>
                 <span class="sa">f</span><span class="s2">"are </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">MODELS</span><span class="p">)</span><span class="si">}</span><span class="s2">). A model in another package gets "</span>
                 <span class="s2">"class: with its import path, such as class: mypkg.models.MyModel."</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">_named_by_path</span><span class="p">(</span><span class="n">model</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
             <span class="p">)</span>
         <span class="k">if</span> <span class="n">model</span> <span class="ow">in</span> <span class="n">block_of</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
@@ -1805,8 +1703,6 @@
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
     <span class="s2">"FOOTPRINT_STAGE"</span><span class="p">,</span>
-    <span class="s2">"STARTER_CONFIG"</span><span class="p">,</span>
-    <span class="s2">"STILT_R_HYSPLIT"</span><span class="p">,</span>
     <span class="s2">"VARIANT_NAME_RE"</span><span class="p">,</span>
     <span class="s2">"ProjectConfig"</span><span class="p">,</span>
     <span class="s2">"Variant"</span><span class="p">,</span>

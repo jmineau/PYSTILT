@@ -1,0 +1,6 @@
+stilt.simulation.Simulation.is\_complete
+========================================
+
+.. currentmodule:: stilt.simulation
+
+.. autoproperty:: Simulation.is_complete

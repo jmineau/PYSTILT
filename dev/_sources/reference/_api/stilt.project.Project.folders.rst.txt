@@ -1,0 +1,5 @@
+stilt.project.Project.folders
+=============================
+
+.. currentmodule:: stilt.project
+.. automethod:: Project.folders

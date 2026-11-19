@@ -1,0 +1,5 @@
+stilt.stilt\_r.StiltRMetConfig.settings
+=======================================
+
+.. currentmodule:: stilt.stilt_r
+.. automethod:: StiltRMetConfig.settings

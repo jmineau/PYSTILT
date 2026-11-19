@@ -1,0 +1,5 @@
+stilt.stilt\_r.StiltRModel.sha256
+=================================
+
+.. currentmodule:: stilt.stilt_r
+.. automethod:: StiltRModel.sha256
