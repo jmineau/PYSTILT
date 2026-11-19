@@ -8,8 +8,8 @@ import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
+from runtraj.models.hysplit import HysplitConfig
 from runtraj.spatial import Grid, horizontal_dims
-from runtraj.transport.hysplit import HysplitConfig
 
 from stilt import sampling
 from stilt.footprint.config import FootprintConfig

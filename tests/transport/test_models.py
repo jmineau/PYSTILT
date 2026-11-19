@@ -6,10 +6,10 @@ from typing import Any, ClassVar
 
 import pytest
 from pydantic import BaseModel, ConfigDict
-from runtraj import transport
+from runtraj import models
 from runtraj.config import ProjectConfig
 from runtraj.identity import read_run_settings, settings_hash
-from runtraj.transport import ModelInfo, TransportConfig
+from runtraj.models import ModelInfo, TransportConfig
 
 from stilt.footprint import FOOTPRINT_STAGE
 
@@ -56,7 +56,7 @@ class ToyModel:
 
 @pytest.fixture
 def toy(monkeypatch):
-    monkeypatch.setitem(transport.MODELS, "toy", ToyModel)
+    monkeypatch.setitem(models.MODELS, "toy", ToyModel)
 
 
 def _mets(tmp_path):

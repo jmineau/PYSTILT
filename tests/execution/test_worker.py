@@ -13,12 +13,12 @@ from runtraj.exceptions import MeteorologyError, SimulationError
 from runtraj.execution import worker
 from runtraj.execution.config import ExecutionConfig
 from runtraj.execution.worker import run_release, run_releases
+from runtraj.models import ModelRun, TransportConfig
+from runtraj.models.hysplit import FailureReason, HysplitConfig, Met, MetConfig
 from runtraj.output import Output
 from runtraj.releases import PointRelease, Release
 from runtraj.simulation import Simulation
 from runtraj.spatial import Grid
-from runtraj.transport import ModelRun, TransportConfig
-from runtraj.transport.hysplit import FailureReason, HysplitConfig, Met, MetConfig
 from typer.testing import CliRunner
 
 from stilt import Project
@@ -162,7 +162,7 @@ def test_run_particles_starts_in_an_empty_directory(
             seen.append(sorted(p.name for p in workdir.iterdir()))
             raise RuntimeError("stop here")
 
-    monkeypatch.setattr("runtraj.transport.get_model", lambda name: _Model())
+    monkeypatch.setattr("runtraj.models.get_model", lambda name: _Model())
     with pytest.raises(RuntimeError):
         worker.run_particles(sim, workdir=workdir)
     assert seen == [[]]
@@ -179,7 +179,7 @@ def test_a_run_stopped_partway_leaves_its_start_in_the_log(
         def run(self, release, params, met, window, workdir=None, timeout=None):
             raise KeyboardInterrupt  # SIGTERM from Slurm, mid-run
 
-    monkeypatch.setattr("runtraj.transport.get_model", lambda name: _Model())
+    monkeypatch.setattr("runtraj.models.get_model", lambda name: _Model())
     with pytest.raises(KeyboardInterrupt):
         worker.run_particles(sim, workdir=compute_root / "w")
 
@@ -198,7 +198,7 @@ def test_a_model_that_needs_no_workdir_gets_none(sim, met, compute_root, monkeyp
             seen.append(workdir)
             raise SimulationError("stop here", log="model log\n")
 
-    monkeypatch.setattr("runtraj.transport.get_model", lambda name: _Model())
+    monkeypatch.setattr("runtraj.models.get_model", lambda name: _Model())
     monkeypatch.setattr(worker, "get_model", lambda name: _Model())
     workdir = compute_root / sim.release.id / sim.variant.name
     with pytest.raises(SimulationError):
@@ -219,7 +219,7 @@ def test_run_particles_keeps_no_empty_scratch_copy(sim, met, compute_root, monke
         def run(self, release, params, met, window, workdir=None, timeout=None):
             raise MeteorologyError("No met file for 2023-01-01 11:00.")
 
-    monkeypatch.setattr("runtraj.transport.get_model", lambda name: _Model())
+    monkeypatch.setattr("runtraj.models.get_model", lambda name: _Model())
     with pytest.raises(MeteorologyError):
         worker.run_particles(
             sim, workdir=compute_root / sim.release.id / sim.variant.name
@@ -239,7 +239,7 @@ def test_run_particles_without_particles_is_a_simulation_error(
         def run(self, release, params, met, window, workdir=None, timeout=None):
             return ModelRun(particles=pd.DataFrame(), met_files=[])
 
-    monkeypatch.setattr("runtraj.transport.get_model", lambda name: _Model())
+    monkeypatch.setattr("runtraj.models.get_model", lambda name: _Model())
     with pytest.raises(SimulationError) as caught:
         worker.run_particles(
             sim, workdir=compute_root / sim.release.id / sim.variant.name
@@ -698,7 +698,7 @@ def test_a_connection_error_while_the_particles_are_written_is_interrupted(
         def run(self, release, params, met, window, workdir=None, timeout=None):
             return ModelRun(particles=_particles(release), met_files=[])
 
-    monkeypatch.setattr("runtraj.transport.get_model", lambda name: _Model())
+    monkeypatch.setattr("runtraj.models.get_model", lambda name: _Model())
     monkeypatch.setattr(
         Output, "write_particles", _fails_with(ConnectionError("bucket down"))
     )
@@ -840,7 +840,7 @@ def test_a_failed_run_keeps_its_log_and_working_directory(
                 log="hycs_std said something\n",
             )
 
-    monkeypatch.setattr("runtraj.transport.get_model", lambda name: _Model())
+    monkeypatch.setattr("runtraj.models.get_model", lambda name: _Model())
     _run_release(project, release)
 
     failure = sim.failure

@@ -292,13 +292,13 @@ def sample_met(
         returned, add it: the release time plus ``age`` minutes.
     files : iterable of path-like
         ARL met files that cover the particles' times, such as the files the
-        run read (``met_files`` of :class:`runtraj.transport.ModelRun` or of
+        run read (``met_files`` of :class:`runtraj.models.ModelRun` or of
         :func:`runtraj.particles.particles_metadata`).
     columns : iterable of str, default ("mlht", "dens", "pres", "zsfc")
         The columns to add.
     z_top : float or None, default 25000
         The top of the run's domain in meters (``z_top`` of
-        :class:`runtraj.transport.hysplit.HysplitConfig`), since HYSPLIT's
+        :class:`runtraj.models.hysplit.HysplitConfig`), since HYSPLIT's
         internal levels depend on it. A stored run records it:
         ``particles_metadata(path).settings["z_top"]``. ``None`` reads the
         met's own levels, for a transport model that is not HYSPLIT; a row
@@ -472,7 +472,7 @@ def calc_pbl_height(
         ``UMOF`` and ``VMOF``.
     z_top : float, default 25000
         The top of the domain in meters, which sets HYSPLIT's internal
-        levels (``z_top`` of :class:`runtraj.transport.hysplit.HysplitConfig`).
+        levels (``z_top`` of :class:`runtraj.models.hysplit.HysplitConfig`).
 
     Returns
     -------

@@ -201,7 +201,7 @@ jobs:
         run: |
           .pkgtest/bin/python - <<'PY'
           from runtraj.exceptions import HYSPLITNotFoundError
-          from runtraj.transport.hysplit import find_hycs_std
+          from runtraj.models.hysplit import find_hycs_std
 
           try:
               find_hycs_std()

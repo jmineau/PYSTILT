@@ -5,8 +5,8 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 from runtraj.meteorology import run_window
-from runtraj.transport import MODELS, ModelRun, TransportConfig, get_model
-from runtraj.transport.hysplit import HysplitConfig, MetConfig
+from runtraj.models import MODELS, ModelRun, TransportConfig, get_model
+from runtraj.models.hysplit import HysplitConfig, MetConfig
 
 from ..fixtures.factories import make_met_config
 
@@ -57,7 +57,7 @@ def test_stilt_r_settings_have_no_defaults():
 
 def _fake_hysplit(monkeypatch) -> dict:
     """Stand in for writing the inputs, running hycs_std, and reading its particles; return what they were given."""
-    from runtraj.transport.hysplit import model as model_module
+    from runtraj.models.hysplit import model as model_module
 
     seen: dict = {}
 
@@ -121,9 +121,9 @@ class _EchoModel:
 
 @pytest.fixture
 def echo(monkeypatch):
-    from runtraj import transport
+    from runtraj import models
 
-    monkeypatch.setitem(transport.MODELS, "echo", _EchoModel)
+    monkeypatch.setitem(models.MODELS, "echo", _EchoModel)
     return _EchoModel
 
 
@@ -158,7 +158,7 @@ def test_run_trajectories_returns_the_particles_and_removes_its_workdir(
 
 def test_finish_leaves_foot_for_the_footprint_to_correct():
     """The near-field correction is the footprint's: a run's particles keep the model's foot."""
-    from runtraj.transport import _finish
+    from runtraj.models import _finish
 
     particles = _positions_only().assign(
         foot=[1e-5, 2e-5], dens=1.2, samt=1.0, sigw=0.1, tlgr=10.0, mlht=500.0
@@ -186,7 +186,7 @@ def _positions_only() -> pd.DataFrame:
 
 def test_finish_adds_no_foot_to_a_model_that_writes_none(tmp_path):
     """A particle file holds what the model wrote: the footprint computes foot when it needs one."""
-    from runtraj.transport import _finish
+    from runtraj.models import _finish
 
     run = _finish(
         ModelRun(_positions_only(), log="model log\n", met_files=[tmp_path / "met"]),

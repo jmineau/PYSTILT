@@ -1,1 +1,1 @@
-"""Tests for runtraj.transport.hysplit."""
+"""Tests for runtraj.models.hysplit."""

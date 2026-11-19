@@ -20,8 +20,8 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from runtraj.exceptions import SimulationError
-from runtraj.transport import ModelRun
-from runtraj.transport.hysplit.config import HysplitConfig
+from runtraj.models import ModelRun
+from runtraj.models.hysplit.config import HysplitConfig
 
 if TYPE_CHECKING:
     from runtraj.releases import Release
@@ -35,7 +35,7 @@ class StiltRConfig(HysplitConfig):
     """
     The settings of imported STILT-R runs: HYSPLIT's, as STILT-R ran it, and the STILT-R version.
 
-    The settings are :class:`~runtraj.transport.hysplit.HysplitConfig`'s,
+    The settings are :class:`~runtraj.models.hysplit.HysplitConfig`'s,
     under the same names, as STILT-R's files record them (``SETUP.CFG``,
     ``CONTROL``, and the ``.rds`` file; see
     :func:`stilt.migration.import_stilt_r`). Every one must be given:

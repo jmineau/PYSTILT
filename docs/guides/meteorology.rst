@@ -80,7 +80,7 @@ hours back:
 .. ipython:: python
 
    from runtraj.meteorology import run_window
-   from runtraj.transport.hysplit import Met, MetConfig
+   from runtraj.models.hysplit import Met, MetConfig
 
    hrrr = Met("hrrr", MetConfig(directory=met_dir))
    window = run_window("2021-01-14 19:00", n_hours=-12)

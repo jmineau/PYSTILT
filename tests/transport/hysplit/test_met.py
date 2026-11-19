@@ -1,4 +1,4 @@
-"""Tests for HYSPLIT's met config and its files (runtraj.transport.hysplit.met)."""
+"""Tests for HYSPLIT's met config and its files (runtraj.models.hysplit.met)."""
 
 import datetime as dt
 from pathlib import Path
@@ -7,8 +7,8 @@ import pandas as pd
 import pytest
 from runtraj.exceptions import MeteorologyError
 from runtraj.meteorology import run_window
+from runtraj.models.hysplit import Met, MetConfig
 from runtraj.spatial import Bounds
-from runtraj.transport.hysplit import Met, MetConfig
 
 from ...fixtures.factories import write_arl_file
 
@@ -239,7 +239,7 @@ def test_a_global_met_grid_holds_every_longitude(tmp_path):
     import numpy as np
     from arlmet import File, Grid, Projection
     from arlmet.vertical import PressureAxis
-    from runtraj.transport.hysplit.met import _on_grid
+    from runtraj.models.hysplit.met import _on_grid
 
     grid = Grid(
         projection=Projection(

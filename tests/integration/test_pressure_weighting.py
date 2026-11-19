@@ -17,9 +17,9 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from runtraj.models import run_model
+from runtraj.models.hysplit import HysplitConfig
 from runtraj.releases import ColumnRelease
-from runtraj.transport import run_model
-from runtraj.transport.hysplit import HysplitConfig
 
 from stilt.transforms import PressureWeighting, particle_pwf, release_coordinate
 

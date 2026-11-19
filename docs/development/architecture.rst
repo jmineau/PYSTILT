@@ -356,8 +356,8 @@ there is refused with a message naming its block.
   uses (``model:``); the model is the block's ``class`` (an import path) or,
   without one, the built-in model of the block's name. A class has one
   block. The parameters are checked by the model's own config class
-  (``runtraj.transport.hysplit.HysplitConfig``), reached through
-  ``runtraj.transport.get_model``: by name when the file loads, and by value
+  (``runtraj.models.hysplit.HysplitConfig``), reached through
+  ``runtraj.models.get_model``: by name when the file loads, and by value
   as a variant runs them (at load for a variant that changes none, else in
   ``resolve``), since a block need not be complete (the ``stilt-r`` model
   has no defaults, and ``n_hours`` has none in any model). Without
@@ -413,7 +413,7 @@ there is refused with a message naming its block.
   ``stilt.footprint.config``, ``ExecutionConfig`` in
   ``runtraj.execution.config``, and a model's config and met config in its
   package (``met_config_class``; HYSPLIT's ``MetConfig`` is in
-  ``runtraj.transport.hysplit``). ``ProjectConfig.mets`` holds each met as
+  ``runtraj.models.hysplit``). ``ProjectConfig.mets`` holds each met as
   written, and ``ProjectConfig.met_config(name, model)`` checks it with the
   met config of the model that reads it (``model`` a ``models`` block's
   name). With several models, a met no variant uses is not checked. ``Bounds`` and ``Grid`` are in

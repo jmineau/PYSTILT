@@ -4,13 +4,13 @@ from pathlib import Path
 
 import pytest
 from runtraj.exceptions import SimulationError
-from runtraj.transport.hysplit import (
+from runtraj.models.hysplit import (
     FailureReason,
     HysplitConfig,
     HysplitModel,
     model,
 )
-from runtraj.transport.hysplit.driver import (
+from runtraj.models.hysplit.driver import (
     MET_STOP_CELLS,
     check_met_stop,
 )

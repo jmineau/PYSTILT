@@ -312,7 +312,7 @@ def test_time_integrate_is_refused_saying_what_to_do_instead(tmp_path, grid, whe
 
 @pytest.mark.parametrize("where", ["block", "variant"])
 def test_veght_is_hysplits_and_goes_to_setup_cfg(tmp_path, where):
-    from runtraj.transport.hysplit.driver import setup_entries
+    from runtraj.models.hysplit.driver import setup_entries
 
     block = {"n_hours": -24, "veght": 0.3} if where == "block" else {"n_hours": -24}
     variant = {} if where == "block" else {"veght": 0.3}

@@ -9,6 +9,7 @@ import pytest
 from pydantic import BaseModel
 from runtraj.exceptions import MeteorologyError
 from runtraj.meteorology import run_window
+from runtraj.models.hysplit import HysplitConfig, Met
 from runtraj.releases import (
     ColumnRelease,
     MultiPointRelease,
@@ -16,7 +17,6 @@ from runtraj.releases import (
     Release,
 )
 from runtraj.spatial import Grid
-from runtraj.transport.hysplit import HysplitConfig, Met
 
 from stilt import Project
 from stilt.observations.placement import slant_points

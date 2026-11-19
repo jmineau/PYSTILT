@@ -31,7 +31,7 @@ import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
-from runtraj.transport.hysplit.driver import find_hycs_std, setup_seed
+from runtraj.models.hysplit.driver import find_hycs_std, setup_seed
 
 from ..fixtures.r_stilt_reference import (
     STILT_R_NAMES,

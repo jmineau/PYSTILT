@@ -9,9 +9,9 @@ from pathlib import Path
 
 import pytest
 from runtraj.config import ProjectConfig
+from runtraj.models.hysplit import MetConfig
 from runtraj.releases import ColumnRelease, MultiPointRelease
 from runtraj.spatial import Grid
-from runtraj.transport.hysplit import MetConfig
 
 from stilt.project import STILT_R_HYSPLIT
 from tests.fixtures.factories import blocks

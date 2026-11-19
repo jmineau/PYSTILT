@@ -26,10 +26,10 @@ import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
+from runtraj.models import ModelRun, run_model
+from runtraj.models.hysplit import HysplitConfig
 from runtraj.particles import PARTICLE_SCHEMA
 from runtraj.releases import PointRelease
-from runtraj.transport import ModelRun, run_model
-from runtraj.transport.hysplit import HysplitConfig
 
 from stilt.footprint import (
     FootprintConfig,
