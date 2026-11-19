@@ -26,10 +26,10 @@ from runtraj._paths import absolute
 from runtraj.identity import file_stamp
 from runtraj.particles import particles_metadata
 from runtraj.releases import Release
-from runtraj.spatial import Grid
 
 from stilt.exceptions import EmptyFootprint
 from stilt.footprint.foot import HNF_PLUME_COLUMNS, add_foot
+from stilt.footprint.grid import Grid
 
 from .config import (
     FileGeometrySpec,
@@ -42,10 +42,10 @@ from .io import write_empty_footprint, write_footprint
 from .targets import Mesh
 
 if TYPE_CHECKING:
-    from runtraj._paths import Location
     from runtraj.config import Variant
     from runtraj.output import Output
     from runtraj.simulation import Simulation
+    from upath import UPath
 
 logger = logging.getLogger(__name__)
 
@@ -200,7 +200,7 @@ class FootprintStage:
             )
         return found
 
-    def run(self, config: FootprintConfig, sim: Simulation, path: Location) -> None:
+    def run(self, config: FootprintConfig, sim: Simulation, path: Path | UPath) -> None:
         """
         Calculate a simulation's footprint from its particles and write it at *path*.
 
@@ -355,7 +355,7 @@ def _mixed_layer(particles: pd.DataFrame, config: FootprintConfig) -> str:
 def stored_particles(
     particles: pd.DataFrame,
     config: FootprintConfig,
-    path: Location | None,
+    path: Path | UPath | None,
     *,
     start: dt.datetime | pd.Timestamp | None = None,
     z_top: float | None = None,
@@ -436,7 +436,7 @@ def model_foot_depth(
 
 def store_footprint(
     output: Output, variant: Variant, foot: xr.DataArray, realization: int | None = None
-) -> Location:
+) -> Path | UPath:
     """
     Write a footprint into *variant*'s footprint folder of an output directory, without calculating it.
 
@@ -454,7 +454,7 @@ def store_footprint(
 
 def store_empty_footprint(
     output: Output, variant: Variant, release: Release, realization: int | None = None
-) -> Location:
+) -> Path | UPath:
     """Record in *variant*'s footprint folder that a release's footprint is empty: no particle reached the grid."""
     name = FootprintStage.name
     path = output.make_path(name, variant, str(release.id), realization)
@@ -462,14 +462,14 @@ def store_empty_footprint(
 
 
 def _write(
-    path: Location,
+    path: Path | UPath,
     config: FootprintConfig,
     variant: Variant,
     release: Release,
     foot: xr.DataArray | None,
     realization: int | None,
     stage: str = FootprintStage.name,
-) -> Location:
+) -> Path | UPath:
     """
     Write a release's footprint, made with *config*, at *path*; the empty one when *foot* is ``None``.
 

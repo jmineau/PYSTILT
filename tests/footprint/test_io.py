@@ -7,11 +7,11 @@ import pandas as pd
 import pytest
 import xarray as xr
 from runtraj.releases import PointRelease
-from runtraj.spatial import Grid
 from runtraj.transforms import AveragingKernel
 
 from stilt.footprint import read_footprint
 from stilt.footprint.config import FootprintConfig
+from stilt.footprint.grid import Grid
 
 from ..fixtures.footprints import as_footprint, geometry_footprint, make_footprint
 

@@ -15,7 +15,6 @@ from runtraj import (
     Bounds,
     ColumnRelease,
     ExecutionConfig,
-    Grid,
     MultiPointRelease,
     PointRelease,
     ProjectConfig,
@@ -28,7 +27,14 @@ from runtraj import (
 )
 
 from .background import Background, background
-from .footprint import FootprintConfig, Mesh, Zones, calc_footprint, read_footprint
+from .footprint import (
+    FootprintConfig,
+    Grid,
+    Mesh,
+    Zones,
+    calc_footprint,
+    read_footprint,
+)
 from .project import Project
 from .simulation import Simulation
 

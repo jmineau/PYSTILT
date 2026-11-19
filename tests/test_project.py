@@ -17,9 +17,9 @@ from runtraj.models.hysplit import MetConfig
 from runtraj.models.hysplit.driver import winderrtf
 from runtraj.output import Output
 from runtraj.releases import ColumnRelease, PointRelease
-from runtraj.spatial import Grid
 
 from stilt import Project, transport_error
+from stilt.footprint.grid import Grid
 from stilt.footprint.stage import store_empty_footprint, store_footprint
 from stilt.project import STILT_R_HYSPLIT
 from tests.fixtures.factories import blocks

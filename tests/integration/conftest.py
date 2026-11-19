@@ -11,8 +11,8 @@ import pytest
 from runtraj.config import ProjectConfig
 from runtraj.models.hysplit import MetConfig
 from runtraj.releases import ColumnRelease, MultiPointRelease
-from runtraj.spatial import Grid
 
+from stilt.footprint.grid import Grid
 from stilt.project import STILT_R_HYSPLIT
 from tests.fixtures.factories import blocks
 

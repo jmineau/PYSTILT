@@ -7,11 +7,11 @@ from runtraj.config import Variant
 from runtraj.models.hysplit import MetConfig
 from runtraj.output import Output
 from runtraj.particles import particles_metadata
-from runtraj.spatial import Grid
 from runtraj.transforms import FirstOrderLifetime, transform_kind, weigh
 
 from stilt import Simulation
 from stilt.footprint.config import FootprintConfig
+from stilt.footprint.grid import Grid
 
 from .fixtures.factories import make_met_config, make_variant
 from .fixtures.footprints import run_footprint

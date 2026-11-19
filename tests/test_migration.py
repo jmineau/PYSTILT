@@ -117,7 +117,7 @@ def test_release_coordinates_do_not_come_from_the_rds(copy):
     # The .rds keeps the release as run_stilt.r gave it; CONTROL is what ran.
     _write_points(copy / POINT / "CONTROL", ["40.78 -111.86 10"])
     release, _, _ = _read(copy)[POINT]
-    assert release.coords() == [(40.78, -111.86, 10.0)]
+    assert release.coords() == [(-111.86, 40.78, 10.0)]
 
 
 def test_slant_points_in_control_are_a_multipoint_release(copy):

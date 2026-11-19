@@ -209,7 +209,7 @@ class ReferenceScenario:
 
     def make_grid(self):
         """Return the :class:`~runtraj.config.Grid` for this scenario."""
-        from runtraj.spatial import Grid
+        from stilt.footprint.grid import Grid
 
         return Grid(
             xmin=self.xmin,

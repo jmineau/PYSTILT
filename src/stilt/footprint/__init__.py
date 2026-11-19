@@ -26,6 +26,7 @@ from .accessor import FootprintAccessor
 from .aggregation import Jacobian, jacobian
 from .config import FootprintConfig
 from .foot import HNF_PLUME_COLUMNS, add_foot, correct_near_field
+from .grid import Grid
 from .gridding import calc_footprint
 from .io import (
     FOOTPRINT_SCHEMA,
@@ -47,6 +48,7 @@ __all__ = [
     "FootprintConfig",
     "FootprintStage",
     "Geometry",
+    "Grid",
     "Jacobian",
     "Mesh",
     "Zones",

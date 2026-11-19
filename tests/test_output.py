@@ -9,11 +9,11 @@ import xarray as xr
 import yaml
 from runtraj.identity import settings_hash, stage_hash
 from runtraj.output import Output
-from runtraj.spatial import Grid
 from scipy import sparse
 
 from stilt.footprint import Jacobian, jacobian, open_footprints
 from stilt.footprint.config import FootprintConfig, footprint_settings
+from stilt.footprint.grid import Grid
 from stilt.footprint.stage import store_empty_footprint, store_footprint
 from stilt.footprint.targets import Mesh
 

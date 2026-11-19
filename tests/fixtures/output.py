@@ -16,9 +16,9 @@ import xarray as xr
 from runtraj.config import Variant
 from runtraj.output import Output
 from runtraj.releases import PointRelease
-from runtraj.spatial import Grid
 
 from stilt.footprint.config import FootprintConfig
+from stilt.footprint.grid import Grid
 
 from .factories import MET, make_release, make_variant
 from .footprints import as_footprint

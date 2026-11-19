@@ -47,8 +47,10 @@ from pydantic import (
     model_validator,
 )
 from runtraj.identity import canonical
-from runtraj.spatial import Bounds, Grid
+from runtraj.spatial import Bounds
 from runtraj.transforms import dump_transform, load_transform, transform_kind
+
+from stilt.footprint.grid import Grid
 
 
 class _GeometrySpec(BaseModel):

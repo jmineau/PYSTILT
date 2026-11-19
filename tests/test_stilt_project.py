@@ -11,9 +11,9 @@ from dataclasses import replace
 import pytest
 import yaml
 from runtraj import project, simulation
-from runtraj.spatial import Grid
 
 import stilt
+from stilt.footprint.grid import Grid
 from stilt.project import STILT_R_HYSPLIT
 
 from .fixtures.factories import blocks, make_met_config

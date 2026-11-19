@@ -14,9 +14,9 @@ import xarray as xr
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # must come after use("Agg")
 from runtraj.releases import MultiPointRelease, PointRelease
-from runtraj.spatial import Grid
 
 from stilt.footprint.config import FootprintConfig
+from stilt.footprint.grid import Grid
 from stilt.visualization import SimulationPlotAccessor, _log10_safe
 
 from .fixtures.footprints import as_footprint

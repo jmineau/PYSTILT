@@ -36,10 +36,10 @@ import pandas as pd
 import pytest
 import xarray as xr
 from runtraj.releases import MultiPointRelease, PointRelease
-from runtraj.spatial import Grid, _east_edge, _grid_cell_starts
 
 from stilt.exceptions import EmptyFootprint
 from stilt.footprint import calc_footprint, correct_near_field
+from stilt.footprint.grid import Grid, _east_edge, _grid_cell_starts
 from stilt.footprint.gridding import (
     _compute_kernel_bandwidths,
     _filter_and_rasterize_particles,

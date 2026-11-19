@@ -99,7 +99,8 @@ def test_release_time_and_particles_are_what_r_reads(written):
         points = [
             tuple(map(float, line.split())) for line in lines[2 : 2 + int(lines[1])]
         ]
-        assert release.coords() == points
+        # CONTROL lists latitude first; coords() gives longitude first.
+        assert release.coords() == [(lon, lat, alt) for lat, lon, alt in points]
         from_r = _read_dump(dumped / f"{name}_particles.csv").rename(
             columns=_PYSTILT_NAMES
         )

@@ -11,9 +11,9 @@ from runtraj.execution.worker import (
     run_stage as _run_stage,  # the worker's own, whatever a test puts in its place
 )
 from runtraj.releases import PointRelease, Release
-from runtraj.spatial import Grid
 
 from stilt.footprint.config import FootprintConfig
+from stilt.footprint.grid import Grid
 from stilt.footprint.io import _describe, read_footprint
 from stilt.footprint.targets import Mesh
 

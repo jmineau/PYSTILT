@@ -18,18 +18,20 @@ from typing import TYPE_CHECKING, Any
 import pandas as pd
 import xarray as xr
 from runtraj import simulation
-from runtraj.spatial import Grid
 
 from stilt.background import Background, background
 from stilt.exceptions import EmptyFootprint
 from stilt.footprint import gridding
 from stilt.footprint.config import FootprintConfig
+from stilt.footprint.grid import Grid
 from stilt.footprint.io import read_footprint
 from stilt.footprint.stage import simulation_particles, variant_footprint
 from stilt.transport_error import TransportError, transport_error
 
 if TYPE_CHECKING:
-    from runtraj._paths import Location
+    from pathlib import Path
+
+    from upath import UPath
 
     from stilt.visualization import SimulationPlotAccessor
 
@@ -73,7 +75,7 @@ class Simulation(simulation.Simulation):
     # -- the footprint -----------------------------------------------------
 
     @property
-    def footprint_path(self) -> Location | None:
+    def footprint_path(self) -> Path | UPath | None:
         """Path of the footprint file in the output directory, or ``None`` before its folder exists."""
         return self.path("footprint")
 

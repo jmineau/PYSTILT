@@ -111,9 +111,8 @@ def test_finished_particles_keep_the_uncorrected_foot(point_release):
 
 def test_footprint_calculate_from_trajectory(point_release, tmp_path):
     """calc_footprint works directly on a particle table and its release."""
-    from runtraj.spatial import Grid
-
     from stilt.footprint import calc_footprint
+    from stilt.footprint.grid import Grid
 
     traj = finished(_particles_basic(), point_release)
     grid = Grid(xmin=-115.0, xmax=-110.0, ymin=38.0, ymax=43.0, xres=0.1, yres=0.1)
@@ -124,9 +123,8 @@ def test_footprint_calculate_from_trajectory(point_release, tmp_path):
 
 def test_calc_footprint_regenerates_a_footprint_on_a_new_grid(tmp_path):
     """calc_footprint makes a footprint on any grid from stored particles."""
-    from runtraj.spatial import Grid
-
     from stilt.footprint import calc_footprint
+    from stilt.footprint.grid import Grid
 
     rng = np.random.default_rng(0)
     n = 20
@@ -172,9 +170,8 @@ def test_check_particles_names_the_missing_columns():
 
 
 def test_a_footprint_needs_the_particle_columns(point_release):
-    from runtraj.spatial import Grid
-
     from stilt.footprint import calc_footprint
+    from stilt.footprint.grid import Grid
 
     grid = Grid(xmin=-113.0, xmax=-111.0, ymin=40.0, ymax=41.0, xres=0.1, yres=0.1)
     particles = pd.DataFrame(

@@ -19,10 +19,11 @@ import pandas as pd
 import pyarrow as pa
 import xarray as xr
 from runtraj.releases import parse_release_id
-from runtraj.spatial import Grid, horizontal_dims
+from runtraj.spatial import horizontal_dims
 from scipy import sparse
 
 from stilt.footprint.config import FootprintConfig
+from stilt.footprint.grid import Grid
 
 from .io import UNITS, _naive_utc, _naive_utc_ns, _threads
 from .targets import Geometry, Mesh, Zones, check_resolution, overlap_weights
