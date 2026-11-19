@@ -70,9 +70,11 @@ outside the container:
 
 The met folder in ``config.yaml`` is the path inside the container
 (``hrrr: /met``). The output directory is ``output/`` in the project unless
-``config.yaml`` names another, and the container runs as user 10001, so
-the project folder must be one that user may write to (``chmod 777``, or
-``docker run --user "$(id -u)"``).
+``config.yaml`` names another. The container runs as user 10001, so that
+user must be able to read the HYSPLIT and met folders and write to the
+project folder (``chmod 777``), or run it as yourself with
+``docker run --user "$(id -u)"``. ``stilt check`` says "No hycs_std on
+PATH" when the HYSPLIT folder cannot be read.
 
 For pods, where mounting a HYSPLIT folder into each is awkward, build an
 image of your own with your HYSPLIT inside it, and keep it in a private
