@@ -90,8 +90,8 @@ src/stilt/
   visualization.py  footprint and simulation plots
   footprint/      FootprintConfig, FootprintStage, calc_footprint (gridding.py), foot (add_foot,
                   the near-field correction), aggregation, io, targets
-  migration.py    read_stilt_r, import_stilt_r: STILT-R and X-STILT by-id output, read with rdata
-  stilt_r.py      StiltRModel, the stilt-r model of imported runs (runs nothing), named by import path
+  migration.py    read_stilt_r, import_stilt_r: STILT-R and X-STILT by-id output, read with rdata;
+                  StiltRModel, the stilt-r model of imported runs (runs nothing), named by import path
   observations/   the X-STILT port (readers, sounding selection, slant releases, columns);
                   releases along a moving platform's track (tracks.py)
   background.py, transport_error.py, sampling.py, exceptions.py (EmptyFootprint)

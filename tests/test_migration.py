@@ -494,7 +494,7 @@ def test_the_import_prints_the_config_in_blocks(tmp_path, capsys):
     """The model's block, the footprint stage, and each variant's footprint under its stages."""
     _, config = _import(_by_id(tmp_path, POINT), tmp_path / "output", capsys)
     assert list(config) == ["mets", "models", "stages", "variants"]
-    assert config["models"] == {"stilt-r": {"class": "stilt.stilt_r.StiltRModel"}}
+    assert config["models"] == {"stilt-r": {"class": "stilt.migration.StiltRModel"}}
     assert config["stages"] == {
         "footprint": {"class": "stilt.footprint.FootprintStage"}
     }
@@ -546,7 +546,7 @@ def test_the_settings_are_what_the_files_record(tmp_path, capsys):
     assert run["siguverr"] is None
     assert run["ziscale"] == 1
     assert run["model"] == {
-        "name": "stilt.stilt_r.StiltRModel",
+        "name": "stilt.migration.StiltRModel",
         "sha256": None,
         "data_files": None,
     }

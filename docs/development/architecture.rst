@@ -102,9 +102,9 @@ project whose ``stages`` block names the footprint.
      migration.py       read_stilt_r: STILT-R and X-STILT by-id output as
                         releases, particle tables, and footprints;
                         import_stilt_r writes it into an output directory
-                        with the settings its files record
-     stilt_r.py         StiltRModel, the stilt-r model of imported STILT-R
-                        runs, named by its import path; it runs nothing
+                        with the settings its files record; StiltRModel,
+                        the stilt-r model of those runs, named by its
+                        import path, which runs nothing
      background.py      background: the mole fraction at a release from a
                         field sampled where the particles end (sim.background)
      transport_error.py transport_error: the transport error of the

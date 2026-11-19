@@ -18,7 +18,7 @@ the simulation id. X-STILT runs STILT-R's code and writes the same layout::
 :func:`read_stilt_r` reads these folders as PYSTILT's releases, particle
 tables, and footprints. :func:`import_stilt_r` writes them into an output
 directory, in folders named by the settings the files record, so a project
-reads them as its own (:class:`stilt.stilt_r.StiltRModel`). The
+reads them as its own (:class:`stilt.migration.StiltRModel`). The
 ``.rds`` files are read with the `rdata <https://github.com/vnmabus/rdata>`_
 package, which needs no R (``pip install "pystilt[stilt-r]"``).
 """
@@ -26,20 +26,25 @@ package, which needs no R (``pip install "pystilt[stilt-r]"``).
 from __future__ import annotations
 
 import dataclasses
+import datetime as dt
 import warnings
 from collections.abc import Iterator, Mapping
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import numpy as np
 import pandas as pd
 import xarray as xr
 import yaml
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from runtraj.config import VARIANT_NAME_RE, Variant
+from runtraj.exceptions import SimulationError
+from runtraj.models import ModelRun
 from runtraj.models.hysplit.config import (
     FIXED_SETUP,
     WIND_ERROR_SETTINGS,
     ZI_ERROR_SETTINGS,
+    HysplitConfig,
 )
 from runtraj.models.hysplit.namelist import read_namelist
 from runtraj.output import Output
@@ -51,7 +56,6 @@ from stilt.footprint import FOOTPRINT_STAGE
 from stilt.footprint.config import FootprintConfig, footprint_settings
 from stilt.footprint.io import _footprint_array
 from stilt.footprint.stage import store_empty_footprint, store_footprint
-from stilt.stilt_r import STILT_R_MODEL, StiltRConfig, StiltRMetConfig, StiltRModel
 
 if TYPE_CHECKING:
     from runtraj.models.hysplit.control import ControlFile
@@ -89,6 +93,129 @@ _ERROR_SETTINGS = WIND_ERROR_SETTINGS + ZI_ERROR_SETTINGS
 #: The columns of rslurm's ``params.RDS`` that are read: the footprint's
 #: smoothing, and two settings that must match the run's own files.
 _PARAMS_COLUMNS = ("smooth_factor", "n_hours", "numpar")
+
+
+#: The import path of :class:`StiltRModel`, the ``class`` of the ``models:``
+#: block of imported STILT-R runs, as their run settings record it.
+STILT_R_MODEL = "stilt.migration.StiltRModel"
+
+
+class StiltRConfig(HysplitConfig):
+    """
+    The settings of imported STILT-R runs: HYSPLIT's, as STILT-R ran it, and the STILT-R version.
+
+    The settings are :class:`~runtraj.models.hysplit.HysplitConfig`'s,
+    under the same names, as STILT-R's files record them (``SETUP.CFG``,
+    ``CONTROL``, and the ``.rds`` file; see
+    :func:`stilt.migration.import_stilt_r`). Every one must be given:
+    none has a default, because an imported run's settings name its folder,
+    and a default would stand in for a value no file gave. The
+    ``config.yaml`` variant the import prints gives them all.
+    """
+
+    #: Fields left out of a run's recorded settings. ``version`` is recorded:
+    #: it is what tells imported runs of two STILT-R versions apart.
+    UNRECORDED: ClassVar[frozenset[str]] = frozenset({"directory"})
+
+    version: str | None = Field(
+        None,
+        description=(
+            "The STILT-R version that made the runs, such as a commit of "
+            "uataq/stilt. No STILT-R file records it, so the import is given "
+            "it. Recorded with the runs' settings."
+        ),
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _every_setting_given(cls, data: Any) -> Any:
+        """Require every recorded setting: an imported run has no defaults."""
+        if isinstance(data, dict):
+            missing = sorted(set(cls.model_fields) - cls.UNRECORDED - set(data))
+            if missing:
+                raise ValueError(
+                    f"An imported STILT-R run gives every setting, and these are "
+                    f"missing: {', '.join(missing)}. Copy the variant "
+                    "stilt.migration.import_stilt_r printed."
+                )
+        return data
+
+
+class StiltRMetConfig(BaseModel):
+    """
+    The met of imported STILT-R runs, as written under ``mets:`` in ``config.yaml``.
+
+    It is the directory the runs' ``CONTROL`` files name, as they name it.
+    The met files need not exist any more; each run's own files are
+    recorded in its particle file (``runtraj:met_files``).
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    met_path: str = Field(
+        ...,
+        description=(
+            "Directory of the met files the runs read, as their CONTROL files "
+            "name it: the met_path of STILT-R's run_stilt.r, or a folder in it."
+        ),
+    )
+
+    def settings(self) -> dict[str, Any]:
+        """Return what an imported run records of its met: the directory, as written."""
+        return {"met_path": self.met_path}
+
+
+class StiltRModel:
+    """
+    The ``stilt-r`` transport model of imported runs, named by its import path (:data:`STILT_R_MODEL`).
+
+    It holds the settings of imported STILT-R runs and runs nothing.
+    :meth:`run` fails, so a ``stilt run`` of a release STILT-R did not run
+    records a failure for it.
+    """
+
+    name = "stilt-r"
+    config_class = StiltRConfig
+    met_config_class = StiltRMetConfig
+    #: Nothing runs, so no files are written.
+    needs_workdir = False
+    batched = False
+
+    def version(self, config: StiltRConfig) -> str | None:
+        """Return the STILT-R version of *config*, which its settings record too."""
+        return config.version
+
+    def sha256(self, config: StiltRConfig) -> None:
+        """Return ``None``: nothing runs, and the build is fixed by the STILT-R version in the settings."""
+        return None
+
+    def data_files(self, config: StiltRConfig) -> dict[str, str] | None:
+        """Return ``None``: the data files are STILT-R's own, fixed by its version."""
+        return None
+
+    def run(
+        self,
+        release: Release,
+        config: StiltRConfig,
+        met: StiltRMetConfig,
+        window: tuple[dt.datetime, dt.datetime],
+        workdir: Path | None = None,
+        timeout: int | None = None,
+    ) -> ModelRun:
+        """
+        Fail: STILT-R runs are imported, not run.
+
+        Raises
+        ------
+        SimulationError
+            Always, with ``reason`` ``NOT_RUNNABLE``.
+        """
+        raise SimulationError(
+            f"{release.id}: PYSTILT cannot run STILT-R. A stilt-r variant reads "
+            "the runs stilt.migration.import_stilt_r wrote; run the release "
+            "with a hysplit variant instead.",
+            reason="NOT_RUNNABLE",
+        )
 
 
 def read_stilt_r(
@@ -569,8 +696,8 @@ def import_stilt_r(
 
     Each run's particles and footprint, as :func:`read_stilt_r` reads them,
     go to the folders of a variant whose model is ``stilt-r``, a ``models:``
-    block with ``class: stilt.stilt_r.StiltRModel``
-    (:class:`~stilt.stilt_r.StiltRModel`). A project whose
+    block with ``class: stilt.migration.StiltRModel``
+    (:class:`~stilt.migration.StiltRModel`). A project whose
     ``config.yaml`` has that variant reads them as its own results:
     ``project.status``, ``project.particles``, ``project.footprints``, and
     ``project.jacobian``. The import prints the variant and its met, to paste
@@ -659,7 +786,7 @@ def import_stilt_r(
         met_path: /data/hrrr
     models:
       stilt-r:
-        class: stilt.stilt_r.StiltRModel
+        class: stilt.migration.StiltRModel
     variants:
       stilt-r:
         model: stilt-r
@@ -997,4 +1124,11 @@ def _variant_entry(variant: Variant, footprints: bool) -> dict[str, Any]:
     return entry
 
 
-__all__ = ["import_stilt_r", "read_stilt_r"]
+__all__ = [
+    "STILT_R_MODEL",
+    "StiltRConfig",
+    "StiltRMetConfig",
+    "StiltRModel",
+    "import_stilt_r",
+    "read_stilt_r",
+]
