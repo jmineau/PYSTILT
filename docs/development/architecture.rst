@@ -125,9 +125,6 @@ project whose ``stages`` block names the footprint.
        targets.py       the geometries footprints are summed onto (Mesh,
                         Zones), the overlap weights, and to_grid
        accessor.py      the .stilt xarray accessor
-     sampling.py        sample_met and calc_pbl_height, ARL met at particle
-                        positions (a gridded field at points is runtraj's
-                        sample_field)
      exceptions.py      EmptyFootprint, the exception PYSTILT adds to runtraj's
      observations/      the X-STILT port: product readers and SOUNDING_SCHEMA,
                         overpass grouping and sounding selection, slant

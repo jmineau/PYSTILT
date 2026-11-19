@@ -3,6 +3,7 @@
 import numpy as np
 import pandas as pd
 import pytest
+import xarray as xr
 from runtraj.releases import ColumnRelease, PointRelease
 
 from stilt.footprint import foot as foot_module
@@ -245,7 +246,7 @@ def met(monkeypatch):
     met = {"density": 1.0, "calls": []}
 
     def sample_met(particles, files, columns, *, z_top):
-        met["calls"].append((list(columns), z_top, list(files)))
+        met["calls"].append((list(columns), z_top, files))
         off = particles["lon"] == 0
         if columns == ["mlht"]:
             return particles.assign(mlht=np.where(off, np.nan, 1000.0))
@@ -254,6 +255,14 @@ def met(monkeypatch):
 
     monkeypatch.setattr(foot_module, "sample_met", sample_met)
     return met
+
+
+def test_add_foot_hands_a_dataset_to_the_met_as_it_is(met):
+    dataset = xr.Dataset({"PRES": ("level", [1000.0])})
+    add_foot(_positions(), dataset, footprint_depth=0.5)
+
+    assert met["calls"]
+    assert all(call[2] is dataset for call in met["calls"])
 
 
 def test_add_foot_counts_a_whole_step_below_the_mixing_depth_and_none_above(met):

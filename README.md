@@ -262,12 +262,12 @@ time_bins = pd.interval_range(
 H = project.jacobian(january, windows, time_bins)  # sparse: releases by (hour, window)
 ```
 
-`stilt.sampling.sample_met` adds met columns (`mlht`, `dens`, `pres`, `zsfc`) to a particle
+`runtraj.sampling.sample_met` adds met columns (`mlht`, `dens`, `pres`, `zsfc`) to a particle
 table, sampled from the met files at each particle's position and time:
 
 ```python
 from runtraj.particles import particles_metadata
-from stilt.sampling import sample_met
+from runtraj.sampling import sample_met
 
 met_files = particles_metadata(sim.particles_path).met_files
 sampled = sample_met(sim.particles.drop(columns="dens"), met_files, columns=["dens"])

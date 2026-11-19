@@ -13,7 +13,7 @@ A transport model that writes only positions has neither ``samt`` nor
 the layer, and ``mlht`` is the met's ``PBLH``, where HYSPLIT's default finds
 the mixed layer from the profile (``kmixd: 3``), so the footprint moves
 more. ``pbl_height: richardson`` finds the mixed layer as HYSPLIT's
-default does (:func:`stilt.sampling.calc_pbl_height`). Run with ``-s`` to
+default does (:func:`runtraj.sampling.calc_pbl_height`). Run with ``-s`` to
 see each step's numbers; the validation page reports them.
 """
 
@@ -30,6 +30,7 @@ from runtraj.models import ModelRun, run_model
 from runtraj.models.hysplit import HysplitConfig
 from runtraj.particles import PARTICLE_SCHEMA
 from runtraj.releases import PointRelease
+from runtraj.sampling import sample_met
 
 from stilt.footprint import (
     FootprintConfig,
@@ -37,7 +38,6 @@ from stilt.footprint import (
     calc_footprint,
     footprint_particles,
 )
-from stilt.sampling import calc_pbl_height, sample_met
 
 from ..conftest import integration
 from ..fixtures.r_stilt_reference import (
@@ -204,27 +204,6 @@ def test_against_hysplit_on_the_mets_mixed_layer_the_footprint_moves_less(
     total, cells = moved[f"floored at {KMIX0} m"]
     assert total == pytest.approx(1.0, abs=0.1)
     assert cells <= moved["sampled"][1] + 0.01
-
-
-@integration
-def test_calc_pbl_height_finds_the_mixed_layer_hysplit_finds(hysplit_run):
-    """HYSPLIT's ``mlht`` with ``kmixd: 3`` is the Richardson-number height, at least ``kmix0``."""
-    run, release = hysplit_run
-    hysplit = run.particles["mlht"].to_numpy()
-    ours = np.maximum(
-        calc_pbl_height(_timed(run.particles, release), run.met_files), KMIX0
-    )
-
-    ratio = ours / hysplit
-    close = np.mean(np.abs(ratio - 1) < 0.02)
-    print(
-        f"\ncalc_pbl_height / HYSPLIT's mlht: median {np.median(ratio):.4f}, "
-        f"5-95 % {np.quantile(ratio, 0.05):.3f} to {np.quantile(ratio, 0.95):.3f}, "
-        f"rows within 2 % {close:.3f}"
-    )
-    assert np.isfinite(ours).all()
-    assert np.median(ratio) == pytest.approx(1.0, abs=0.01)
-    assert close > 0.6
 
 
 @integration
