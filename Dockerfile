@@ -40,10 +40,13 @@ RUN uv sync --locked --no-dev --no-editable \
 
 FROM python:3.13-slim-bookworm
 # tini runs as process 1 and passes a stop signal (docker stop, or
-# Kubernetes' SIGTERM) on to stilt, which ends its runs and exits.
+# Kubernetes' SIGTERM) on to stilt, which ends its runs and exits. The base
+# image's pip goes: nothing here uses it, and the old copies of urllib3,
+# msgpack and setuptools it carries inside it are what a scan finds.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends tini \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && python -m pip uninstall -y pip
 COPY --from=build /opt/venv /opt/venv
 ENV PATH=/opt/venv/bin:/opt/hysplit/exec:$PATH \
     PYTHONUNBUFFERED=1 \
