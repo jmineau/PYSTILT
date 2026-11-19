@@ -1,17 +1,17 @@
-﻿stilt.stilt\_r.StiltRModel
-==========================
+﻿stilt.migration.StiltRModel
+===========================
 
-.. currentmodule:: stilt.stilt_r
-
-
+.. currentmodule:: stilt.migration
 
 
 
 
-.. class-signature:: stilt.stilt_r.StiltRModel
 
 
-.. class-parameters:: stilt.stilt_r.StiltRModel
+.. class-signature:: stilt.migration.StiltRModel
+
+
+.. class-parameters:: stilt.migration.StiltRModel
 
 
 

@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=452eb2bb"></script>
+    <script src="../_static/documentation_options.js?v=dcb4150b"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev37+gb0c8d6f65" />
+  <meta name="docsearch:version" content="0.1.0a30.dev38+g3cfdd68e7" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -667,17 +667,17 @@
 <li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitModel.version.html">runtraj.models.hysplit.HysplitModel.version</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.stilt_r.StiltRModel.html">stilt.stilt_r.StiltRModel</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="_api/stilt.stilt_r.StiltRModel.needs_workdir.html">stilt.stilt_r.StiltRModel.needs_workdir</a></li>
-<li class="toctree-l3"><a class="reference internal" href="_api/stilt.stilt_r.StiltRModel.data_files.html">stilt.stilt_r.StiltRModel.data_files</a></li>
-<li class="toctree-l3"><a class="reference internal" href="_api/stilt.stilt_r.StiltRModel.run.html">stilt.stilt_r.StiltRModel.run</a></li>
-<li class="toctree-l3"><a class="reference internal" href="_api/stilt.stilt_r.StiltRModel.sha256.html">stilt.stilt_r.StiltRModel.sha256</a></li>
-<li class="toctree-l3"><a class="reference internal" href="_api/stilt.stilt_r.StiltRModel.version.html">stilt.stilt_r.StiltRModel.version</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.migration.StiltRModel.html">stilt.migration.StiltRModel</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.migration.StiltRModel.needs_workdir.html">stilt.migration.StiltRModel.needs_workdir</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.migration.StiltRModel.data_files.html">stilt.migration.StiltRModel.data_files</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.migration.StiltRModel.run.html">stilt.migration.StiltRModel.run</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.migration.StiltRModel.sha256.html">stilt.migration.StiltRModel.sha256</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.migration.StiltRModel.version.html">stilt.migration.StiltRModel.version</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2"><a class="reference internal" href="_api/stilt.stilt_r.StiltRConfig.html">stilt.stilt_r.StiltRConfig</a></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.stilt_r.StiltRMetConfig.html">stilt.stilt_r.StiltRMetConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="_api/stilt.stilt_r.StiltRMetConfig.settings.html">stilt.stilt_r.StiltRMetConfig.settings</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.migration.StiltRConfig.html">stilt.migration.StiltRConfig</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.migration.StiltRMetConfig.html">stilt.migration.StiltRMetConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.migration.StiltRMetConfig.settings.html">stilt.migration.StiltRMetConfig.settings</a></li>
 </ul>
 </details></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="_api/runtraj.stages.Stage.html">runtraj.stages.Stage</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -942,7 +942,7 @@ same product holds, such as a short copy, is passed over for the longer one.</p>
 that no file holds, a file whose first index record cannot be read, a file
 with one time period, and a damaged file (cut short, an hour written
 partway, or records lost to null bytes), found by
-<a class="reference external" href="https://jmineau.github.io/arl-met/stable/_autosummary/arlmet.File.check.html#arlmet.File.check" title="(in arl-met v0.1.0b10)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">arlmet.File.check()</span></code></a>. Each file is checked once in a process, which
+<a class="reference external" href="https://jmineau.github.io/arl-met/stable/_autosummary/arlmet.File.check.html#arlmet.File.check" title="(in arl-met v0.1.0b11)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">arlmet.File.check()</span></code></a>. Each file is checked once in a process, which
 reads every record’s header: a few seconds for a 1 GB HRRR file. After the
 run, a run that stopped early with a particle more than 5 grid cells inside
 the met’s grid fails the same way (<a class="reference internal" href="hysplit.html"><span class="doc">HYSPLIT Integration</span></a>, “Failure reasons”).</p>
