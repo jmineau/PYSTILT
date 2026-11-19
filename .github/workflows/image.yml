@@ -1,0 +1,83 @@
+name: Container image
+
+# Builds the image from the Dockerfile and runs a release of a small project
+# in it, with STILT-R's HYSPLIT mounted (the image holds none). Weekly, it
+# builds again from fresh base images and scans the image for known
+# vulnerabilities, failing on high or critical ones that have a fix. Nothing
+# is pushed to a registry.
+
+on:
+  push:
+    branches: [main]
+  pull_request:  # any base, so a PR stacked on another PR is checked too
+    paths:
+      - Dockerfile
+      - .dockerignore
+      - pyproject.toml
+      - uv.lock
+      - src/**
+      - .github/workflows/image.yml
+      - .github/scripts/container_demo.sh
+      - .github/scripts/install_hysplit.sh
+  schedule:
+    - cron: "17 6 * * 1"  # Mondays 06:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0  # setuptools-scm reads the version from tags
+
+      - uses: astral-sh/setup-uv@v10.3.2
+        with:
+          version: "0.12.23"
+
+      - name: Version
+        id: version
+        run: |
+          version=$(uv run --no-project --with 'setuptools-scm>=8' python -m setuptools_scm)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        # --pull: the weekly build takes the base image's security fixes.
+        run: docker build --pull --build-arg "VERSION=$VERSION" -t pystilt .
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+
+      - name: The image runs stilt
+        run: docker run --rm pystilt stilt --help > /dev/null
+
+      - name: Install HYSPLIT
+        run: .github/scripts/install_hysplit.sh
+
+      - name: Restore HRRR met cache
+        # The integration tests fill it (tests.yml), under the same key.
+        uses: actions/cache/restore@v6
+        with:
+          path: tests/met_cache
+          key: met-hrrr-2021-v1
+          fail-on-cache-miss: true
+
+      - name: Run a release in the image
+        run: .github/scripts/container_demo.sh pystilt tests/met_cache /opt/hysplit
+
+      - name: Scan the image
+        # Pinned to a commit, not a tag: this action's tags were rewritten to
+        # malicious code in 2026. The commit is v0.36.0.
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
+        with:
+          image-ref: pystilt
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
