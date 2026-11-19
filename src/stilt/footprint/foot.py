@@ -19,8 +19,8 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+from runtraj.releases import PointRelease, Release
 
-from stilt.releases import PointRelease, Release
 from stilt.sampling import calc_pbl_height, sample_met
 
 logger = logging.getLogger(__name__)
@@ -148,7 +148,9 @@ def add_foot(
     Examples
     --------
     >>> particles = sim.particles.drop(columns="foot")  # doctest: +SKIP
-    >>> meta = stilt.particles.particles_metadata(sim.particles_path)  # doctest: +SKIP
+    >>> meta = runtraj.particles.particles_metadata(
+    ...     sim.particles_path
+    ... )  # doctest: +SKIP
     >>> stilt.footprint.add_foot(
     ...     particles, meta.met_files, footprint_depth=0.5
     ... )  # doctest: +SKIP
@@ -238,7 +240,7 @@ def correct_near_field(
     particles another way, or before ``particles.stilt.enhancement``.
 
     Needs the columns :data:`HNF_PLUME_COLUMNS`, and the release height:
-    ``release_height`` (:func:`stilt.particles.add_release_heights`) or the altitude of a point
+    ``release_height`` (:func:`runtraj.particles.add_release_heights`) or the altitude of a point
     release. The plume grows from the ground, so for a release whose
     heights are above sea level (``altitude_ref="msl"``) it starts at the
     release height minus the terrain under it, the median ``zsfc`` of the

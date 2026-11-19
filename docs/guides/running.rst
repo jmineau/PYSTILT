@@ -94,7 +94,7 @@ again starts the ones that were cut off from the beginning.
 
 If a worker process is killed outright, most often by the kernel's
 out-of-memory killer, the run stops with an error
-(:class:`~stilt.exceptions.WorkerDied`) and ``stilt run`` exits with 3. The pool
+(:class:`~runtraj.exceptions.WorkerDied`) and ``stilt run`` exits with 3. The pool
 cannot say which release the worker held, so the error names every release
 that was in progress. Nothing is marked failed and what finished stays
 finished: run it again and only what is missing runs, with a lower ``cpus`` or

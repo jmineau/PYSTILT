@@ -3,33 +3,38 @@ PYSTILT, a Python implementation of the STILT transport model.
 
 :func:`run_trajectories` and :func:`calc_footprint` make the particles and
 the footprint of one release. :class:`Project` runs many releases from a
-directory of releases and settings, and loads their results.
+directory of releases and settings, and loads their results. The particle
+runs are `runtraj <https://jmineau.github.io/runtraj/>`_'s: the names here
+that make and read them are its own.
 """
 
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _version
 
-from .background import Background, background
-from .config import ProjectConfig
-from .exceptions import StiltError
-from .execution import ExecutionConfig, task_share
-from .footprint import FootprintConfig, Mesh, Zones, calc_footprint, read_footprint
-from .particles import read_particles
-from .releases import (
+from runtraj import (
+    Bounds,
     ColumnRelease,
+    ExecutionConfig,
+    Grid,
     MultiPointRelease,
     PointRelease,
+    ProjectConfig,
     Release,
+    RuntrajError,
+    read_particles,
     read_releases,
+    run_trajectories,
+    task_share,
 )
-from .spatial import Bounds, Grid
-from .stilt_project import Project
-from .stilt_simulation import Simulation
 
-# Registers particles.stilt, with STILT's methods (stilt_particles.ParticlesAccessor).
-from . import stilt_particles  # noqa: F401  # isort: skip
+from .background import Background, background
+from .footprint import FootprintConfig, Mesh, Zones, calc_footprint, read_footprint
+from .project import Project
+from .simulation import Simulation
+
+# Registers particles.stilt, with STILT's methods (stilt.particles.ParticlesAccessor).
+from . import particles  # noqa: F401  # isort: skip
 from .transforms import averaging_kernel_table
-from .transport import run_trajectories
 from .transport_error import TransportError, transport_error
 
 try:
@@ -70,6 +75,6 @@ __all__ = [
     "read_footprint",
     # Satellite columns
     "averaging_kernel_table",
-    # Exceptions (all of them live in stilt.exceptions)
-    "StiltError",
+    # Exceptions (runtraj.exceptions has the rest)
+    "RuntrajError",
 ]

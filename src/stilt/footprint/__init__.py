@@ -35,11 +35,12 @@ from .io import (
     write_empty_footprint,
     write_footprint,
 )
-from .stage import FootprintStage, footprint_particles
+from .stage import FOOTPRINT_STAGE, FootprintStage, footprint_particles
 from .targets import Geometry, Mesh, Zones, check_resolution, overlap_weights
 
 __all__ = [
     "FOOTPRINT_SCHEMA",
+    "FOOTPRINT_STAGE",
     "HNF_PLUME_COLUMNS",
     "UNITS",
     "FootprintAccessor",

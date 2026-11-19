@@ -13,12 +13,12 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import xarray as xr
+from runtraj.config import Variant
+from runtraj.output import Output
+from runtraj.releases import PointRelease
+from runtraj.spatial import Grid
 
-from stilt.config import Variant
 from stilt.footprint.config import FootprintConfig
-from stilt.output import Output
-from stilt.releases import PointRelease
-from stilt.spatial import Grid
 
 from .factories import MET, make_release, make_variant
 from .footprints import as_footprint
@@ -103,7 +103,7 @@ def as_written_before_the_rename(path: Path) -> Path:
     table = pq.read_table(path)
     names = ["receptor" if n == "release" else n for n in table.column_names]
     meta = {
-        (b"stilt:receptor" if k == b"stilt:release" else k): v
+        (b"stilt:receptor" if k == b"runtraj:release" else k): v
         for k, v in (table.schema.metadata or {}).items()
     }
     pq.write_table(table.rename_columns(names).replace_schema_metadata(meta), path)

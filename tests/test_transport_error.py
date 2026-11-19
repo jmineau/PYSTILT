@@ -4,11 +4,11 @@ import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
+from runtraj.releases import PointRelease
 
 from stilt import TransportError
 from stilt import transport_error as _transport_error
 from stilt.footprint import correct_near_field
-from stilt.releases import PointRelease
 from stilt.transforms import AveragingKernel
 
 

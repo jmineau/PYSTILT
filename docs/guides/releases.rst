@@ -201,7 +201,7 @@ reads ``releases.csv`` as a table and builds a release only when you ask
 for it, so opening a project of a hundred thousand releases takes a second
 or two. The file is still checked as it is read: a longitude out of range
 or a column of equal heights is an error at once.
-:func:`~stilt.releases.releases_to_frame` gives releases back as one
+:func:`~runtraj.releases.releases_to_frame` gives releases back as one
 table with a row per release point, in the same columns as the file.
 
 A project's ``releases.csv`` is read automatically. To load another CSV,

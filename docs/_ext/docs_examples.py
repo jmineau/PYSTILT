@@ -163,7 +163,7 @@ def use_tiles() -> None:
     A map that is given a ``tiler`` keeps it. The service's credit for the
     tiles is written on each new map.
     """
-    import stilt.visualization as visualization
+    import runtraj.visualization as visualization
 
     make_ax = visualization._make_ax
     if getattr(make_ax, "on_committed_tiles", False):

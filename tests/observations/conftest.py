@@ -8,8 +8,7 @@ so this directory does not depend on the rest of the test suite.
 import datetime as dt
 
 import pytest
-
-from stilt.releases import PointRelease
+from runtraj.releases import PointRelease
 
 
 @pytest.fixture

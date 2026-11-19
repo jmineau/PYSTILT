@@ -7,6 +7,8 @@ import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
+from runtraj.releases import MultiPointRelease, PointRelease
+from runtraj.spatial import Grid
 
 from stilt.exceptions import EmptyFootprint
 from stilt.footprint import calc_footprint, correct_near_field, gridding
@@ -24,8 +26,6 @@ from stilt.footprint.gridding import (
     _unwrap_around_cloud,
 )
 from stilt.footprint.io import read_footprint, write_footprint
-from stilt.releases import MultiPointRelease, PointRelease
-from stilt.spatial import Grid
 
 
 def _particles_in_domain(n: int = 30, seed: int = 42) -> pd.DataFrame:

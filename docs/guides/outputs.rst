@@ -190,7 +190,7 @@ To open a particle file without a project:
        "202101150800_-111.848_40.766_10.parquet"
    )
    particles = stilt.read_particles(path)
-   meta = stilt.particles.particles_metadata(path)
+   meta = runtraj.particles.particles_metadata(path)
    meta.release, meta.settings, meta.met_files, meta.realization
 
 The file holds the release, the meteorology files the run read, and the
@@ -446,7 +446,7 @@ One release of ``project.footprints().foot``,
 Pass the particles, as above: openghg also expects ``particle_locations_n``,
 ``_e``, ``_s`` and ``_w``, the fraction of particles that first left the
 footprint grid through each edge, by cell along the edge and by 1 km height
-layer up to 20 km (:meth:`~stilt.particles.ParticlesAccessor.grid_exits`).
+layer up to 20 km (:meth:`~runtraj.particles.ParticlesAccessor.grid_exits`).
 Without the particles these are left out, and openghg refuses the file
 unless told not to expect them. A particle that never left the grid counts
 nowhere, so the four add up to the share that left:

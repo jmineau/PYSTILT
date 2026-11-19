@@ -63,7 +63,7 @@ def _format_type(annotation: Any) -> str:
         rendered = stringify_annotation(annotation, mode="smart")
     except TypeError:
         rendered = stringify_annotation(annotation)
-    return rendered.replace("stilt.config.", "")
+    return rendered.replace("runtraj.config.", "")
 
 
 def _format_default(field: Any) -> str:

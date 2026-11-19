@@ -8,12 +8,12 @@ import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
+from runtraj.spatial import Grid, horizontal_dims
+from runtraj.transport.hysplit import HysplitConfig
 
 from stilt import sampling
 from stilt.footprint.config import FootprintConfig
 from stilt.sampling import sample_field, sample_met
-from stilt.spatial import Grid, horizontal_dims
-from stilt.transport.hysplit import HysplitConfig
 
 from .fixtures.footprints import as_footprint
 

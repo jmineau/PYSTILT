@@ -21,6 +21,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 import yaml
+from runtraj.particles import particles_metadata
 
 from stilt import (
     ColumnRelease,
@@ -40,7 +41,6 @@ from stilt.migration import (
     import_stilt_r,
     read_stilt_r,
 )
-from stilt.particles import particles_metadata
 
 PROJECT = Path(__file__).parent / "fixtures" / "stilt_r_project"
 SAMPLE = PROJECT / "out" / "by-id"

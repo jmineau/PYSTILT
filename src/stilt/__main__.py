@@ -1,6 +1,6 @@
 """Module entry point for ``python -m stilt``."""
 
-from stilt.stilt_cli import app
+from stilt.cli import app
 
 
 def main() -> None:

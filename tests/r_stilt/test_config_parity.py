@@ -3,7 +3,7 @@ Check that a new project's SETUP.CFG is the one STILT-R writes.
 
 ``HysplitConfig`` has HYSPLIT's own defaults; ``stilt init`` and
 ``Project.init`` write STILT-R's values where they differ
-(:data:`stilt.config.STILT_R_HYSPLIT`). The first test has STILT-R's own
+(:data:`runtraj.config.STILT_R_HYSPLIT`). The first test has STILT-R's own
 ``write_setup()`` write ``SETUP.CFG`` from the values its ``run_stilt.r``
 sets, and compares it entry by entry with what PYSTILT writes from the
 starter config. It needs R and a STILT-R checkout, not HYSPLIT, so it runs
@@ -19,11 +19,11 @@ from pathlib import Path
 import pandas as pd
 import pytest
 import yaml
+from runtraj.transport.hysplit import HysplitConfig
+from runtraj.transport.hysplit.driver import setup_entries, winderrtf
+from runtraj.transport.hysplit.namelist import NameList, read_namelist
 
-from stilt.stilt_project import STARTER_CONFIG
-from stilt.transport.hysplit import HysplitConfig
-from stilt.transport.hysplit.driver import setup_entries, winderrtf
-from stilt.transport.hysplit.namelist import NameList, read_namelist
+from stilt.project import STARTER_CONFIG
 
 from ..fixtures.r_stilt_reference import STILT_R_NAMES
 

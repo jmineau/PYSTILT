@@ -2,7 +2,7 @@
 The footprint stage: what a ``stages`` block of ``config.yaml`` names.
 
 A stage is what is made from each simulation's results after the transport
-model runs (:class:`stilt.stages.Stage`). A project lists its stages by name
+model runs (:class:`runtraj.stages.Stage`). A project lists its stages by name
 under ``stages:``, each block giving the stage's import path as ``class``
 and then the stage's settings. :class:`FootprintStage` is the one stage
 PYSTILT has.
@@ -22,14 +22,14 @@ from typing import TYPE_CHECKING, Any
 import pandas as pd
 import xarray as xr
 from pydantic import TypeAdapter
+from runtraj._paths import absolute
+from runtraj.identity import file_stamp
+from runtraj.particles import particles_metadata
+from runtraj.releases import Release
+from runtraj.spatial import Grid
 
-from stilt._paths import absolute
 from stilt.exceptions import EmptyFootprint
 from stilt.footprint.foot import HNF_PLUME_COLUMNS, add_foot
-from stilt.identity import file_stamp
-from stilt.particles import particles_metadata
-from stilt.releases import Release
-from stilt.spatial import Grid
 
 from .config import (
     FileGeometrySpec,
@@ -42,12 +42,15 @@ from .io import write_empty_footprint, write_footprint
 from .targets import Mesh
 
 if TYPE_CHECKING:
-    from stilt._paths import Location
-    from stilt.config import Variant
-    from stilt.output import Output
-    from stilt.simulation import Simulation
+    from runtraj._paths import Location
+    from runtraj.config import Variant
+    from runtraj.output import Output
+    from runtraj.simulation import Simulation
 
 logger = logging.getLogger(__name__)
+
+#: The import path of the footprint stage, the ``class`` of its ``stages:`` block.
+FOOTPRINT_STAGE = "stilt.footprint.FootprintStage"
 
 #: One thing :meth:`FootprintStage.check` found: the check, the release it is about (or ``None``), and what is wrong.
 _Finding = tuple[str, str | None, str]
@@ -216,7 +219,7 @@ class FootprintStage:
         ----------
         config : FootprintConfig
             The variant's footprint settings, as :meth:`resolve` returned them.
-        sim : stilt.simulation.Simulation
+        sim : runtraj.simulation.Simulation
             The simulation, as the worker gives it: the particle part, which
             reads the particles.
         path : Path or UPath
@@ -269,7 +272,7 @@ def footprint_particles(
         The footprint settings.
     met_files : iterable of path-like
         The met files the run read, which a particle file records
-        (:func:`stilt.particles.particles_metadata`). They are read only
+        (:func:`runtraj.particles.particles_metadata`). They are read only
         when ``foot`` is computed, and must still be at those paths then.
     z_top : float, optional
         The top of the run's domain, HYSPLIT's ``z_top``, which
@@ -288,7 +291,9 @@ def footprint_particles(
 
     Examples
     --------
-    >>> meta = stilt.particles.particles_metadata(sim.particles_path)  # doctest: +SKIP
+    >>> meta = runtraj.particles.particles_metadata(
+    ...     sim.particles_path
+    ... )  # doctest: +SKIP
     >>> config = stilt.FootprintConfig(
     ...     grid=grid, pbl_height="richardson"
     ... )  # doctest: +SKIP
@@ -469,7 +474,7 @@ def _write(
     Write a release's footprint, made with *config*, at *path*; the empty one when *foot* is ``None``.
 
     The file records what every result file does
-    (:func:`stilt.identity.file_stamp`, with the hash of *variant*'s folder
+    (:func:`runtraj.identity.file_stamp`, with the hash of *variant*'s folder
     of *stage*), and the hash of the particles it was made from.
     """
     stamp = file_stamp(variant.stage_hashes[stage], realization)

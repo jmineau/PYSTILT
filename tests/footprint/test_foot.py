@@ -3,10 +3,10 @@
 import numpy as np
 import pandas as pd
 import pytest
+from runtraj.releases import ColumnRelease, PointRelease
 
 from stilt.footprint import foot as foot_module
 from stilt.footprint.foot import add_foot, correct_near_field
-from stilt.releases import ColumnRelease, PointRelease
 
 from ..fixtures.particles import point_at
 

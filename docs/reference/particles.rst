@@ -1,7 +1,7 @@
 The Particle Table
 ==================
 
-.. currentmodule:: stilt.particles
+.. currentmodule:: runtraj.particles
 
 A transport model run gives one table: a row per particle per output step.
 Everything after the run reads it: the footprint, the near-field
@@ -70,7 +70,7 @@ Where ``foot`` comes from:
 
 A ``foot`` PYSTILT computes is stored nowhere: the particle file keeps what
 the model wrote, and each footprint computes it again. It reads the met
-files at the paths the particle file records (``stilt:met_files``), so
+files at the paths the particle file records (``runtraj:met_files``), so
 they must still be there when the footprint is made, and when
 ``sim.calc_footprint`` or the transport error makes one later. Keep the
 met files where the run read them for as long as you may remake a
@@ -93,7 +93,7 @@ settings and the met files the run read:
 .. code-block:: python
 
    from stilt.footprint import footprint_particles
-   from stilt.particles import particles_metadata
+   from runtraj.particles import particles_metadata
 
    meta = particles_metadata(sim.particles_path)
    particles = footprint_particles(
@@ -226,7 +226,7 @@ its domain, which a stored run records:
 
    from stilt.sampling import sample_met
 
-   meta = stilt.particles.particles_metadata(sim.particles_path)
+   meta = runtraj.particles.particles_metadata(sim.particles_path)
    sampled = sample_met(
        sim.particles.drop(columns=["mlht", "dens"]),
        meta.met_files,
@@ -270,7 +270,6 @@ Checking a table
    :nosignatures:
 
    PARTICLE_SCHEMA
-   FOOTPRINT_COLUMNS
    check_particles
 
 After a run
@@ -311,4 +310,4 @@ What the footprint stage computes from the particles before gridding them,
    correct_near_field
    HNF_PLUME_COLUMNS
 
-.. currentmodule:: stilt.particles
+.. currentmodule:: runtraj.particles

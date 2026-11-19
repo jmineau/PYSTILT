@@ -36,11 +36,11 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pytest
+from runtraj.releases import PointRelease
+from runtraj.transport import run_model
+from runtraj.transport.hysplit import HysplitConfig
 
-from stilt.releases import PointRelease
 from stilt.sampling import sample_met
-from stilt.transport import run_model
-from stilt.transport.hysplit import HysplitConfig
 
 from ..conftest import integration
 from ..fixtures.r_stilt_reference import REFERENCE_SUMMER_TIME, REFERENCE_TIME

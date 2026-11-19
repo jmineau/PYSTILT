@@ -25,8 +25,8 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import xarray as xr
+from runtraj.releases import Release
 
-from stilt.releases import Release
 from stilt.sampling import sample_field, vertical_dim
 from stilt.transforms import apply_transforms
 

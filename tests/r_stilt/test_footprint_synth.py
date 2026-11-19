@@ -35,6 +35,8 @@ import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
+from runtraj.releases import MultiPointRelease, PointRelease
+from runtraj.spatial import Grid, _east_edge, _grid_cell_starts
 
 from stilt.exceptions import EmptyFootprint
 from stilt.footprint import calc_footprint, correct_near_field
@@ -46,8 +48,6 @@ from stilt.footprint.gridding import (
     _padded_axes,
     _project_particles_to_crs,
 )
-from stilt.releases import MultiPointRelease, PointRelease
-from stilt.spatial import Grid, _east_edge, _grid_cell_starts
 
 from ..fixtures.particles import point_at
 

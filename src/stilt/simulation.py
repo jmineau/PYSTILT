@@ -1,48 +1,50 @@
 """
-A simulation, one release run under one variant, and where its results are.
+:class:`stilt.Simulation`: a simulation, with the reads of what STILT makes from its particles.
 
-This is the particle part, which the workers and the stages use.
-:class:`stilt.Simulation` (:mod:`stilt.stilt_simulation`), which a STILT
-project gives you, adds the reads of what STILT makes from the particles.
+It is the particle part (:class:`runtraj.simulation.Simulation`) and only
+adds: the footprint, a footprint with other settings, the background, the
+transport error, and the plots that draw them. A STILT project
+(:class:`stilt.Project`) gives you these. The workers and the stages use the
+particle part, and nothing on disk names this class.
 """
 
 from __future__ import annotations
 
-import logging
-from dataclasses import dataclass, fields
+from collections.abc import Sequence
+from datetime import timedelta
 from functools import cached_property
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
+import xarray as xr
+from runtraj import simulation
+from runtraj.spatial import Grid
 
-from stilt.output import Output, completed
-from stilt.particles import read_particles
-from stilt.releases import Release
-from stilt.stages import reads
+from stilt.background import Background, background
+from stilt.exceptions import EmptyFootprint
+from stilt.footprint import gridding
+from stilt.footprint.config import FootprintConfig
+from stilt.footprint.io import read_footprint
+from stilt.footprint.stage import simulation_particles, variant_footprint
+from stilt.transport_error import TransportError, transport_error
 
 if TYPE_CHECKING:
-    from stilt._paths import Location
-    from stilt.config import Variant
+    from runtraj._paths import Location
 
-logger = logging.getLogger(__name__)
+    from stilt.visualization import SimulationPlotAccessor
 
 
-@dataclass(frozen=True)
-class Simulation:
+class Simulation(simulation.Simulation):
     """
-    One release run under one variant, as one realization of an ensemble or alone.
+    One release run under one variant, with its footprint, background, and transport error.
 
-    A simulation is a value: its release, its variant, and the output
-    directory its results are in. From those it knows where its particles,
-    the file of each stage (:meth:`path`), and its log are, whether they
-    exist (:meth:`has`, :attr:`is_complete`), and how to read them. It runs
-    nothing itself; the workers in :mod:`stilt.execution` run the transport
-    model and the stages.
+    It is :class:`runtraj.simulation.Simulation`, which knows where the
+    particles and the file of each stage are and reads the particles, and it
+    adds the reads of what STILT makes from them: :attr:`footprint`,
+    :meth:`calc_footprint`, :meth:`background`, :meth:`transport_error`,
+    and :attr:`plot`. It changes nothing it inherits.
 
-    :class:`stilt.Simulation` subclasses it with the reads of what STILT
-    makes from the particles: the footprint, the background, and the
-    transport error. You rarely build one yourself. Get it from a project instead, as in
+    You rarely build one yourself. Get it from a project instead, as in
     ``project.simulation(release_id, "hrrr")``.
 
     Parameters
@@ -68,206 +70,214 @@ class Simulation:
         If *realization* is not one the variant runs as.
     """
 
-    release: Release
-    variant: Variant
-    output: Output
-    directory: Path | None = None
-    realization: int | None = None
-
-    def __post_init__(self) -> None:
-        if self.realization not in self.variant.realization_numbers:
-            raise ValueError(
-                f"Variant {self.variant.name!r} runs as realizations "
-                f"{self.variant.realization_numbers}, not {self.realization!r}."
-            )
-
-    def __repr__(self) -> str:
-        realization = (
-            "" if self.realization is None else f", realization={self.realization}"
-        )
-        return (
-            f"Simulation(release={self.release.id!r}, "
-            f"variant={self.variant.name!r}{realization})"
-        )
-
-    def __str__(self) -> str:
-        name = f"{self.release.id}/{self.variant.name}"
-        return name if self.realization is None else f"{name}/{self.realization}"
-
-    def __eq__(self, other: object) -> bool:
-        # One simulation whatever its class: the workers build this class and
-        # stilt.Project the subclass, which adds only reads.
-        if not isinstance(other, Simulation):
-            return NotImplemented
-        mine = tuple(getattr(self, f.name) for f in fields(self))
-        return mine == tuple(getattr(other, f.name) for f in fields(other))
-
-    def __hash__(self) -> int:
-        return hash((self.id, self.output))
-
-    # -- identity ----------------------------------------------------------
+    # -- the footprint -----------------------------------------------------
 
     @property
-    def id(self) -> tuple[str, str, int | None]:
-        """``(release.id, variant.name, realization)``, the row of ``project.simulations`` it is."""
-        return (self.release.id, self.variant.name, self.realization)
+    def footprint_path(self) -> Location | None:
+        """Path of the footprint file in the output directory, or ``None`` before its folder exists."""
+        return self.path("footprint")
 
     @property
-    def transport(self) -> Any:
-        """The transport config this simulation runs with. It is the variant's, with ``seed + realization`` for an ensemble."""
-        return self.variant.transport_for(self.realization)
-
-    # -- where the results are ---------------------------------------------
-
-    def path(self, kind: str) -> Location | None:
+    def has_footprint(self) -> bool:
         """
-        Return the path of this simulation's file of *kind* in the output directory.
+        Whether the footprint file exists.
 
-        *kind* is ``"particles"`` or the name of a stage, such as
-        ``"footprint"``. ``None`` before the variant's folder of that kind
-        exists, and for a stage the variant does not use. The file may not
-        exist yet (:meth:`has`). A stage that reads another stage's file
-        finds it here, and reads it with that stage's own reader.
-
-        Examples
-        --------
-        >>> sim.path("footprint")  # doctest: +SKIP
+        An empty footprint (no particles over the grid) is a finished result.
         """
-        return self.output.path(kind, self.variant, self.release.id, self.realization)
-
-    def has(self, kind: str) -> bool:
-        """
-        Return whether this simulation's file of *kind* exists.
-
-        *kind* is ``"particles"`` or the name of a stage. A stage's file is
-        a finished result whatever it holds: an empty footprint is one.
-        """
-        path = self.path(kind)
-        return path is not None and path.exists()
-
-    @property
-    def particles_path(self) -> Location | None:
-        """Path of the particle file in the output directory, or ``None`` before its folder exists."""
-        return self.path("particles")
-
-    @property
-    def log_path(self) -> Location | None:
-        """Path of the transport model's log in the output directory, or ``None`` before its folder exists."""
-        return self.output.log_path(self.variant, self.release.id, self.realization)
-
-    @property
-    def kept_workdir(self) -> Location | None:
-        """
-        Where a failed run's working directory is kept, or ``None`` before its folder exists.
-
-        The directory, under ``scratch/`` in the output directory, holds
-        the transport model's files as the run left them: for HYSPLIT,
-        CONTROL, SETUP.CFG, and its own output. It exists only after a
-        failed run, or after any run with ``keep_workdir`` set.
-        """
-        return self.output.kept_workdir(self.variant, self.release.id, self.realization)
-
-    # -- presence and completion -------------------------------------------
-
-    @property
-    def has_particles(self) -> bool:
-        """Whether the particle file exists."""
-        return self.has("particles")
-
-    @property
-    def is_complete(self) -> bool:
-        """
-        Whether every expected result exists.
-
-        That is the particles, and the file of every stage the variant
-        uses, such as the footprint. It is :func:`stilt.output.completed`,
-        the one definition of done, for one release, from a file check for
-        each.
-        """
-        rid = self.release.id
-        mine: frozenset[str] = frozenset([rid])
-        none: frozenset[str] = frozenset()
-        kinds = ("particles", *self.variant.stage_order)
-        return rid in completed(*(mine if self.has(k) else none for k in kinds))
-
-    # -- status ------------------------------------------------------------
-
-    @property
-    def failure(self) -> dict[str, Any] | None:
-        """
-        Why this simulation is not complete, as the worker recorded it, or ``None``.
-
-        ``None`` when it is complete, or has not run, or what failed has
-        since succeeded. Otherwise a dict with ``stage`` (``"particles"``
-        for the transport model run, or the name of the stage that failed,
-        such as ``"footprint"``), ``reason`` (a short cause such as
-        ``"MET_COVERAGE"``, or the error's class when it has none),
-        ``message``, and ``time``. An unexpected error also has a
-        ``traceback``. A failed transport model run fails every variant
-        that shares its particles. Of several stages that failed, the
-        first in the order they run is given. :attr:`log` reads the model's log and
-        :attr:`kept_workdir` is where its workdir was kept.
-
-        Examples
-        --------
-        >>> sim.failure  # doctest: +SKIP
-        {'stage': 'particles', 'reason': 'MET_COVERAGE',
-         'message': 'HYSPLIT: start point not within (x,y,t) any data file', ...}
-        """
-        variant, rid = self.variant, self.release.id
-        if not self.has("particles"):
-            return self.output.failure("particles", variant, rid, self.realization)
-        # A stage can have failed only where what it reads exists: the first
-        # such stage with a record, in the order the stages run.
-        there = {"particles"}
-        for name in variant.stage_order:
-            if self.has(name):
-                there.add(name)
-            elif there.issuperset(reads(variant.stage(name))):
-                record = self.output.failure(name, variant, rid, self.realization)
-                if record is not None:
-                    return record
-        return None
-
-    # -- reading the results -----------------------------------------------
-
-    @property
-    def log(self) -> str:
-        """
-        Text of the transport model's log.
-
-        Raises
-        ------
-        FileNotFoundError
-            If the log has not been written yet.
-        """
-        log_path = self.log_path
-        if log_path is None or not log_path.exists():
-            raise FileNotFoundError(f"No log for {self} yet.")
-        return log_path.read_text()
+        return self.has("footprint")
 
     @cached_property
-    def particles(self) -> pd.DataFrame:
+    def footprint(self) -> xr.DataArray | None:
         """
-        The particle table, one row per particle per output step.
+        The footprint, or ``None`` when the variant has no grid or it is empty.
 
-        The columns are the variables in ``varsiwant``, under the particle
-        table's names (``particle``, ``age`` in minutes since release,
-        ``lon``, ``lat``, ``zagl``, ``foot``, ...), plus ``time`` (UTC)
-        and ``release_height`` (for column and multipoint releases). Read from the output directory on first
-        access and kept. Check
-        :attr:`has_particles` first when the run may not have finished.
+        An :class:`xarray.DataArray` with dimensions ``(time, lat, lon)``,
+        whose ``.stilt`` accessor has the PYSTILT methods.
+
+        Read from the output directory on first access and kept. An empty
+        footprint, where no particle reached the grid, is ``None`` while
+        :attr:`has_footprint` is true. Check :attr:`has_footprint` first
+        when the run may not have finished.
 
         Raises
         ------
         FileNotFoundError
-            If the particles have not been written yet. Nothing is kept, so
-            a read after the run finishes loads them.
+            If the footprint has not been written yet. Nothing is kept, so a
+            read after the run finishes loads it.
         """
-        path = self.particles_path
+        if "footprint" not in self.variant.stages:
+            return None
+        path = self.footprint_path
         if path is None or not path.exists():
-            raise FileNotFoundError(f"{self} has no particles yet.")
-        return read_particles(path)
+            raise FileNotFoundError(f"{self} has no footprint yet.")
+        return read_footprint(path)
+
+    @cached_property
+    def plot(self) -> SimulationPlotAccessor:
+        """Plotting methods, such as ``sim.plot.map()``."""
+        from stilt.visualization import SimulationPlotAccessor
+
+        return SimulationPlotAccessor(self)
+
+    def calc_footprint(
+        self,
+        *,
+        grid: Grid | None = None,
+        smooth_factor: float | None = None,
+        tres: str | timedelta | None = None,
+        hnf_plume: bool | None = None,
+        transforms: Sequence[Any] | None = None,
+    ) -> xr.DataArray | None:
+        """
+        Calculate a footprint from the stored particles, without writing it.
+
+        This is :func:`stilt.calc_footprint` with this simulation's
+        particles, release, and footprint settings filled in, as the
+        footprint stage makes it: the particles get the ``foot`` those
+        settings ask for (:func:`stilt.footprint.footprint_particles`).
+        Each setting given replaces the variant's own. Use it to try other settings; the
+        workers write the variant's own footprint. A relative file name in
+        a transform's settings starts from the project directory.
+
+        Returns
+        -------
+        xarray.DataArray or None
+            The footprint, or ``None`` when no particle reaches the grid.
+
+        Raises
+        ------
+        TypeError
+            If the variant has no grid and none is given.
+        FileNotFoundError
+            If the particles have not been written yet.
+
+        Examples
+        --------
+        >>> smoother = sim.calc_footprint(smooth_factor=2.0)  # doctest: +SKIP
+        >>> quarter_hours = sim.calc_footprint(tres="15min")  # doctest: +SKIP
+        >>> fine = sim.calc_footprint(
+        ...     grid=hexes.to_grid(cells_per_target=4)
+        ... )  # doctest: +SKIP
+        """
+        own = self._footprint_config
+        # The variant's geometry names its own grid, not another one.
+        geometry_hash = own.geometry_hash if grid is None else None
+        grid = grid if grid is not None else own.grid
+        if grid is None:
+            raise TypeError(f"{self} has no footprint settings; give a grid.")
+        particles = simulation_particles(self, own)
+        try:
+            return gridding.calc_footprint(
+                particles,
+                self.release,
+                grid,
+                smooth_factor=own.smooth_factor
+                if smooth_factor is None
+                else smooth_factor,
+                tres=own.tres if tres is None else tres,
+                hnf_plume=own.hnf_plume if hnf_plume is None else hnf_plume,
+                footprint_depth=own.footprint_depth,
+                transforms=own.transforms if transforms is None else transforms,
+                name=self.variant.name,
+                directory=self.directory,
+                geometry_hash=geometry_hash,
+            )
+        except EmptyFootprint:
+            return None
+
+    @property
+    def _footprint_config(self) -> FootprintConfig:
+        """The footprint settings of this simulation: the variant's, or the defaults with the model's depth (:func:`stilt.footprint.stage.variant_footprint`)."""
+        return variant_footprint(self.variant)
+
+    @property
+    def _transforms(self) -> Sequence[Any]:
+        """The footprint's particle transforms, which weight the particles; none without a footprint."""
+        footprint = self.variant.stages.get("footprint")
+        return () if footprint is None else footprint.transforms
+
+    @property
+    def _near_field_settings(self) -> dict[str, Any]:
+        """The near-field correction a footprint of this simulation gets: ``hnf_plume`` and ``footprint_depth``."""
+        footprint = self._footprint_config
+        return {
+            "hnf_plume": footprint.hnf_plume,
+            "footprint_depth": footprint.footprint_depth,
+        }
+
+    # -- what the particles give beyond the footprint ----------------------
+
+    def background(self, field: xr.DataArray | pd.Series) -> Background:
+        """
+        Return the background mole fraction at the release.
+
+        The background is the field where each particle ends, averaged over
+        the particles with the footprint's weights (its transforms), so it
+        adds to the enhancement. See :func:`stilt.background`.
+
+        Parameters
+        ----------
+        field : xarray.DataArray or pandas.Series
+            A mole-fraction field such as CarbonTracker, whose vertical
+            dimension is named after a particle column (``pres`` or
+            ``zagl``), or one value per particle, indexed by ``particle``.
+
+        Examples
+        --------
+        >>> ct = xr.open_dataarray("ct_ch4.nc").rename(level="pres")  # doctest: +SKIP
+        >>> sim.background(ct).value  # doctest: +SKIP
+        """
+        return background(
+            self.particles,
+            field,
+            transforms=self._transforms,
+            release=self.release,
+            directory=self.directory,
+        )
+
+    def transport_error(
+        self,
+        error: simulation.Simulation | Sequence[simulation.Simulation],
+        flux: xr.DataArray,
+        **options: Any,
+    ) -> TransportError:
+        """
+        Return the transport error of this simulation's modeled enhancement.
+
+        It is the extra spread in the per-particle enhancement that a
+        wind-error variant of the same release adds (Lin and Gerbig, 2005).
+        See :func:`stilt.transport_error`, which documents the
+        options (``levels``, ``length_scale``, ``percentile``,
+        ``background``).
+
+        Parameters
+        ----------
+        error : Simulation or sequence of Simulation
+            The same release under a wind-error variant, or every
+            realization of one.
+        flux : xarray.DataArray
+            Surface flux field, in µmol m⁻² s⁻¹.
+
+        Examples
+        --------
+        >>> err = project.simulation(sim.release.id, "hrrr-err")  # doctest: +SKIP
+        >>> sim.transport_error(err, flux).variance  # doctest: +SKIP
+        >>> ensemble = [
+        ...     project.simulation(rid, "hrrr-err", k) for k in range(10)
+        ... ]  # doctest: +SKIP
+        >>> sim.transport_error(ensemble, flux)  # doctest: +SKIP
+        """
+        sims = [error] if isinstance(error, simulation.Simulation) else list(error)
+        config = self._footprint_config
+        return transport_error(
+            simulation_particles(self, config),
+            [simulation_particles(e, config) for e in sims],
+            flux,
+            transforms=self._transforms,
+            release=self.release,
+            directory=self.directory,
+            **{**self._near_field_settings, **options},
+        )
 
 
 __all__ = ["Simulation"]

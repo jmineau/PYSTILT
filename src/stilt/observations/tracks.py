@@ -16,9 +16,8 @@ import datetime as dt
 
 import numpy as np
 import pandas as pd
-
-from stilt.releases import PointRelease, VerticalReference
-from stilt.spatial import haversine_km
+from runtraj.releases import PointRelease, VerticalReference
+from runtraj.spatial import haversine_km
 
 #: The columns a track needs, as ``{name: meaning}``. A track may have any
 #: other columns, such as the measured mole fractions, and

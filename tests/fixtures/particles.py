@@ -4,9 +4,8 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-
-from stilt.particles import add_release_heights
-from stilt.releases import PointRelease, Release
+from runtraj.particles import add_release_heights
+from runtraj.releases import PointRelease, Release
 
 
 def finished(particles: pd.DataFrame, release: Release) -> pd.DataFrame:

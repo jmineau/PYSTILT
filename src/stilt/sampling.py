@@ -29,8 +29,7 @@ import pandas as pd
 import xarray as xr
 from numpy.typing import ArrayLike
 from pandas.errors import InvalidIndexError
-
-from stilt.spatial import horizontal_dims
+from runtraj.spatial import horizontal_dims
 
 
 def nearest_cell(coords: np.ndarray, values: np.ndarray) -> np.ndarray:
@@ -293,13 +292,13 @@ def sample_met(
         returned, add it: the release time plus ``age`` minutes.
     files : iterable of path-like
         ARL met files that cover the particles' times, such as the files the
-        run read (``met_files`` of :class:`stilt.transport.ModelRun` or of
-        :func:`stilt.particles.particles_metadata`).
+        run read (``met_files`` of :class:`runtraj.transport.ModelRun` or of
+        :func:`runtraj.particles.particles_metadata`).
     columns : iterable of str, default ("mlht", "dens", "pres", "zsfc")
         The columns to add.
     z_top : float or None, default 25000
         The top of the run's domain in meters (``z_top`` of
-        :class:`stilt.transport.hysplit.HysplitConfig`), since HYSPLIT's
+        :class:`runtraj.transport.hysplit.HysplitConfig`), since HYSPLIT's
         internal levels depend on it. A stored run records it:
         ``particles_metadata(path).settings["z_top"]``. ``None`` reads the
         met's own levels, for a transport model that is not HYSPLIT; a row
@@ -322,7 +321,9 @@ def sample_met(
 
     Examples
     --------
-    >>> meta = stilt.particles.particles_metadata(sim.particles_path)  # doctest: +SKIP
+    >>> meta = runtraj.particles.particles_metadata(
+    ...     sim.particles_path
+    ... )  # doctest: +SKIP
     >>> hysplit = sim.particles  # doctest: +SKIP
     >>> sampled = stilt.sampling.sample_met(  # doctest: +SKIP
     ...     hysplit.drop(columns="pres"),
@@ -471,7 +472,7 @@ def calc_pbl_height(
         ``UMOF`` and ``VMOF``.
     z_top : float, default 25000
         The top of the domain in meters, which sets HYSPLIT's internal
-        levels (``z_top`` of :class:`stilt.transport.hysplit.HysplitConfig`).
+        levels (``z_top`` of :class:`runtraj.transport.hysplit.HysplitConfig`).
 
     Returns
     -------
@@ -489,7 +490,9 @@ def calc_pbl_height(
 
     Examples
     --------
-    >>> meta = stilt.particles.particles_metadata(sim.particles_path)  # doctest: +SKIP
+    >>> meta = runtraj.particles.particles_metadata(
+    ...     sim.particles_path
+    ... )  # doctest: +SKIP
     >>> mlht = stilt.sampling.calc_pbl_height(
     ...     sim.particles, meta.met_files
     ... )  # doctest: +SKIP

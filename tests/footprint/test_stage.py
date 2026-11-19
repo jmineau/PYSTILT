@@ -7,12 +7,12 @@ import json
 
 import pandas as pd
 import pytest
+from runtraj.identity import stage_hash
+from runtraj.spatial import Grid
+from runtraj.stages import check_stage, get_stage, reads
 
 from stilt.footprint import FootprintConfig, FootprintStage
 from stilt.footprint.targets import Mesh
-from stilt.identity import stage_hash
-from stilt.spatial import Grid
-from stilt.stages import check_stage, get_stage, reads
 
 from ..fixtures.factories import make_variant
 
@@ -322,11 +322,11 @@ class CoarseFootprint(FootprintStage):
 def test_a_footprint_stage_under_another_name_writes_its_own_files(tmp_path):
     """The file records the settings the stage was handed and the hash of its own folder."""
     import pyarrow.parquet as pq
+    from runtraj.identity import file_stamp
+    from runtraj.output import Output
+    from runtraj.simulation import Simulation
 
     from stilt.footprint import read_footprint
-    from stilt.identity import file_stamp
-    from stilt.output import Output
-    from stilt.simulation import Simulation
 
     from ..fixtures.factories import make_release
     from ..fixtures.particles import finished, random_walk
@@ -540,9 +540,10 @@ def test_a_foot_to_compute_needs_the_met_files_where_the_run_read_them(
 def test_a_stored_runs_met_files_are_read_only_to_compute_foot(
     add_foot, tmp_path, monkeypatch
 ):
+    from runtraj.particles import write_particles
+    from runtraj.releases import PointRelease
+
     from stilt.footprint import stage
-    from stilt.particles import write_particles
-    from stilt.releases import PointRelease
 
     met = tmp_path / "met"
     met.touch()

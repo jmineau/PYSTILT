@@ -26,6 +26,10 @@ import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
+from runtraj.particles import PARTICLE_SCHEMA
+from runtraj.releases import PointRelease
+from runtraj.transport import ModelRun, run_model
+from runtraj.transport.hysplit import HysplitConfig
 
 from stilt.footprint import (
     FootprintConfig,
@@ -33,11 +37,7 @@ from stilt.footprint import (
     calc_footprint,
     footprint_particles,
 )
-from stilt.particles import PARTICLE_SCHEMA
-from stilt.releases import PointRelease
 from stilt.sampling import calc_pbl_height, sample_met
-from stilt.transport import ModelRun, run_model
-from stilt.transport.hysplit import HysplitConfig
 
 from ..conftest import integration
 from ..fixtures.r_stilt_reference import (

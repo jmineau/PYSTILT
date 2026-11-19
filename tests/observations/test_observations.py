@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from arlmet.vertical import R_D, G
+from runtraj.releases import ColumnRelease, MultiPointRelease, Release
 from shapely.geometry import Point, Polygon
 
 from stilt.observations import (
@@ -15,7 +16,6 @@ from stilt.observations import (
     select_observations_spatial,
     slant_points,
 )
-from stilt.releases import ColumnRelease, MultiPointRelease, Release
 
 METRES_PER_DEG_LAT = math.radians(1.0) * 6_371_000.0
 

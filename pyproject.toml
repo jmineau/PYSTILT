@@ -35,6 +35,7 @@ dependencies = [
     "pyproj>=3.5",
     "pydantic>=2.1.0",  # 2.0 fails the release tests (unhashable dict)
     "pyyaml>=6.0",
+    "runtraj",  # the particle runs; taken from git until its first release ([tool.uv.sources])
     "scipy>=1.10",
     "shapely>=2.0",
     "typer>=0.15.4",  # older ones fail with click 8.2 and later (make_metavar)
@@ -132,12 +133,11 @@ exclude_type_checking_imports = true
 # The package in layers, top to bottom: a module may import the layers
 # below it, never those above. Modules that import each other share a layer
 # (joined by ":"); "|" joins modules that must not. The observation layer
-# sits above the transport core, which runs without it; releases and the
-# raster layer import nothing above them; a transport model's package, in
-# the transport layer, does not import the project config. The migration
-# module writes imported runs into an output directory through variants, so
-# it sits above the project config. Exhaustive, so a new module has to be
-# placed. Imports inside functions count.
+# sits above the footprint, which runs without it. The migration module
+# writes imported runs into an output directory through variants, so it sits
+# above the footprint too. Exhaustive, so a new module has to be placed.
+# Imports inside functions count. The particle runs under all of it are
+# runtraj's, which imports none of this package.
 [[tool.importlinter.contracts]]
 name = "The package's layers"
 type = "layers"
@@ -145,119 +145,20 @@ containers = ["stilt"]
 exhaustive = true
 layers = [
     "__main__",
-    "stilt_cli",
     "cli",
     "observations | migration",
-    "stilt_project",
-    "project : execution : config",
-    "check | fetch",
-    "stilt_simulation",
+    "project",
     "simulation",
     "transport_error",
     "background",
-    "output",
-    "stages",
     "stilt_r",
-    "footprint : identity : meteorology : transport",
-    "stilt_particles",
+    "footprint",
     "particles",
-    "stilt_visualization",
-    "releases : visualization",
+    "visualization",
     "transforms",
     "sampling",
-    "spatial",
-    "_plugins",
-    "_paths | exceptions | _transient",
+    "exceptions",
 ]
-
-# HYSPLIT is one transport model, reached through stilt.transport.get_model.
-# Its package is the only place that knows HYSPLIT's files and behaviour, so
-# a second model would not have to touch the core.
-[[tool.importlinter.contracts]]
-name = "Only the transport registry imports HYSPLIT's package"
-type = "forbidden"
-source_modules = ["stilt.*"]
-forbidden_modules = ["stilt.transport.hysplit"]
-# get_model imports a model's package when asked for it; that is the boundary.
-# STILT-R runs HYSPLIT, so its reader reads the CONTROL and SETUP.CFG files
-# it left, and an imported run's settings are HYSPLIT's.
-ignore_imports = [
-    "stilt.transport -> stilt.transport.hysplit",
-    "stilt.migration -> stilt.transport.hysplit.config",
-    "stilt.migration -> stilt.transport.hysplit.control",
-    "stilt.migration -> stilt.transport.hysplit.namelist",
-    "stilt.stilt_r -> stilt.transport.hysplit.config",
-]
-allow_indirect_imports = true
-
-# Config classes do no I/O when they validate, so a config.yaml loads
-# offline. Reading a footprint geometry or asking a transport model its
-# build happens on request, in ProjectConfig.resolve. The config never reads
-# results or runs anything. It shares a layer with the project and the
-# execution package, which import each other, so this is its own contract.
-[[tool.importlinter.contracts]]
-name = "The project config reads no results and runs nothing"
-type = "forbidden"
-source_modules = ["stilt.config"]
-forbidden_modules = [
-    "stilt.execution.runner",
-    "stilt.execution.worker",
-    "stilt.output",
-    "stilt.project",
-    "stilt.simulation",
-    "stilt.transport.hysplit",
-]
-allow_indirect_imports = true
-
-# The core that makes particle runs (releases and variants, settings
-# folders, completion by file, run and submit, the met catalog, the transport
-# models) is kept apart from what STILT adds on top of the particles:
-# footprints (foot and the near-field correction among them), transforms,
-# observations, sampling fields at particles, background, transport error,
-# the STILT-R model and reader, and the classes and commands a STILT user
-# holds (stilt.Project, stilt.Simulation, the particle accessor with its
-# enhancement, the footprint and simulation plots, stilt init and python -m
-# stilt). The core
-# imports none of it: a stage and a model are named in config.yaml by the
-# import path of their class, so the config, the settings records, the check,
-# the output directory and the worker reach them without an import. The only
-# ignored imports are those within STILT's side. The package's __init__
-# re-exports the public names, so it is not a source. Imports used only for
-# type hints do not count.
-[[tool.importlinter.contracts]]
-name = "The particle-run core does not import what STILT adds on top"
-type = "forbidden"
-source_modules = ["stilt.*"]
-forbidden_modules = [
-    "stilt.footprint",
-    "stilt.transforms",
-    "stilt.observations",
-    "stilt.sampling",
-    "stilt.background",
-    "stilt.transport_error",
-    "stilt.migration",
-    "stilt.stilt_r",
-    "stilt.stilt_project",
-    "stilt.stilt_simulation",
-    "stilt.stilt_particles",
-    "stilt.stilt_visualization",
-    "stilt.stilt_cli",
-    "stilt.__main__",
-]
-ignore_imports = [
-    "stilt.footprint.** -> stilt.**",
-    "stilt.transforms.** -> stilt.**",
-    "stilt.observations.** -> stilt.**",
-    "stilt.background -> stilt.**",
-    "stilt.transport_error -> stilt.**",
-    "stilt.migration -> stilt.**",
-    "stilt.stilt_project -> stilt.**",
-    "stilt.stilt_simulation -> stilt.**",
-    "stilt.stilt_particles -> stilt.**",
-    "stilt.stilt_cli -> stilt.**",
-    "stilt.__main__ -> stilt.**",
-]
-allow_indirect_imports = true
 
 [tool.pyrefly]
 project-includes = ["src"]
@@ -344,7 +245,7 @@ convention = "numpy"
 known-first-party = ["stilt"]
 
 [project.scripts]
-stilt = "stilt.stilt_cli:app"
+stilt = "stilt.cli:app"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -356,6 +257,9 @@ where = ["src"]
 # Releases are git tags vX.Y.Z (see CONTRIBUTING.md). Between releases the
 # version is the next one as a dev version, e.g. 0.1.0a23.dev3+g1a2b3c4.
 fallback_version = "0.0.0"  # no git metadata at all (e.g. a bare source copy)
+
+[tool.uv.sources]
+runtraj = { git = "https://github.com/jmineau/runtraj", rev = "7ef2bda2c7c48f19798cfd5a568d40c7364c374f" }
 
 [tool.uv]
 required-version = ">=0.12"

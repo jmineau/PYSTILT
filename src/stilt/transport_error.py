@@ -31,10 +31,10 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import xarray as xr
+from runtraj.releases import Release
 
 from stilt.background import _background, _fill_missing
 from stilt.footprint.foot import _near_field
-from stilt.releases import Release
 from stilt.transforms import apply_transforms, release_coordinate
 
 #: X-STILT's empirical mean vertical correlation length of transport errors, m.

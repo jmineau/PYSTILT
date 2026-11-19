@@ -2,8 +2,7 @@
 
 import pytest
 import xarray as xr
-
-from stilt.releases import PointRelease
+from runtraj.releases import PointRelease
 
 from ..fixtures.footprints import as_footprint, make_footprint
 

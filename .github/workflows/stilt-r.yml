@@ -6,14 +6,14 @@ name: STILT-R parity
 #
 #   src/stilt/      everything but observations/ and visualization.py, which no
 #                   STILT-R test reaches. The fidelity scenarios run a project end
-#                   to end (config, project, execution, transport/hysplit,
-#                   particles, footprint, releases, output);
+#                   to end, on runtraj's particle runs and the footprint;
 #                   the r_only tests also read STILT-R output (migration.py).
 #   tests/          the STILT-R tests, the shared conftest.py (its _MET_BLOCKS name
 #                   the met cache), the fixtures and R helpers, and the
-#                   release-assignment test whose setup prewarms the met cache.
+#                   pressure-weighting test whose setup prewarms the met cache.
 #   uv.lock, pyproject.toml
-#                   the dependencies and the pytest settings (warnings are errors).
+#                   the dependencies, the runtraj commit among them, and the
+#                   pytest settings (warnings are errors).
 #   this file       so a STILT_R_SHA bump runs it.
 #
 # It also runs on a push to main (main tested with every merged change together),
@@ -29,7 +29,7 @@ on:
       - "tests/conftest.py"
       - "tests/fixtures/**"
       - "tests/r_stilt/**"
-      - "tests/transport/hysplit/test_release_assignment.py"
+      - "tests/integration/test_pressure_weighting.py"
       - "uv.lock"
       - "pyproject.toml"
       - ".github/workflows/stilt-r.yml"
@@ -110,7 +110,7 @@ jobs:
           STILT_TEST_FETCH_MET: "1"
         run: |
           uv run pytest \
-            tests/transport/hysplit/test_release_assignment.py::test_hysplit_multipoint_release_points_follow_control_order \
+            tests/integration/test_pressure_weighting.py::test_hypsometric_fit_holds_on_a_real_winter_profile \
             --setup-only -q
 
       - name: Save HRRR met cache

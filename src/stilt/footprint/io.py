@@ -22,21 +22,20 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 import xarray as xr
+from runtraj._paths import location, readable, write_parquet
+from runtraj.particles.table import stored_release
+from runtraj.releases import Release
+from runtraj.spatial import Grid, _with_cf_grid, horizontal_dims
 
-from stilt._paths import location, readable, write_parquet
 from stilt.footprint.config import (
     FootprintConfig,
     footprint_settings,
     read_footprint_settings,
 )
-from stilt.particles.table import stored_release
-from stilt.releases import Release
-from stilt.spatial import Grid, _with_cf_grid, horizontal_dims
 
 if TYPE_CHECKING:
+    from runtraj._paths import Location
     from upath import UPath
-
-    from stilt._paths import Location
 
 
 def _naive_utc(values: Any) -> pd.DatetimeIndex:
@@ -411,7 +410,7 @@ def open_footprints(
             ],
         }
     )
-    realization = footers[0].get(b"stilt:realization")
+    realization = footers[0].get(b"runtraj:realization")
     if realization is not None:
         ds.attrs["realization"] = int(realization)
     return _with_cf_metadata(ds, grid=grid)
@@ -442,6 +441,16 @@ def _cell_indices(coords: np.ndarray, axis: np.ndarray, name: str) -> np.ndarray
     return idx
 
 
+def _pystilt_version() -> str:
+    """Return the installed PYSTILT version, which a footprint file records."""
+    from importlib.metadata import PackageNotFoundError, version
+
+    try:
+        return version("pystilt")
+    except PackageNotFoundError:
+        return "0+unknown"
+
+
 def _file_metadata(
     release: Release,
     config: FootprintConfig,
@@ -452,7 +461,8 @@ def _file_metadata(
 ) -> dict[bytes, bytes]:
     """Return what a footprint file records so that it reads alone."""
     return {
-        b"stilt:release": release.to_json().encode(),
+        b"runtraj:release": release.to_json().encode(),
+        b"stilt:pystilt": _pystilt_version().encode(),
         b"stilt:name": name.encode(),
         b"stilt:hours": json.dumps(hours).encode(),
         b"stilt:empty": b"true" if empty else b"false",

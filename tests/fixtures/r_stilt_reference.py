@@ -114,7 +114,7 @@ class ReferenceScenario:
         Scalar for point; ``(bottom, top)`` tuple for column;
         tuple of per-point altitudes for multipoint.
     n_hours, numpar, krand, seed
-        Transport controls passed to :class:`~stilt.config.ProjectConfig`.
+        Transport controls passed to :class:`~runtraj.config.ProjectConfig`.
     hnf_plume
         Whether to apply hyper-near-field plume dilution.
     veght
@@ -179,7 +179,7 @@ class ReferenceScenario:
 
     def make_release(self):
         """Return the appropriate release subtype for this scenario."""
-        from stilt.releases import ColumnRelease, MultiPointRelease, PointRelease
+        from runtraj.releases import ColumnRelease, MultiPointRelease, PointRelease
 
         if self.release_type == "point":
             return PointRelease(
@@ -208,8 +208,8 @@ class ReferenceScenario:
         )
 
     def make_grid(self):
-        """Return the :class:`~stilt.config.Grid` for this scenario."""
-        from stilt.spatial import Grid
+        """Return the :class:`~runtraj.config.Grid` for this scenario."""
+        from runtraj.spatial import Grid
 
         return Grid(
             xmin=self.xmin,
@@ -222,7 +222,7 @@ class ReferenceScenario:
         )
 
     def make_footprint_config(self):
-        """Return the :class:`~stilt.config.FootprintConfig` for this scenario."""
+        """Return the :class:`~runtraj.config.FootprintConfig` for this scenario."""
         from stilt.footprint.config import FootprintConfig
 
         return FootprintConfig(
@@ -238,9 +238,11 @@ class ReferenceScenario:
         return f"{REFERENCE_MET}-err" if self.siguverr is not None else None
 
     def make_model_config(self, met_dir):
-        """Return a :class:`~stilt.config.ProjectConfig` configured for this scenario."""
-        from stilt.config import FOOTPRINT_STAGE, ProjectConfig
-        from stilt.stilt_project import STILT_R_HYSPLIT
+        """Return a :class:`~runtraj.config.ProjectConfig` configured for this scenario."""
+        from runtraj.config import ProjectConfig
+
+        from stilt.footprint import FOOTPRINT_STAGE
+        from stilt.project import STILT_R_HYSPLIT
 
         config: dict = {
             "mets": {

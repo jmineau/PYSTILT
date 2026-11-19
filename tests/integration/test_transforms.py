@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import numpy as np
+from runtraj.config import ProjectConfig
 
 from stilt import Project
-from stilt.config import ProjectConfig
 from stilt.transforms import FirstOrderLifetime
 from tests.fixtures.factories import blocks
 
