@@ -15,7 +15,8 @@ import pandas as pd
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from runtraj.spatial import horizontal_dims
-from runtraj.visualization import (
+
+from stilt._plotting import (
     _bounds_extent,
     _data_crs,
     _draw_bounds_box,

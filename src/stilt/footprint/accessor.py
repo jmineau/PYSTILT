@@ -12,10 +12,10 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 import xarray as xr
-from runtraj._paths import atomic_path
 from runtraj.releases import Release
 from runtraj.spatial import horizontal_dims
 
+from stilt._paths import atomic_path
 from stilt.footprint.config import FootprintConfig, read_footprint_settings
 from stilt.footprint.grid import Grid
 

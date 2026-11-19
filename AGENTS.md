@@ -95,6 +95,7 @@ src/stilt/
   observations/   the X-STILT port (readers, sounding selection, slant releases, columns);
                   releases along a moving platform's track (tracks.py)
   background.py, transport_error.py, sampling.py, exceptions.py (EmptyFootprint)
+  _paths.py, _plotting.py   copies of the few helpers runtraj keeps private
 ```
 
 **Observation-driven** work sits above the footprint: `stilt.observations`

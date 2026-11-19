@@ -7,7 +7,7 @@ from typing import ClassVar
 
 import pandas as pd
 import pytest
-from runtraj.cli import _exit_code, app
+from runtraj.cli import app
 from runtraj.config import ProjectConfig, Variant
 from runtraj.exceptions import MeteorologyError, SimulationError
 from runtraj.execution import worker
@@ -768,10 +768,10 @@ def test_a_connection_error_removes_the_failure_record_of_an_earlier_attempt(
     assert _states(project) == {sim.release.id: "pending"}
 
 
-def test_a_mixed_run_is_3_until_the_connection_error_is_mended_and_then_1(
+def test_a_connection_error_leaves_its_release_pending_until_it_is_mended(
     tmp_path, release, other_release, monkeypatch
 ):
-    """The retry runs only what did not finish; the real failure stays, and ends the run with 1."""
+    """The retry runs only what did not finish; the real failure stays."""
     project = _model(tmp_path, [release, other_release])
     transient, real = str(release.id), str(other_release.id)
 
@@ -788,7 +788,6 @@ def test_a_mixed_run_is_3_until_the_connection_error_is_mended_and_then_1(
         execution=ExecutionConfig(local={"cpus": 1}),
     )
     assert _states(project) == {transient: "pending", real: "failed"}
-    assert _exit_code(project.status()) == 3
 
     def second(sim, **kwargs):
         if sim.release.id == real:
@@ -803,7 +802,6 @@ def test_a_mixed_run_is_3_until_the_connection_error_is_mended_and_then_1(
         execution=ExecutionConfig(local={"cpus": 1}),
     )
     assert _states(project) == {transient: "complete", real: "failed"}
-    assert _exit_code(project.status()) == 1
 
 
 def test_stilt_run_exits_3_after_a_connection_error_in_a_simulation_and_0_on_the_rerun(
