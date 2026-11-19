@@ -7,17 +7,14 @@ import arlmet.archives
 import pandas as pd
 import pytest
 from arlmet.archives import HRRRArchive
+from runtraj.project import Project
 from typer.testing import CliRunner
 
-from stilt import transport
-from stilt.project import Project
-from stilt.stilt_cli import app
-from stilt.transport.hysplit import Met, MetConfig
+from stilt.cli import app
 from tests.fixtures.factories import blocks
 
 from .fixtures.factories import (
     make_met_config,
-    make_met_files,
     make_release,
 )
 
@@ -89,46 +86,6 @@ def _project(tmp_path: Path, releases, *, n_hours: int = -3, **met) -> Project:
     )
 
 
-class _Stop(Exception):
-    """Raised where HYSPLIT would start."""
-
-
-def _files_a_run_gets(project: Project, release_ids, monkeypatch, tmp_path):
-    """
-    Return the met files that runs of *release_ids* ask for.
-
-    Each is run through the transport model (:func:`stilt.transport.run_model`) up to
-    the point where HYSPLIT would start, and the files :meth:`Met.files_for`
-    returns are noted.
-    """
-    got: list[Path] = []
-    files_for = Met.files_for
-
-    def note(self, window):
-        files = files_for(self, window)
-        got.extend(files)
-        return files
-
-    def stop(*args, **kwargs):
-        raise _Stop
-
-    monkeypatch.setattr(Met, "files_for", note)
-    monkeypatch.setattr(Met, "check", lambda self, files, window: None)
-    monkeypatch.setattr("stilt.transport.hysplit.model.write_inputs", stop)
-    for rid in release_ids:
-        sim = project.simulation(rid, "hrrr")
-        with pytest.raises(_Stop):
-            transport.run_model(
-                sim.variant.model,
-                sim.release,
-                sim.transport,
-                sim.variant.met_config,
-                tmp_path / "workdir",
-            )
-    monkeypatch.undo()
-    return got
-
-
 # ---------------------------------------------------------------------------
 # The files a run would ask for
 # ---------------------------------------------------------------------------
@@ -141,45 +98,6 @@ RELEASES = [
     _release(2, 20),
     _release(9, 1),
 ]
-
-
-def test_fetch_gets_exactly_the_files_the_runs_ask_for(tmp_path, archive, monkeypatch):
-    fetched = _project(tmp_path / "fetch", RELEASES, n_hours=-6)
-    files = fetched.fetch()
-    other = _project(tmp_path / "run", RELEASES, n_hours=-6)
-    ran = _files_a_run_gets(
-        other, other.releases["release"], monkeypatch, tmp_path / "wd"
-    )
-
-    assert files["message"].isna().all()
-    assert len(files) == 7
-    # Same names, in two met directories: the crop is in the name.
-    assert sorted(Path(f).name for f in files["file"]) == sorted({p.name for p in ran})
-    assert all(Path(f).is_file() for f in files["file"])
-    assert set(files["met"]) == {"hrrr"}
-
-
-def test_runs_after_a_fetch_download_nothing(tmp_path, archive, monkeypatch):
-    project = _project(tmp_path, RELEASES, n_hours=-6)
-    project.fetch()
-    downloaded = list(archive.downloaded)
-
-    ran = _files_a_run_gets(
-        project, project.releases["release"], monkeypatch, tmp_path / "wd"
-    )
-
-    assert len(downloaded) == 7
-    assert archive.downloaded == downloaded
-    assert len(ran) > 0
-
-
-def test_a_fetch_asks_the_archive_once_for_windows_that_overlap(tmp_path, archive):
-    project = _project(tmp_path, RELEASES, n_hours=-6)
-
-    project.fetch()
-
-    # 2 July 03:00, 07:00 and 08:00 (-6 h) overlap; 20:00 and 9 July do not.
-    assert len(archive.requests) == 3
 
 
 # ---------------------------------------------------------------------------
@@ -223,151 +141,14 @@ def test_a_project_with_nothing_left_to_run_fetches_nothing(tmp_path, archive):
     assert archive.requests == []
 
 
-def test_a_selection_limits_the_fetch(tmp_path, archive):
-    project = _project(tmp_path, RELEASES, n_hours=-6)
-    sims = project.simulations
-
-    files = project.fetch(sims[sims["release"] == RELEASES[-1].id])
-
-    assert len(files) == 2  # 8 July 18-23 and 9 July 00-05
-    assert all("202407" in f for f in files["file"])
-    assert not any("20240702" in f for f in files["file"])
-
-
 # ---------------------------------------------------------------------------
 # Files that cannot be had
 # ---------------------------------------------------------------------------
 
 
-def test_a_file_the_archive_lacks_is_reported_for_its_times_alone(tmp_path, archive):
-    # 2 July 06:00 and 12:00 (-12 h) overlap, so they are asked for together;
-    # only the second needs the 12-17 block.
-    releases = [_release(2, 6), _release(2, 12)]
-    project = _project(tmp_path, releases, n_hours=-12)
-    archive.missing = {"20240702_12-17"}
-
-    files = project.fetch()
-
-    failed = files[files["message"].notna()]
-    assert len(failed) == 1
-    assert "2024-07-02 00:00 to 2024-07-02 12:00" in failed["message"].iloc[0]
-    assert "not in the archive" in failed["message"].iloc[0]
-    assert failed["file"].isna().all()
-    have = files[files["file"].notna()]
-    assert len(have) == 3  # 1 July 18-23, 2 July 00-05 and 06-11
-    assert all(Path(f).is_file() for f in have["file"])
-
-
-def test_a_date_before_the_archive_begins_is_reported(tmp_path, archive):
-    project = _project(
-        tmp_path, [make_release(dt.datetime(2015, 1, 1, 12), -111.8, 40.7)]
-    )
-
-    files = project.fetch()
-
-    assert files["file"].isna().all()
-    assert "archive begins" in files["message"].iloc[0]
-
-
-def test_a_met_without_download_is_only_checked(tmp_path):
-    met_dir = tmp_path / "met"
-    release = make_release(dt.datetime(2023, 1, 1, 12), -111.85, 40.77)
-    make_met_files(met_dir, release.time, -1)  # a run of -3 h needs more
-    project = Project.init(
-        tmp_path / "proj",
-        releases=[release],
-        **blocks(
-            mets={"hrrr": make_met_config(met_dir)}, n_hours=-3, variants={"hrrr": {}}
-        ),
-    )
-    before = sorted(met_dir.iterdir())
-
-    files = project.fetch()
-    found = project.check()
-
-    problems = files[files["message"].notna()]
-    assert len(problems) == 1
-    assert "2023-01-01 09:00" in problems["message"].iloc[0]
-    assert list(found["check"]) == ["met_files"]
-    assert "2023-01-01 09:00" in found["message"].iloc[0]
-    assert sorted(met_dir.iterdir()) == before
-    assert files["file"].isna().all()  # a run with a file missing has none to read
-
-
-def test_a_met_without_download_that_is_complete_is_ready(tmp_path):
-    met_dir = tmp_path / "met"
-    release = make_release(dt.datetime(2023, 1, 1, 12), -111.85, 40.77)
-    make_met_files(met_dir, release.time, -3)
-    project = Project.init(
-        tmp_path / "proj",
-        releases=[release],
-        **blocks(
-            mets={"hrrr": make_met_config(met_dir)}, n_hours=-3, variants={"hrrr": {}}
-        ),
-    )
-
-    files = project.fetch()
-
-    assert files["message"].isna().all()
-    assert len(files) == 4  # 09:00 to 12:00, the run's hours
-
-
 # ---------------------------------------------------------------------------
 # Met.fetch
 # ---------------------------------------------------------------------------
-
-
-def _window(start: str, end: str):
-    return pd.Timestamp(start), pd.Timestamp(end)
-
-
-def test_met_fetch_asks_once_for_overlapping_windows_and_apart_for_the_rest(
-    tmp_path, archive
-):
-    met = Met("hrrr", MetConfig(directory=tmp_path, download="hrrr"))
-
-    files = met.fetch(
-        [
-            _window("2024-07-02 00:00", "2024-07-02 06:00"),
-            _window("2024-07-02 04:00", "2024-07-02 10:00"),
-            _window("2024-07-02 10:00", "2024-07-02 11:00"),  # only touches
-            _window("2024-07-02 00:00", "2024-07-02 06:00"),  # a repeat
-        ]
-    )
-
-    assert len(archive.requests) == 2
-    assert files["message"].isna().all()
-
-
-def test_met_fetch_errors_other_than_a_missing_file_are_not_swallowed(
-    tmp_path, archive, monkeypatch
-):
-    met = Met("hrrr", MetConfig(directory=tmp_path, download="hrrr"))
-
-    def no_extra(*args, **kwargs):
-        raise ImportError("fsspec is required")
-
-    monkeypatch.setattr(archive, "fetch", no_extra)
-
-    with pytest.raises(ImportError, match="fsspec"):
-        met.fetch([_window("2024-07-02 00:00", "2024-07-02 06:00")])
-
-
-def test_a_model_with_no_fetch_adds_no_row(tmp_path, monkeypatch):
-    from .test_check import _NoFilesModel
-
-    monkeypatch.setitem(transport.MODELS, "toy", _NoFilesModel)
-    project = Project.init(
-        tmp_path / "proj",
-        releases=[_release(2, 3)],
-        **blocks(
-            mets={"hrrr": {"directory": tmp_path / "met", "download": "hrrr"}},
-            models={"toy": {"n_hours": -3}},
-            variants={"toy": {"met": "hrrr"}},
-        ),
-    )
-
-    assert project.fetch().empty
 
 
 # ---------------------------------------------------------------------------
@@ -543,8 +324,7 @@ def test_stilt_fetch_gets_only_the_releases_it_is_given(tmp_path, archive):
 def test_stilt_fetch_reads_a_submissions_releases_parquet(tmp_path, archive):
     """The fetch job of ``stilt submit`` reads the rows the array reads (#436)."""
     import pyarrow as pa
-
-    from stilt._paths import write_parquet
+    from runtraj._paths import write_parquet
 
     project = _project(tmp_path, RELEASES, n_hours=-6)
     rows = project._rows_of([RELEASES[-1].id])

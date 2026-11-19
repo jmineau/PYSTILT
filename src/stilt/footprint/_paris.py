@@ -16,9 +16,9 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import xarray as xr
+from runtraj.releases import parse_release_id
 
 from stilt.footprint.config import FootprintConfig
-from stilt.releases import parse_release_id
 
 # Units of the footprint in a PARIS file. PYSTILT's ppm per (µmol m⁻² s⁻¹)
 # is the same quantity with the same numbers.

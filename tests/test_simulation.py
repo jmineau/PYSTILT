@@ -1,17 +1,17 @@
-"""Tests for stilt.simulation: the Simulation value object."""
+"""Tests for runtraj.simulation: the Simulation value object."""
 
 import pandas as pd
 import pytest
 import xarray as xr
+from runtraj.config import Variant
+from runtraj.output import Output
+from runtraj.particles import particles_metadata
+from runtraj.spatial import Grid
+from runtraj.transport.hysplit import MetConfig
 
 from stilt import Simulation
-from stilt.config import Variant
 from stilt.footprint.config import FootprintConfig
-from stilt.output import Output
-from stilt.particles import particles_metadata
-from stilt.spatial import Grid
 from stilt.transforms import FirstOrderLifetime, transform_kind
-from stilt.transport.hysplit import MetConfig
 
 from .fixtures.factories import make_met_config, make_variant
 from .fixtures.footprints import run_footprint

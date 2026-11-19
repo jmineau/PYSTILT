@@ -58,8 +58,8 @@ the ones that have an equivalent.
      - ``foot.stilt.enhancement``, ``particles.stilt.enhancement``
    * - Wind error statistics from radiosondes and surface stations
      - ``get.uverr``, ``get.siguverr``, ``cal.wind.err``, ``grab.raob``
-     - :func:`~stilt.meteorology.variogram` and
-       :func:`~stilt.meteorology.fit_variogram` estimate all four error
+     - :func:`~runtraj.meteorology.variogram` and
+       :func:`~runtraj.meteorology.fit_variogram` estimate all four error
        settings. X-STILT estimates only ``siguverr`` and fixes the others.
        The met is sampled at the observations with ``arlmet.sample_points``
        instead of one HYSPLIT run per sonde, and sondes come from IGRA2

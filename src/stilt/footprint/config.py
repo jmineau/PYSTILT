@@ -46,9 +46,9 @@ from pydantic import (
     field_validator,
     model_validator,
 )
+from runtraj.identity import canonical
+from runtraj.spatial import Bounds, Grid
 
-from stilt.identity import canonical
-from stilt.spatial import Bounds, Grid
 from stilt.transforms import dump_transform, load_transform, transform_kind
 
 

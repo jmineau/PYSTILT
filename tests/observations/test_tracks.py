@@ -3,10 +3,11 @@
 import numpy as np
 import pandas as pd
 import pytest
+import runtraj.spatial
+from runtraj.releases import PointRelease
 
 import stilt
 from stilt.observations import TRACK_SCHEMA, check_track, releases_from_track
-from stilt.releases import PointRelease
 
 
 def _drive(minutes=10, start="2024-07-01 18:00", lon0=-111.90, lon1=-111.83):
@@ -82,7 +83,7 @@ def test_spacing_groups_by_distance_along_the_track():
     track = _drive()
     releases, table = releases_from_track(track, spacing=1000)
 
-    step = stilt.spatial.haversine_km(
+    step = runtraj.spatial.haversine_km(
         track.longitude[:-1].to_numpy(),
         track.latitude[:-1].to_numpy(),
         track.longitude[1:].to_numpy(),

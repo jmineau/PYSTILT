@@ -6,7 +6,7 @@ results go to the output directory that ``config.yaml`` names, one tree per
 kind of result with a folder per set of settings (see
 :doc:`../guides/projects` and :ref:`finished-work`). Most
 users only need :class:`stilt.Project`. ``project.output`` is the
-:class:`~stilt.output.Output`.
+:class:`~runtraj.output.Output`.
 
 Project
 -------
@@ -20,6 +20,6 @@ Output directory
    :toctree: _api
    :nosignatures:
 
-   stilt.output.Output
-   stilt.output.completed
+   runtraj.output.Output
+   runtraj.output.completed
    stilt.footprint.Jacobian

@@ -15,7 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from stilt.transforms._common import step_minutes
 
 if TYPE_CHECKING:
-    from stilt.releases import Release
+    from runtraj.releases import Release
 
 
 def survival(particles: pd.DataFrame, rate: ArrayLike) -> pd.Series:

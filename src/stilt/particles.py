@@ -10,10 +10,34 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 import xarray as xr
+from runtraj.particles import accessor
 
-from stilt.particles import accessor
-from stilt.particles.table import _need_foot
 from stilt.sampling import sample_field
+
+
+def _need_foot(particles: pd.DataFrame) -> None:
+    """
+    Raise unless *particles* have a ``foot`` column, saying how to get one.
+
+    A particle file holds what the transport model wrote, and a model that
+    writes only positions writes no ``foot``: the footprint stage computes
+    one when it needs it and stores it nowhere.
+
+    Raises
+    ------
+    ValueError
+        If there is no ``foot`` column.
+    """
+    if "foot" in particles.columns:
+        return
+    raise ValueError(
+        "The particle table has no 'foot' column: the transport model wrote "
+        "none, and the footprint stage stores the foot it computes nowhere. "
+        "stilt.footprint.footprint_particles(particles, config, met_files) adds "
+        "the one the footprint uses, from the met files the run read "
+        "(runtraj.particles.particles_metadata(path).met_files), with the "
+        "variant's footprint settings (sim.variant.stages['footprint'])."
+    )
 
 
 @pd.api.extensions.register_dataframe_accessor("stilt")
@@ -21,7 +45,7 @@ class ParticlesAccessor(accessor.ParticlesAccessor):
     """
     PYSTILT methods on a particle table, as ``particles.stilt``.
 
-    The particle part's methods (:class:`stilt.particles.ParticlesAccessor`)
+    The particle part's methods (:class:`runtraj.particles.ParticlesAccessor`)
     and :meth:`enhancement`, which samples a surface flux at the particles.
 
     Examples

@@ -71,7 +71,7 @@ from stilt.transforms.oxidation import Oxidation
 from stilt.transforms.pressure_weighting import PressureWeighting, particle_pwf
 
 if TYPE_CHECKING:
-    from stilt.releases import Release
+    from runtraj.releases import Release
 
 BuiltinTransform = Annotated[
     AveragingKernel

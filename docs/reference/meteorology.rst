@@ -2,9 +2,9 @@ Meteorology
 ===========
 
 Each transport model reads its meteorology from a met config of its own.
-HYSPLIT's, :class:`~stilt.transport.hysplit.MetConfig`, holds the settings
+HYSPLIT's, :class:`~runtraj.transport.hysplit.MetConfig`, holds the settings
 for one met in ``config.yaml``: ARL files in a directory, or an archive to
-download. :class:`~stilt.transport.hysplit.Met` finds the files a
+download. :class:`~runtraj.transport.hysplit.Met` finds the files a
 simulation needs, downloads them when ``download`` is set, and crops them
 when asked. See :doc:`../guides/meteorology` for how to set it up.
 
@@ -12,9 +12,9 @@ when asked. See :doc:`../guides/meteorology` for how to set it up.
    :toctree: _api
    :nosignatures:
 
-   stilt.transport.hysplit.MetConfig
-   stilt.transport.hysplit.Met
-   stilt.meteorology.run_window
+   runtraj.transport.hysplit.MetConfig
+   runtraj.transport.hysplit.Met
+   runtraj.meteorology.run_window
 
 How a met finds its files
 -------------------------
@@ -35,7 +35,7 @@ skipped.
 HYSPLIT interpolates between the met steps on either side of each of its
 times, so a run needs the files from the step at or before its start to the
 step at or after its end: the release of a backward run, the end of a
-forward one (:meth:`Met.files_for <stilt.transport.hysplit.Met.files_for>`).
+forward one (:meth:`Met.files_for <runtraj.transport.hysplit.Met.files_for>`).
 With 6-hour HRRR files of hourly steps, a backward run released at 23:30
 needs the next day's first file, and one released at 23:00 does not. With
 daily NAM12 files of 3-hourly steps (00:00 to 21:00), a run released at
@@ -72,7 +72,7 @@ Crops
 
 Each crop gets a folder inside ``subgrid_dir``, named by a hash of
 ``subgrid_bounds`` and ``subgrid_levels``
-(:attr:`Met.crop_dir <stilt.transport.hysplit.Met.crop_dir>`), so a new crop
+(:attr:`Met.crop_dir <runtraj.transport.hysplit.Met.crop_dir>`), so a new crop
 box starts a new folder and projects with the same box share one. Old
 folders are not deleted. The crops have a catalog of their own, so a crop
 serves a run by the hours its header holds, whatever it is named and
@@ -88,7 +88,7 @@ The weather product is read from the header of the
 first file in ``directory`` (a download's comes from its archive) when the
 project's settings folders are first needed, to run or to read results. So
 ``directory`` must hold the files on the machine that opens the project
-(:meth:`MetConfig.settings <stilt.transport.hysplit.MetConfig.settings>`).
+(:meth:`MetConfig.settings <runtraj.transport.hysplit.MetConfig.settings>`).
 
 Wind-error statistics
 ---------------------
@@ -100,6 +100,6 @@ wind-error settings for a transport-error run (:ref:`wind-error-statistics`).
    :toctree: _api
    :nosignatures:
 
-   stilt.meteorology.variogram
-   stilt.meteorology.fit_variogram
-   stilt.meteorology.VariogramFit
+   runtraj.meteorology.variogram
+   runtraj.meteorology.fit_variogram
+   runtraj.meteorology.VariogramFit

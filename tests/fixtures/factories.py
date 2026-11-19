@@ -2,8 +2,8 @@
 Small objects many tests need, built in one place.
 
 A test that needs a met config, a project config, a resolved variant, or a
-release calls these, so a change to :class:`stilt.transport.hysplit.MetConfig`,
-:class:`stilt.config.Variant`, or the release types is one edit here, not
+release calls these, so a change to :class:`runtraj.transport.hysplit.MetConfig`,
+:class:`runtraj.config.Variant`, or the release types is one edit here, not
 one in every test module.
 """
 
@@ -14,11 +14,13 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
-from stilt.config import FOOTPRINT_STAGE, ProjectConfig, Variant
+from runtraj.config import ProjectConfig, Variant
+from runtraj.releases import PointRelease
+from runtraj.transport import TransportConfig
+from runtraj.transport.hysplit import HysplitConfig, MetConfig
+
+from stilt.footprint import FOOTPRINT_STAGE
 from stilt.footprint.config import FootprintConfig
-from stilt.releases import PointRelease
-from stilt.transport import TransportConfig
-from stilt.transport.hysplit import HysplitConfig, MetConfig
 
 #: The source id the ARL files these factories write carry.
 SOURCE = "HRRR"
@@ -39,7 +41,7 @@ def write_arl_file(
     One time step per entry in *times* on a 20 x 20 grid of whole degrees,
     125 W to 106 W and 30 N to 49 N (so it holds the tests' releases), each with PRSS
     at the surface and TEMP above it: enough for a met's source to be read
-    from it (:meth:`stilt.transport.hysplit.MetConfig.source`) and for
+    from it (:meth:`runtraj.transport.hysplit.MetConfig.source`) and for
     arlmet to check it, not for HYSPLIT to run on it. With *partial*, the
     last time step has no TEMP, as a write stopped partway leaves it.
     """
@@ -111,15 +113,14 @@ def make_met_files(directory: Path, time: Any, n_hours: int) -> list[Path]:
     """
     Write hourly met files that cover a run of *n_hours* from *time*, and return them.
 
-    They reach one hour beyond the run on each side, so :class:`stilt.transport.hysplit.Met` finds them.
+    They reach one hour beyond the run on each side, so :class:`runtraj.transport.hysplit.Met` finds them.
     Each holds its own hour and half past it (:func:`write_arl_file`), since
     HYSPLIT cannot read a file with one time period and
-    :meth:`stilt.transport.hysplit.Met.check` refuses it; the transport
+    :meth:`runtraj.transport.hysplit.Met.check` refuses it; the transport
     model cannot run on them.
     """
     import pandas as pd
-
-    from stilt.meteorology import run_window
+    from runtraj.meteorology import run_window
 
     start, end = run_window(time, n_hours)
     hours = pd.date_range(

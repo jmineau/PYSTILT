@@ -1,4 +1,4 @@
-"""Tests for stilt.project: the project directory, its tables, its results, and running it."""
+"""Tests for runtraj.project: the project directory, its tables, its results, and running it."""
 
 import datetime as dt
 import doctest
@@ -10,18 +10,18 @@ import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
+from runtraj.config import ProjectConfig
+from runtraj.execution.config import ExecutionConfig
+from runtraj.execution.runner import resolve_compute_root
+from runtraj.output import Output
+from runtraj.releases import ColumnRelease, PointRelease
+from runtraj.spatial import Grid
+from runtraj.transport.hysplit import MetConfig
+from runtraj.transport.hysplit.driver import winderrtf
 
 from stilt import Project, transport_error
-from stilt.config import ProjectConfig
-from stilt.execution.config import ExecutionConfig
-from stilt.execution.runner import resolve_compute_root
 from stilt.footprint.stage import store_empty_footprint, store_footprint
-from stilt.output import Output
-from stilt.releases import ColumnRelease, PointRelease
-from stilt.spatial import Grid
-from stilt.stilt_project import STILT_R_HYSPLIT
-from stilt.transport.hysplit import MetConfig
-from stilt.transport.hysplit.driver import winderrtf
+from stilt.project import STILT_R_HYSPLIT
 from tests.fixtures.factories import blocks
 
 from .fixtures.factories import make_hysplit_dir, make_met_config, make_release
@@ -168,19 +168,6 @@ def test_an_output_given_when_opening_replaces_the_configs(tmp_path, point_relea
     assert not project.simulation(point_release.id, "hrrr").has_particles
 
 
-def test_init_takes_the_releases_second(tmp_path, point_release):
-    # The quickstart's order: a project directory, then its releases.
-    project = Project.init(
-        tmp_path / "proj",
-        [point_release],
-        mets={"hrrr": _met(tmp_path)},
-        models={"hysplit": {"n_hours": -24}},
-        variants={"hrrr": {}},
-    )
-
-    assert list(project.releases["release"]) == [point_release.id]
-
-
 def test_init_writes_stilt_rs_hysplit_values_where_none_are_given(tmp_path):
     project = Project.init(
         tmp_path / "proj",
@@ -213,18 +200,6 @@ def test_init_writes_stilt_rs_values_when_no_model_is_given(tmp_path):
     assert project.variants["hrrr"].transport.capemin == -1.0
 
 
-def test_init_writes_no_hysplit_values_for_another_model(tmp_path):
-    config = ProjectConfig(
-        mets={"hrrr": _met(tmp_path)},
-        models={"mine": {"class": "tests.transport.test_models.ToyModel"}},
-        variants={"hrrr": {"n_hours": -24}},
-    )
-
-    project = Project.init(tmp_path / "proj", config=config)
-
-    assert "hysplit" not in project.config.models
-
-
 def test_init_refuses_a_project_that_has_a_config(tmp_path):
     _project(tmp_path)
     text = (tmp_path / "proj" / "config.yaml").read_text()
@@ -241,7 +216,7 @@ def test_init_takes_a_config_or_keywords_not_both(tmp_path):
 
 
 def test_init_writes_the_commented_starter_config(tmp_path):
-    from stilt.stilt_project import STARTER_CONFIG
+    from stilt.project import STARTER_CONFIG
 
     project = Project.init(tmp_path / "proj", starter=True)
 
@@ -265,33 +240,6 @@ def test_init_copies_releases_from_a_csv(tmp_path):
     assert project.releases["site"].tolist() == ["WBB"]
 
 
-def test_opening_reads_nothing_but_looks_for_config_yaml(tmp_path):
-    (tmp_path / "proj").mkdir()
-    (tmp_path / "proj" / "config.yaml").write_text(
-        "n_hours: [\n"
-    )  # read only when asked
-    project = Project(tmp_path / "proj")
-
-    assert project.directory == (tmp_path / "proj").resolve()
-    assert project.name == "proj"
-    assert repr(project) == f"Project({str(project.directory)!r})"
-    with pytest.raises(ValueError, match="not valid YAML"):
-        _ = project.config
-
-
-def test_a_path_that_is_not_a_project_is_refused_when_opened(tmp_path):
-    """A mistyped path read as a project with no releases, with no warning (#440)."""
-    with pytest.raises(FileNotFoundError, match=r"No config.yaml.*Project\.init"):
-        Project(tmp_path / "my_projcet")
-    assert not (tmp_path / "my_projcet").exists()
-    (tmp_path / "loose").mkdir()
-    (tmp_path / "loose" / "releases.csv").write_text(
-        "time,longitude,latitude,altitude\n2023-01-01 12:00,-111.85,40.77,5\n"
-    )
-    with pytest.raises(FileNotFoundError, match="No config.yaml"):
-        Project(tmp_path / "loose")
-
-
 @pytest.mark.parametrize("empty", [[], "header.csv"])
 def test_init_refuses_releases_that_hold_none_and_writes_nothing(tmp_path, empty):
     """An empty list or a header-only file made an empty project, with no warning (#440)."""
@@ -301,16 +249,6 @@ def test_init_refuses_releases_that_hold_none_and_writes_nothing(tmp_path, empty
     with pytest.raises(ValueError, match="No releases were given"):
         Project.init(tmp_path / "proj", releases, config=_config(tmp_path))
     assert not (tmp_path / "proj").exists()
-
-
-def test_a_relative_path_is_taken_from_the_current_directory(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("PROJECTS", str(tmp_path / "env"))
-    for folder in (tmp_path / "rel", tmp_path / "env" / "p"):
-        folder.mkdir(parents=True)
-        (folder / "config.yaml").write_text("")
-    assert Project("rel").directory == (tmp_path / "rel").resolve()
-    assert Project("$PROJECTS/p").directory == (tmp_path / "env" / "p").resolve()
 
 
 def test_views_are_cached(tmp_path):
@@ -362,9 +300,9 @@ def test_output_can_be_shared_between_projects(tmp_path, point_release):
 
 def test_compute_root_defaults_under_tmpdir(tmp_path, monkeypatch):
     monkeypatch.setenv("TMPDIR", str(tmp_path / "tmp"))
-    monkeypatch.delenv("PYSTILT_COMPUTE_ROOT", raising=False)
+    monkeypatch.delenv("RUNTRAJ_COMPUTE_ROOT", raising=False)
 
-    expected = (tmp_path / "tmp" / "pystilt" / "proj").resolve()
+    expected = (tmp_path / "tmp" / "runtraj" / "proj").resolve()
     assert resolve_compute_root(_project(tmp_path)) == expected
 
 
@@ -374,16 +312,16 @@ def test_default_compute_root_is_resolved_like_an_explicit_one(tmp_path, monkeyp
     real.mkdir()
     (tmp_path / "link").symlink_to(real)
     monkeypatch.setenv("TMPDIR", str(tmp_path / "link"))
-    monkeypatch.delenv("PYSTILT_COMPUTE_ROOT", raising=False)
+    monkeypatch.delenv("RUNTRAJ_COMPUTE_ROOT", raising=False)
     project = _project(tmp_path)
 
     default = resolve_compute_root(project)
-    assert default == real.resolve() / "pystilt" / "proj"
+    assert default == real.resolve() / "runtraj" / "proj"
     assert resolve_compute_root(project, str(default)) == default
 
 
 def test_compute_root_from_the_environment_and_explicit_wins(tmp_path, monkeypatch):
-    monkeypatch.setenv("PYSTILT_COMPUTE_ROOT", str(tmp_path / "scratch"))
+    monkeypatch.setenv("RUNTRAJ_COMPUTE_ROOT", str(tmp_path / "scratch"))
     project = _project(tmp_path)
 
     assert resolve_compute_root(project) == (tmp_path / "scratch").resolve()
@@ -392,11 +330,11 @@ def test_compute_root_from_the_environment_and_explicit_wins(tmp_path, monkeypat
 
 
 def test_an_empty_compute_root_variable_is_unset(tmp_path, monkeypatch):
-    """PYSTILT_COMPUTE_ROOT= means the default, not the current directory."""
+    """RUNTRAJ_COMPUTE_ROOT= means the default, not the current directory."""
     monkeypatch.setenv("TMPDIR", str(tmp_path / "tmp"))
-    monkeypatch.setenv("PYSTILT_COMPUTE_ROOT", "")
+    monkeypatch.setenv("RUNTRAJ_COMPUTE_ROOT", "")
 
-    expected = (tmp_path / "tmp" / "pystilt" / "proj").resolve()
+    expected = (tmp_path / "tmp" / "runtraj" / "proj").resolve()
     assert resolve_compute_root(_project(tmp_path)) == expected
 
 
@@ -497,7 +435,7 @@ def test_a_project_with_the_old_receptors_csv_is_refused(tmp_path):
 
 def test_releases_that_would_share_result_files_are_refused(tmp_path):
     """Two releases with one id would overwrite each other's results."""
-    from stilt.releases import MultiPointRelease
+    from runtraj.releases import MultiPointRelease
 
     def slant(alt):
         return MultiPointRelease(
@@ -1463,7 +1401,7 @@ def test_jacobian_in_threads_is_the_same_matrix(tmp_path):
 
 
 def test_jacobian_lists_each_date_folder_once(tmp_path, monkeypatch):
-    import stilt.output as output_module
+    import runtraj.output as output_module
 
     a = _release(12)
     project = _project(tmp_path, [a])
@@ -1511,7 +1449,7 @@ def ran(monkeypatch):
     def run_releases(project, release_ids, **kwargs):
         calls.append({"project": project, "ids": list(release_ids), **kwargs})
 
-    monkeypatch.setattr("stilt.execution.worker.run_releases", run_releases)
+    monkeypatch.setattr("runtraj.execution.worker.run_releases", run_releases)
     return calls
 
 
@@ -1641,9 +1579,9 @@ def test_run_on_slurm_submits_and_waits(tmp_path, monkeypatch, point_release):
         waited.append((job_id, cluster))
 
     slept: list[float] = []
-    monkeypatch.setattr("stilt.execution.runner._submit", submit)
-    monkeypatch.setattr("stilt.execution.runner.wait", wait)
-    monkeypatch.setattr("stilt.execution.runner.time.sleep", slept.append)
+    monkeypatch.setattr("runtraj.execution.runner._submit", submit)
+    monkeypatch.setattr("runtraj.execution.runner.wait", wait)
+    monkeypatch.setattr("runtraj.execution.runner.time.sleep", slept.append)
 
     status = project.run(compute_root="/s")
     assert waited == [("777", "kingspeak")]
@@ -1658,20 +1596,20 @@ def test_run_on_slurm_submits_and_waits(tmp_path, monkeypatch, point_release):
 
 
 def test_releases_are_built_only_when_asked_for(tmp_path, monkeypatch):
-    import stilt.project
+    import runtraj.project
 
     a, b = _release(12, site="WBB"), _release(13, site="UOU")
     _project(tmp_path, [a, b])
     project = Project(tmp_path / "proj")
     built = []
-    build = stilt.project.releases_from_rows
+    build = runtraj.project.releases_from_rows
 
     def counting(rows):
         releases = build(rows)
         built.extend(r.id for r in releases)
         return releases
 
-    monkeypatch.setattr(stilt.project, "releases_from_rows", counting)
+    monkeypatch.setattr(runtraj.project, "releases_from_rows", counting)
 
     assert len(project.releases) == 2
     project.status()
@@ -1749,49 +1687,6 @@ def test_a_selection_needs_release_and_variant_columns(tmp_path):
         project.status(unknown)
     with pytest.raises(KeyError, match="No release"):
         project.release("202301011200_-1_1_1")
-
-
-def test_relative_paths_start_from_the_project_not_the_working_directory(
-    tmp_path, monkeypatch, point_release
-):
-    monkeypatch.setenv("MET_ROOT", str(tmp_path / "archive"))
-    (tmp_path / "real_output").mkdir()
-    (tmp_path / "output_link").symlink_to(tmp_path / "real_output")
-    Project.init(
-        tmp_path / "proj",
-        releases=[point_release],
-        mets={
-            "local": "met",
-            "shared": {"directory": "$MET_ROOT/hrrr"},
-        },
-        models={"hysplit": {"n_hours": -24}},
-        output=str(tmp_path / "output_link"),
-        variants={"local": {}, "shared": {}},
-    )
-    elsewhere = tmp_path / "elsewhere"
-    elsewhere.mkdir()
-    monkeypatch.chdir(elsewhere)
-
-    project = Project(tmp_path / "proj")
-    variants = project.variants
-    assert variants["local"].met_config.directory == project.directory / "met"
-    assert variants["shared"].met_config.directory == (
-        (tmp_path / "archive/hrrr").resolve()
-    )
-    # Reached through a link, the output is the directory it points to.
-    assert project.output == Output((tmp_path / "real_output").resolve())
-    # A simulation finds relative file names in its settings from the project.
-    assert project.simulation(point_release.id, "local").directory == project.directory
-
-
-def test_init_refuses_a_variant_with_bad_settings_and_writes_nothing(tmp_path):
-    """A variant's transport settings are checked before config.yaml is written."""
-    met = make_met_config(str(tmp_path / "met"))
-    with pytest.raises(ValueError, match="numpr"):
-        Project.init(
-            tmp_path / "proj", mets={"hrrr": met}, variants={"hrrr": {"numpr": 10}}
-        )
-    assert not (tmp_path / "proj" / "config.yaml").exists()
 
 
 def test_status_says_why_the_failed_simulations_failed(tmp_path, point_release):

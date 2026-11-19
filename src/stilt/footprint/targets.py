@@ -40,11 +40,11 @@ import numpy as np
 import pandas as pd
 import shapely
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+from runtraj.spatial import Grid, _east_edge, is_longlat, same_crs
 from scipy import sparse
 from shapely.geometry.base import BaseGeometry
 
 from stilt.footprint.config import FileGeometrySpec, GeometrySpec, H3GeometrySpec
-from stilt.spatial import Grid, _east_edge, is_longlat, same_crs
 
 
 def _transform_geometries(

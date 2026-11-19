@@ -26,13 +26,20 @@ from typing import Any, cast
 import numpy as np
 import pandas as pd
 import xarray as xr
+from runtraj.particles import check_particles
+from runtraj.releases import Release
+from runtraj.spatial import (
+    Grid,
+    _east_edge,
+    _grid_cell_starts,
+    haversine_km,
+    is_longlat,
+)
 
 from stilt.exceptions import EmptyFootprint
 from stilt.footprint.config import FootprintConfig
 from stilt.footprint.foot import _near_field
-from stilt.particles import FOOTPRINT_COLUMNS, check_particles
-from stilt.releases import Release
-from stilt.spatial import Grid, _east_edge, _grid_cell_starts, haversine_km, is_longlat
+from stilt.particles import _need_foot
 from stilt.transforms import apply_transforms
 
 from .io import _footprint_array
@@ -945,7 +952,8 @@ def calc_footprint(
         }
     )
     if not particles.empty:
-        check_particles(particles, need=FOOTPRINT_COLUMNS)
+        _need_foot(particles)
+        check_particles(particles, need=("foot",))
         _check_particles_for_footprint(particles, release)
         if config.hnf_plume:
             particles = _near_field(particles, release, footprint_depth)

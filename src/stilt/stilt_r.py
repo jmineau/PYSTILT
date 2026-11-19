@@ -19,13 +19,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-
-from stilt.exceptions import SimulationError
-from stilt.transport import ModelRun
-from stilt.transport.hysplit.config import HysplitConfig
+from runtraj.exceptions import SimulationError
+from runtraj.transport import ModelRun
+from runtraj.transport.hysplit.config import HysplitConfig
 
 if TYPE_CHECKING:
-    from stilt.releases import Release
+    from runtraj.releases import Release
 
 #: The import path of :class:`StiltRModel`, the ``class`` of the ``models:``
 #: block of imported STILT-R runs, as their run settings record it.
@@ -36,7 +35,7 @@ class StiltRConfig(HysplitConfig):
     """
     The settings of imported STILT-R runs: HYSPLIT's, as STILT-R ran it, and the STILT-R version.
 
-    The settings are :class:`~stilt.transport.hysplit.HysplitConfig`'s,
+    The settings are :class:`~runtraj.transport.hysplit.HysplitConfig`'s,
     under the same names, as STILT-R's files record them (``SETUP.CFG``,
     ``CONTROL``, and the ``.rds`` file; see
     :func:`stilt.migration.import_stilt_r`). Every one must be given:
@@ -79,7 +78,7 @@ class StiltRMetConfig(BaseModel):
 
     It is the directory the runs' ``CONTROL`` files name, as they name it.
     The met files need not exist any more; each run's own files are
-    recorded in its particle file (``stilt:met_files``).
+    recorded in its particle file (``runtraj:met_files``).
     """
 
     model_config = ConfigDict(extra="forbid", frozen=True)

@@ -15,7 +15,7 @@ import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field
 
 if TYPE_CHECKING:
-    from stilt.releases import Release
+    from runtraj.releases import Release
 
 from stilt.transforms._common import release_coordinate
 

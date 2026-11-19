@@ -7,15 +7,15 @@ import datetime as dt
 import numpy as np
 import pandas as pd
 import xarray as xr
-
-from stilt.execution.worker import (
+from runtraj.execution.worker import (
     run_stage as _run_stage,  # the worker's own, whatever a test puts in its place
 )
+from runtraj.releases import PointRelease, Release
+from runtraj.spatial import Grid
+
 from stilt.footprint.config import FootprintConfig
 from stilt.footprint.io import _describe, read_footprint
 from stilt.footprint.targets import Mesh
-from stilt.releases import PointRelease, Release
-from stilt.spatial import Grid
 
 
 def as_footprint(

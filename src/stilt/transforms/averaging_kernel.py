@@ -22,7 +22,7 @@ from numpy.typing import ArrayLike
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 if TYPE_CHECKING:
-    from stilt.releases import Release
+    from runtraj.releases import Release
 
 from stilt.transforms._common import release_coordinate
 

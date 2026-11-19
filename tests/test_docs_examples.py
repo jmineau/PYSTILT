@@ -14,11 +14,12 @@ from typing import Any
 import pytest
 import yaml
 from pydantic import RootModel
+from runtraj.config import ProjectConfig
+from runtraj.execution.config import ExecutionConfig
+from runtraj.transport import TransportConfig
 
-from stilt.config import FOOTPRINT_STAGE, ProjectConfig
-from stilt.execution.config import ExecutionConfig
+from stilt.footprint import FOOTPRINT_STAGE
 from stilt.footprint.config import FootprintConfig
-from stilt.transport import TransportConfig
 
 DOCS = Path(__file__).parent.parent / "docs"
 README = DOCS.parent / "README.md"

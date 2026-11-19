@@ -10,11 +10,11 @@ from dataclasses import replace
 
 import pytest
 import yaml
+from runtraj import project, simulation
+from runtraj.spatial import Grid
 
 import stilt
-from stilt import project, simulation
-from stilt.spatial import Grid
-from stilt.stilt_project import STILT_R_HYSPLIT
+from stilt.project import STILT_R_HYSPLIT
 
 from .fixtures.factories import blocks, make_met_config
 

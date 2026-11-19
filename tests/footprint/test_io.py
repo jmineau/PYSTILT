@@ -6,11 +6,11 @@ import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
+from runtraj.releases import PointRelease
+from runtraj.spatial import Grid
 
 from stilt.footprint import read_footprint
 from stilt.footprint.config import FootprintConfig
-from stilt.releases import PointRelease
-from stilt.spatial import Grid
 from stilt.transforms import AveragingKernel
 
 from ..fixtures.footprints import as_footprint, geometry_footprint, make_footprint

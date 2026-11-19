@@ -479,7 +479,7 @@ def test_pwf_msl_slant_across_terrain_closes_at_ground_under_lowest_point():
 
 
 def test_pwf_reads_altitude_ref_from_the_release():
-    from stilt.releases import ColumnRelease
+    from runtraj.releases import ColumnRelease
 
     _, msl = _msl_column_particles(10, station=1300.0)
     release = ColumnRelease(
@@ -1078,7 +1078,7 @@ def test_transform_kind():
 
 
 def _two_releases():
-    from stilt.releases import ColumnRelease
+    from runtraj.releases import ColumnRelease
 
     a = ColumnRelease(
         time="2023-01-01 12:00",
@@ -1206,7 +1206,7 @@ def test_ak_table_relative_path_without_store_is_relative_to_cwd(tmp_path, monke
 
 
 def test_ak_table_missing_release_raises(tmp_path):
-    from stilt.releases import PointRelease
+    from runtraj.releases import PointRelease
 
     a, b = _two_releases()
     path = tmp_path / "kernels.parquet"

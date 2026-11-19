@@ -145,7 +145,7 @@ attribute, or module data as `type: description`, so keep a colon out of
 the middle of that line.
 
 Module data such as `PARTICLE_SCHEMA` is listed under the package that
-exports it (`stilt.particles`). autodoc looks for its `#:` comment in that
+exports it (`runtraj.particles`). autodoc looks for its `#:` comment in that
 module, where there is none, so `reexported_data_comment` in
 `docs/conf.py` takes the comment from the submodule that defines it.
 Without the hook, a page shows the docstring of the object's type
@@ -212,7 +212,7 @@ fails when one breaks.
 
   ```bash
   STILT_TEST_FETCH_MET=1 uv run pytest \
-    tests/transport/hysplit/test_release_assignment.py::test_hysplit_multipoint_release_points_follow_control_order \
+    tests/integration/test_pressure_weighting.py::test_hypsometric_fit_holds_on_a_real_winter_profile \
     --setup-only -q
   ```
 
@@ -247,214 +247,27 @@ and `ziscale` are keys of the `hysplit` block under `models`, and `grid` and
 `smooth_factor` of the footprint's under `stages`. Don't add nested parameter
 objects inside a block.
 
-Each HYSPLIT setting is a field of `HysplitConfig`
-(`src/stilt/transport/hysplit/config.py`): a plain pydantic
-`Field(default, description=...)`. Which input file it goes to is the
-HYSPLIT driver's business (`src/stilt/transport/hysplit/driver.py`). A
-setting is a `SETUP.CFG` entry unless the driver lists it in
-`NOT_IN_SETUP`: the `CONTROL` settings (which `ControlFile` writes),
-`ziscale` (`ZICONTROL`), the wind- and mixed-layer-error groups (`WINDERR`
-and `ZIERR`, in the order of `WIND_ERROR_SETTINGS` and
-`ZI_ERROR_SETTINGS`), and the settings PYSTILT uses itself. So a new
-`SETUP.CFG` entry needs only the field, and its HYSPLIT type in the table in
-`tests/test_config.py`. Any other new setting also needs a line in the
-driver; a test fails if it would land in `SETUP.CFG` unknown to HYSPLIT.
+A footprint setting is a field of `FootprintConfig`
+(`src/stilt/footprint/config.py`): a plain pydantic
+`Field(default, description=...)`. The transport model's settings
+(`HysplitConfig`), the met's and the execution's are
+[runtraj](https://github.com/jmineau/runtraj)'s, and a new one is a change
+there.
 
-## Adding a transport model
+## The particle runs are runtraj's
 
-A transport model owns its config: a subclass of
-`stilt.transport.TransportConfig` with the model's own parameters. The base
-gives the parameters PYSTILT's own code reads whatever the model
-(`n_hours`, `seed`); a parameter goes there only when the core reads it,
-so another model is never handed a setting it would ignore. It also gives
-an `UNRECORDED` set of the fields that change no particle (empty unless the
-subclass names some), `settings()` (what a run
-records), and `realizations(n)` (realization `k` with `seed + k`); override
-those two only where the model differs. The model itself names that class as
-`config_class`, names its met config as `met_config_class`, and gives
-`sha256` (the checksum of the executable it runs, `None` for none: part of
-the run's settings), `version` (what the build reports, recorded beside
-them), `data_files`, and
-`run(release, config, met, window, workdir=None, timeout=None)`
-(`stilt.transport.TransportModel`). `sha256` raises `FileNotFoundError` when
-the executable cannot be found; the project still opens, and its status
-compares stored folders without the build. The met config is a pydantic model that
-checks one entry under `mets:`; its `settings()` returns what a run records
-of the met (which weather it is, and anything else that changes the
-particles, never where its files are kept). HYSPLIT's is
-`stilt.transport.hysplit.MetConfig`, whose settings are the source id in
-the ARL headers and the crop. A model that reads no files can take any
-keys, with no directory. `met` is that config, its `directory` and
-`subgrid_dir` absolute when it has them, and `window` the `(start, end)`
-the run covers; the model finds its own met from them. `run` returns a `ModelRun`: the particle table (the
-columns of `stilt.particles.PARTICLE_SCHEMA`, `foot` if the model computes
-one, and what the transforms read, with a release row at `age = 0` when the
-model can write one; see `docs/reference/particles.rst`), its log as text,
-and the met files it read. A failed run raises `SimulationError` with its
-log. PYSTILT adds the release heights itself (`stilt.transport.run_model`);
-the footprint stage computes `foot` from the met files when the particles
-have none, and applies the near-field correction (`stilt.calc_footprint`).
-A model whose `foot` is made with a depth records it as `veght`, as
-HYSPLIT does, so the footprint corrects the near field with it. A model that writes no files sets
-`needs_workdir = False` and is handed `workdir=None`. A model that runs
-many releases in one call, such as an emulator on a GPU, sets
-`batched = True` and gives `run_many(releases, config, met, windows,
-workdir=None, timeout=None)`, returning one table with a `release` column
-(`stilt.transport.BatchedTransportModel`): the worker then hands it every
-release of a variant that needs particles at once, and a release it
-returns no rows for fails alone. A model in a package of its own needs no
-registration: its block under `models:` in `config.yaml` names it by import
-path (`class: mypkg.models.MyModel`), as a transform's `kind:` is, and every
-process that opens the project imports it from there. The run settings
-record the `class:` string as written, so the same class named by two
-paths (`mypkg.models.MyModel` and a re-export, `mypkg.MyModel`) gets two
-settings folders. Pick one path and keep it. A model built into
-PYSTILT goes in `stilt.transport.MODELS` under a short name instead. Keep
-its package out of the core: the import contracts in `pyproject.toml` say
-how.
+Transport models, the stage protocol, the output directory with its
+completion rule, and how work is run (the local pool, Slurm) are
+[runtraj](https://github.com/jmineau/runtraj)'s. Its `CONTRIBUTING.md` has
+"Adding a transport model", "Adding a stage", "Output directory and
+completion" and "Changing how work is run". The footprint is a stage
+(`stilt.footprint.FootprintStage`), and `stilt.Project` and
+`stilt.Simulation` subclass runtraj's with the reads of what it makes.
 
-## Adding a stage
-
-A stage is what is made from each simulation's results after the transport
-model runs: one file per release, from the particles, from the files of
-other stages, or both. The footprint is one
-(`stilt.footprint.FootprintStage`). Write a stage when you want a product
-made for every release of a project, kept in the output directory beside
-the particles, and counted by `stilt status`. For a calculation you run now
-and then, read the particles (`project.particles`) instead.
-
-A stage is a class with the members of `stilt.stages.Stage`; it subclasses
-nothing and holds no state. This one writes each release's mean particle
-height:
-
-```python
-from pydantic import BaseModel
-
-
-class MeanHeightConfig(BaseModel):
-    below: float = 5000.0  # meters above ground
-
-
-class MeanHeight:
-    name = "mean_height"  # its tree in the output, and its status() column
-    config_class = MeanHeightConfig
-    suffix = ".txt"  # the extension of its files
-
-    def resolve(self, config, model, model_settings, directory):
-        return config  # read files, and refuse a model that does not fit, here
-
-    def settings(self, config):
-        return config.model_dump(mode="json")  # what names its settings folder
-
-    def check(self, config, releases, directory):
-        return []  # (check, release id or None, message), for `stilt check`
-
-    def run(self, config, sim, path):
-        zagl = sim.particles["zagl"]
-        path.write_text(str(zagl[zagl < config.below].mean()))
-```
-
-```yaml
-stages:
-  mean_height:
-    class: mypkg.stages.MeanHeight
-    below: 3000
-```
-
-- **`name`** is the name of the stage's block under `stages:`, its tree in
-  the output directory
-  (`mean_height/settings=<variant>-<hash>/date=<day>/<release><suffix>`),
-  its column in `project.status()`, and the `stage` of a failure record: one
-  word for the stage everywhere, so a block under another name is refused.
-  Lowercase letters, digits and underscores.
-- **`suffix`** is the extension of the stage's files, with its dot.
-- **`config_class`** is a pydantic model that checks the block's settings
-  when `config.yaml` loads, without reading a file. A variant changes a
-  setting under its own `stages:` key, and the variant's keys replace the
-  block's; give the class an `override(block, own)` classmethod to merge
-  them another way, as `FootprintConfig` changes a grid field by field.
-- **`resolve`** runs once for each variant when the project reads its
-  variants. Read the files the settings name there, and raise `ValueError`
-  for a transport model whose particles the stage cannot use (`model` is
-  its name and `model_settings` what a run of it records). Return the
-  config the runs use.
-- **`settings`** returns the record that names the stage's settings folder,
-  as plain data. A changed value is a new folder, so leave out what changes
-  no result, such as a path. `config_class` must read the record back to a
-  config with the same record, because a stored folder is found that way.
-  `stilt.stages.check_stage(stage, config)` checks it: call it in your
-  tests, once for each kind of setting.
-- **`check`** returns what would stop the stage for the project's
-  releases, for `stilt check`. Run nothing in it.
-- **`run`** makes one simulation's file and writes it at `path`. It gets the
-  simulation: `sim.particles`, `sim.release`, `sim.variant`, and
-  `sim.directory`, where a relative file name in the settings starts. Do
-  not change `sim.particles` in place, since variants share it. Write one
-  file whatever there is to say: a simulation is complete when the model's
-  output file exists, and so does the file of every stage its variant uses,
-  so a stage that writes nothing leaves its simulations unfinished. Write a
-  file that says "nothing here", as an empty footprint does. An error
-  fails the simulation at this stage, and the worker records it. On a
-  filesystem `path` is a hidden temporary name ending in `suffix`, moved
-  into place when `run` returns; the stage's earlier file is removed before
-  it runs, and so is what a `run` that raises has written. So no file made
-  from other inputs, and no half-written one, counts as complete. A Parquet
-  file may carry `stilt.identity.file_stamp(...)` in its metadata, the
-  folder's hash and the PYSTILT version, as particle and footprint files do.
-- **`reads`** (optional) names the stages whose files this one reads, such
-  as `reads = ("footprint",)`. The stage runs after them and again whenever
-  one was made again, and its settings folder is named from theirs too.
-  Find a file with `sim.path("footprint")` and read it with the reader of
-  the package that wrote it (`stilt.read_footprint`). A variant that sets a
-  stage to null while another of its stages reads it is refused.
-
-The stage's package must be installed wherever the project is opened, the
-login node that reports status included: a settings folder is named from
-the stage's settings, defaults included, and only its config class knows
-them. A project whose config names a class that is not installed stops
-with a message naming the package.
-
-## Output directory and completion
-
-A project is a local directory of inputs (`stilt.project.Project`, which
-`stilt.Project` extends with STILT's reads):
-`config.yaml` and `releases.csv`. Results go to an output directory
-(`stilt.output.Output`) that `config.yaml` names and that several projects
-can share. Each results folder is named by the hash of its settings, so a
-changed setting writes a new folder and never overwrites a result.
-
-`Output` knows where each result's file is (`path`), which releases have
-one (`present`, from a listing of their date folders), and the one
-definition of a finished simulation (`complete`, which applies
-`stilt.output.completed`): the model's output file exists, and so does the
-file of every stage the variant uses. `Simulation.is_complete` and
-`status()` use it. Every method takes the kind of result, `"particles"` or
-a stage's name, so a stage needs no method of its own; it writes its file
-at the path `make_path` gives. Don't add another "does this output exist"
-check, a registry, or a manifest. Call these instead.
-
-## Changing how work is run
-
-`stilt.execution.run` (`execution/runner.py`) finds the releases with
-missing results. A local run calls `run_releases` in this process. A Slurm
-run goes through `submit`, which writes `releases.txt`,
-`releases.parquet` (the submitted releases' checked rows, which tasks
-read in place of `releases.csv`), `execution.yaml`, and `job.sh`
-(`job_script`) into `_slurm/<stamp>/` and calls `sbatch`. When a met
-downloads, `fetch.sh` (`fetch_script`) is submitted first and the array
-waits for it.
-
-The unit of work is a command line: `stilt run <project> --releases FILE
---task I/N`. Any scheduler that can start it with an index can run a
-project; the task requeues itself on `SIGUSR1` inside a Slurm job. Another
-scheduler means another script writer, not another worker.
-
-A new `execution:` setting goes on its backend's block (`LocalConfig` or
-`SlurmConfig` in `execution/config.py`) with a description; only a setting
-that applies wherever a run happens goes on `ExecutionConfig` itself. A new
-backend gets a block of its own, named as `backend:` names it. Settings that
-only `sbatch` understands do not need a field: users write them in the
-`slurm:` block by `sbatch`'s own names.
+A change that needs both packages is two pull requests: runtraj's first,
+then one here that moves the commit `pyproject.toml` takes runtraj from
+(`[tool.uv.sources]`), updates `uv.lock` (`just lock`), and runs the STILT-R
+parity suite.
 
 ## Adding particle transforms
 

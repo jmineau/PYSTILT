@@ -15,7 +15,7 @@ from stilt.transforms._common import step_minutes
 from stilt.transforms.lifetime import survival
 
 if TYPE_CHECKING:
-    from stilt.releases import Release
+    from runtraj.releases import Release
 
 #: The longest time step, in minutes, the surviving fraction is computed over.
 #: A particle can cross the surface layer within a few minutes, so rows

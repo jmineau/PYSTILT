@@ -13,15 +13,12 @@ import xarray as xr
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # must come after use("Agg")
-from matplotlib.layout_engine import ConstrainedLayoutEngine
+from runtraj.releases import MultiPointRelease, PointRelease
+from runtraj.spatial import Grid
 
 from stilt.footprint.config import FootprintConfig
-from stilt.releases import ColumnRelease, MultiPointRelease, PointRelease
-from stilt.spatial import Grid
-from stilt.stilt_visualization import SimulationPlotAccessor, _log10_safe
-from stilt.visualization import ProjectPlotAccessor, _draw_bounds_box, _make_ax
+from stilt.visualization import SimulationPlotAccessor, _log10_safe
 
-from .fixtures.factories import make_project_config
 from .fixtures.footprints import as_footprint
 
 # ---------------------------------------------------------------------------
@@ -43,17 +40,6 @@ def release():
         longitude=-111.85,
         latitude=40.77,
         altitude=5.0,
-    )
-
-
-@pytest.fixture
-def col_release():
-    return ColumnRelease(
-        time=dt.datetime(2023, 1, 1, 12),
-        longitude=-111.85,
-        latitude=40.77,
-        bottom=5.0,
-        top=50.0,
     )
 
 
@@ -128,36 +114,6 @@ def _simulation(release, footprint=None, particles=None):
 # ---------------------------------------------------------------------------
 
 
-def test_make_ax_no_args():
-    fig, ax = _make_ax()
-    assert fig is not None
-    assert ax is not None
-
-
-def test_make_ax_with_extent():
-    fig, ax = _make_ax(extent=(-115.0, -110.0, 38.0, 43.0))
-    assert fig is not None
-    assert ax is not None
-
-
-def test_make_ax_with_existing_ax():
-    _, existing = plt.subplots()
-    fig, ax = _make_ax(ax=existing)
-    assert ax is existing
-
-
-def test_make_ax_has_a_constrained_layout():
-    """Each colorbar a map adds gets room, with its label."""
-    fig, _ = _make_ax()
-    assert isinstance(fig.get_layout_engine(), ConstrainedLayoutEngine)
-
-
-def test_make_ax_leaves_the_layout_of_a_given_ax():
-    fig, existing = plt.subplots()
-    _make_ax(ax=existing)
-    assert fig.get_layout_engine() is None
-
-
 # ---------------------------------------------------------------------------
 # _log10_safe
 # ---------------------------------------------------------------------------
@@ -180,81 +136,9 @@ def test_log10_safe_zero_and_negative_become_nan():
 # ---------------------------------------------------------------------------
 
 
-def test_draw_bounds_box_adds_patch(grid):
-    _, ax = plt.subplots()
-    _draw_bounds_box(ax, grid, label="Domain")
-    assert len(ax.patches) == 1
-
-
 # ---------------------------------------------------------------------------
 # ReleasePlotAccessor
 # ---------------------------------------------------------------------------
-
-
-def test_release_map_point_returns_axes(release):
-    ax = release.plot.map()
-    assert ax is not None
-
-
-def test_release_map_column_returns_axes(col_release):
-    ax = col_release.plot.map()
-    assert ax is not None
-
-
-def test_release_map_multipoint_returns_axes(multi_release):
-    ax = multi_release.plot.map()
-    assert ax is not None
-
-
-def test_release_map_legend_has_a_fixed_place(release, monkeypatch):
-    """
-    The legend sits in a corner instead of searching for the emptiest spot.
-
-    With loc="best", matplotlib tries every candidate against every point on the
-    axes, and warns when that takes over a second, as it does with the particles
-    of a simulation.
-    """
-
-    def search(self, *args, **kwargs):
-        raise AssertionError("the legend searched for its best position")
-
-    monkeypatch.setattr(matplotlib.legend.Legend, "_find_best_position", search)
-    fig, ax = plt.subplots()
-    release.plot.map(ax=ax)
-    fig.canvas.draw()  # the legend is placed at draw time
-
-
-def test_release_map_column_names_its_height_reference(col_release):
-    """A column's heights are labeled with the reference they are given in."""
-    for ref in ("agl", "msl"):
-        ax = col_release.model_copy(update={"altitude_ref": ref}).plot.map()
-        assert any(f"m {ref.upper()}" in t.get_text() for t in ax.texts)
-        plt.close("all")
-
-
-def test_release_map_multipoint_names_its_height_reference(multi_release):
-    """The height colorbar names the reference the release's heights are in."""
-    for ref in ("agl", "msl"):
-        ax = multi_release.model_copy(update={"altitude_ref": ref}).plot.map()
-        labels = [a.get_ylabel() for a in ax.figure.axes]
-        assert f"Height {ref.upper()} (m)" in labels
-        plt.close("all")
-
-
-def test_release_map_with_domain(release, grid):
-    ax = release.plot.map(domain=grid)
-    assert ax is not None
-
-
-def test_release_map_met_bounds(release, grid):
-    ax = release.plot.map(met_bounds=grid)
-    assert ax is not None
-
-
-def test_release_map_reuses_ax(release):
-    _, existing = plt.subplots()
-    ax = release.plot.map(ax=existing)
-    assert ax is existing
 
 
 # ---------------------------------------------------------------------------
@@ -262,38 +146,12 @@ def test_release_map_reuses_ax(release):
 # ---------------------------------------------------------------------------
 
 
-def test_trajectories_map_default(minimal_trajectories):
-    ax = minimal_trajectories.stilt.plot.map()
-    assert ax is not None
-
-
-def test_trajectories_map_color_by_zagl(minimal_trajectories):
-    ax = minimal_trajectories.stilt.plot.map(color_by="zagl")
-    assert ax is not None
-
-
-def test_trajectories_map_color_by_foot(minimal_trajectories):
-    ax = minimal_trajectories.stilt.plot.map(color_by="foot")
-    assert ax is not None
-
-
 def test_trajectories_map_color_by_foot_without_foot_says_how_to_get_one(
     minimal_trajectories,
 ):
     particles = minimal_trajectories.drop(columns="foot")
-    with pytest.raises(ValueError, match="no 'foot' column.*footprint_particles"):
+    with pytest.raises(ValueError, match="no 'foot' column"):
         particles.stilt.plot.map(color_by="foot")
-
-
-def test_trajectories_map_invalid_color_by_raises(minimal_trajectories):
-    with pytest.raises(ValueError, match="color_by"):
-        minimal_trajectories.stilt.plot.map(color_by="bad_col")
-
-
-def test_trajectories_map_reuses_ax(minimal_trajectories):
-    _, existing = plt.subplots()
-    ax = minimal_trajectories.stilt.plot.map(ax=existing)
-    assert ax is existing
 
 
 # ---------------------------------------------------------------------------
@@ -650,108 +508,6 @@ def test_simulation_map_multipoint_release_has_one_height_colorbar(multi_release
 # ---------------------------------------------------------------------------
 
 
-def test_project_availability_empty():
-    from unittest.mock import MagicMock
-
-    project = MagicMock()
-    project.releases = pd.DataFrame(columns=["location", "time"])
-
-    ax = ProjectPlotAccessor(project).availability()
-    assert ax is not None
-
-
-def test_project_availability_with_sims(tmp_path, release):
-    from stilt import Project
-
-    config = make_project_config(tmp_path)
-    project = Project.init(tmp_path, config=config, releases=[release])
-    assert len(project.simulations) == 1
-
-    ax = project.plot.availability()
-    assert ax is not None
-    [bars] = ax.collections
-    assert len(bars.get_paths()) == 1
-
-
-def test_project_availability_bins_releases_by_day_and_location(release):
-    from unittest.mock import MagicMock
-
-    t = pd.Timestamp(release.time)
-    project = MagicMock()
-    project.releases = pd.DataFrame(
-        {
-            "location": ["a", "a", "a", "b"],
-            "time": [t, t + pd.Timedelta("2h"), t + pd.Timedelta("1D"), t],
-        }
-    )
-
-    ax = ProjectPlotAccessor(project).availability()
-
-    a, b = ax.collections[:2]
-    assert [len(a.get_paths()), len(b.get_paths())] == [2, 1]  # days with releases
-    assert [label.get_text() for label in ax.get_yticklabels()] == ["a", "b"]
-
-
-def test_project_availability_reuses_ax():
-    from unittest.mock import MagicMock
-
-    _, existing = plt.subplots()
-    project = MagicMock()
-    project.releases = pd.DataFrame(columns=["location", "time"])
-
-    ax = ProjectPlotAccessor(project).availability(ax=existing)
-    assert ax is existing
-
-
-def test_project_availability_formats_the_figure_of_the_given_ax(release):
-    """The dates are formatted on the ax's figure, not the current figure."""
-    from unittest.mock import MagicMock
-
-    fig, existing = plt.subplots()
-    other = plt.figure()  # now the current figure
-    default_bottom = other.subplotpars.bottom
-    project = MagicMock()
-    project.releases = pd.DataFrame(
-        {"location": [release.location_id], "time": [release.time]}
-    )
-
-    ProjectPlotAccessor(project).availability(ax=existing)
-
-    assert fig.subplotpars.bottom == pytest.approx(0.2)  # set by autofmt_xdate
-    assert other.subplotpars.bottom == default_bottom
-
-
-def test_project_availability_figure_keeps_long_location_labels(release):
-    """A label of any length stays inside the figure, so a saved figure has it whole."""
-    from unittest.mock import MagicMock
-
-    project = MagicMock()
-    project.releases = pd.DataFrame(
-        {"location": ["-111.848_40.766_10-with-a-long-name"], "time": [release.time]}
-    )
-
-    ax = ProjectPlotAccessor(project).availability()
-
-    fig = ax.figure
-    fig.canvas.draw()
-    renderer = fig.canvas.get_renderer()
-    for text in [*ax.get_yticklabels(), ax.yaxis.label]:
-        assert text.get_window_extent(renderer).x0 >= 0
-
-
-def test_project_availability_rotates_the_dates_of_its_own_figure(release):
-    from unittest.mock import MagicMock
-
-    project = MagicMock()
-    project.releases = pd.DataFrame(
-        {"location": [release.location_id], "time": [release.time]}
-    )
-
-    ax = ProjectPlotAccessor(project).availability()
-
-    assert {label.get_rotation() for label in ax.get_xticklabels()} == {30.0}
-
-
 # ---------------------------------------------------------------------------
 # Maps across 180 degrees
 # ---------------------------------------------------------------------------
@@ -778,16 +534,6 @@ def _width_of_map(ax):
     """Return the width in degrees of the longitudes a map shows, in its own coordinates (cartopy widens it to fill the axes)."""
     west, east = ax.get_xlim()
     return east - west
-
-
-def test_central_longitude_is_zero_unless_the_extent_runs_past_180():
-    from stilt.visualization import _central_longitude
-
-    assert _central_longitude(None) == 0.0
-    assert _central_longitude((-114.0, -111.0, 39.0, 42.0)) == 0.0
-    assert _central_longitude((-180.0, 180.0, -90.0, 90.0)) == 0.0
-    assert _central_longitude((169.95, 190.05, 40.0, 50.0)) == pytest.approx(180.0)
-    assert _central_longitude((-190.05, -169.95, 40.0, 50.0)) == pytest.approx(-180.0)
 
 
 def test_footprint_map_across_180_shows_only_the_grid(dateline_footprint):

@@ -311,7 +311,7 @@ output="s3://my-bucket/slv-2023")``.
 Everything else is the same: the folder layout, reruns that skip finished
 simulations, ``stilt status``, and loading results. Runs write each result
 straight to the store, while HYSPLIT itself still runs in a workdir on local
-disk (``--compute-root`` or ``PYSTILT_COMPUTE_ROOT``). Listing an object
+disk (``--compute-root`` or ``RUNTRAJ_COMPUTE_ROOT``). Listing an object
 store takes longer than listing a disk, so ``stilt status`` on a large
 project is slower.
 
@@ -522,7 +522,7 @@ which your editor can autocomplete and check:
 
 .. code-block:: python
 
-   from stilt.transport.hysplit import MetConfig
+   from runtraj.transport.hysplit import MetConfig
 
    config = stilt.ProjectConfig(
        mets={"hrrr": MetConfig(directory="/data/arl/hrrr")},

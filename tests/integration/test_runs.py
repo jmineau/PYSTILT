@@ -15,22 +15,17 @@ Skip them:
 import numpy as np
 import pandas as pd
 import pytest
+from runtraj.config import ProjectConfig
+from runtraj.identity import transport_from_settings
+from runtraj.particles import particles_metadata
+from runtraj.transport.hysplit.driver import winderrtf
 
 from stilt import Project
-from stilt.config import ProjectConfig
-from stilt.exceptions import SimulationError
-from stilt.execution.runner import resolve_compute_root
 from stilt.footprint.targets import Mesh
-from stilt.identity import transport_from_settings
-from stilt.particles import particles_metadata
-from stilt.releases import MultiPointRelease
-from stilt.stilt_project import STILT_R_HYSPLIT
-from stilt.transport.hysplit import FailureReason
-from stilt.transport.hysplit.driver import winderrtf
+from stilt.project import STILT_R_HYSPLIT
 from tests.fixtures.factories import blocks
 
 from ..conftest import integration
-from ..fixtures.r_stilt_reference import REFERENCE_TIME
 from .conftest import reference_met
 
 _XYERR = {"siguverr": 2.0, "tluverr": 60.0, "zcoruverr": 500.0, "horcoruverr": 40.0}
@@ -73,34 +68,6 @@ def _with(
 # ---------------------------------------------------------------------------
 # Point release - trajectory only
 # ---------------------------------------------------------------------------
-
-
-@integration
-def test_particles(tmp_path, wbb_release, traj_only_config):
-    """HYSPLIT runs and produces a non-empty trajectory parquet."""
-    model = Project.init(
-        tmp_path / "trajectory",
-        config=traj_only_config,
-        releases=[wbb_release],
-    )
-    model.run()
-
-    sid = _sim_id(wbb_release)
-    assert list(model.simulations["release"]) == [sid[0]]
-    sim = model.simulation(*sid)
-    assert sim.has_particles
-    assert sim.particles_path is not None
-    assert sim.particles_path.parent.name == "date=2021-01-15"
-    assert sim.particles_path.parent.parent.name.startswith("settings=hrrr-")
-    assert len(pd.read_parquet(sim.particles_path)) > 0, "Particle file is empty"
-    assert sim.particles is not None and len(sim.particles) > 0
-    assert not (resolve_compute_root(model) / sid[0] / sid[1]).exists(), (
-        "the scratch working directory is removed"
-    )
-
-    log_text = sim.log
-    for phrase in ("FATAL ERROR", "Segmentation fault", "hycs_std: not found"):
-        assert phrase not in log_text, f"Fatal phrase in log: {phrase!r}"
 
 
 @integration
@@ -233,7 +200,7 @@ def test_particles_that_leave_the_met_domain_complete_the_run(
     tmp_path, traj_only_config
 ):
     """A January night at WBB empties the test met's 4 by 3 degree crop in about 11 hours (#189)."""
-    from stilt.releases import PointRelease
+    from runtraj.releases import PointRelease
 
     # The last particle left after 10 to 12 hours in 24 runs. From the
     # reference release, 30 km south-west, one of the 100 particles stayed
@@ -282,7 +249,7 @@ def _project_on_met_cut_short(tmp_path, wbb_release, traj_only_config, met_dir):
 
 def _skip_the_met_checks(monkeypatch, tmp_path) -> None:
     """Give HYSPLIT the run's files, the one cut short too, as if nothing had looked at them first."""
-    from stilt.transport.hysplit import Met
+    from runtraj.transport.hysplit import Met
 
     blocks = ("20210114_18-23*", "20210115_00-05*", "20210115_06-11*")
     files = [next((tmp_path / "met").glob(block)).resolve() for block in blocks]
@@ -359,26 +326,6 @@ def test_a_run_the_met_stopped_without_a_warning_fails_by_where_its_particles_en
 # ---------------------------------------------------------------------------
 
 
-@integration
-def test_idempotency(tmp_path, wbb_release, traj_only_config):
-    """Second run with skip_existing=True does not overwrite existing output."""
-    model = Project.init(
-        tmp_path / "idempotency",
-        config=traj_only_config,
-        releases=[wbb_release],
-    )
-
-    model.run()
-    sim = model.simulation(*_sim_id(wbb_release))
-    assert sim.has_particles
-    mtime_before = sim.particles_path.stat().st_mtime
-
-    model.run()  # skip_existing=True is the default
-    assert sim.particles_path.stat().st_mtime == mtime_before, (
-        "Parquet was overwritten on second run"
-    )
-
-
 # ---------------------------------------------------------------------------
 # Column and multipoint releases
 # ---------------------------------------------------------------------------
@@ -421,53 +368,6 @@ def test_multipoint(tmp_path, wbb_multipoint_release, multipoint_config):
     sim = model.simulation(*sid)
     assert sim.has_particles
     assert sim.has_footprint
-
-
-def _forty_points() -> MultiPointRelease:
-    """Forty locations 0.03 degrees apart, 4 m up: HYSPLIT's maxpar cut left the last one empty (#237)."""
-    lons = -112.4 + 0.03 * np.arange(40)
-    lats = 40.76 + 0.0001 * np.arange(40)
-    return MultiPointRelease(
-        time=REFERENCE_TIME, longitudes=lons, latitudes=lats, altitudes=[4.0] * 40
-    )
-
-
-@integration
-def test_every_multipoint_location_gets_the_same_particles(tmp_path, met_dir):
-    """With maxpar unset, 1000 particles over 40 locations give each 26; none is cut."""
-    import stilt
-
-    release = _forty_points()
-    particles = stilt.run_trajectories(
-        release, reference_met(met_dir), workdir=tmp_path, n_hours=-1,
-        numpar=1000, krand=2, seed=42,
-    )  # fmt: skip
-
-    # A particle's first row is a minute after release, much nearer its own
-    # location than the next one (2.5 km away).
-    first = particles.loc[particles.groupby("particle")["age"].idxmax()]
-    lons, lats = np.array(release.longitudes), np.array(release.latitudes)
-    nearest = np.argmin(
-        (first["lon"].to_numpy()[:, None] - lons) ** 2
-        + (first["lat"].to_numpy()[:, None] - lats) ** 2,
-        axis=1,
-    )
-    counts = np.bincount(nearest, minlength=40)
-    assert counts.tolist() == [26] * 40
-    warning = tmp_path / "WARNING"  # HYSPLIT writes it only with a warning
-    assert not warning.exists() or "exceeding puff limit" not in warning.read_text()
-
-
-@integration
-def test_a_maxpar_that_cuts_a_multipoint_release_short_fails(tmp_path, met_dir):
-    import stilt
-
-    with pytest.raises(SimulationError, match="40 release locations") as caught:
-        stilt.run_trajectories(
-            _forty_points(), reference_met(met_dir), workdir=tmp_path, n_hours=-1,
-            numpar=1000, maxpar=1000, krand=2, seed=42,
-        )  # fmt: skip
-    assert caught.value.reason == FailureReason.PARTICLE_LIMIT
 
 
 # ---------------------------------------------------------------------------
@@ -563,9 +463,8 @@ def test_pbl_height_is_the_footprints_and_shares_the_run(
 @integration
 def test_cli_run(tmp_path, wbb_config, wbb_release):
     """CLI `stilt run` produces trajectory and footprint artifacts."""
+    from runtraj.cli import app
     from typer.testing import CliRunner
-
-    from stilt.cli import app
 
     project_dir = tmp_path / "cli_project"
     project_dir.mkdir()
@@ -587,42 +486,6 @@ def test_cli_run(tmp_path, wbb_config, wbb_release):
     assert sim.has_particles, "CLI run: no particles"
     assert sim.has_footprint, "CLI run: no footprint"
     assert (project_dir / "output" / "particles").is_dir()
-
-
-@integration
-def test_cli_tasks_split_the_releases(tmp_path, traj_only_config):
-    """Two `stilt run --task` shares run every release once; a rerun has nothing to do."""
-    from typer.testing import CliRunner
-
-    from stilt.cli import app
-
-    project_dir = tmp_path / "tasks"
-    project_dir.mkdir()
-    traj_only_config.to_yaml(project_dir / "config.yaml")
-    (project_dir / "releases.csv").write_text(
-        "time,lati,long,zagl\n"
-        "2021-01-15 06:00:00,40.5,-112.0,5.0\n"
-        "2021-01-15 06:00:00,40.6,-111.9,5.0\n"
-        "2021-01-15 06:00:00,40.7,-111.8,5.0\n"
-    )
-    project = Project(project_dir)
-    every = list(dict.fromkeys(project.simulations["release"]))
-
-    first = CliRunner().invoke(app, ["run", str(project_dir), "--task", "0/2"])
-    assert first.exit_code == 0, first.output
-    status = project.status()
-    assert set(status.loc[status.state == "complete", "release"]) == {
-        every[0],
-        every[2],
-    }
-
-    second = CliRunner().invoke(app, ["run", str(project_dir), "--task", "1/2"])
-    assert second.exit_code == 0, second.output
-    assert set(project.status()["state"]) == {"complete"}
-
-    again = CliRunner().invoke(app, ["run", str(project_dir), "--task", "0/2"])
-    assert again.exit_code == 0, again.output
-    assert "This run:  total=0" in again.output
 
 
 # ---------------------------------------------------------------------------
@@ -812,7 +675,7 @@ def test_geometry_footprint(tmp_path, wbb_release, met_dir):
 @integration
 def test_forward_run(tmp_path, met_dir, wbb_grid):
     """A forward simulation runs end to end and carries a forward time axis."""
-    from stilt.releases import PointRelease
+    from runtraj.releases import PointRelease
 
     from ..fixtures.r_stilt_reference import (
         REFERENCE_ALTITUDE,

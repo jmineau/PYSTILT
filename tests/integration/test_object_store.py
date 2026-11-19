@@ -16,10 +16,11 @@ import pytest
 pytest.importorskip("s3fs")
 moto_server = pytest.importorskip("moto.server")
 
+from runtraj.output import Output  # noqa: E402
+from runtraj.particles import read_particles  # noqa: E402
+
 from stilt.footprint import open_footprints, read_footprint  # noqa: E402
 from stilt.footprint.stage import store_empty_footprint, store_footprint  # noqa: E402
-from stilt.output import Output  # noqa: E402
-from stilt.particles import read_particles  # noqa: E402
 
 from ..conftest import integration  # noqa: E402
 from ..fixtures.output import (  # noqa: E402
@@ -97,33 +98,6 @@ def test_output_on_an_object_store_writes_lists_and_reads(store):
     store_empty_footprint(out, FEET, later)
     assert out.present("footprint", FEET) == {rid, str(later.id)}
     assert read_footprint(out.path("footprint", FEET, str(later.id))) is None  # type: ignore[arg-type]
-
-
-def test_logs_and_failure_records_on_an_object_store(store):
-    out = Output(f"{store}/output")
-    rid = str(release_at().id)
-    log = out.write_log(VARIANT, rid, "hycs_std ran\n")
-    assert log.read_text() == "hycs_std ran\n"
-    record = {"stage": "particles", "reason": "MET_COVERAGE", "message": "boom"}
-    out.record_failure("particles", VARIANT, rid, record)
-    assert out.failure("particles", VARIANT, rid) == record
-    out.clear_failure("particles", VARIANT, rid)
-    assert out.failure("particles", VARIANT, rid) is None
-
-
-def test_a_kept_workdir_on_an_object_store_leaves_out_links(store, tmp_path):
-    out = Output(f"{store}/output")
-    rid = str(release_at().id)
-    workdir = tmp_path / "work"
-    workdir.mkdir()
-    (workdir / "CONTROL").write_text("x")
-    (workdir / "met").symlink_to(tmp_path)  # HYSPLIT links its met files
-
-    kept = out.keep_workdir(VARIANT, rid, workdir)
-
-    assert kept == out.kept_workdir(VARIANT, rid)
-    assert (kept / "CONTROL").read_text() == "x"
-    assert not (kept / "met").exists()
 
 
 @integration

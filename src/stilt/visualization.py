@@ -1,450 +1,329 @@
 """
-Plotting for particles, releases, and projects.
+Plotting for footprints and simulations: STILT's plots, which draw the footprint.
 
-The plots of a footprint and of a simulation, which draw the footprint, are
-STILT's: :mod:`stilt.stilt_visualization`.
+``foot.stilt.plot`` (:class:`FootprintPlotAccessor`) and ``sim.plot``
+(:class:`SimulationPlotAccessor`). The plots of particles, releases and
+projects are in :mod:`runtraj.visualization`.
 """
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
+from runtraj.spatial import horizontal_dims
+from runtraj.visualization import (
+    _bounds_extent,
+    _data_crs,
+    _draw_bounds_box,
+    _draw_met_box,
+    _extent,
+    _legend,
+    _make_ax,
+    _release_points,
+)
 
 if TYPE_CHECKING:
+    import xarray as xr
     from cartopy.io.img_tiles import GoogleTiles
+    from runtraj.spatial import Bounds
 
-    from stilt.project import Project
-    from stilt.releases import Release
-    from stilt.spatial import Bounds
-
-from stilt.releases import ColumnRelease, MultiPointRelease, Release
-
-# ---------------------------------------------------------------------------
-# Internal helpers
-# ---------------------------------------------------------------------------
+    from stilt.simulation import Simulation
 
 
-def _make_ax(
-    ax: Axes | None = None,
-    extent: tuple[float, float, float, float] | None = None,
-    tiler: GoogleTiles | None = None,
-    tiler_zoom: int = 8,
-) -> tuple[Figure, Axes]:
-    """Return ``(fig, ax)``, making a cartopy map when cartopy is installed."""
-    if ax is not None:
-        # pyrefly: ignore[bad-return]
-        return ax.get_figure(), ax
-    try:
-        import cartopy.crs as ccrs
-        import cartopy.feature as cfeature
-
-        # Constrained layout makes room for each colorbar and its label.
-        fig = plt.figure(layout="constrained")
-        center = _central_longitude(extent)
-        projection = ccrs.PlateCarree(central_longitude=center)
-        ax = fig.add_subplot(1, 1, 1, projection=projection)
-        # pyrefly: ignore[missing-attribute]
-        ax.add_feature(cfeature.STATES, linewidth=0.4, edgecolor="0.4")
-        # pyrefly: ignore[missing-attribute]
-        ax.add_feature(cfeature.COASTLINE, linewidth=0.5)
-        if extent is not None:
-            # The extent is given in the axes' own coordinates, which count
-            # degrees east of the center, so a map across 180 stays narrow.
-            west, east, south, north = extent
-            # pyrefly: ignore[missing-attribute]
-            ax.set_extent((west - center, east - center, south, north), crs=projection)
-
-            if tiler is not None:
-                # pyrefly: ignore[bad-argument-type, bad-argument-count]
-                ax.add_image(tiler, tiler_zoom)
-    except ImportError:
-        fig, ax = plt.subplots()
-        if extent is not None:
-            ax.set_xlim(extent[0], extent[1])
-            ax.set_ylim(extent[2], extent[3])
-    return fig, ax
-
-
-def _central_longitude(extent: tuple[float, float, float, float] | None) -> float:
+def _cell_lonlat(foot: xr.DataArray) -> tuple[np.ndarray, np.ndarray]:
     """
-    Return the longitude a new map is centered on.
+    Return the longitude and latitude of each footprint cell center, as 2-D arrays.
 
-    This is 0 unless the extent runs past 180 or -180, as a footprint grid
-    from 170 to 190 does. Then it is the extent's middle, so the map shows
-    that box and not the whole globe.
+    A footprint on a projected grid (``x`` and ``y``) is converted with its
+    grid's projection, from ``foot.stilt.grid``.
     """
-    if extent is None:
-        return 0.0
-    west, east = extent[0], extent[1]
-    if west < -180 or east > 180:
-        return (west + east) / 2
-    return 0.0
+    y_dim, x_dim = horizontal_dims(foot)
+    if x_dim == "lon":
+        return np.meshgrid(foot["lon"].values, foot["lat"].values)
+    from pyproj import Transformer
+
+    to_lonlat = Transformer.from_crs(foot.stilt.grid.crs, "EPSG:4326", always_xy=True)
+    x, y = np.meshgrid(foot["x"].values, foot["y"].values)
+    lon, lat = to_lonlat.transform(x, y)
+    return np.asarray(lon), np.asarray(lat)
 
 
-def _data_crs(ax: Axes) -> dict:
-    """
-    Return the ``transform`` keyword that draws longitude and latitude on *ax*.
-
-    A cartopy map is centered on the longitude it was made with, so data in
-    degrees must say so. Plain matplotlib axes need no keyword.
-    """
-    if not hasattr(ax, "projection"):
-        return {}
-    import cartopy.crs as ccrs
-
-    return {"transform": ccrs.PlateCarree()}
+def _log10_safe(vals: np.ndarray) -> np.ndarray:
+    """Return log10 of ``vals``, with NaN where a value is zero or negative."""
+    with np.errstate(divide="ignore", invalid="ignore"):
+        return np.where(vals > 0, np.log10(vals), np.nan)
 
 
-def _extent(lons, lats, pad: float) -> tuple[float, float, float, float]:
-    """Return the ``(west, east, south, north)`` box around *lons* and *lats*, widened by *pad* degrees."""
-    lons, lats = np.asarray(lons, dtype=float), np.asarray(lats, dtype=float)
-    return (
-        float(lons.min()) - pad,
-        float(lons.max()) + pad,
-        float(lats.min()) - pad,
-        float(lats.max()) + pad,
-    )
+class FootprintPlotAccessor:
+    """Plotting methods of a footprint, as ``foot.stilt.plot``."""
 
-
-def _bounds_extent(bounds: Bounds, pad: float) -> tuple[float, float, float, float]:
-    """Return the ``(west, east, south, north)`` box of *bounds*, widened by *pad* degrees."""
-    return _extent([bounds.xmin, bounds.xmax], [bounds.ymin, bounds.ymax], pad)
-
-
-def _release_points(release: Release) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Return the longitudes, latitudes, and heights of a release's release points."""
-    lats, lons, alts = (
-        np.array(v, dtype=float) for v in zip(*release.coords(), strict=True)
-    )
-    return lons, lats, alts
-
-
-def _draw_bounds_box(
-    ax: Axes,
-    bounds: Bounds,
-    label: str = "",
-    edgecolor: str = "black",
-    linestyle: str = "--",
-    linewidth: float = 1.5,
-) -> None:
-    """Draw the outline of ``bounds`` on ``ax``."""
-    from matplotlib.patches import Rectangle
-
-    rect = Rectangle(
-        (bounds.xmin, bounds.ymin),
-        bounds.xmax - bounds.xmin,
-        bounds.ymax - bounds.ymin,
-        linewidth=linewidth,
-        edgecolor=edgecolor,
-        facecolor="none",
-        linestyle=linestyle,
-        label=label or None,
-        **_data_crs(ax),
-    )
-    ax.add_patch(rect)
-
-
-def _draw_met_box(ax: Axes, bounds: Bounds) -> None:
-    """Draw the outline of a met's crop box on ``ax``."""
-    _draw_bounds_box(
-        ax,
-        bounds,
-        label="Met domain",
-        edgecolor="steelblue",
-        linestyle=":",
-        linewidth=1.2,
-    )
-
-
-def _legend(ax: Axes) -> None:
-    """Add a legend of the labeled artists in the upper right corner (the best spot is slow to search for)."""
-    ax.legend(fontsize=8, loc="upper right")
-
-
-# ---------------------------------------------------------------------------
-# Particles plot accessor
-# ---------------------------------------------------------------------------
-
-
-class ParticlesPlotAccessor:
-    """Plotting methods of a particle table, as ``particles.stilt.plot``."""
-
-    def __init__(self, particles: pd.DataFrame) -> None:
-        self._particles = particles
+    def __init__(self, foot: xr.DataArray) -> None:
+        self._foot = foot
 
     def map(
         self,
-        color_by: str = "age",
-        release: Release | None = None,
+        time=None,
+        log: bool = True,
         ax: Axes | None = None,
-        cmap: str = "viridis_r",
-        s: float = 1.0,
-        alpha: float = 0.3,
-        tiler: GoogleTiles | None = None,
-        tiler_zoom: int = 8,
-        **kwargs,
-    ) -> Axes:
-        """
-        Map every particle position, colored by a particle variable.
-
-        Parameters
-        ----------
-        color_by : {"age", "zagl", "foot"}, default "age"
-            Particle variable to color by.
-        release : Release, optional
-            Mark this release on the map.
-        ax : Axes, optional
-            Axes to plot on. By default a new map is made, with cartopy when
-            it is installed.
-        cmap : str, default "viridis_r"
-            Colormap name.
-        s : float, default 1.0
-            Marker size.
-        alpha : float, default 0.3
-            Marker opacity.
-        tiler : cartopy.io.img_tiles.GoogleTiles, optional
-            Map tiles drawn as a background on a new cartopy map.
-        tiler_zoom : int, default 8
-            Zoom level of the map tiles.
-        **kwargs
-            Forwarded to :func:`matplotlib.axes.Axes.scatter`.
-
-        Returns
-        -------
-        Axes
-        """
-        p = self._particles
-        lons: np.ndarray = p["lon"].to_numpy(dtype=float)
-        lats: np.ndarray = p["lat"].to_numpy(dtype=float)
-
-        _color_labels = {
-            "age": "Minutes since release",
-            "zagl": "Altitude AGL (m)",
-            "foot": "Footprint influence",
-        }
-        if color_by not in _color_labels:
-            raise ValueError(
-                f"color_by must be one of {list(_color_labels)!r}, got {color_by!r}"
-            )
-        if color_by == "foot" and "foot" not in p.columns:
-            raise ValueError(
-                "The particles have no 'foot' column to color by: the transport "
-                "model wrote none. stilt.footprint.footprint_particles adds "
-                "the one the footprint uses."
-            )
-        c: np.ndarray = p[color_by].to_numpy(dtype=float)
-        cbar_label = _color_labels[color_by]
-
-        extent = _extent(lons, lats, pad=0.5)
-        fig, ax = _make_ax(ax, extent=extent, tiler=tiler, tiler_zoom=tiler_zoom)
-
-        sc = ax.scatter(
-            lons,
-            lats,
-            c=c,
-            cmap=cmap,
-            s=s,
-            alpha=alpha,
-            **{**_data_crs(ax), **kwargs},
-        )
-        fig.colorbar(sc, ax=ax, label=cbar_label, shrink=0.7, pad=0.02)
-
-        if release is not None:
-            release.plot.map(ax=ax)
-        ax.set(xlabel="Longitude", ylabel="Latitude", title="Particles")
-        return ax
-
-
-# ---------------------------------------------------------------------------
-# Release plot accessor
-# ---------------------------------------------------------------------------
-
-
-class ReleasePlotAccessor:
-    """Plotting methods of :class:`stilt.Release`, as ``release.plot``."""
-
-    def __init__(self, release: Release) -> None:
-        self._release = release
-
-    def map(
-        self,
-        ax: Axes | None = None,
-        domain: Bounds | None = None,
+        cmap: str = "cool",
+        show_grid: bool = False,
+        show_release: bool = True,
         met_bounds: Bounds | None = None,
-        color: str = "red",
         tiler: GoogleTiles | None = None,
         tiler_zoom: int = 8,
         **kwargs,
     ) -> Axes:
         """
-        Map the release's location.
-
-        A multipoint release's points are colored by height.
+        Map the footprint.
 
         Parameters
         ----------
+        time : datetime-like, optional
+            Plot the time step nearest this time. By default all time steps
+            are summed.
+        log : bool, default True
+            Plot log10 of the footprint. Cells of zero are left blank.
         ax : Axes, optional
-            Axes to plot on. By default a new map is made, with cartopy when
-            it is installed.
-        domain : Bounds, optional
-            Outline a domain, such as a footprint :class:`~stilt.Grid`, with
-            a dashed line, and fit the map to it.
+            Axes to plot on. By default a new map is made.
+        cmap : str, default "cool"
+            Colormap name.
+        show_grid : bool, default False
+            Outline the footprint grid with a dashed line.
+        show_release : bool, default True
+            Mark the release the footprint was made for.
         met_bounds : Bounds, optional
             Outline the meteorology domain with a dotted blue line.
-        color : str, default "red"
-            Marker color of a point or column release.
         tiler : cartopy.io.img_tiles.GoogleTiles, optional
             Map tiles drawn as a background on a new cartopy map.
         tiler_zoom : int, default 8
             Zoom level of the map tiles.
         **kwargs
-            Passed to :meth:`matplotlib.axes.Axes.scatter`.
+            Forwarded to :func:`matplotlib.axes.Axes.pcolormesh`.
 
         Returns
         -------
         Axes
         """
-        standalone = ax is None
-
-        r = self._release
-        lons, lats, alts = _release_points(r)
-
-        if domain is not None:
-            extent = _bounds_extent(domain, pad=0.5)
+        foot = self._foot
+        if time is not None:
+            data = foot.sel(time=time, method="nearest")
         else:
-            pad = max(
-                1.0,
-                (lons.max() - lons.min()) * 0.3 + 0.5,
-                (lats.max() - lats.min()) * 0.3 + 0.5,
-            )
-            extent = _extent(lons, lats, pad=pad)
+            data = foot.sum("time")
 
+        LON, LAT = _cell_lonlat(foot)
+        vals = data.values.astype(float)
+
+        if log:
+            vals = _log10_safe(vals)
+            cbar_label = "log₁₀(footprint)"
+        else:
+            cbar_label = "footprint"
+
+        extent = _extent(LON, LAT, pad=0.05)
         fig, ax = _make_ax(ax, extent=extent, tiler=tiler, tiler_zoom=tiler_zoom)
 
-        if isinstance(r, MultiPointRelease):
-            sc = ax.scatter(
-                lons,
-                lats,
-                c=alts,
-                cmap="plasma",
-                s=80,
-                zorder=5,
-                label="Releases",
-                **{**_data_crs(ax), **kwargs},
-            )
-            fig.colorbar(
-                sc,
-                ax=ax,
-                label=f"Height {r.altitude_ref.upper()} (m)",
-                shrink=0.7,
-                pad=0.02,
-            )
-        else:  # a point, or a column at one location
-            ax.scatter(
-                [lons[0]],
-                [lats[0]],
-                marker="*",
-                s=200,
-                color=color,
-                zorder=5,
-                label="Release",
-                **{**_data_crs(ax), **kwargs},
-            )
-            if isinstance(r, ColumnRelease):
-                ax.annotate(
-                    f"{r.bottom:.0f}–{r.top:.0f} m {r.altitude_ref.upper()}",
-                    xy=(lons[0], lats[0]),
-                    xycoords=_data_crs(ax).get("transform", "data"),
-                    xytext=(6, 4),
-                    textcoords="offset points",
-                    fontsize=8,
-                )
+        mesh = ax.pcolormesh(
+            LON,
+            LAT,
+            vals,
+            cmap=cmap,
+            shading="auto",
+            **{**_data_crs(ax), **kwargs},
+        )
+        fig.colorbar(mesh, ax=ax, label=cbar_label, shrink=0.7, pad=0.02)
 
-        if domain is not None:
-            _draw_bounds_box(ax, domain, label="Domain")
+        if show_grid:
+            _draw_bounds_box(ax, foot.stilt.grid, label="Domain")
         if met_bounds is not None:
             _draw_met_box(ax, met_bounds)
 
-        _legend(ax)
-        if standalone:
-            ax.set(xlabel="Longitude", ylabel="Latitude", title="Release")
+        if show_release and "stilt_release" in foot.attrs:
+            foot.stilt.release.plot.map(ax=ax)  # also makes the legend
+        elif show_grid or met_bounds is not None:
+            _legend(ax)
+        title = "Footprint" if time is None else f"Footprint — {pd.Timestamp(time)}"
+        ax.set(xlabel="Longitude", ylabel="Latitude", title=title)
         return ax
 
-
-# ---------------------------------------------------------------------------
-# Project plot accessor
-# ---------------------------------------------------------------------------
-
-
-class ProjectPlotAccessor:
-    """Plotting methods of :class:`stilt.Project`, as ``project.plot``."""
-
-    def __init__(self, project: Project):
-        self._project = project
-
-    def availability(self, ax: Axes | None = None, **kwargs) -> Axes:
+    def facet(
+        self,
+        ncols: int = 3,
+        log: bool = True,
+        cmap: str = "cool",
+        figsize: tuple[float, float] | None = None,
+        **kwargs,
+    ) -> tuple[Figure, np.ndarray]:
         """
-        Plot how many releases each location has on each day.
+        Plot each time step of the footprint in its own panel, with one colorbar.
 
-        Each location is a row, and each day with releases there a one-day
-        bar shaded by their number, so the plot stays quick for projects of
-        tens of thousands of releases. Whether their simulations have run
-        is not shown; ``project.status()`` says that.
+        This is xarray's faceted plot, in the footprint's own coordinates. Each
+        panel is titled with its time.
 
         Parameters
         ----------
-        ax : Axes, optional
-            Axes to plot on. By default a new figure is made.
+        ncols : int, default 3
+            Number of panel columns.
+        log : bool, default True
+            Plot log10 of the footprint. Cells of zero are left blank.
+        cmap : str, default "cool"
+            Colormap name.
+        figsize : tuple of float, optional
+            Figure size. By default the figure is sized by its panels, each
+            2.2 inches high and 1.25 times as wide as high (xarray's ``size``
+            and ``aspect``, which can be passed instead).
         **kwargs
-            Passed to :meth:`matplotlib.axes.Axes.broken_barh`, except
-            ``cmap``, the colormap of the counts (``viridis``).
+            Forwarded to :meth:`xarray.DataArray.plot`. ``cbar_kwargs`` is
+            merged into the slim colorbar's settings.
+
+        Returns
+        -------
+        fig : Figure
+        axes : ndarray of Axes
+        """
+        foot = self._foot
+        data = foot
+        if log:
+            blank_zeros = foot.where(foot > 0)
+            data = blank_zeros.copy(data=np.log10(blank_zeros.values))
+        y_dim, x_dim = horizontal_dims(foot)
+        if figsize is None:
+            kwargs.setdefault("size", 2.2)
+            kwargs.setdefault("aspect", 1.25)
+        else:
+            kwargs["figsize"] = figsize
+        cbar_kwargs = {
+            "label": "log₁₀(footprint)" if log else "footprint",
+            "fraction": 0.08,
+            "aspect": 30,
+            "shrink": 0.6,
+            "pad": 0.02,
+            **kwargs.pop("cbar_kwargs", {}),
+        }
+        facets = data.plot(
+            x=x_dim,
+            y=y_dim,
+            col="time",
+            col_wrap=ncols,
+            cmap=cmap,
+            cbar_kwargs=cbar_kwargs,
+            **kwargs,
+        )
+        # xarray titles a panel "time = 2021-01-15T01:00:00", and a midnight one with no hour.
+        for ax, time in zip(facets.axs.flat, foot["time"].values, strict=False):
+            ax.set_title(pd.Timestamp(time).strftime("%Y-%m-%d %H:%M"), fontsize=9)
+        return facets.fig, facets.axs
+
+
+class SimulationPlotAccessor:
+    """Plotting methods of :class:`stilt.Simulation`, as ``sim.plot``."""
+
+    def __init__(self, sim: Simulation) -> None:
+        self._sim = sim
+
+    def map(
+        self,
+        show_particles: bool = True,
+        show_release: bool = True,
+        log: bool = True,
+        foot_cmap: str = "YlOrRd",
+        particles_cmap: str = "viridis_r",
+        particles_color_by: str = "age",
+        particles_s: float = 1.0,
+        particles_alpha: float = 0.3,
+        show_grid: bool = True,
+        met_bounds: Bounds | None = None,
+        ax: Axes | None = None,
+        tiler: GoogleTiles | None = None,
+        tiler_zoom: int = 8,
+    ) -> Axes:
+        """
+        Map the footprint, the particles, and the release together.
+
+        The footprint is drawn first, then the particles, then the release.
+        A layer the simulation has no output for is skipped.
+
+        Parameters
+        ----------
+        show_particles : bool, default True
+            Draw the particle positions.
+        show_release : bool, default True
+            Mark the release.
+        log : bool, default True
+            Plot log10 of the footprint.
+        foot_cmap : str, default "YlOrRd"
+            Colormap of the footprint.
+        particles_cmap : str, default "viridis_r"
+            Colormap of the particles.
+        particles_color_by : {"age", "zagl", "foot"}, default "age"
+            Particle variable to color by.
+        particles_s : float, default 1.0
+            Particle marker size.
+        particles_alpha : float, default 0.3
+            Particle marker opacity.
+        show_grid : bool, default True
+            Outline the footprint grid with a dashed line.
+        met_bounds : Bounds, optional
+            Outline the meteorology domain with a dotted blue line.
+        ax : Axes, optional
+            Axes to plot on. By default a new map is made.
+        tiler : cartopy.io.img_tiles.GoogleTiles, optional
+            Map tiles drawn as a background on a new cartopy map.
+        tiler_zoom : int, default 8
+            Zoom level of the map tiles.
 
         Returns
         -------
         Axes
         """
-        import matplotlib.dates as mdates
-        from matplotlib.cm import ScalarMappable
-        from matplotlib.colors import Normalize
+        sim = self._sim
+        foot = sim.footprint if sim.has_footprint else None
+        particles = sim.particles if sim.has_particles else None
 
-        if ax is None:
-            # Constrained layout fits location labels of any length.
-            _, ax = plt.subplots(layout="constrained")
-        assert ax is not None
+        # Map extent: the footprint grid, else the particles, else the release
+        if foot is not None:
+            extent = _bounds_extent(foot.stilt.grid, pad=0.1)
+        elif particles is not None:
+            extent = _extent(particles["lon"], particles["lat"], pad=0.5)
+        else:
+            lons, lats, _ = _release_points(sim.release)
+            extent = _extent(lons, lats, pad=2.0)
 
-        releases = self._project.releases
-        if releases.empty:
-            return ax
+        _, ax = _make_ax(ax, extent=extent, tiler=tiler, tiler_zoom=tiler_zoom)
 
-        cmap = plt.get_cmap(kwargs.pop("cmap", "viridis"))
-        days = pd.to_datetime(releases["time"]).dt.floor("D")
-        counts = releases.assign(day=days).groupby(["location", "day"]).size()
-        norm = Normalize(vmin=1, vmax=max(int(counts.to_numpy().max()), 2))
-        locations = list(dict.fromkeys(releases["location"]))
-        for row, location in enumerate(locations):
-            per_day = counts.loc[location]
-            starts = mdates.date2num(per_day.index.to_pydatetime())
-            ax.broken_barh(
-                [(float(start), 1.0) for start in starts],
-                (row - 0.3, 0.6),
-                facecolors=[cmap(norm(int(n))) for n in per_day.to_numpy()],
-                **kwargs,
+        if foot is not None:
+            # The release is marked once, below, whatever the footprint records.
+            foot.stilt.plot.map(
+                ax=ax,
+                log=log,
+                cmap=foot_cmap,
+                show_grid=show_grid,
+                show_release=False,
             )
-        ax.set_yticks(range(len(locations)), labels=locations)
-        ax.xaxis_date()
-        ax.figure.colorbar(
-            ScalarMappable(norm=norm, cmap=cmap), ax=ax, label="Releases per day"
-        )
-        if ax.figure.get_layout_engine() is None:
-            ax.figure.autofmt_xdate()  # rotates the dates and makes room for them
-        else:  # the layout makes the room; autofmt_xdate would warn on older matplotlib
-            for label in ax.get_xticklabels():
-                label.set_rotation(30)
-                label.set_horizontalalignment("right")
-        ax.set(title="Releases", xlabel="Day", ylabel="Location")
+
+        if show_particles and particles is not None:
+            # pandas-stubs read the registered .stilt accessor as a column
+            # pyrefly: ignore[missing-attribute]
+            particles.stilt.plot.map(
+                ax=ax,
+                color_by=particles_color_by,
+                cmap=particles_cmap,
+                s=particles_s,
+                alpha=particles_alpha,
+            )
+
+        if show_release:
+            sim.release.plot.map(ax=ax, color="red")
+
+        if met_bounds is not None:
+            _draw_met_box(ax, met_bounds)
+            _legend(ax)
+
+        ax.set_title(f"Simulation {sim}")
         return ax
+
+
+__all__ = ["FootprintPlotAccessor", "SimulationPlotAccessor"]

@@ -17,11 +17,11 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from runtraj.releases import ColumnRelease
+from runtraj.transport import run_model
+from runtraj.transport.hysplit import HysplitConfig
 
-from stilt.releases import ColumnRelease
 from stilt.transforms import PressureWeighting, particle_pwf, release_coordinate
-from stilt.transport import run_model
-from stilt.transport.hysplit import HysplitConfig
 
 from ..conftest import integration
 from ..fixtures.r_stilt_reference import (

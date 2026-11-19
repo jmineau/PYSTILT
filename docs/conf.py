@@ -153,14 +153,14 @@ autodoc_typehints = "description"
 autodoc_mock_imports = ["cartopy"]
 
 autodoc_type_aliases = {
-    "ProjectConfig": "stilt.config.ProjectConfig",
-    "Release": "stilt.releases.Release",
+    "ProjectConfig": "runtraj.config.ProjectConfig",
+    "Release": "runtraj.releases.Release",
     # Two documented classes of each name: the particle part's, which the
     # workers and stages take, and STILT's subclass (stilt.Project). A hint
     # names the class its module imports, and modules of the core import the
     # particle part's.
-    "Project": "stilt.project.Project",
-    "Simulation": "stilt.simulation.Simulation",
+    "Project": "runtraj.project.Project",
+    "Simulation": "runtraj.simulation.Simulation",
 }
 
 # Autosummary settings
@@ -258,8 +258,8 @@ def reexported_data_comment(
     Give module data that a package re-exports the comment where it is written.
 
     autodoc looks for the ``#:`` comment of module data in the module the page
-    names it under. ``stilt.particles`` only imports ``FOOTPRINT_COLUMNS``
-    from ``stilt.particles.table``, so its page showed the docstring of the
+    names it under. ``runtraj.particles`` only imports ``PARTICLE_SCHEMA``
+    from ``runtraj.particles.table``, so its page showed the docstring of the
     object's type ("Built-in immutable sequence.") and not the comment. This
     takes the comment from the first module, the named one or a submodule
     already imported, that holds the object under that name and comments it.

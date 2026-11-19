@@ -12,11 +12,11 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 import xarray as xr
+from runtraj._paths import atomic_path
+from runtraj.releases import Release
+from runtraj.spatial import Grid, horizontal_dims
 
-from stilt._paths import atomic_path
 from stilt.footprint.config import FootprintConfig, read_footprint_settings
-from stilt.releases import Release
-from stilt.spatial import Grid, horizontal_dims
 
 from ._paris import to_paris
 from .aggregation import _check_steps_hold_layers, aggregate
@@ -24,7 +24,7 @@ from .io import _naive_utc, _with_cf_metadata
 from .targets import Geometry
 
 if TYPE_CHECKING:
-    from stilt.stilt_visualization import FootprintPlotAccessor
+    from stilt.visualization import FootprintPlotAccessor
 
 
 def _spacing(values: np.ndarray) -> float | None:
@@ -144,7 +144,7 @@ class FootprintAccessor:
     @property
     def plot(self) -> FootprintPlotAccessor:
         """Plotting methods, such as ``foot.stilt.plot.map()``."""
-        from stilt.stilt_visualization import FootprintPlotAccessor
+        from stilt.visualization import FootprintPlotAccessor
 
         return FootprintPlotAccessor(self._foot)
 
@@ -210,7 +210,7 @@ class FootprintAccessor:
         particles : pandas.DataFrame, optional
             The particles the footprint was made from, such as
             ``sim.particles``. Where they left the grid comes from
-            :meth:`~stilt.particles.ParticlesAccessor.grid_exits` on the
+            :meth:`~runtraj.particles.ParticlesAccessor.grid_exits` on the
             footprint's grid, and the fractions are of the particles in the
             table.
 

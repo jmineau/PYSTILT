@@ -160,7 +160,7 @@ A particles folder's hash covers its ``settings`` block. A stage folder's
 hash covers its ``settings`` block together with the hash of each thing
 under ``reads``, so the same footprint settings on other particles give
 another folder. The versions are not part of a hash. Every particle and
-footprint file records its folder's full hash as ``stilt:hash``.
+footprint file records its folder's full hash as ``runtraj:hash``.
 
 Particle files
 --------------
@@ -201,18 +201,18 @@ The file's metadata (Parquet key-value metadata):
 
    * - Key
      - Value
-   * - ``stilt:release``
+   * - ``runtraj:release``
      - The release as JSON (below).
-   * - ``stilt:settings``
+   * - ``runtraj:settings``
      - The run's settings as JSON, the ``settings`` block of the folder's
        ``_settings.yaml``.
-   * - ``stilt:met_files``
+   * - ``runtraj:met_files``
      - The met files the run read, a JSON list of paths.
-   * - ``stilt:hash``
+   * - ``runtraj:hash``
      - The folder's settings hash.
    * - ``stilt:pystilt``
      - The PYSTILT version that wrote the file.
-   * - ``stilt:realization``
+   * - ``runtraj:realization``
      - The realization number, in an ensemble only.
 
 Footprint files
@@ -253,7 +253,7 @@ The file's metadata:
 
    * - Key
      - Value
-   * - ``stilt:release``
+   * - ``runtraj:release``
      - The release as JSON.
    * - ``stilt:footprint``
      - The footprint settings as JSON, with the grid: the ``settings``
@@ -266,13 +266,13 @@ The file's metadata:
      - The variant that made the footprint.
    * - ``stilt:empty``
      - ``true`` when no particle reached the grid, else ``false``.
-   * - ``stilt:hash``
+   * - ``runtraj:hash``
      - The folder's settings hash.
    * - ``stilt:particles_hash``
      - The settings hash of the particles it was made from.
    * - ``stilt:pystilt``
      - The PYSTILT version that wrote the file.
-   * - ``stilt:realization``
+   * - ``runtraj:realization``
      - The realization number, in an ensemble only.
 
 An empty footprint is a file with no rows and ``stilt:empty`` set to
@@ -376,7 +376,7 @@ A release id is the release time to the minute, then the location:
 A location ends in ``msl`` when its heights are above sea level. Whole
 numbers are written without a decimal point.
 
-``stilt:release`` holds the whole release as JSON. Its ``time`` keeps
+``runtraj:release`` holds the whole release as JSON. Its ``time`` keeps
 the seconds, and is UTC with no time zone:
 
 .. code-block:: text

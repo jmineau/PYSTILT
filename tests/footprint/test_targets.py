@@ -5,6 +5,7 @@ import warnings
 import numpy as np
 import pytest
 import shapely
+from runtraj.spatial import same_crs
 
 from stilt import Grid, Mesh, Zones
 from stilt.footprint.targets import (
@@ -13,7 +14,6 @@ from stilt.footprint.targets import (
     check_resolution,
     overlap_weights,
 )
-from stilt.spatial import same_crs
 
 # ---------------------------------------------------------------------------
 # Grid as a geometry

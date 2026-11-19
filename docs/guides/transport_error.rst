@@ -518,18 +518,18 @@ since their heights above ground are unknown.
 Step 2: the scales
 ~~~~~~~~~~~~~~~~~~
 
-:func:`~stilt.meteorology.variogram` builds the empirical variogram. It
+:func:`~runtraj.meteorology.variogram` builds the empirical variogram. It
 takes the errors, the coordinate the separation is measured in, and a
 ``group`` label. Only points with the same label are paired. The coordinate
 can also be two columns of longitude and latitude, and the separation is
 then the great-circle distance in kilometers.
-:func:`~stilt.meteorology.fit_variogram` fits the exponential model with
+:func:`~runtraj.meteorology.fit_variogram` fits the exponential model with
 σ fixed.
 
 .. code-block:: python
 
    import numpy as np
-   from stilt.meteorology import fit_variogram, variogram
+   from runtraj.meteorology import fit_variogram, variogram
 
    def scale(errors, lag, group, bins):
        table = variogram(errors, lag, group=group, bins=bins)
@@ -573,7 +573,7 @@ The recipe makes these choices, and you can change any of them:
   perturbation does not represent it.
 
 The four values go into ``config.yaml`` under the same names, or into
-:class:`~stilt.transport.hysplit.HysplitConfig`. Look at the fits before you trust
+:class:`~runtraj.transport.hysplit.HysplitConfig`. Look at the fits before you trust
 them:
 
 .. code-block:: python

@@ -5,8 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
-
-from stilt.spatial import haversine_km
+from runtraj.spatial import haversine_km
 
 # -- overpasses -----------------------------------------------------------------
 

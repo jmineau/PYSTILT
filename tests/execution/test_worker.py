@@ -1,4 +1,4 @@
-"""Tests for the worker-side execution functions in ``stilt.execution.worker``."""
+"""Tests for the worker-side execution functions in ``runtraj.execution.worker``."""
 
 import datetime as dt
 import errno
@@ -7,23 +7,22 @@ from typing import ClassVar
 
 import pandas as pd
 import pytest
+from runtraj.cli import _exit_code, app
+from runtraj.config import ProjectConfig, Variant
+from runtraj.exceptions import MeteorologyError, SimulationError
+from runtraj.execution import worker
+from runtraj.execution.config import ExecutionConfig
+from runtraj.execution.worker import run_release, run_releases
+from runtraj.output import Output
+from runtraj.releases import PointRelease, Release
+from runtraj.simulation import Simulation
+from runtraj.spatial import Grid
+from runtraj.transport import ModelRun, TransportConfig
+from runtraj.transport.hysplit import FailureReason, HysplitConfig, Met, MetConfig
 from typer.testing import CliRunner
 
 from stilt import Project
-from stilt.cli import _exit_code, app
-from stilt.config import ProjectConfig, Variant
-from stilt.exceptions import MeteorologyError, SimulationError, WorkerDied
-from stilt.execution import worker
-from stilt.execution.config import ExecutionConfig
-from stilt.execution.worker import run_release, run_releases
-from stilt.footprint.config import FootprintConfig
 from stilt.footprint.stage import store_empty_footprint
-from stilt.output import Output
-from stilt.releases import PointRelease, Release
-from stilt.simulation import Simulation
-from stilt.spatial import Grid
-from stilt.transport import ModelRun, TransportConfig
-from stilt.transport.hysplit import FailureReason, HysplitConfig, Met, MetConfig
 
 from ..fixtures.factories import make_met_config, make_project_config, make_variant
 from ..fixtures.footprints import run_footprint
@@ -98,16 +97,6 @@ def sim(release, met_config, params, output) -> Simulation:
     return _make_sim(release, met_config, params, output)
 
 
-@pytest.fixture
-def fsim(release, met_config, params, output) -> Simulation:
-    """A simulation with a footprint whose particles already exist."""
-    s = _make_sim(
-        release, met_config, params, output, footprint=FootprintConfig(grid=GRID)
-    )
-    _write_particles(s)
-    return s
-
-
 def _particles(release) -> pd.DataFrame:
     data = pd.DataFrame(
         {
@@ -173,7 +162,7 @@ def test_run_particles_starts_in_an_empty_directory(
             seen.append(sorted(p.name for p in workdir.iterdir()))
             raise RuntimeError("stop here")
 
-    monkeypatch.setattr("stilt.transport.get_model", lambda name: _Model())
+    monkeypatch.setattr("runtraj.transport.get_model", lambda name: _Model())
     with pytest.raises(RuntimeError):
         worker.run_particles(sim, workdir=workdir)
     assert seen == [[]]
@@ -190,11 +179,11 @@ def test_a_run_stopped_partway_leaves_its_start_in_the_log(
         def run(self, release, params, met, window, workdir=None, timeout=None):
             raise KeyboardInterrupt  # SIGTERM from Slurm, mid-run
 
-    monkeypatch.setattr("stilt.transport.get_model", lambda name: _Model())
+    monkeypatch.setattr("runtraj.transport.get_model", lambda name: _Model())
     with pytest.raises(KeyboardInterrupt):
         worker.run_particles(sim, workdir=compute_root / "w")
 
-    assert "PYSTILT started this run" in sim.log
+    assert "runtraj started this run" in sim.log
     assert not sim.has_particles and sim.failure is None
 
 
@@ -209,7 +198,7 @@ def test_a_model_that_needs_no_workdir_gets_none(sim, met, compute_root, monkeyp
             seen.append(workdir)
             raise SimulationError("stop here", log="model log\n")
 
-    monkeypatch.setattr("stilt.transport.get_model", lambda name: _Model())
+    monkeypatch.setattr("runtraj.transport.get_model", lambda name: _Model())
     monkeypatch.setattr(worker, "get_model", lambda name: _Model())
     workdir = compute_root / sim.release.id / sim.variant.name
     with pytest.raises(SimulationError):
@@ -230,7 +219,7 @@ def test_run_particles_keeps_no_empty_scratch_copy(sim, met, compute_root, monke
         def run(self, release, params, met, window, workdir=None, timeout=None):
             raise MeteorologyError("No met file for 2023-01-01 11:00.")
 
-    monkeypatch.setattr("stilt.transport.get_model", lambda name: _Model())
+    monkeypatch.setattr("runtraj.transport.get_model", lambda name: _Model())
     with pytest.raises(MeteorologyError):
         worker.run_particles(
             sim, workdir=compute_root / sim.release.id / sim.variant.name
@@ -250,7 +239,7 @@ def test_run_particles_without_particles_is_a_simulation_error(
         def run(self, release, params, met, window, workdir=None, timeout=None):
             return ModelRun(particles=pd.DataFrame(), met_files=[])
 
-    monkeypatch.setattr("stilt.transport.get_model", lambda name: _Model())
+    monkeypatch.setattr("runtraj.transport.get_model", lambda name: _Model())
     with pytest.raises(SimulationError) as caught:
         worker.run_particles(
             sim, workdir=compute_root / sim.release.id / sim.variant.name
@@ -291,57 +280,6 @@ def _run_release(project, release, **kwargs):
 
 
 SHARED = {"hrrr": {}, "hrrr-s2": {"smooth_factor": 2.0}, "zi08": {"ziscale": 0.8}}
-
-
-def test_a_release_leaves_no_folders_under_the_compute_root(
-    tmp_path, release, monkeypatch
-):
-    project = _model(tmp_path, [release], variants={"hrrr": {"realizations": 2}})
-    compute_root = project.directory / "scratch"
-
-    class _Model:
-        name = "hysplit"
-
-        def run(self, release, params, met, window, workdir=None, timeout=None):
-            (workdir / "CONTROL").write_text("")
-            raise RuntimeError("stop here")
-
-    monkeypatch.setattr("stilt.transport.get_model", lambda name: _Model())
-
-    assert len(_run_release(project, release)) == 2  # both realizations failed
-    assert list(compute_root.iterdir()) == []
-
-
-@pytest.mark.parametrize("numpar", [200, 100], ids=["other-settings", "same-settings"])
-def test_runs_that_share_a_compute_root_never_share_a_workdir(
-    tmp_path, release, monkeypatch, numpar
-):
-    """Two projects run the same release and variant name at once in one compute root."""
-    first = _model(tmp_path / "a", [release], numpar=100)
-    second = _model(tmp_path / "b", [release], numpar=numpar)
-    compute_root = tmp_path / "compute"
-    ended: dict[str, str | None] = {}
-
-    class _Model:
-        name = "hysplit"
-        started = 0
-
-        def run(self, release, params, met, window, workdir=None, timeout=None):
-            mine = f"run {_Model.started}"
-            _Model.started += 1
-            (workdir / "CONTROL").write_text(mine)
-            if mine == "run 0":  # the second project starts while the first runs
-                run_release(second, str(release.id), compute_root=compute_root)
-            control = workdir / "CONTROL"
-            ended[mine] = control.read_text() if control.exists() else None
-            raise RuntimeError("stop here")
-
-    monkeypatch.setattr("stilt.transport.get_model", lambda name: _Model())
-    run_release(first, str(release.id), compute_root=compute_root)
-
-    # Each run finds its own input in its workdir when it ends.
-    assert ended == {"run 0": "run 0", "run 1": "run 1"}
-    assert list(compute_root.iterdir()) == []
 
 
 def test_each_run_gets_a_new_workdir_named_after_its_simulation(
@@ -637,7 +575,7 @@ def test_a_success_clears_the_failure_it_replaces(tmp_path, release, monkeypatch
 
 # A connection or I/O error that a retry may get past is not a failure of the
 # simulation: no record is written, so it stays unfinished and `stilt run`
-# exits with 3 (stilt._transient.is_transient sorts the errors).
+# exits with 3 (runtraj._transient.is_transient sorts the errors).
 
 
 def _client_error(status, code):
@@ -760,7 +698,7 @@ def test_a_connection_error_while_the_particles_are_written_is_interrupted(
         def run(self, release, params, met, window, workdir=None, timeout=None):
             return ModelRun(particles=_particles(release), met_files=[])
 
-    monkeypatch.setattr("stilt.transport.get_model", lambda name: _Model())
+    monkeypatch.setattr("runtraj.transport.get_model", lambda name: _Model())
     monkeypatch.setattr(
         Output, "write_particles", _fails_with(ConnectionError("bucket down"))
     )
@@ -830,21 +768,6 @@ def test_a_connection_error_removes_the_failure_record_of_an_earlier_attempt(
     assert _states(project) == {sim.release.id: "pending"}
 
 
-def test_an_earlier_record_that_cannot_be_removed_does_not_stop_the_run(
-    tmp_path, release, other_release, monkeypatch
-):
-    """With the output unreachable the old record stays, and the run goes on to the next release."""
-    project = _model(tmp_path, [release, other_release])
-    monkeypatch.setattr(worker, "run_particles", _fails_with(ConnectionError("down")))
-    monkeypatch.setattr(
-        Output, "clear_failure", _fails_with(ConnectionError("down too"))
-    )
-
-    for each in (release, other_release):
-        problems = _run_release(project, each)
-        assert "did not finish" in problems[0]
-
-
 def test_a_mixed_run_is_3_until_the_connection_error_is_mended_and_then_1(
     tmp_path, release, other_release, monkeypatch
 ):
@@ -900,18 +823,6 @@ def test_stilt_run_exits_3_after_a_connection_error_in_a_simulation_and_0_on_the
     assert up.exit_code == 0, up.output
 
 
-def test_stilt_run_still_exits_1_for_a_simulation_that_failed(
-    tmp_path, release, monkeypatch
-):
-    project = _model(tmp_path, [release])
-    (tmp_path / "met").mkdir(exist_ok=True)
-    monkeypatch.setattr(
-        worker, "run_particles", _fails_with(MeteorologyError("No met file."))
-    )
-    result = CliRunner().invoke(app, ["run", str(project.directory)])
-    assert result.exit_code == 1, result.output
-
-
 def test_a_failed_run_keeps_its_log_and_working_directory(
     tmp_path, release, monkeypatch
 ):
@@ -929,7 +840,7 @@ def test_a_failed_run_keeps_its_log_and_working_directory(
                 log="hycs_std said something\n",
             )
 
-    monkeypatch.setattr("stilt.transport.get_model", lambda name: _Model())
+    monkeypatch.setattr("runtraj.transport.get_model", lambda name: _Model())
     _run_release(project, release)
 
     failure = sim.failure
@@ -943,120 +854,6 @@ def test_a_failed_run_keeps_its_log_and_working_directory(
 # ---------------------------------------------------------------------------
 # run_releases: inline
 # ---------------------------------------------------------------------------
-
-
-def _fake_run_release(calls: list[dict], status=None):
-    """
-    A stand-in for run_release that records its calls.
-
-    *status* maps a release to ``"interrupted"`` (it raises
-    KeyboardInterrupt, as a preempted run does) or ``"failed"`` (it reports
-    one problem); the others complete.
-    """
-
-    def fake(
-        project,
-        release_id,
-        *,
-        compute_root,
-        execution=None,
-        skip_existing=True,
-        batched=True,
-    ):
-        calls.append(
-            {
-                "release": release_id,
-                "execution": execution,
-                "skip_existing": skip_existing,
-            }
-        )
-        state = (status or {}).get(release_id)
-        if state == "interrupted":
-            raise KeyboardInterrupt
-        return ["hrrr failed during particles (X): boom"] if state == "failed" else []
-
-    return fake
-
-
-def test_run_releases_inline_runs_in_order_and_logs_progress(
-    tmp_path, release, other_release, monkeypatch, caplog
-):
-    model = _model(tmp_path, [release, other_release])
-    ids = [str(r.id) for r in (release, other_release)]
-    calls: list[dict] = []
-    monkeypatch.setattr(
-        worker, "run_release", _fake_run_release(calls, {ids[0]: "failed"})
-    )
-
-    with caplog.at_level("INFO", logger="stilt.execution.worker"):
-        run_releases(
-            model,
-            ids,
-            compute_root=tmp_path / "scratch",
-            execution=ExecutionConfig(local={"cpus": 1}),
-            skip_existing=True,
-        )
-
-    assert [c["release"] for c in calls] == ids
-    assert caplog.messages == [
-        f"[1/2] {ids[0]}: hrrr failed during particles (X): boom",
-        f"[2/2] {ids[1]} complete",
-    ]
-
-
-def test_run_releases_empty_ids_runs_nothing(tmp_path, release, monkeypatch):
-    model = _model(tmp_path, [release])
-    monkeypatch.setattr(
-        worker, "run_release", lambda *a, **k: pytest.fail("must not run")
-    )
-    run_releases(
-        model,
-        [],
-        compute_root=tmp_path / "scratch",
-        execution=ExecutionConfig(local={"cpus": 1}),
-    )
-
-
-def test_run_releases_inline_skips_existing_by_default(tmp_path, release, monkeypatch):
-    model = _model(tmp_path, [release])
-    calls: list[dict] = []
-    monkeypatch.setattr(worker, "run_release", _fake_run_release(calls))
-
-    run_releases(
-        model,
-        [str(release.id)],
-        compute_root=tmp_path / "scratch",
-        execution=ExecutionConfig(local={"cpus": 1}),
-    )
-    run_releases(
-        model,
-        [str(release.id)],
-        compute_root=tmp_path / "scratch",
-        execution=ExecutionConfig(local={"cpus": 1}),
-        skip_existing=False,
-    )
-
-    assert [c["skip_existing"] for c in calls] == [True, False]
-
-
-def test_run_releases_inline_stops_after_interrupt(
-    tmp_path, release, other_release, monkeypatch
-):
-    model = _model(tmp_path, [release, other_release])
-    ids = [str(r.id) for r in (release, other_release)]
-    calls: list[dict] = []
-    monkeypatch.setattr(
-        worker, "run_release", _fake_run_release(calls, {ids[0]: "interrupted"})
-    )
-
-    run_releases(
-        model,
-        ids,
-        compute_root=tmp_path / "scratch",
-        execution=ExecutionConfig(local={"cpus": 1}),
-    )
-
-    assert [c["release"] for c in calls] == [ids[0]]
 
 
 # ---------------------------------------------------------------------------
@@ -1111,119 +908,6 @@ def fake_pool(monkeypatch):
     return _FakeExecutor
 
 
-def test_run_releases_pool_rebuilds_the_project_in_each_worker(
-    tmp_path, release, other_release, monkeypatch, fake_pool
-):
-    model = _model(tmp_path, [release, other_release])
-    ids = list(model.releases["release"])
-    calls: list[dict] = []
-    monkeypatch.setattr(worker, "run_release", _fake_run_release(calls))
-
-    run_releases(
-        model,
-        ids,
-        compute_root=tmp_path / "scratch",
-        execution=ExecutionConfig(local={"cpus": 2}),
-        skip_existing=False,
-    )
-
-    [pool] = fake_pool.instances
-    assert pool.max_workers == 2
-    # A normal finish waits for the workers to exit on their own.
-    assert pool.shutdowns == [{"wait": True, "cancel_futures": False}]
-    # The initializer opened the project again from its directory.
-    assert worker._POOL_PROJECT is not None
-    assert worker._POOL_PROJECT is not model
-    assert worker._POOL_PROJECT.directory == model.directory
-    assert tmp_path / "scratch" == worker._POOL_COMPUTE_ROOT
-    assert worker._POOL_SKIP is False
-    assert ExecutionConfig(local={"cpus": 2}) == worker._POOL_EXECUTION
-    assert sorted(c["release"] for c in calls) == sorted(ids)
-    assert [c["skip_existing"] for c in calls] == [False, False]
-
-
-def test_run_releases_pool_logs_every_release_once(
-    tmp_path, release, other_release, monkeypatch, fake_pool, caplog
-):
-    model = _model(tmp_path, [release, other_release])
-    ids = list(model.releases["release"])
-    monkeypatch.setattr(
-        worker, "run_release", _fake_run_release([], {ids[0]: "failed"})
-    )
-
-    with caplog.at_level("INFO", logger="stilt.execution.worker"):
-        run_releases(
-            model,
-            ids,
-            compute_root=tmp_path / "scratch",
-            execution=ExecutionConfig(local={"cpus": 2}),
-        )
-
-    # Releases are logged as they finish, in either order, counted 1 then 2.
-    lines = {m.split("] ", 1)[1] for m in caplog.messages}
-    assert lines == {
-        f"{ids[0]}: hrrr failed during particles (X): boom",
-        f"{ids[1]} complete",
-    }
-    assert sorted(m.split("]")[0] for m in caplog.messages) == ["[1/2", "[2/2"]
-
-
-def test_run_releases_pool_stops_its_workers_and_says_how_far_it_got(
-    tmp_path, release, other_release, monkeypatch, fake_pool, caplog
-):
-    model = _model(tmp_path, [release, other_release])
-    ids = list(model.releases["release"])
-    calls: list[dict] = []
-    # The fake runs each release as it is submitted, so the second is stopped
-    # before the first one's result is read.
-    monkeypatch.setattr(
-        worker, "run_release", _fake_run_release(calls, {ids[1]: "interrupted"})
-    )
-
-    with caplog.at_level("INFO", logger="stilt.execution.worker"):
-        run_releases(
-            model,
-            ids,
-            compute_root=tmp_path / "scratch",
-            execution=ExecutionConfig(local={"cpus": 2}),
-        )
-
-    [pool] = fake_pool.instances
-    # The workers are stopped, and what has not started is cancelled.
-    assert pool.shutdowns == [{"wait": False, "cancel_futures": True}]
-    assert [c["release"] for c in calls] == ids
-    assert "stopped after 0 of 2 releases; the rest did not run" in caplog.text
-
-
-def test_a_pool_worker_exits_on_sigterm_and_ignores_ctrl_c(
-    tmp_path, release, monkeypatch, fake_pool
-):
-    """A worker that survived SIGTERM would keep the stop waiting for ever (#309)."""
-    import signal
-
-    model = _model(tmp_path, [release])
-    handlers: dict[int, object] = {}
-    monkeypatch.setattr(
-        worker.signal,
-        "signal",
-        lambda signum, handler: handlers.update({signum: handler}),
-    )
-
-    worker._init_pool_worker(
-        str(model.directory),
-        str(model.output.directory),
-        str(tmp_path / "scratch"),
-        ExecutionConfig(local={"cpus": 2}),
-        True,
-    )
-
-    assert handlers[signal.SIGINT] is signal.SIG_IGN
-    handler = handlers[signal.SIGTERM]
-    assert callable(handler)
-    with pytest.raises(SystemExit):
-        handler(signal.SIGTERM, None)
-
-
 def test_run_releases_pool_worker_error_stops_the_workers_and_is_not_masked(
     tmp_path, release, other_release, monkeypatch, fake_pool
 ):
@@ -1252,203 +936,6 @@ def test_run_releases_pool_worker_error_stops_the_workers_and_is_not_masked(
 
     [pool] = fake_pool.instances
     assert pool.shutdowns == [{"wait": False, "cancel_futures": True}]
-
-
-def test_run_releases_pool_dead_worker_stops_the_run_and_names_what_was_running(
-    tmp_path, release, other_release, monkeypatch, fake_pool
-):
-    """A worker killed outright breaks the pool: stop, and name the releases in progress."""
-    from concurrent.futures.process import BrokenProcessPool
-
-    model = _model(tmp_path, [release, other_release])
-    ids = list(model.releases["release"])
-
-    def kill(*args, **kwargs):
-        raise BrokenProcessPool("a process was terminated abruptly")
-
-    monkeypatch.setattr(worker, "run_release", kill)
-
-    with pytest.raises(WorkerDied) as stopped:
-        run_releases(
-            model,
-            ids,
-            compute_root=tmp_path / "scratch",
-            execution=ExecutionConfig(local={"cpus": 2}),
-        )
-
-    message = str(stopped.value)
-    assert all(rid in message for rid in ids)
-    assert "memory" in message
-    assert "run it again" in message
-    [pool] = fake_pool.instances
-    assert pool.shutdowns == [{"wait": False, "cancel_futures": True}]
-
-
-#: A transport model in its own package, which pool workers import by path.
-_TOY_PACKAGE = """
-import pandas as pd
-from pydantic import BaseModel
-from stilt.transport import ModelRun, TransportConfig
-
-class ToyConfig(TransportConfig):
-    pass
-
-class ToyMet(BaseModel):
-    weather: str
-
-    def settings(self):
-        return {"weather": self.weather}
-
-class ToyModel:
-    name = "toy"
-    config_class = ToyConfig
-    met_config_class = ToyMet
-
-    def sha256(self, config):
-        return None
-
-    def version(self, config):
-        return "1.0"
-
-    def data_files(self, config):
-        return None
-
-    def run(self, release, config, met, window, workdir=None, timeout=None):
-        particles = pd.DataFrame({
-            "particle": [1, 2, 1, 2],
-            "age": [0, 0, -60, -60],
-            "lon": release.longitude,
-            "lat": release.latitude,
-            "zagl": release.altitude,
-            "foot": [0.0, 0.0, 0.01, 0.01],
-        })
-        return ModelRun(particles=particles)
-"""
-
-
-def test_a_run_on_two_cpus_writes_to_the_output_it_was_given(tmp_path):
-    """Pool workers open the project again; they must write where the parent looks (#188)."""
-    import os
-    import subprocess
-    import sys
-
-    (tmp_path / "toypool").mkdir()
-    (tmp_path / "toypool" / "__init__.py").write_text(_TOY_PACKAGE)
-    project = tmp_path / "project"
-    project.mkdir()
-    (project / "config.yaml").write_text(
-        "models:\n  toy:\n    class: toypool.ToyModel\n    n_hours: -1\n"
-        "mets:\n  toy:\n    weather: hrrr\n"
-        "variants:\n  toy: {}\n"
-    )
-    (project / "releases.csv").write_text(
-        "time,longitude,latitude,altitude\n"
-        + "".join(f"2023-01-01 {h:02d}:00:00,-111.85,40.77,5.0\n" for h in range(4))
-    )
-    override = tmp_path / "elsewhere"
-
-    done = subprocess.run(
-        [sys.executable, "-m", "stilt", "run", str(project), "--cpus", "2"]
-        + ["--output", str(override), "--compute-root", str(tmp_path / "work")],
-        capture_output=True,
-        text=True,
-        env={**os.environ, "PYTHONPATH": str(tmp_path)},
-    )
-
-    assert done.returncode == 0, done.stdout + done.stderr
-    assert len(list(override.glob("particles/*/date=*/*.parquet"))) == 4
-    assert not (project / "output").exists()
-
-
-#: A toy model whose run at altitude 99 is killed outright, as the out-of-memory
-#: killer would, when ``TOY_KILL`` is set; the others wait, so they are still
-#: in progress when the pool finds its worker dead.
-_KILLING_TOY_PACKAGE = """
-import os
-import signal
-import time
-
-from toypool import ToyModel
-
-class KillingToy(ToyModel):
-    def run(self, release, config, met, window, workdir=None, timeout=None):
-        if os.environ.get("TOY_KILL"):
-            if release.altitude == 99.0:
-                os.kill(os.getpid(), signal.SIGKILL)  # the worker's own pid
-            time.sleep(30)  # until the pool stops it
-        return super().run(release, config, met, window, workdir, timeout)
-"""
-
-
-def test_a_worker_killed_outright_stops_the_run_and_a_rerun_finishes_it(tmp_path):
-    """A pool worker that dies without Python's say used to hang the run for ever (#382)."""
-    import os
-    import subprocess
-    import sys
-
-    for name, source in (("toypool", _TOY_PACKAGE), ("toykill", _KILLING_TOY_PACKAGE)):
-        (tmp_path / name).mkdir()
-        (tmp_path / name / "__init__.py").write_text(source)
-    project = tmp_path / "project"
-    project.mkdir()
-    (project / "config.yaml").write_text(
-        "models:\n  toy:\n    class: toykill.KillingToy\n    n_hours: -1\n"
-        "mets:\n  toy:\n    weather: hrrr\n"
-        "variants:\n  toy: {}\n"
-    )
-    # The first two start together on two cpus; the killed one is the first.
-    altitudes = [99.0, 5.0, 5.0, 5.0]
-    (project / "releases.csv").write_text(
-        "time,longitude,latitude,altitude\n"
-        + "".join(
-            f"2023-01-01 {h:02d}:00:00,-111.85,40.77,{altitude}\n"
-            for h, altitude in enumerate(altitudes)
-        )
-    )
-    command = [sys.executable, "-m", "stilt", "run", str(project), "--cpus", "2"]
-    command += ["--compute-root", str(tmp_path / "work")]
-    env = {**os.environ, "PYTHONPATH": str(tmp_path)}
-
-    # On main this hangs; the timeout turns that into a failure.
-    killed = subprocess.run(
-        command,
-        capture_output=True,
-        text=True,
-        timeout=120,
-        env={**env, "TOY_KILL": "1"},
-    )
-
-    ids = list(Project(project).releases["release"])
-    assert killed.returncode == 3, killed.stdout + killed.stderr
-    # It names the two releases in progress, not the two that had not started.
-    assert all(rid in killed.stderr for rid in ids[:2]), killed.stderr
-    assert not any(rid in killed.stderr for rid in ids[2:]), killed.stderr
-    assert "memory" in killed.stderr
-    assert "run it again" in killed.stderr
-
-    rerun = subprocess.run(
-        command, capture_output=True, text=True, timeout=120, env=env
-    )
-
-    assert rerun.returncode == 0, rerun.stdout + rerun.stderr
-    assert len(list((project / "output").glob("particles/*/date=*/*.parquet"))) == 4
-
-
-@pytest.mark.parametrize(
-    ("alive", "died"),
-    [([True, True], False), ([True, False], True), ([False, True], True)],
-)
-def test_a_dead_pool_worker_is_found_by_looking_at_the_workers(alive, died):
-    """The loop looks at the workers itself, since the pool can miss a kill (#400)."""
-    from types import SimpleNamespace
-
-    processes = {
-        i: SimpleNamespace(is_alive=lambda state=state: state)
-        for i, state in enumerate(alive)
-    }
-    executor = SimpleNamespace(_processes=processes)
-
-    assert worker._a_worker_died(executor) is died
 
 
 # ---------------------------------------------------------------------------

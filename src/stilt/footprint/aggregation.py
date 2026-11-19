@@ -18,11 +18,11 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 import xarray as xr
+from runtraj.releases import parse_release_id
+from runtraj.spatial import Grid, horizontal_dims
 from scipy import sparse
 
 from stilt.footprint.config import FootprintConfig
-from stilt.releases import parse_release_id
-from stilt.spatial import Grid, horizontal_dims
 
 from .io import UNITS, _naive_utc, _naive_utc_ns, _threads
 from .targets import Geometry, Mesh, Zones, check_resolution, overlap_weights
@@ -366,7 +366,7 @@ def jacobian(
     Sum the footprints in *table* onto a target, per time bin, as one sparse matrix.
 
     The same operation as ``foot.stilt.aggregate``, for many footprints at
-    once. *table* is what :meth:`stilt.output.Output.table` reads: the
+    once. *table* is what :meth:`runtraj.output.Output.table` reads: the
     stored non-zero cells of each release, all on the grid of *config*.
     :meth:`stilt.Project.jacobian` reads a project's footprints one
     release at a time instead, so a selection of any size fits in memory.

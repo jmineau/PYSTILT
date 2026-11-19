@@ -266,7 +266,7 @@ H = project.jacobian(january, windows, time_bins)  # sparse: releases by (hour, 
 table, sampled from the met files at each particle's position and time:
 
 ```python
-from stilt.particles import particles_metadata
+from runtraj.particles import particles_metadata
 from stilt.sampling import sample_met
 
 met_files = particles_metadata(sim.particles_path).met_files

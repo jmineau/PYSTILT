@@ -25,9 +25,9 @@ Configuration
    output: output
 
 ``mets`` names the meteorology (for HYSPLIT,
-:class:`~stilt.transport.hysplit.MetConfig`). ``models`` names the transport
+:class:`~runtraj.transport.hysplit.MetConfig`). ``models`` names the transport
 models, each block with that model's settings
-(:class:`~stilt.transport.hysplit.HysplitConfig` for ``hysplit``).
+(:class:`~runtraj.transport.hysplit.HysplitConfig` for ``hysplit``).
 ``stages`` names what is made from each simulation's particles: the
 footprint, with the footprint settings (:class:`FootprintConfig`). A stage's
 block is named for its stage, so the footprint's is ``footprint``, the name
@@ -35,8 +35,8 @@ of its folder in the output directory and of its column in
 ``project.status()``.
 ``variants`` says what runs, and ``execution`` where
 (:class:`ExecutionConfig`). Each class lives next to the code that uses it
-(``stilt.footprint.config``, ``stilt.execution.config``,
-``stilt.transport.hysplit``), and all but the transport model's are
+(``stilt.footprint.config``, ``runtraj.execution.config``,
+``runtraj.transport.hysplit``), and all but the transport model's are
 importable from ``stilt``.
 
 No setting sits at the top level. One written there is refused with a
@@ -62,7 +62,7 @@ Top level
 
 The blocks, and where the results go.
 
-.. config-model:: stilt.config.ProjectConfig
+.. config-model:: runtraj.config.ProjectConfig
    :declared-only:
 
 HYSPLIT
@@ -75,10 +75,10 @@ Left out, the block is HYSPLIT with the defaults below, which are HYSPLIT's
 own. ``n_hours`` has no default, and ``capemin``, ``kblt``, ``kmixd``,
 ``krand`` and ``vscales`` are unset unless given: HYSPLIT chooses them when
 it runs. ``stilt init`` and :meth:`stilt.Project.init` write STILT-R's values
-where they differ (:data:`stilt.stilt_project.STILT_R_HYSPLIT`; the list is in
+where they differ (:data:`stilt.project.STILT_R_HYSPLIT`; the list is in
 :doc:`../guides/migration/stilt_r`).
 
-.. config-model:: stilt.transport.hysplit.HysplitConfig
+.. config-model:: runtraj.transport.hysplit.HysplitConfig
 
 A model in another package gets a block of any name that gives the model
 class's import path as ``class``, then that model's own settings:
@@ -164,7 +164,7 @@ A met
 The keys of one entry under ``mets:``, for HYSPLIT
 (:doc:`../guides/meteorology`).
 
-.. config-model:: stilt.transport.hysplit.MetConfig
+.. config-model:: runtraj.transport.hysplit.MetConfig
 
 Execution
 ~~~~~~~~~
@@ -173,32 +173,32 @@ The keys under ``execution:`` (:doc:`../guides/running`). ``backend`` names
 where the project runs, and every setting of that place is in the block of
 its name. Only that block is read, so a config can hold both.
 
-.. config-model:: stilt.execution.config.ExecutionConfig
+.. config-model:: runtraj.execution.config.ExecutionConfig
 
 The keys under ``execution: local:``, a run on this machine.
 
-.. config-model:: stilt.execution.config.LocalConfig
+.. config-model:: runtraj.execution.config.LocalConfig
 
 The keys under ``execution: slurm:``, a Slurm job array
 (:doc:`../guides/slurm`). Any other key is an ``sbatch`` option by its name.
 
-.. config-model:: stilt.execution.config.SlurmConfig
+.. config-model:: runtraj.execution.config.SlurmConfig
 
 The keys under ``execution: slurm: fetch:``, the Slurm resources of the job
 that gets the met files before a job array (:ref:`slurm-fetch`).
 
-.. config-model:: stilt.execution.config.FetchConfig
+.. config-model:: runtraj.execution.config.FetchConfig
 
 Config objects
 --------------
 
 A config is what you write. ``project.variants`` turns each declared
-variant into a :class:`stilt.config.Variant`: its transport settings
+variant into a :class:`runtraj.config.Variant`: its transport settings
 checked by the model's config class, and what the file alone does not
 say, such as the grid of a footprint given by a geometry and the transport
 model build. A variant with ``realizations: N`` stays one variant.
 
-The ``PYSTILT_COMPUTE_ROOT`` environment variable sets the compute root,
+The ``RUNTRAJ_COMPUTE_ROOT`` environment variable sets the compute root,
 where each run's workdir is made. It never changes a result, and projects
 can share one.
 
@@ -210,9 +210,6 @@ can share one.
    FootprintConfig
    footprint.FootprintStage
    ExecutionConfig
-   execution.LocalConfig
-   execution.SlurmConfig
-   execution.FetchConfig
    Bounds
    Grid
 
@@ -222,7 +219,7 @@ Parameters
 The settings that shape a run's particles belong to the transport model,
 and are written in its block under ``models:`` (``hysplit`` when the config
 has no ``models``). HYSPLIT's are in
-:class:`stilt.transport.hysplit.HysplitConfig`, under HYSPLIT's names (see
+:class:`runtraj.transport.hysplit.HysplitConfig`, under HYSPLIT's names (see
 :doc:`hysplit`). Each model's block holds all of its settings, the ones
 PYSTILT reads itself among them (``n_hours`` and ``seed``): nothing passes
 from one model's block to another's.

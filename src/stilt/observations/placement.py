@@ -18,9 +18,9 @@ from typing import Literal
 import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
+from runtraj.releases import ColumnRelease, Release
 from shapely.geometry import Point, Polygon
 
-from stilt.releases import ColumnRelease, Release
 from stilt.transforms import averaging_kernel_table
 
 JitterMethod = Literal["regular", "random"]

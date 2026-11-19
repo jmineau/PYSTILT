@@ -1,166 +1,182 @@
 """
-The :class:`Project`: a directory of releases and settings, and a view of their results.
+:class:`stilt.Project`: a project, with the reads of what STILT makes from its particles.
 
-A project is a directory holding what the user wrote::
+It is the particle part (:class:`runtraj.project.Project`) and only adds: the
+footprints of a selection as one dataset, the Jacobian, the transport
+error, and simulations that read their footprint (:class:`stilt.Simulation`).
+It opens the same directory. The workers use the particle part, and nothing
+on disk names this class, so a machine that only runs the particles opens
+the project as well.
 
-    config.yaml       the settings (written once, by Project.init or stilt init)
-    releases.csv     the releases (only appended to)
-
-Results go to the output directory ``config.yaml`` names
-(:class:`stilt.output.Output`), ``./output`` by default. The simulations a
-project defines are its releases crossed with the variants in
-``config.yaml``. A project reads; the workers in :mod:`stilt.execution` are
-the only code that writes results.
-
-This is the particle part, which the workers use. :class:`stilt.Project`
-(:mod:`stilt.stilt_project`) adds the reads of what STILT makes from the
-particles, such as :meth:`stilt.Project.footprints`.
+A new project made here (:meth:`Project.init`, ``stilt init``) gets the
+values STILT-R runs HYSPLIT with (:data:`STILT_R_HYSPLIT`).
 """
 
 from __future__ import annotations
 
-import re
-from collections.abc import Iterable, Iterator
-from functools import cached_property
+from collections.abc import Iterable
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Self
+from typing import Any, Self
 
-import numpy as np
 import pandas as pd
-import pyarrow as pa
+import xarray as xr
+import yaml
+from runtraj import project
+from runtraj.config import ProjectConfig, Variant
+from runtraj.particles import read_particles
+from runtraj.project import _one_group
+from runtraj.releases import Release
 
-from stilt._paths import absolute, location, write_parquet
-from stilt.check import check_project
-from stilt.config import ProjectConfig, Variant
-from stilt.execution.config import ExecutionConfig
-from stilt.fetch import fetch_project
-from stilt.output import Output, completed
-from stilt.particles import particles_from_table
-from stilt.releases import Release, read_releases
-from stilt.releases.table import (
-    COLUMNS,
-    ROW_COLUMNS,
-    append_releases_csv,
-    check_distinct_ids,
-    read_release_frame,
-    release_rows,
-    releases_from_rows,
-    releases_to_csv,
-)
+from stilt.footprint import Geometry, Jacobian
+from stilt.footprint.aggregation import _jacobian
+from stilt.footprint.io import _threads, open_footprints
+from stilt.footprint.stage import stored_particles, variant_footprint
 from stilt.simulation import Simulation
-from stilt.stages import reads
+from stilt.transport_error import _transport_errors
 
-if TYPE_CHECKING:
-    from stilt.visualization import ProjectPlotAccessor
+#: STILT-R's HYSPLIT settings where they differ from what HYSPLIT does on its
+#: own: ``stilt.Project.init`` and ``stilt init`` write them into a new project's
+#: ``models: hysplit:`` block, so it runs HYSPLIT as STILT-R does. The values
+#: are those of STILT-R's ``run_stilt.r``. ``kblt``, ``kmixd`` and ``vscales``
+#: are what HYSPLIT chooses itself in STILT mode, and are written so that
+#: ``SETUP.CFG`` matches STILT-R's line for line. ``varsiwant`` is STILT-R's
+#: list with ``pres`` added, for pressure weighting.
+STILT_R_HYSPLIT: dict[str, Any] = {
+    "numpar": 1000,
+    "capemin": -1.0,
+    "kblt": 5,
+    "kmixd": 3,
+    "krand": 4,
+    "vscales": -1.0,
+    "wvert": False,
+    "varsiwant": [
+        "time",
+        "indx",
+        "long",
+        "lati",
+        "zagl",
+        "foot",
+        "mlht",
+        "pres",
+        "dens",
+        "samt",
+        "sigw",
+        "tlgr",
+    ],
+}
 
-
-#: The columns of :attr:`Project.releases` before the label columns.
-RELEASE_COLUMNS = ("release", "time", "kind", "location")
-
-#: Where a simulation stands, the ``state`` column of :meth:`Project.status`.
-STATES = ("complete", "failed", "interrupted", "pending")
-
-
-def _as_releases(
-    releases: Release | Iterable[Release] | str | Path,
-) -> list[Release]:
-    """Return releases given as one, several, or the path of a releases CSV."""
-    if isinstance(releases, (str, Path)):
-        return read_releases(absolute(releases))
-    if isinstance(releases, Release):
-        return [releases]
-    items = list(releases)
-    if not all(isinstance(item, Release) for item in items):
-        raise TypeError(
-            "Releases must be a Release, an iterable of Releases, or the path "
-            "of a releases CSV."
-        )
-    return items
-
-
-#: A variant and a realization, how the bulk methods group a selection.
-_Key = tuple[str, int | None]
-#: The releases with each kind of result a variant makes: ``particles`` first, then each stage in the order they run.
-_Present = dict[str, frozenset[str]]
-
-
-def _realization(value: Any) -> int | None:
-    """Return a ``realization`` cell as an int, or ``None`` for a single run."""
-    return None if pd.isna(value) else int(value)
+#: The commented ``config.yaml`` that ``stilt.Project.init(path, starter=True)`` and
+#: ``stilt init`` write, to edit by hand.
+STARTER_CONFIG = """# PYSTILT project configuration
+# See docs for details: https://jmineau.github.io/PYSTILT
 
 
-def _rows(frame: pd.DataFrame) -> list[tuple[str, str, int | None]]:
-    """Return each row's ``(release, variant, realization)``."""
-    return [
-        (str(r), str(v), _realization(k))
-        for r, v, k in zip(
-            frame["release"], frame["variant"], frame["realization"], strict=True
-        )
-    ]
+# Meteorology, by name: the folder of your ARL files. To download them from NOAA
+# instead, write hrrr: {download: hrrr, directory: /path/to/keep/them}.
+mets:
+  hrrr: /path/to/arl/meteorology
 
 
-def _groups(frame: pd.DataFrame) -> Iterator[tuple[str, int | None, pd.DataFrame]]:
-    """Yield the rows of each variant and realization in *frame*."""
-    for key, rows in frame.groupby(
-        ["variant", "realization"], sort=False, dropna=False
-    ):
-        assert isinstance(key, tuple)  # grouped by two columns
-        name, k = key
-        yield str(name), _realization(k), rows
+# Transport models, by name, each with its settings: the defaults of every
+# variant that runs it. Negative n_hours means backward in time.
+models:
+  hysplit:
+    n_hours: -24
+    # STILT-R's values where HYSPLIT's own defaults differ. A setting left
+    # out runs with HYSPLIT's default.
+    numpar: 1000
+    capemin: -1     # no convection
+    kblt: 5         # Hanna turbulence
+    kmixd: 3        # mixed-layer height from the bulk Richardson number
+    krand: 4        # random numbers seeded from the clock
+    vscales: -1     # Hanna timescale in a stable boundary layer
+    wvert: false
+    varsiwant: [time, indx, long, lati, zagl, foot, mlht, pres, dens, samt, sigw, tlgr]
 
 
-def _one_group(frame: pd.DataFrame, what: str) -> tuple[str, int | None]:
-    """Return the one ``(variant, realization)`` of a selection, or raise."""
-    groups = list(dict.fromkeys((v, k) for _, v, k in _rows(frame)))
-    variants = list(dict.fromkeys(v for v, _ in groups))
-    if len(variants) == 1 and len(groups) > 1:
-        realizations = [k for _, k in groups]
-        raise ValueError(
-            f"{what} is made from one realization of an ensemble; this "
-            f"selection holds realizations {realizations} of {variants[0]!r}. "
-            "Pick one with the realization column, as in "
-            f"ens[ens.realization == {realizations[0]}]."
-        )
-    if len(groups) != 1:
-        raise ValueError(
-            f"{what} is made from one variant (and one realization of an "
-            f"ensemble); this selection has {groups}. Select one first, as in "
-            "sims[sims.variant == 'hrrr']."
-        )
-    return groups[0]
+# Stages, by name: what is made from each simulation's particles. The footprint
+# stage grids them. Remove the stages block to make particles only.
+stages:
+  footprint:
+    class: stilt.footprint.FootprintStage
+    grid:
+      xmin: -113.0
+      xmax: -110.5
+      ymin: 40.0
+      ymax: 42.0
+      xres: 0.01
+      yres: 0.01
+    hnf_plume: true  # correct foot for the thin plume near the release before gridding
 
 
-def _is_mask(sel: Any) -> bool:
-    """Return whether *sel* is a boolean mask (a Series, an array, or a list of booleans)."""
-    if isinstance(sel, (pd.Series, np.ndarray)):
-        return sel.dtype == bool or str(sel.dtype) == "boolean"
-    return isinstance(sel, list) and bool(sel) and all(isinstance(v, bool) for v in sel)
+# Variants. Every release runs once per variant, with the blocks above as
+# the defaults. An entry with no overrides runs the defaults as they are; add
+# others to run the same releases under other settings, e.g. a mixed-layer
+# bracket or a wind-error ensemble (see the docs). A variant changes a
+# footprint setting under its own stages: key. Only the variants listed here
+# run.
+variants:
+  hrrr: {}
+#  hrrr-zi08: {ziscale: 0.8}
+#  hrrr-coarse: {stages: {footprint: {grid: {xres: 0.05, yres: 0.05}}}}
 
 
-def _column(table: Any, name: str) -> list[str]:
-    """Return one column of a pandas, polars, or pyarrow table as a list of strings."""
-    column = table[name]
-    for convert in ("to_pylist", "to_list", "tolist"):  # pyarrow, polars, pandas
-        if hasattr(column, convert):
-            return [str(v) for v in getattr(column, convert)()]
-    return [str(v) for v in column]
+# Results go to this directory, relative to the project unless absolute.
+# Several projects can name the same directory and share runs.
+output: ./output
 
 
-class Project:
+# Execution is optional. Local execution is the default. Each backend's
+# settings are in the block of its name, and only the backend's block is read.
+# execution:
+#   backend: local    # or "slurm"
+#   local:
+#     cpus: 1         # releases at once
+#   slurm:
+#     n_workers: 1    # array tasks
+#     cpus: 1         # releases at once in each task
+#     time: "02:00:00"
+"""
+
+
+def _with_stilt_r_values(config: ProjectConfig) -> ProjectConfig:
     """
-    A project's particle runs: releases, settings, and the simulations they define.
+    Return *config* with STILT-R's HYSPLIT values in its ``hysplit`` block, where it gives none.
+
+    A config that does not run the built-in HYSPLIT is returned as it is.
+    """
+    data = yaml.safe_load(config.to_yaml())
+    models = data.get("models") or {"hysplit": {}}
+    if "hysplit" not in models or "class" in (models["hysplit"] or {}):
+        return config
+    block = models["hysplit"] or {}
+    models["hysplit"] = block | {
+        name: value for name, value in STILT_R_HYSPLIT.items() if name not in block
+    }
+    data["models"] = models
+    return ProjectConfig.model_validate(data)
+
+
+class Project(project.Project):
+    """
+    A STILT project: releases, settings, the simulations they define, and their footprints.
 
     ``Project(path)`` opens a project directory and reads it. It is every
     release under every variant, and a view of their results: list the
-    simulations, see which have finished, load their particles. The results
-    are in the output directory ``config.yaml`` names (``./output`` by
-    default), which several projects can share.
+    simulations, see which have finished, load particles and footprints.
+    The results are in the output directory ``config.yaml`` names
+    (``./output`` by default), which several projects can share.
 
-    This is the part the workers use. :class:`stilt.Project`, which opens the
-    same directory, adds the reads of what STILT makes from the particles
-    (footprints, the Jacobian, the transport error); most users want that
-    one. Make a new project with :meth:`init`. After that, ``config.yaml``
-    is yours to edit; PYSTILT never rewrites it.
+    It is :class:`runtraj.project.Project`, the particle part the workers use,
+    and it adds the reads of what STILT makes from the particles:
+    :meth:`footprints`, :meth:`jacobian`, :meth:`transport_error`, and
+    simulations that read their footprint (:class:`stilt.Simulation`). Of
+    what it inherits it changes only :meth:`simulation`, which returns that
+    class, and :meth:`init`, which writes STILT-R's values; nothing on disk
+    names it.
+
+    Make a new project with :meth:`init` (or ``stilt init``). After that,
+    ``config.yaml`` is yours to edit; PYSTILT never rewrites it.
 
     Parameters
     ----------
@@ -177,33 +193,77 @@ class Project:
     FileNotFoundError
         If the directory has no ``config.yaml``, so it is not a project: a
         mistyped path is not read as a project with no releases.
-    ValueError
-        If the directory has ``receptors.csv`` and no ``releases.csv``: the
-        file was renamed, and its ``r_idx`` column is now ``group``.
 
     Attributes
     ----------
     directory : Path
         The project directory, absolute.
+
+    Examples
+    --------
+    Make a project, run it, and load a footprint:
+
+    >>> import stilt  # doctest: +SKIP
+    >>> release = stilt.PointRelease(  # doctest: +SKIP
+    ...     time="2023-07-15 18:00", longitude=-111.848, latitude=40.766, altitude=10
+    ... )
+    >>> project = stilt.Project.init(  # doctest: +SKIP
+    ...     "./my_project",
+    ...     releases=[release],
+    ...     mets={"hrrr": "/data/hrrr"},
+    ...     models={"hysplit": {"n_hours": -24}},
+    ...     stages={
+    ...         "footprint": {
+    ...             "class": "stilt.footprint.FootprintStage",
+    ...             "grid": {
+    ...                 "xmin": -113,
+    ...                 "xmax": -110.5,
+    ...                 "ymin": 40,
+    ...                 "ymax": 42,
+    ...                 "xres": 0.01,
+    ...                 "yres": 0.01,
+    ...             },
+    ...         }
+    ...     },
+    ...     variants={"hrrr": {}},
+    ... )
+    >>> project.run()  # doctest: +SKIP
+    >>> foot = project.simulation(release.id, "hrrr").footprint  # doctest: +SKIP
+
+    Open it again later and check a selection of simulations:
+
+    >>> project = stilt.Project("./my_project")  # doctest: +SKIP
+    >>> sims = project.simulations  # doctest: +SKIP
+    >>> project.status(sims[sims.variant == "hrrr"])  # doctest: +SKIP
     """
 
-    def __init__(self, path: str | Path, *, output: str | Path | None = None) -> None:
-        self.directory = absolute(path)
-        self._output = output
-        #: Checked release rows used in place of releases.csv (:meth:`_take_rows`).
-        self._taken_rows: pd.DataFrame | None = None
-        if not self.config_path.exists():
-            raise FileNotFoundError(
-                f"No config.yaml in {self.directory}. Make a project with "
-                "stilt.Project.init(...) or `stilt init`."
-            )
-        if (
-            self.directory / "receptors.csv"
-        ).exists() and not self.releases_path.exists():
-            raise ValueError(
-                f"{self.directory} has receptors.csv, which is now named "
-                "releases.csv: rename the file, and rename its r_idx column to group."
-            )
+    def simulation(
+        self, release_id: str, variant: str, realization: int | None = None
+    ) -> Simulation:
+        """
+        Return one simulation, with STILT's reads: a :class:`stilt.Simulation`.
+
+        It is :meth:`runtraj.project.Project.simulation`, which finds the
+        release and the variant, as the subclass that reads the footprint,
+        the background, and the transport error. The two compare equal.
+
+        Raises
+        ------
+        KeyError
+            If the project has no such release or variant.
+        ValueError
+            If *realization* is not one the variant runs as: ``0`` to
+            ``N - 1`` for ``realizations: N``, ``None`` otherwise.
+
+        Examples
+        --------
+        >>> sim = project.simulation(release_id, "hrrr")  # doctest: +SKIP
+        >>> sim.footprint  # doctest: +SKIP
+        """
+        sim = super().simulation(release_id, variant, realization)
+        return Simulation(
+            sim.release, sim.variant, sim.output, sim.directory, sim.realization
+        )
 
     @classmethod
     def init(
@@ -212,16 +272,22 @@ class Project:
         releases: Release | Iterable[Release] | str | Path | None = None,
         *,
         config: ProjectConfig | None = None,
+        starter: bool = False,
         **settings: Any,
     ) -> Self:
         """
         Make a new project and return it.
 
         Writes ``config.yaml``, with the settings given, and
-        ``releases.csv`` when releases are given. The settings are written
-        as given: a transport model runs with its own defaults for the
-        settings they leave out. :meth:`stilt.Project.init` also writes the
-        values STILT-R runs HYSPLIT with.
+        ``releases.csv`` when releases are given. With ``starter=True`` it
+        writes the commented starter config instead, to edit by hand, as
+        ``stilt init`` does.
+
+        Either way, a project that runs HYSPLIT gets STILT-R's values where
+        they differ from HYSPLIT's own defaults (:data:`STILT_R_HYSPLIT`)
+        in its ``models: hysplit:`` block, unless the settings give them,
+        so it runs as STILT-R does. Otherwise it is
+        :meth:`runtraj.project.Project.init`.
 
         Parameters
         ----------
@@ -231,6 +297,10 @@ class Project:
             Releases, or the path of a releases CSV to copy them from.
         config : ProjectConfig, optional
             The settings. Or give them as keywords instead.
+        starter : bool, default False
+            Write the commented starter ``config.yaml``
+            (:data:`STARTER_CONFIG`) in place of a config. Without
+            releases, ``releases.csv`` gets only its header.
         **settings
             The blocks of :class:`~stilt.ProjectConfig`: ``mets``, ``models``,
             ``stages`` and ``variants``, and ``execution`` and ``output``.
@@ -241,7 +311,8 @@ class Project:
             If the directory already has a ``config.yaml``. Open it with
             ``Project(path)`` instead, and edit the file to change settings.
         TypeError
-            If both *config* and keyword settings are given.
+            If both *config* and keyword settings are given, or either is
+            given with ``starter=True``.
         ValueError
             If a variant's settings are invalid, or *releases* is given but
             holds none (an empty list, or a CSV file with only its header).
@@ -249,877 +320,324 @@ class Project:
         """
         if config is not None and settings:
             raise TypeError("Give a ProjectConfig or keyword settings, not both.")
-        batch = None if releases is None else _as_releases(releases)
-        if batch == []:
-            raise ValueError(
-                "No releases were given: the list or file is empty. Leave "
-                "releases out to make a project without them, and add them "
-                "later with project.add_releases."
+        if not starter:
+            config = _with_stilt_r_values(config or ProjectConfig(**settings))
+            return super().init(path, releases, config=config)
+        if config is not None or settings:
+            raise TypeError(
+                "A starter config takes no settings; edit its config.yaml instead."
             )
-        if config is None:
-            config = ProjectConfig(**settings)
-        directory = absolute(path)
-        config_path = directory / "config.yaml"
-        # The config checks a variant's own transport settings only when it is
-        # resolved; do it now, so a bad config is never written.
-        config.resolve(directory)
-        if config_path.exists():
-            raise FileExistsError(
-                f"{directory} already has a config.yaml. Open it with "
-                "Project(path), and edit config.yaml to change its settings."
-            )
-        directory.mkdir(parents=True, exist_ok=True)
-        config.to_yaml(config_path)
-        project = cls(directory)
-        if batch is not None:
-            project.add_releases(batch)
-        return project
+        starting = ProjectConfig.model_validate(yaml.safe_load(STARTER_CONFIG))
+        new = super().init(path, releases, config=starting)
+        # The same settings, with the comments that explain them.
+        new.config_path.write_text(STARTER_CONFIG)
+        if releases is None:
+            # Header only: every other line of a releases file is a release.
+            new.releases_path.write_text("time,longitude,latitude,altitude\n")
+        return new
 
-    def __repr__(self) -> str:
-        return f"Project({str(self.directory)!r})"
-
-    # -- inputs ----------------------------------------------------------------
-
-    @property
-    def name(self) -> str:
-        """The project's name, which is the name of its directory."""
-        return self.directory.name
-
-    @property
-    def config_path(self) -> Path:
-        """The project's ``config.yaml``."""
-        return self.directory / "config.yaml"
-
-    @property
-    def releases_path(self) -> Path:
-        """The project's ``releases.csv``."""
-        return self.directory / "releases.csv"
-
-    @cached_property
-    def config(self) -> ProjectConfig:
+    def footprints(self, sel: Any = None) -> xr.Dataset:
         """
-        The settings, read from ``config.yaml``.
+        Open the footprints of the selected simulations as one dataset.
 
-        Raises
-        ------
-        ValueError
-            If ``config.yaml`` is not valid YAML or holds a wrong setting.
-        """
-        return ProjectConfig.from_yaml(self.config_path)
-
-    @cached_property
-    def output(self) -> Output:
-        """
-        The output directory.
-
-        The ``output`` the project was opened with, or else ``config.output``
-        (``./output`` by default), relative to the project.
-        """
-        if self._output is not None:
-            return Output(location(self._output))
-        return Output(location(self.config.output, self.directory))
-
-    @cached_property
-    def variants(self) -> dict[str, Variant]:
-        """
-        Each variant, resolved, by name, in config order.
-
-        An ensemble (``realizations: N``) is one variant; its realizations
-        are the ``realization`` column of :attr:`simulations`. A footprint given by a geometry gets its grid
-        here, so the geometry is read on first use (:meth:`stilt.ProjectConfig.resolve`),
-        and a relative geometry file starts from the project directory.
-        """
-        return self.config.resolve(self.directory)
-
-    @cached_property
-    def _rows(self) -> pd.DataFrame:
-        """
-        The rows of ``releases.csv``, checked, with each row's release id.
-
-        No release is built here; :meth:`release` builds one when asked.
-        """
-        if self._taken_rows is not None:
-            return self._taken_rows
-        if not self.releases_path.exists():
-            empty = pd.DataFrame(columns=["time", "longitude", "latitude", "altitude"])
-            return release_rows(empty)
-        return release_rows(read_release_frame(self.releases_path))
-
-    @cached_property
-    def _positions(self) -> dict[str, np.ndarray]:
-        """Where each release's rows are in :attr:`_rows`, by id, so :meth:`release` need not search."""
-        groups = self._rows.groupby("release", sort=False).indices
-        return {str(rid): np.asarray(positions) for rid, positions in groups.items()}
-
-    @cached_property
-    def releases(self) -> pd.DataFrame:
-        """
-        The releases, one row per release, in file order.
-
-        The columns are ``release`` (the id), ``time``, ``kind``
-        (``point``, ``column``, or ``multipoint``), ``location`` (the
-        location id), and one column per label from ``releases.csv``.
-        :meth:`release` gives the release itself.
-
-        Raises
-        ------
-        ValueError
-            If a row of ``releases.csv`` is wrong, naming the row.
-        """
-        rows = self._rows
-        labels = [c for c in rows.columns if c not in COLUMNS and c not in ROW_COLUMNS]
-        first = rows.drop_duplicates("release")
-        frame = first.loc[:, [*RELEASE_COLUMNS, *labels]].reset_index(drop=True)
-        return frame.astype({"time": "datetime64[ns]"})
-
-    def release(self, release_id: str) -> Release:
-        """
-        Return one release by id, built from its rows.
-
-        Raises
-        ------
-        KeyError
-            If the project has no release with that id.
-        """
-        return self._releases([release_id])[release_id]
-
-    def _releases(self, release_ids: Iterable[str]) -> dict[str, Release]:
-        """
-        Return releases by id, built together from their rows.
-
-        Selecting a release's rows from a large table is most of the cost
-        of building it, so a selection builds all of its releases in one
-        pass: on a project of millions of rows that is about 0.05 ms a
-        release, against several ms one at a time.
-
-        Raises
-        ------
-        KeyError
-            If the project has no release with one of the ids.
-        """
-        ids = list(dict.fromkeys(release_ids))
-        if not ids:
-            return {}
-        # releases_from_rows builds them in the order the ids first appear.
-        return dict(zip(ids, releases_from_rows(self._rows_of(ids)), strict=True))
-
-    def _rows_of(self, release_ids: list[str]) -> pd.DataFrame:
-        """
-        Return the checked rows of *release_ids*, in that order.
-
-        Raises
-        ------
-        KeyError
-            If the project has no release with one of the ids.
-        """
-        for rid in release_ids:
-            if rid not in self._positions:
-                raise KeyError(f"No release {rid!r} in {self.directory}.")
-        return self._rows.iloc[
-            np.concatenate([self._positions[r] for r in release_ids])
-        ]
-
-    def _take_rows(self, rows: pd.DataFrame) -> None:
-        """
-        Use *rows*, checked release rows (:func:`~stilt.releases.table.release_rows`), in place of ``releases.csv``.
-
-        A Slurm task reads the rows of its submission's releases
-        (``releases.parquet``, written by :func:`stilt.execution.submit`)
-        rather than reading and checking the whole file again. The project
-        then knows only those releases.
-        """
-        self._taken_rows = rows.reset_index(drop=True)
-        for name in ("_rows", "_positions", "releases", "_simulations"):
-            vars(self).pop(name, None)
-
-    def add_releases(
-        self, releases: Release | Iterable[Release] | str | Path
-    ) -> list[str]:
-        """
-        Add releases to ``releases.csv`` and return the ids of the new ones.
-
-        The file is created if needed, and otherwise only appended to, in its
-        own columns (:func:`stilt.releases.table.append_releases_csv`). Releases
-        it already holds are skipped.
+        Footprints are stacked by their layer from the release time, so
+        releases at any time share one layer axis, named for the unit
+        ``tres`` is written in and counted in it: ``hour`` with the default
+        ``tres`` of ``1h``, ``day`` for ``1D``, ``minute`` for ``15min``. The
+        ``time`` coordinate says when each layer starts. Only the files' metadata is
+        read here. The values load with dask when they are used, in blocks
+        of releases from one date folder. The selection must hold one
+        variant, as for :meth:`jacobian`.
 
         Parameters
         ----------
-        releases : Release, iterable of Release, str or Path
-            Releases, or the path of a releases CSV to add them from.
+        sel : DataFrame or mask, optional
+            The simulations, as for :meth:`status`, all of one variant (and
+            one realization of an ensemble). All of them by default.
+
+        Returns
+        -------
+        xarray.Dataset
+            ``foot`` with dims ``(release, hour, lat, lon)`` (``y`` and
+            ``x`` on a projected grid, and ``day`` or ``minute`` in place
+            of ``hour`` when ``tres`` is written in them), in selection
+            order. A release with
+            an empty footprint has no row and is listed in
+            ``attrs["empty"]``; one not run yet is listed in
+            ``attrs["missing"]``.
 
         Raises
         ------
         ValueError
-            If a new release has the id of a different release, since an
-            id names a release's result files.
-        """
-        batch = _as_releases(releases)
-        known = [self.release(r.id) for r in batch if r.id in self._positions]
-        check_distinct_ids([*known, *batch])
-        new = list({r.id: r for r in batch if r.id not in self._positions}.values())
-        if new:
-            self.directory.mkdir(parents=True, exist_ok=True)
-            if self.releases_path.exists():
-                text = self.releases_path.read_text()
-                self.releases_path.write_text(append_releases_csv(text, new))
-            else:
-                self.releases_path.write_text(releases_to_csv(new))
-            # These were read from the file that just changed.
-            for name in ("_rows", "_positions", "releases", "_simulations"):
-                vars(self).pop(name, None)
-        return [r.id for r in new]
+            If the selection holds more or fewer than one variant, or
+            several realizations of an ensemble, the variant has no grid, or
+            no selected simulation has a footprint file yet.
 
-    def table_path(self, name: str) -> Path:
-        """Return where the project's table *name* is kept: ``tables/<name>.parquet``."""
-        if not re.fullmatch(r"[A-Za-z0-9_-]+", name):
-            raise ValueError(
-                f"A table name is letters, digits, '_', and '-'; got {name!r}."
-            )
-        return self.directory / "tables" / f"{name}.parquet"
-
-    def add_table(self, name: str, table: pd.DataFrame) -> Path:
-        """
-        Add rows to one of the project's input tables, and return its path.
-
-        A table is an input, like ``releases.csv``: the averaging kernels of
-        satellite soundings, for one, which a transform names as ``table:
-        kernels``. It is kept as ``tables/<name>.parquet``, created if
-        needed and otherwise added to. When the table has a ``release``
-        column, rows of a release it already holds are left out, so adding
-        the same kernels again changes nothing.
-
-        Parameters
-        ----------
-        name : str
-            The table's name: letters, digits, ``_``, and ``-``.
-        table : pandas.DataFrame
-            Rows to add, in the columns of the table.
-
-        Raises
-        ------
-        ValueError
-            If *table* has other columns than the table it adds to, or the
-            table was written with a ``receptor`` column, now ``release``.
+        Notes
+        -----
+        A footprint is about 35 MB of values on a 350,000-cell grid over 24
+        hours, so a computation that loads every release at once suits a
+        selection of hundreds. Sums over ``hour`` or the grid run block by
+        block. :meth:`jacobian` sums any number of footprints onto a target.
 
         Examples
         --------
-        >>> releases, kernels = releases_from_soundings(
-        ...     df, "slant", top=3000
-        ... )  # doctest: +SKIP
-        >>> project.add_releases(releases)  # doctest: +SKIP
-        >>> project.add_table("kernels", kernels)  # doctest: +SKIP
+        >>> ds = project.footprints(sims[sims.variant == "hrrr"])  # doctest: +SKIP
+        >>> ds.foot.sum("hour").mean("release").plot()  # doctest: +SKIP
         """
-        path = self.table_path(name)
-        rows = table.reset_index(drop=True)
-        if path.exists():
-            held = pd.read_parquet(path)
-            if "receptor" in held.columns and "release" in rows.columns:
-                raise ValueError(
-                    f"Table {name!r} was written with a 'receptor' column, which "
-                    f"is now named 'release'. Rename the column in {path}, or "
-                    "delete the file and add the table again."
-                )
-            if list(held.columns) != list(rows.columns):
-                raise ValueError(
-                    f"Table {name!r} has the columns {list(held.columns)}, "
-                    f"not {list(rows.columns)}."
-                )
-            if "release" in rows.columns:
-                rows = rows[~rows["release"].isin(held["release"])]
-            rows = pd.concat([held, rows], ignore_index=True)
-        write_parquet(pa.Table.from_pandas(rows, preserve_index=False), path)
-        return path
+        frame = self._selected(sel)
+        name, k = _one_group(frame, "A footprint dataset")
+        variant = self.variants[name]
+        if "footprint" not in variant.stages:
+            raise ValueError(f"Variant {name!r} makes no footprints (no grid).")
+        requested = list(dict.fromkeys(frame["release"]))
+        found = self.output.present("footprint", variant, requested, k)
+        paths = [
+            path
+            for r in requested
+            if r in found
+            and (path := self.output.path("footprint", variant, r, k)) is not None
+        ]
+        if not paths:
+            raise ValueError(
+                f"None of the {len(requested)} selected simulations of {name!r} "
+                "has a footprint yet."
+            )
+        ds = open_footprints(paths)
+        ds.attrs["missing"] = [r for r in requested if r not in found]
+        return ds
 
-    # -- simulations -----------------------------------------------------------
-
-    @cached_property
-    def _simulations(self) -> pd.DataFrame:
-        """The table :attr:`simulations` copies, built once."""
-        variants = pd.DataFrame(
-            [
-                (name, k, v.model)
-                for name, v in self.variants.items()
-                for k in v.realization_numbers
-            ],
-            columns=["variant", "realization", "model"],
-        ).astype({"realization": "Int64"})
-        frame = self.releases.merge(variants, how="cross")
-        first = ["release", "variant", "realization", "model"]
-        return frame.loc[:, first + [c for c in frame.columns if c not in first]]
-
-    @property
-    def simulations(self) -> pd.DataFrame:
+    def jacobian(
+        self,
+        sel: Any,
+        target: Geometry,
+        time_bins: pd.IntervalIndex,
+        *,
+        workers: int | None = None,
+    ) -> Jacobian:
         """
-        Every release under every variant, one row per simulation.
+        Sum the selected footprints onto a target, per time bin, as one sparse matrix.
 
-        A pandas DataFrame with the columns ``release``, ``variant``,
-        ``realization`` (``0`` to ``N - 1`` for a variant with
-        ``realizations: N``, empty for one that runs once), ``model`` (its
-        transport model), then the other columns of :attr:`releases`. Rows
-        run release by release, with variants in config order. Select rows as in pandas
-        and pass the selection to :meth:`status`, :meth:`incomplete`,
-        or :meth:`particles`; :class:`stilt.Project` adds
-        :meth:`~stilt.Project.footprints`, :meth:`~stilt.Project.jacobian`,
-        and :meth:`~stilt.Project.transport_error`.
+        The same operation as ``foot.stilt.aggregate``, for every selected
+        footprint at once. Each footprint cell is split among the target
+        cells it overlaps in proportion to area, time layers are summed
+        within each of *time_bins*, and cells or layers outside the target
+        or the bins are dropped. The selection must hold one variant, and
+        one realization of an ensemble: ``ens[ens.realization == k]``.
+
+        Footprints are read and summed one release at a time, in *workers*
+        threads. Each thread holds one footprint, so memory stays at a few
+        footprints whatever the selection's size; the result itself is
+        sparse.
+
+        Parameters
+        ----------
+        sel : DataFrame or mask
+            The simulations, as for :meth:`status`, all of one variant (and
+            one realization of an ensemble).
+        target : Geometry
+            Where the fluxes are: a grid, mesh, or set of zones.
+        time_bins : pandas.IntervalIndex
+            Flux time bins, such as a flux inventory's steps. They must be
+            closed on the left (``closed="left"``): each bin holds the
+            footprint layers that start in it. A layer goes whole into the
+            bin where it starts, so the bins must be as long as the
+            footprints' layers (``tres``) or longer; a layer that crosses a
+            bin edge still goes into the bin where it starts. You build these yourself;
+            ``jacobian`` does not read them from an inventory's own CF time
+            bounds, unlike ``foot.stilt.enhancement`` with a flux that has
+            them. Building the bins from an inventory's own time labels
+            (its left edges) reads each label as the start of its step, the
+            same reading ``foot.stilt.enhancement`` gives a flux with no
+            bounds. A flux not labeled at the start of its steps must be
+            relabeled first, or its bins built from the relabeled starts;
+            one with bounds can have its bins built from them directly
+            instead (see :ref:`flux-step-labels`).
+        workers : int, optional
+            Threads that read and sum batches. Defaults to the CPUs this
+            process may use (in a Slurm job, the job's), at most 8: more
+            threads add memory and stop adding speed.
+
+        Returns
+        -------
+        Jacobian
+            Rows are the selected releases with a non-empty footprint, in
+            selection order; columns are ``(time bin, target cell)``.
+            Releases with an empty footprint are listed in ``empty``, and
+            those not run yet in ``missing``.
+
+        Raises
+        ------
+        TypeError
+            If ``time_bins`` is not a :class:`pandas.IntervalIndex`.
+        ValueError
+            If the selection holds more or fewer than one variant, or
+            several realizations of an ensemble, the variant has no grid or
+            no footprints yet, ``time_bins`` is not closed on the left, or a
+            bin is shorter than the footprints' layers (use a shorter
+            ``tres``).
+        """
+        frame = self._selected(sel)
+        name, k = _one_group(frame, "A Jacobian")
+        variant = self.variants[name]
+        if "footprint" not in variant.stages:
+            raise ValueError(f"Variant {name!r} makes no footprints (no grid).")
+        if self.output.folder("footprint", variant) is None:
+            raise ValueError(f"Variant {name!r} has no footprints yet.")
+        requested = list(dict.fromkeys(frame["release"]))
+        found = self.output.present("footprint", variant, requested, k)
+        return _jacobian(
+            lambda r: self.output.read(
+                "footprint", variant, r, k, columns=["hour", "y", "x", "foot"]
+            ),
+            [r for r in requested if r in found],
+            variant.stages["footprint"],
+            target,
+            time_bins,
+            missing=[r for r in requested if r not in found],
+            workers=workers,
+        )
+
+    def transport_error(
+        self,
+        sel: Any,
+        error: str,
+        flux: xr.DataArray,
+        *,
+        workers: int | None = None,
+        **options: Any,
+    ) -> pd.DataFrame:
+        """
+        Return the transport error of each selected simulation's modeled enhancement.
+
+        The same estimate as ``sim.transport_error``, for every selected
+        release at once (Lin and Gerbig, 2005; the *Transport Error* guide).
+        *sel* is the unperturbed run, and *error* names the wind-error
+        variant of the same releases. Every realization of *error* that has
+        run is averaged, so a release whose ensemble is still running gets
+        an estimate from the realizations it has.
+
+        Releases are read and estimated one at a time, in *workers*
+        threads. Each thread holds one release's particle tables: the
+        unperturbed one and one per realization.
+
+        Parameters
+        ----------
+        sel : DataFrame or mask
+            The simulations, as for :meth:`status`, all of one variant that
+            runs once (no ``realizations``).
+        error : str
+            The wind-error variant, such as ``"hrrr-err"``.
+        flux : xarray.DataArray
+            Surface flux field, in µmol m⁻² s⁻¹, the same for every release.
+        workers : int, optional
+            Threads that read and estimate releases. Defaults to the CPUs
+            this process may use (in a Slurm job, the job's), at most 8.
+        **options
+            Passed to :func:`stilt.transport_error`: ``levels``,
+            ``length_scale``, ``percentile``, and ``background``.
+
+        Returns
+        -------
+        pandas.DataFrame
+            The selection with six more columns, from
+            :class:`~runtraj.particles.TransportError`: ``enhancement``,
+            ``enhancement_perturbed``, ``background``, ``variance``,
+            ``noise``, and ``realizations`` (how many realizations of
+            *error* were averaged). A release without particles in the
+            selected variant or in any realization of *error* gets NaN and
+            ``realizations`` 0.
+
+        Raises
+        ------
+        KeyError
+            If the project has no variant named *error*.
+        ValueError
+            If the selection holds more or fewer than one variant, that
+            variant is an ensemble, or it is *error* itself.
+
+        Notes
+        -----
+        Each release's particles are read whole. A table of 1.4 million
+        rows takes about a second to read, so a selection of hundreds of
+        releases takes minutes. The per-level tables of
+        :class:`~runtraj.particles.TransportError` are not kept; get them for
+        one release with ``sim.transport_error``.
 
         Examples
         --------
         >>> sims = project.simulations  # doctest: +SKIP
-        >>> july = sims[
+        >>> wbb = sims[
         ...     (sims.variant == "hrrr") & (sims.site == "WBB")
         ... ]  # doctest: +SKIP
-        >>> project.status(july)  # doctest: +SKIP
-        >>> project.particles(july)  # doctest: +SKIP
-        """
-        return self._simulations.copy()
-
-    def simulation(
-        self, release_id: str, variant: str, realization: int | None = None
-    ) -> Simulation:
-        """
-        Return one simulation: a release under a variant, and a realization of an ensemble.
-
-        A simulation is a value built from its release, its variant, and the
-        output directory, so it is cheap. It knows where its results are and
-        loads them.
-
-        Raises
-        ------
-        KeyError
-            If the project has no such release or variant.
-        ValueError
-            If *realization* is not one the variant runs as: ``0`` to
-            ``N - 1`` for ``realizations: N``, ``None`` otherwise.
-        """
-        if variant not in self.variants:
-            raise KeyError(
-                f"No variant {variant!r}; the variants are {list(self.variants)}."
-            )
-        return Simulation(
-            self.release(release_id),
-            self.variants[variant],
-            self.output,
-            self.directory,
-            realization,
-        )
-
-    def folders(self) -> pd.DataFrame:
-        """
-        Return every settings folder in the output directory, and which variants use it.
-
-        A settings folder holds the results of one set of settings, named
-        after the variant that first made them and a short hash of the
-        settings (``settings=hrrr-b2399e``). A folder that no variant of this
-        project uses comes from changed settings, a dropped variant, or
-        another project sharing the output directory; PYSTILT never deletes
-        one. ``stilt status`` prints this table.
-
-        Returns
-        -------
-        pandas.DataFrame
-            ``kind`` (``particles``, or a stage's name such as
-            ``footprint``), ``folder`` (the
-            ``settings=`` value), ``name`` (the variant that made it),
-            ``files`` (the result files it holds), ``variant`` (the variants
-            here that use it, empty when none does), and ``differs`` (how an
-            unused folder's settings differ from the variant of its name).
-
-        Examples
-        --------
-        >>> folders = project.folders()  # doctest: +SKIP
-        >>> folders[
-        ...     folders.variant == ""
-        ... ]  # results no variant here uses  # doctest: +SKIP
-        """
-        return self.output.folders(self.variants)
-
-    @cached_property
-    def plot(self) -> ProjectPlotAccessor:
-        """Plotting methods, such as ``project.plot.availability()``."""
-        from stilt.visualization import ProjectPlotAccessor
-
-        return ProjectPlotAccessor(self)
-
-    # -- the simulations' results ----------------------------------------------
-
-    def _selected(self, sel: Any = None) -> pd.DataFrame:
-        """
-        Return the rows of :attr:`simulations` that *sel* selects.
-
-        *sel* is ``None`` (every simulation), a pandas table with
-        ``release`` and ``variant`` columns (returned as it is, extra
-        columns and all), a boolean mask over :attr:`simulations`, or a
-        polars or pyarrow table with those two columns. A table without a
-        ``realization`` column selects every realization of an ensemble.
-
-        Raises
-        ------
-        ValueError
-            If the table lacks the ``release`` or ``variant`` column.
-        KeyError
-            If it names a variant the project does not have.
-        """
-        if sel is None:
-            return self.simulations
-        if isinstance(sel, pd.DataFrame):
-            frame = sel
-        elif _is_mask(sel):
-            frame = self.simulations.loc[np.asarray(sel, dtype=bool)]
-        else:
-            try:
-                frame = pd.DataFrame(
-                    {name: _column(sel, name) for name in ("release", "variant")}
-                )
-            except (KeyError, TypeError, ValueError, IndexError):
-                frame = pd.DataFrame()
-        missing = [c for c in ("release", "variant") if c not in frame.columns]
-        if "release" in missing and "receptor" in frame.columns:
-            raise ValueError(
-                "A selection of simulations has a 'receptor' column, which is "
-                "now named 'release'. Rename the column, or select from "
-                "project.simulations."
-            )
-        if missing:
-            raise ValueError(
-                "A selection of simulations is a table with 'release' and "
-                f"'variant' columns, or a mask over project.simulations; this "
-                f"one has no {missing}."
-            )
-        unknown = sorted(set(frame["variant"]) - set(self.variants))
-        if unknown:
-            raise KeyError(
-                f"No variant {unknown}; the variants are {list(self.variants)}."
-            )
-        if "realization" not in frame.columns:
-            # Every realization of an ensemble, and the rest of each row.
-            sims = self.simulations
-            keep = [c for c in sims.columns if c not in frame.columns]
-            frame = frame.merge(
-                sims[["release", "variant", *keep]],
-                on=["release", "variant"],
-                how="left",
-            )
-        return frame
-
-    def _present(self, frame: pd.DataFrame) -> dict[_Key, _Present]:
-        """
-        Return, per variant and realization, the selected releases with particles and with each stage's file.
-
-        Read from a listing of the date folders the selection falls in
-        (:meth:`stilt.output.Output.present`), in place of a file check per
-        simulation: on a large project the checks are the slow part. A
-        variant has a set for ``particles`` and one for each stage it uses.
-        """
-        present: dict[_Key, _Present] = {}
-        for name, k, rows in _groups(frame):
-            variant = self.variants[name]
-            among = set(rows["release"])
-            present[(name, k)] = {
-                kind: self.output.present(kind, variant, among, k)
-                for kind in ("particles", *variant.stage_order)
-            }
-        return present
-
-    @staticmethod
-    def _complete(frame: pd.DataFrame, present: dict[_Key, _Present]) -> np.ndarray:
-        """Return whether each row is complete (:func:`stilt.output.completed`), from :meth:`_present`."""
-        done = {key: completed(*sets.values()) for key, sets in present.items()}
-        return np.array([r in done[(v, k)] for r, v, k in _rows(frame)], dtype=bool)
-
-    def status(self, sel: Any = None) -> pd.DataFrame:
-        """
-        Return the selected simulations with what each has, and where it stands.
-
-        Whether a result exists comes from a listing of the date folders, so
-        no result file is opened; only the failure records of failed
-        simulations are read.
-
-        Parameters
-        ----------
-        sel : DataFrame or mask, optional
-            The simulations: rows of :attr:`simulations`, any table with
-            ``release`` and ``variant`` columns (pandas, polars, pyarrow),
-            or a boolean mask over :attr:`simulations`. All of them by
-            default.
-
-        Returns
-        -------
-        pandas.DataFrame
-            The selection with more columns. ``particles``, and one
-            column named for each stage the project has (``footprint``),
-            are ``True`` when the result exists, ``False`` when it is
-            missing, and ``NA`` when the variant does not make it. ``state``
-            is ``complete`` when every expected result exists
-            (:attr:`stilt.simulation.Simulation.is_complete`), ``failed`` when the last
-            run failed, ``interrupted`` when a run of its particles started
-            and stopped before it finished (a time limit, preemption, or a
-            killed process), and ``pending`` when nothing has run.
-            ``stage`` (``particles``, or the stage that failed), ``reason``,
-            and ``message`` say why a failed simulation failed
-            (:attr:`stilt.simulation.Simulation.failure`), and are ``NA`` for the
-            others.
-
-        Notes
-        -----
-        An empty footprint (no particle reached the grid) is complete: its
-        ``sim.footprint`` is ``None`` while ``sim.has_footprint`` is true,
-        and :meth:`stilt.Project.jacobian` lists the empty ones.
-
-        Examples
-        --------
-        >>> st = project.status()  # doctest: +SKIP
-        >>> st.state.value_counts()  # doctest: +SKIP
-        >>> st[st.state == "failed"][["release", "variant", "reason"]]  # doctest: +SKIP
+        >>> errors = project.transport_error(wbb, "hrrr-err", flux)  # doctest: +SKIP
+        >>> errors.groupby(errors.time.dt.month).variance.median()  # doctest: +SKIP
         """
         frame = self._selected(sel)
-        present = self._present(frame)
-        rows = _rows(frame)
-        # One column for each kind of result any variant of the project makes.
-        kinds = dict.fromkeys(
-            ["particles", *(s for v in self.variants.values() for s in v.stage_order)]
-        )
-        has = {
-            kind: pd.array(
-                [
-                    None if (have := present[(v, k)].get(kind)) is None else r in have
-                    for r, v, k in rows
-                ],
-                dtype="boolean",
+        name, _ = _one_group(frame, "A transport error")
+        variant = self.variants[name]
+        if variant.realizations is not None:
+            raise ValueError(
+                f"Variant {name!r} is an ensemble (realizations: "
+                f"{variant.realizations}); the selection is the unperturbed run, "
+                "a variant that runs once."
             )
-            for kind in kinds
+        if error not in self.variants:
+            raise KeyError(
+                f"No variant {error!r}; the variants are {list(self.variants)}."
+            )
+        if error == name:
+            raise ValueError(
+                f"The selection is of {error!r} itself; select the unperturbed variant."
+            )
+        perturbed = self.variants[error]
+        requested = list(dict.fromkeys(frame["release"]))
+        have = self.output.present("particles", variant, requested)
+        ran = {
+            k: self.output.present("particles", perturbed, requested, k)
+            for k in perturbed.realization_numbers
         }
-        complete = self._complete(frame, present)
-        found = self._failure_records(frame, present)
-        records = [found.get(row, {}) for row in rows]
-        started = self._started(frame, present, found)
-        state = [
-            "complete"
-            if done
-            else "failed"
-            if record
-            else "interrupted"
-            if row in started
-            else "pending"
-            for done, record, row in zip(complete, records, rows, strict=True)
-        ]
-        return frame.assign(
-            **has,
-            state=pd.Categorical(state, categories=STATES),
+        # Each release with both sides, and the realizations of *error* it has.
+        runs = {
+            r: ks
+            for r in requested
+            if r in have and (ks := [k for k, found in ran.items() if r in found])
+        }
+
+        footprint = variant_footprint(variant)
+
+        def particles(v: Variant, rid: str, k: int | None) -> pd.DataFrame:
+            path = self.output.path("particles", v, rid, k)
+            assert path is not None  # the listing found the file
+            return stored_particles(
+                read_particles(path),
+                footprint,
+                path,
+                z_top=getattr(v.transport, "z_top", None),
+            )
+
+        def read(rid: str) -> tuple[pd.DataFrame, list[pd.DataFrame]]:
+            return (
+                particles(variant, rid, None),
+                [particles(perturbed, rid, k) for k in runs[rid]],
+            )
+
+        found = _transport_errors(
+            read,
+            list(self._releases(runs).values()),
+            flux,
+            transforms=footprint.transforms,
+            directory=self.directory,
+            workers=_threads(workers),
             **{
-                column: pd.array([r.get(column) for r in records], dtype="string")
-                for column in ("stage", "reason", "message")
+                "hnf_plume": footprint.hnf_plume,
+                "footprint_depth": footprint.footprint_depth,
+                **options,
             },
         )
-
-    def _failure_records(
-        self, frame: pd.DataFrame, present: dict[_Key, _Present]
-    ) -> dict[tuple[str, str, int | None], dict[str, Any]]:
-        """
-        Return the failure record of each selected simulation missing a result, by ``(release, variant, realization)``.
-
-        A simulation without particles is explained by its particles'
-        record. One with particles is explained by the record of the first
-        stage, in the order they run, that has no file where what it reads
-        exists and that has a record (:attr:`stilt.simulation.Simulation.failure`).
-        Only those releases' date folders are listed, and only the records
-        found are read.
-        """
-        found: dict[tuple[str, str, int | None], dict[str, Any]] = {}
-        for name, k, rows in _groups(frame):
-            variant = self.variants[name]
-            have = present[(name, k)]
-            releases = set(rows["release"])
-            for kind in have:
-                # Where a stage could have run: its inputs are there.
-                inputs = (
-                    ()
-                    if kind == "particles"
-                    else ("particles", *reads(variant.stage(kind)))
-                )
-                ready = releases.intersection(*(have[i] for i in inputs))
-                missing = ready - have[kind]
-                if missing:
-                    failures = self.output.failures(kind, variant, missing, k)
-                    for rid, record in failures.items():
-                        found.setdefault((rid, name, k), record)
-        return found
-
-    def _started(
-        self,
-        frame: pd.DataFrame,
-        present: dict[_Key, _Present],
-        failed: dict[tuple[str, str, int | None], dict[str, Any]],
-    ) -> set[tuple[str, str, int | None]]:
-        """
-        Return the selected simulations whose particles run started and did not finish.
-
-        That is a log with no particles and no failure record. Only the
-        date folders of releases without particles are listed.
-        """
-        started: set[tuple[str, str, int | None]] = set()
-        for name, k, rows in _groups(frame):
-            missing = set(rows["release"]) - present[(name, k)]["particles"]
-            if not missing:
-                continue
-            logged = self.output.logged(self.variants[name], missing, k)
-            started |= {
-                (rid, name, k) for rid in logged if (rid, name, k) not in failed
-            }
-        return started
-
-    def incomplete(self, sel: Any = None) -> pd.DataFrame:
-        """
-        Return the selected simulations that are missing an expected result.
-
-        The rows :meth:`status` does not mark ``complete``. It reads no
-        failure record, so it is the quickest way to see what is left.
-        *sel* is as for :meth:`status`.
-        """
-        frame = self._selected(sel)
-        return frame.loc[~self._complete(frame, self._present(frame))]
-
-    def particles(
-        self, sel: Any = None, columns: list[str] | None = None
-    ) -> pd.DataFrame:
-        """
-        Load the particles of every selected simulation that has them, as one table.
-
-        Parameters
-        ----------
-        sel : DataFrame or mask, optional
-            The simulations, as for :meth:`status`. All of them by default.
-        columns : list of str, optional
-            Only these particle columns, such as ``["particle", "age",
-            "lon", "lat", "foot"]``, after ``release``, ``variant``, and
-            ``realization``. ``time`` (UTC) is built from ``age``. Every
-            column by default. Fewer columns read faster and take less
-            memory.
-
-        Returns
-        -------
-        pandas.DataFrame
-            One row per particle per output step per simulation, with
-            ``release``, ``variant``, and ``realization`` columns first. Simulations without
-            particles are left out. Variants that share a run each get their
-            own copy of its rows. The simulations come in the order of *sel*, one
-            variant (and realization) after another in the order they first appear
-            in it.
-
-        Notes
-        -----
-        A run of 1,000 particles over 24 hours is about 1.4 million rows,
-        some 250 MB in memory, so this suits a selection of tens. For a
-        whole large project, read the ``particles/`` tree of the output
-        directory with pyarrow, DuckDB, or polars instead.
-        """
-        first = ["release", "variant", "realization"]
-        with_time = columns is None or "time" in columns
-        stored = None
-        if columns is not None:
-            stored = [c for c in columns if c not in (*first, "time")]
-            if with_time and "age" not in stored:
-                stored.append("age")
-        frame = self._selected(sel)
-        parts = []
-        for name, k, rows in _groups(frame):
-            variant = self.variants[name]
-            present = self.output.present("particles", variant, rows["release"], k)
-            # In selection order: a set would follow each process's string hashing.
-            releases = [r for r in dict.fromkeys(rows["release"]) if r in present]
-            table = self.output.table("particles", variant, releases, k, stored)
-            if table.num_rows:
-                part = particles_from_table(table, with_time).assign(variant=name)
-                parts.append(
-                    part.assign(realization=pd.array([k], "Int64").repeat(len(part)))
-                )
-        if not parts:
-            return pd.DataFrame(columns=pd.Index(first))
-        particles = pd.concat(parts, ignore_index=True)
-        rest = particles.columns if columns is None else columns
-        return particles.loc[:, first + [c for c in rest if c not in first]]
-
-    # -- running ---------------------------------------------------------------
-
-    def check(self) -> pd.DataFrame:
-        """
-        Return what would stop the project's simulations, found before any run.
-
-        Looks only at the inputs, and runs and downloads nothing. For each
-        variant it checks that:
-
-        - the project has releases (``releases``);
-        - the met's ``directory`` exists and holds an ARL file (``met_directory``);
-        - every met file each release's run needs is there, naming the
-          hours (``met_files``);
-        - each met file they need holds at least two time periods, which
-          HYSPLIT needs (``met_periods``), and ends on a whole time step
-          (``met_cut``);
-        - each release is inside the grid of the met files its run starts
-          in, when the crop is off (``met_domain``), or inside the met's
-          crop box, ``subgrid_bounds``, when it is on (``met_crop``);
-        - each release is inside the footprint grid (``grid``);
-        - each ``averaging_kernel`` table exists (``kernel_table``), has a
-          kernel for every release (``kernel_missing``), and holds none for
-          a release the project lacks (``kernel_unused``);
-        - ``varsiwant`` holds ``zsfc`` when a release is above sea level
-          (``altitude_ref="msl"``) and a run reads it: the near-field
-          correction of a footprint, the release heights of a multipoint release whose
-          points are less than 1 km apart and at different altitudes, or the
-          ``pressure_weighting`` transform (``zsfc``).
-
-        A met with ``download`` has no files to look for: they are fetched
-        when a run needs them, so only its crop is checked.
-
-        Returns
-        -------
-        pandas.DataFrame
-            One row for each thing found, with ``check`` (the name in
-            parentheses above), ``variant`` (the variants it is found for,
-            separated by commas, when they share a met, a run length, a
-            grid, or a table), ``release`` (``NA`` when it is not about
-            one release), and ``message`` columns. Empty when nothing is
-            found. ``stilt check`` prints it.
-
-        Raises
-        ------
-        ValueError
-            If ``config.yaml`` or ``releases.csv`` is invalid.
-
-        Notes
-        -----
-        The check looks for files, not inside them (except to count the time
-        periods of the first file a run needs, to read the spacing of the
-        met steps from the file of a run's end, and to read a grid from a
-        file's header). A run that passes it can still fail as
-        ``MET_COVERAGE``: a met file that is damaged or cut short is found
-        when the run opens it.
-
-        Examples
-        --------
-        >>> problems = project.check()  # doctest: +SKIP
-        >>> problems.empty  # True when nothing would stop a run  # doctest: +SKIP
-        >>> problems[problems.check == "met_files"][
-        ...     ["release", "message"]
-        ... ]  # doctest: +SKIP
-        """
-        return check_project(self)
-
-    def fetch(self, sel: Any = None, *, skip_existing: bool = True) -> pd.DataFrame:
-        """
-        Get the met files the unfinished simulations need, and return them.
-
-        For each met, gets the files that cover the time of every
-        simulation in *sel* whose transport model has yet to run (every
-        one, with ``skip_existing=False``), as a run would ask for them (the met step at or after a run's end too). With
-        ``download``, it downloads what is missing and crops it as it
-        goes, so the runs that follow find every file and download nothing.
-        A met without ``download`` is only checked: its missing files are
-        reported, as ``check`` does. Several fetches, or a fetch beside runs,
-        can share a met directory: arlmet writes each file under a
-        temporary name and renames it into place when whole.
-
-        Parameters
-        ----------
-        sel : optional
-            The simulations to fetch for, as for :meth:`status`. Defaults to
-            all of them.
-        skip_existing : bool, default True
-            Leave out simulations whose particles exist. ``False`` gets the
-            met files of every simulation in *sel*, for a run with
-            ``skip_existing=False``, which runs them all again.
-
-        Returns
-        -------
-        pandas.DataFrame
-            ``met`` (its name under ``mets:``), ``file``, and ``message``
-            columns: a row for each file, with ``message`` empty, then a row
-            for each window whose files could not be had, with ``file``
-            empty. No row has a ``message`` when every file is there. Empty
-            when no simulation is left to run. ``stilt fetch`` prints it.
-
-        Raises
-        ------
-        ValueError
-            If ``config.yaml`` or ``releases.csv`` is invalid.
-        FileNotFoundError
-            If the directory of a met without ``download`` holds no ARL
-            file, which names the output folder of its runs.
-        ImportError
-            If a met downloads and the ``download`` extra is not installed.
-        OSError
-            If a download fails for any reason but a missing file, such as
-            a busy archive or a full disk, and so does a connection error
-            of the download library. ``stilt fetch`` exits with 3 or 4.
-
-        Examples
-        --------
-        >>> files = project.fetch()  # doctest: +SKIP
-        >>> files.message.isna().all()  # True when every file is there  # doctest: +SKIP
-        >>> project.run()  # downloads nothing  # doctest: +SKIP
-        """
-        return fetch_project(self, self._unrun(sel, skip_existing=skip_existing))
-
-    def _unrun(self, sel: Any = None, *, skip_existing: bool = True) -> pd.DataFrame:
-        """Return the rows of the simulations in *sel* whose particles are missing (all of them unless *skip_existing*): the ones a fetch gets met for."""
-        frame = self._selected(sel)
-        if not skip_existing:
-            return frame
-        present = self._present(frame)
-        has = np.array(
-            [r in present[(v, k)]["particles"] for r, v, k in _rows(frame)], dtype=bool
-        )
-        return frame.loc[~has]
-
-    def run(
-        self,
-        skip_existing: bool = True,
-        compute_root: str | Path | None = None,
-        execution: ExecutionConfig | None = None,
-        *,
-        releases: Iterable[str] | None = None,
-        task: tuple[int, int] | None = None,
-    ) -> pd.DataFrame:
-        """
-        Run every simulation that has not finished, and wait for it.
-
-        Shorthand for :func:`stilt.execution.run`, which documents the
-        parameters. Use :meth:`submit` to submit to Slurm and return at once.
-        """
-        from stilt.execution import run
-
-        return run(
-            self,
-            releases=releases,
-            task=task,
-            execution=execution,
-            skip_existing=skip_existing,
-            compute_root=compute_root,
-        )
-
-    def submit(
-        self,
-        skip_existing: bool = True,
-        compute_root: str | Path | None = None,
-        execution: ExecutionConfig | None = None,
-        *,
-        releases: Iterable[str] | None = None,
-    ) -> str | None:
-        """
-        Submit every simulation that has not finished to Slurm, and return at once.
-
-        Shorthand for :func:`stilt.execution.submit`, which documents the
-        parameters. Returns the Slurm job id, or ``None`` when nothing needs
-        to run.
-        """
-        from stilt.execution import submit
-
-        return submit(
-            self,
-            releases=releases,
-            execution=execution,
-            skip_existing=skip_existing,
-            compute_root=compute_root,
-        )
+        result = found.reindex(frame["release"].to_numpy())
+        result["realizations"] = result["realizations"].fillna(0).astype("int64")
+        return frame.assign(**{c: result[c].to_numpy() for c in result.columns})
 
 
-__all__ = ["Project"]
+__all__ = ["STARTER_CONFIG", "STILT_R_HYSPLIT", "Project"]
