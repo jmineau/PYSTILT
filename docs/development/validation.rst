@@ -34,10 +34,10 @@ reasons are in :doc:`architecture` ("Implementation notes").
 Met sampled at particle positions
 ---------------------------------
 
-:func:`stilt.sampling.sample_met` reads ``mlht``, ``dens``, ``pres`` and
+:func:`runtraj.sampling.sample_met` reads ``mlht``, ``dens``, ``pres`` and
 ``zsfc`` from the met files at each particle's position. On two 6-hour HRRR
-runs from Salt Lake City (``tests/integration/test_sample_met.py``), against
-HYSPLIT's own columns:
+runs from Salt Lake City (``tests/integration/test_sample_met.py`` in
+runtraj), against HYSPLIT's own columns:
 
 .. list-table::
    :header-rows: 1
@@ -146,7 +146,7 @@ particles (``tests/integration/test_foot.py``):
      - 14 to 106 %
 
 ``richardson`` is HYSPLIT's own method ported
-(:func:`stilt.sampling.calc_pbl_height`): the height it finds, kept at
+(:func:`runtraj.sampling.calc_pbl_height`): the height it finds, kept at
 least 150 m, has a median ratio of 0.999 to 1.000 to the ``mlht`` HYSPLIT
 wrote, and 73 to 94 % of rows are within 2 %; the lowest 5 % of ratios
 are 0.77 to 0.94, for reasons not yet looked into. With it, what is left of the

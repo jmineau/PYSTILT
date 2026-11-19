@@ -94,7 +94,7 @@ src/stilt/
                   StiltRModel, the stilt-r model of imported runs (runs nothing), named by import path
   observations/   the X-STILT port (readers, sounding selection, slant releases, columns);
                   releases along a moving platform's track (tracks.py)
-  background.py, transport_error.py, sampling.py, exceptions.py (EmptyFootprint)
+  background.py, transport_error.py, exceptions.py (EmptyFootprint)
   _paths.py, _plotting.py   copies of the few helpers runtraj keeps private
 ```
 
@@ -123,6 +123,10 @@ every pull request and on each change of the runtraj requirement.
   per row; they open a file per row only when its contents are the answer
   (`footprints`, `jacobian`).
 - **Identity is content.** PYSTILT never deletes or overwrites a results folder.
+- **Meteorology I/O goes through runtraj, which reads it with
+  [arlmet](https://github.com/jmineau/arl-met).** The footprint stage opens a
+  run's met with `runtraj.models.open_met` and samples it with `runtraj.sampling`
+  (`add_foot`); no met file is opened here, and a met format is a converter in arlmet.
 - **The CLI stays thin.** `stilt` is runtraj's commands and `stilt init`.
 - **PYSTILT ships no HYSPLIT file**; runtraj finds the user's `hycs_std`.
 - **Pydantic for all configuration**: every field a plain

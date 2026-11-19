@@ -20,10 +20,10 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+import xarray as xr
 from runtraj.releases import PointRelease, Release
+from runtraj.sampling import calc_pbl_height, sample_met
 from runtraj.transforms import WEIGHT, apply_transforms
-
-from stilt.sampling import calc_pbl_height, sample_met
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +62,7 @@ def _mixing_depth(mlht: pd.Series, footprint_depth: float) -> pd.Series | float:
 
 def add_foot(
     particles: pd.DataFrame,
-    met_files: Iterable[str | os.PathLike[str]],
+    met: Iterable[str | os.PathLike[str]] | xr.Dataset,
     footprint_depth: float,
     pbl_height: str | float | None = None,
     pbl_height_min: float = 0.0,
@@ -111,19 +111,21 @@ def add_foot(
         Particle table with ``time``, the release time plus ``age``
         minutes. A ``mlht`` column (m above ground) is used as it is
         unless *pbl_height* is set.
-    met_files : iterable of path-like
+    met : iterable of path-like, or xarray.Dataset
         ARL met files that cover the particles' times, such as the files
-        the run read. They are read on their own levels, which start at the
-        ground.
+        the run read, or met in another format as one Dataset in
+        :func:`arlmet.open_dataset`'s layout (:func:`runtraj.models.open_met`
+        returns the met of a run either way). It is read on its own levels,
+        which start at the ground.
     footprint_depth : float
         Height that surface fluxes are mixed through (``VEGHT`` in HYSPLIT
         and STILT-R): a fraction of the mixed-layer height when 1 or less,
         else meters above ground.
     pbl_height : {"met", "richardson"}, float, or None, default None
         The mixed-layer height: ``"met"`` samples the met's ``PBLH``
-        (:func:`stilt.sampling.sample_met`), ``"richardson"`` finds it from
+        (:func:`runtraj.sampling.sample_met`), ``"richardson"`` finds it from
         the met's profile as HYSPLIT's ``kmixd: 3`` does
-        (:func:`stilt.sampling.calc_pbl_height`), and a number is a fixed
+        (:func:`runtraj.sampling.calc_pbl_height`), and a number is a fixed
         height in meters. ``None`` uses the particles' ``mlht``, or the
         met's ``PBLH`` when they have none.
     pbl_height_min : float, default 0
@@ -145,7 +147,7 @@ def add_foot(
     ------
     ValueError
         If *particles* has a ``foot`` column already, has no ``time``
-        column, or has a row outside the files' times.
+        column, or has a row outside the met's times.
 
     Examples
     --------
@@ -161,12 +163,12 @@ def add_foot(
         raise ValueError(
             "The particles have a foot column already. Drop it first to compute it."
         )
-    files = list(met_files)
+    met = met if isinstance(met, xr.Dataset) else list(met)
     own_mlht = pbl_height is None and "mlht" in particles.columns
     out = particles.copy()
     if not own_mlht:
         found = _pbl_height(
-            out.drop(columns="mlht", errors="ignore"), files, pbl_height, z_top
+            out.drop(columns="mlht", errors="ignore"), met, pbl_height, z_top
         )
         out["mlht"] = np.maximum(found, pbl_height_min)
     depth = np.broadcast_to(
@@ -177,7 +179,7 @@ def add_foot(
     ends = pd.concat(
         [where.assign(zagl=0.0), where.assign(zagl=depth)], ignore_index=True
     )
-    pres = sample_met(ends, files, ["pres"], z_top=None)["pres"].to_numpy()
+    pres = sample_met(ends, met, ["pres"], z_top=None)["pres"].to_numpy()
     air = 100.0 * (pres[: len(out)] - pres[len(out) :]) / _GRAVITY  # kg m⁻²
     if own_mlht and "samt" in out.columns:
         minutes = out["samt"].to_numpy(dtype=float)
@@ -190,17 +192,17 @@ def add_foot(
 
 def _pbl_height(
     particles: pd.DataFrame,
-    files: list[Any],
+    met: list[Any] | xr.Dataset,
     pbl_height: str | float | None,
     z_top: float | None = None,
 ) -> np.ndarray:
     """Return the mixed-layer height at each row that *pbl_height* names, the met's ``PBLH`` for ``None``."""
     if pbl_height is None or pbl_height == "met":
-        return sample_met(particles, files, ["mlht"], z_top=None)["mlht"].to_numpy()
+        return sample_met(particles, met, ["mlht"], z_top=None)["mlht"].to_numpy()
     if pbl_height == "richardson":
         if z_top is None:
-            return calc_pbl_height(particles, files)
-        return calc_pbl_height(particles, files, z_top=z_top)
+            return calc_pbl_height(particles, met)
+        return calc_pbl_height(particles, met, z_top=z_top)
     if isinstance(pbl_height, str):
         raise ValueError(
             "pbl_height must be met, richardson, or a height in meters; "

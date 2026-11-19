@@ -670,6 +670,7 @@ class Project(project.Project):
                 footprint,
                 path,
                 z_top=getattr(v.transport, "z_top", None),
+                variant=v,
             )
 
         def read(rid: str) -> tuple[pd.DataFrame, list[pd.DataFrame]]:

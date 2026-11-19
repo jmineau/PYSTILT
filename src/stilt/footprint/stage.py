@@ -19,10 +19,13 @@ from collections.abc import Callable, Iterable, Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+import numpy as np
 import pandas as pd
 import xarray as xr
 from pydantic import TypeAdapter
+from runtraj import Bounds
 from runtraj.identity import file_stamp
+from runtraj.models import open_met
 from runtraj.particles import particles_metadata
 from runtraj.releases import Release
 
@@ -252,6 +255,7 @@ def footprint_particles(
     met_files: Iterable[str | os.PathLike[str]],
     *,
     z_top: float | None = None,
+    variant: Variant | None = None,
 ) -> pd.DataFrame:
     """
     Return the particles a footprint under *config* is made from, with the ``foot`` it uses.
@@ -277,6 +281,11 @@ def footprint_particles(
     z_top : float, optional
         The top of the run's domain, HYSPLIT's ``z_top``, which
         ``pbl_height: richardson`` reads.
+    variant : runtraj.config.Variant, optional
+        The variant that made the particles. Its transport model opens the
+        met files in the format it reads (:func:`runtraj.models.open_met`),
+        around the particles. Without it the files are read as ARL files, as
+        HYSPLIT's are.
 
     Returns
     -------
@@ -319,9 +328,16 @@ def footprint_particles(
         )
     had_foot = "foot" in particles.columns
     out = particles.drop(columns="foot") if had_foot else particles
+    met = (
+        files
+        if variant is None
+        else open_met(
+            variant.model, variant.met_config, files, _particle_bounds(particles)
+        )
+    )
     out = add_foot(
         out,
-        files,
+        met,
         config.footprint_depth,
         pbl_height=config.pbl_height,
         pbl_height_min=config.pbl_height_min,
@@ -334,6 +350,24 @@ def footprint_particles(
         " in place of the model's foot" if had_foot else "",
     )
     return out
+
+
+def _particle_bounds(particles: pd.DataFrame) -> Bounds | None:
+    """Return the box around the particles' longitudes and latitudes, or ``None`` when none is finite."""
+    lon = particles["lon"].to_numpy(dtype=float)
+    lat = particles["lat"].to_numpy(dtype=float)
+    keep = np.isfinite(lon) & np.isfinite(lat)
+    if not keep.any():
+        return None
+    ymin, ymax = float(lat[keep].min()), float(lat[keep].max())
+    if ymin == ymax:  # a box needs a height; the model adds its own margin
+        ymin, ymax = max(ymin - 0.01, -90.0), min(ymax + 0.01, 90.0)
+    return Bounds(
+        xmin=float(lon[keep].min()),
+        xmax=float(lon[keep].max()),
+        ymin=ymin,
+        ymax=ymax,
+    )
 
 
 def _mixed_layer(particles: pd.DataFrame, config: FootprintConfig) -> str:
@@ -359,6 +393,7 @@ def stored_particles(
     *,
     start: dt.datetime | pd.Timestamp | None = None,
     z_top: float | None = None,
+    variant: Variant | None = None,
 ) -> pd.DataFrame:
     """
     Return particles read from the file at *path* with the ``foot`` a footprint under *config* uses (:func:`footprint_particles`).
@@ -377,7 +412,9 @@ def stored_particles(
             time=pd.Timestamp(start)
             + pd.to_timedelta(particles["age"].to_numpy(), unit="min")
         )
-    out = footprint_particles(particles, config, met_files, z_top=z_top)
+    out = footprint_particles(
+        particles, config, met_files, z_top=z_top, variant=variant
+    )
     return out.drop(columns="time") if added_time else out
 
 
@@ -389,6 +426,7 @@ def simulation_particles(sim: Simulation, config: FootprintConfig) -> pd.DataFra
         sim.particles_path,
         start=sim.release.time,
         z_top=getattr(sim.transport, "z_top", None),
+        variant=sim.variant,
     )
 
 

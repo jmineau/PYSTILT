@@ -74,7 +74,7 @@ each a ``stilt run --task`` command line.
      - Implemented
    * - Transport models other than HYSPLIT, named by import path (``class: mypkg.MyModel`` in a ``models`` block), including models that run many releases per call
      - Implemented (the interface; HYSPLIT is the one model)
-   * - Met columns (``mlht``, ``dens``, ``pres``, ``zsfc``) sampled at particle positions, for a model that writes only positions (``stilt.sampling.sample_met``)
+   * - Met columns (``mlht``, ``dens``, ``pres``, ``zsfc``) sampled at particle positions, for a model that writes only positions (``runtraj.sampling.sample_met``)
      - Implemented (see the Meteorology guide for how closely ``pres`` and ``dens`` match HYSPLIT's)
    * - ``foot`` computed from the met files for a model that writes only positions, so its particles make footprints (``stilt.footprint.add_foot``)
      - Implemented (no near-field correction for such a model; see Validation for how far a footprint moves)

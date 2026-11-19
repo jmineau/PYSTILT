@@ -7,6 +7,7 @@ import json
 
 import pandas as pd
 import pytest
+import xarray as xr
 from runtraj.identity import stage_hash
 from runtraj.stages import check_stage, get_stage, reads
 
@@ -498,6 +499,49 @@ def test_a_positions_only_run_gets_a_foot_from_its_met_files(
     assert (add_foot["pbl_height"], add_foot["pbl_height_min"]) == (None, 0.0)
     assert add_foot["z_top"] == 10000.0
     assert "foot computed by PYSTILT from the met's PBLH" in caplog.text
+
+
+def test_the_variants_model_opens_the_met_around_the_particles(
+    add_foot, tmp_path, monkeypatch
+):
+    from runtraj import Bounds
+
+    from stilt.footprint import footprint_particles, stage
+
+    met = tmp_path / "met"
+    met.touch()
+    variant = make_variant()
+    opened = xr.Dataset()
+    calls = []
+
+    def open_met(name, met_config, files, bounds):
+        calls.append((name, met_config, list(files), bounds))
+        return opened
+
+    monkeypatch.setattr(stage, "open_met", open_met)
+    particles = _particles(time=pd.Timestamp("2023-01-01 11:59"))
+    footprint_particles(particles, FootprintConfig(), [met], variant=variant)
+
+    assert calls == [
+        (
+            "hysplit",
+            variant.met_config,
+            [met],
+            Bounds(xmin=-112.0, xmax=-111.9, ymin=40.6, ymax=40.7),
+        )
+    ]
+    assert add_foot["met_files"] is opened
+
+
+def test_hysplits_met_files_reach_foot_as_the_paths_they_are(add_foot, tmp_path):
+    from stilt.footprint import footprint_particles
+
+    met = tmp_path / "met"
+    met.touch()
+    particles = _particles(time=pd.Timestamp("2023-01-01 11:59"))
+    footprint_particles(particles, FootprintConfig(), [met], variant=make_variant())
+
+    assert add_foot["met_files"] == [met]
 
 
 def test_pbl_height_replaces_the_models_foot(add_foot, tmp_path, caplog):
