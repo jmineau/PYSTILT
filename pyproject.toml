@@ -62,6 +62,10 @@ sparse = [
 stilt-r = [
     "rdata>=1.0",
 ]
+# An output directory or met files in a bucket: s3:// (AWS, MinIO, any
+# S3-compatible store) and gs:// (Google Cloud). The container image has both.
+s3 = ["s3fs>=2024.12"]
+gcs = ["gcsfs>=2024.12"]
 complete = [
     "pystilt[geometry]",
     "pystilt[visualization]",
