@@ -1,5 +1,0 @@
-stilt.simulation.Simulation.has
-===============================
-
-.. currentmodule:: stilt.simulation
-.. automethod:: Simulation.has

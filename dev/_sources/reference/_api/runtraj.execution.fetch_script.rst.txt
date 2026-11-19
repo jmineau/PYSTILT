@@ -1,0 +1,6 @@
+﻿runtraj.execution.fetch\_script
+===============================
+
+.. currentmodule:: runtraj.execution
+
+.. autofunction:: fetch_script

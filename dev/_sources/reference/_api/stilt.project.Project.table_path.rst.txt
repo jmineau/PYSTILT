@@ -1,5 +1,0 @@
-stilt.project.Project.table\_path
-=================================
-
-.. currentmodule:: stilt.project
-.. automethod:: Project.table_path

@@ -1,5 +1,0 @@
-stilt.project.Project.submit
-============================
-
-.. currentmodule:: stilt.project
-.. automethod:: Project.submit

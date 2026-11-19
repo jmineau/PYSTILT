@@ -1,5 +1,0 @@
-stilt.project.Project.release
-=============================
-
-.. currentmodule:: stilt.project
-.. automethod:: Project.release

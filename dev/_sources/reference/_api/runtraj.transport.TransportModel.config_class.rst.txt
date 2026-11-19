@@ -1,0 +1,6 @@
+runtraj.transport.TransportModel.config\_class
+==============================================
+
+.. currentmodule:: runtraj.transport
+
+.. autoproperty:: TransportModel.config_class

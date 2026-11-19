@@ -1,5 +1,0 @@
-stilt.output.Output.keep\_workdir
-=================================
-
-.. currentmodule:: stilt.output
-.. automethod:: Output.keep_workdir

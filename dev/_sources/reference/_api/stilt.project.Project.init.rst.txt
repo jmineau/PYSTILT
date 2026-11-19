@@ -1,5 +1,0 @@
-stilt.project.Project.init
-==========================
-
-.. currentmodule:: stilt.project
-.. automethod:: Project.init

@@ -18,28 +18,7 @@ Parameters
 
 
 
-Attributes
-----------
-
-.. autosummary::
-   :toctree:
-   :nosignatures:
-
-   ~StiltRConfig.UNRECORDED
 
 
-
-
-
-
-Inherited
----------
-
-
-From :class:`~.HysplitConfig`: :py:obj:`~.HysplitConfig.hourly_ziscale`, :py:obj:`~.HysplitConfig.maxpar_for`, :py:obj:`~.HysplitConfig.realizations`
-
-
-
-From :class:`~.TransportConfig`: :py:obj:`~.TransportConfig.settings`
 
 

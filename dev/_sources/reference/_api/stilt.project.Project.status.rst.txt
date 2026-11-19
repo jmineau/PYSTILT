@@ -1,5 +1,0 @@
-stilt.project.Project.status
-============================
-
-.. currentmodule:: stilt.project
-.. automethod:: Project.status

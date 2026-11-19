@@ -1,5 +1,0 @@
-stilt.particles.ParticlesAccessor.to\_cf\_trajectories
-======================================================
-
-.. currentmodule:: stilt.particles
-.. automethod:: ParticlesAccessor.to_cf_trajectories

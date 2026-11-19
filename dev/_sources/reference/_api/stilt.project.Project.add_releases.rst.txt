@@ -1,5 +1,0 @@
-stilt.project.Project.add\_releases
-===================================
-
-.. currentmodule:: stilt.project
-.. automethod:: Project.add_releases

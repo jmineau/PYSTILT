@@ -1,5 +1,0 @@
-stilt.output.Output.kinds
-=========================
-
-.. currentmodule:: stilt.output
-.. automethod:: Output.kinds

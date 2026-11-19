@@ -1,5 +1,0 @@
-stilt.output.Output.complete
-============================
-
-.. currentmodule:: stilt.output
-.. automethod:: Output.complete

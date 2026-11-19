@@ -1,6 +1,0 @@
-﻿stilt.stages.get\_stage
-=======================
-
-.. currentmodule:: stilt.stages
-
-.. autofunction:: get_stage

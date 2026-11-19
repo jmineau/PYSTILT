@@ -1,0 +1,5 @@
+runtraj.transport.hysplit.MetConfig.model\_post\_init
+=====================================================
+
+.. currentmodule:: runtraj.transport.hysplit
+.. automethod:: MetConfig.model_post_init

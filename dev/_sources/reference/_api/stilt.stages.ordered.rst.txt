@@ -1,6 +1,0 @@
-﻿stilt.stages.ordered
-====================
-
-.. currentmodule:: stilt.stages
-
-.. autofunction:: ordered

@@ -1,6 +1,0 @@
-stilt.simulation.Simulation.transport
-=====================================
-
-.. currentmodule:: stilt.simulation
-
-.. autoproperty:: Simulation.transport

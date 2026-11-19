@@ -1,5 +1,0 @@
-stilt.stages.Stage.run
-======================
-
-.. currentmodule:: stilt.stages
-.. automethod:: Stage.run

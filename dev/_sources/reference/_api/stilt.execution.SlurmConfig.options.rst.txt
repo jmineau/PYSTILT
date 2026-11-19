@@ -1,6 +1,0 @@
-stilt.execution.SlurmConfig.options
-===================================
-
-.. currentmodule:: stilt.execution
-
-.. autoproperty:: SlurmConfig.options

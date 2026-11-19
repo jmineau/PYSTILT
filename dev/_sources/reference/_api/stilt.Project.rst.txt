@@ -31,11 +31,3 @@ Methods
 
 
 
-
-Inherited
----------
-
-
-From :class:`~.Project`: :py:obj:`~.Project.add_releases`, :py:obj:`~.Project.add_table`, :py:obj:`~.Project.check`, :py:obj:`~.Project.config`, :py:obj:`~.Project.config_path`, :py:obj:`~.Project.fetch`, :py:obj:`~.Project.folders`, :py:obj:`~.Project.incomplete`, :py:obj:`~.Project.name`, :py:obj:`~.Project.output`, :py:obj:`~.Project.particles`, :py:obj:`~.Project.plot`, :py:obj:`~.Project.release`, :py:obj:`~.Project.releases`, :py:obj:`~.Project.releases_path`, :py:obj:`~.Project.run`, :py:obj:`~.Project.simulations`, :py:obj:`~.Project.status`, :py:obj:`~.Project.submit`, :py:obj:`~.Project.table_path`, :py:obj:`~.Project.variants`
-
-

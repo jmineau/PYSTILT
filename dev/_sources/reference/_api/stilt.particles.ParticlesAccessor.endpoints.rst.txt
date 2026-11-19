@@ -1,5 +1,0 @@
-stilt.particles.ParticlesAccessor.endpoints
-===========================================
-
-.. currentmodule:: stilt.particles
-.. automethod:: ParticlesAccessor.endpoints

@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=000a6a7f"></script>
+    <script src="../_static/documentation_options.js?v=3465ac01"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev30+g0d6d55b99" />
+  <meta name="docsearch:version" content="0.1.0a30.dev32+g7bfb1e505" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -553,7 +553,7 @@ instead be on an object store (<code class="docutils literal notranslate"><span 
 <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">--output</span> <span class="pre">s3://bucket/...</span></code> uses another output directory
 than <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> names, without editing it.</p></li>
 <li><p>A compute root, where each run gets its workdir. Set
-<code class="docutils literal notranslate"><span class="pre">PYSTILT_COMPUTE_ROOT</span></code> to a folder on fast local disk, such as an
+<code class="docutils literal notranslate"><span class="pre">RUNTRAJ_COMPUTE_ROOT</span></code> to a folder on fast local disk, such as an
 <code class="docutils literal notranslate"><span class="pre">emptyDir</span></code>.</p></li>
 </ul>
 </section>
@@ -623,7 +623,7 @@ is the task number:</p>
 <span class="w">          </span><span class="nt">command</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">"sh"</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">"-c"</span><span class="p p-Indicator">]</span>
 <span class="w">          </span><span class="nt">args</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">"exec</span><span class="nv"> </span><span class="s">stilt</span><span class="nv"> </span><span class="s">run</span><span class="nv"> </span><span class="s">/project</span><span class="nv"> </span><span class="s">--task</span><span class="nv"> </span><span class="s">$JOB_COMPLETION_INDEX/20</span><span class="nv"> </span><span class="s">--cpus</span><span class="nv"> </span><span class="s">4"</span><span class="p p-Indicator">]</span>
 <span class="w">          </span><span class="nt">env</span><span class="p">:</span>
-<span class="w">            </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">PYSTILT_COMPUTE_ROOT</span>
+<span class="w">            </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">RUNTRAJ_COMPUTE_ROOT</span>
 <span class="w">              </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/scratch</span>
 <span class="w">          </span><span class="nt">resources</span><span class="p">:</span>
 <span class="w">            </span><span class="nt">requests</span><span class="p">:</span>

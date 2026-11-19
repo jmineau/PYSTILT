@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=000a6a7f"></script>
+    <script src="../_static/documentation_options.js?v=3465ac01"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev30+g0d6d55b99" />
+  <meta name="docsearch:version" content="0.1.0a30.dev32+g7bfb1e505" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -652,7 +652,7 @@ there too when the table has it.</p>
 <ul class="simple">
 <li><p>The exit is the first time the particle crossed the edge. A particle that
 came back in, or ended long after at the edge of the meteorology, has the
-same exit; <a class="reference internal" href="../reference/_api/stilt.particles.ParticlesAccessor.endpoints.html#stilt.particles.ParticlesAccessor.endpoints" title="stilt.particles.ParticlesAccessor.endpoints"><code class="xref py py-meth docutils literal notranslate"><span class="pre">endpoints()</span></code></a> gives
+same exit; <code class="xref py py-meth docutils literal notranslate"><span class="pre">endpoints()</span></code> gives
 where it ended.</p></li>
 <li><p>The edge is the outer edge of the grid’s cells. A projected grid is a
 rectangle in its projection, and a grid across the dateline is read
@@ -722,7 +722,7 @@ forward with 1000 particles. In PYSTILT each release is a
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.observations</span><span class="w"> </span><span class="kn">import</span> <span class="n">jitter_points</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.releases</span><span class="w"> </span><span class="kn">import</span> <span class="n">MultiPointRelease</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.releases</span><span class="w"> </span><span class="kn">import</span> <span class="n">MultiPointRelease</span>
 
 <span class="n">site</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mf">111.9</span><span class="p">,</span> <span class="mf">40.75</span><span class="p">)</span>                       <span class="c1"># Salt Lake City</span>
 <span class="n">overpass</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="s2">"2023-10-19 19:42"</span><span class="p">)</span>  <span class="c1"># from the sounding times</span>

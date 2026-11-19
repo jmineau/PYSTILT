@@ -4,6 +4,9 @@ Core Objects
 .. currentmodule:: stilt
 
 The project, its releases, the simulations it runs, and their outputs.
+The particle runs are `runtraj <https://jmineau.github.io/runtraj/>`_'s, and
+its reference has their classes and functions; this page lists what
+``stilt`` adds and the names it gives you.
 
 One release, without a project
 -------------------------------
@@ -31,18 +34,17 @@ stores the results.
 Project interface
 -----------------
 
-:class:`Project` is what you open a project with. It is the particle part,
-:class:`project.Project`, which runs the transport model and reads the
+:class:`Project` is what you open a project with. It is runtraj's
+:class:`runtraj.Project`, which runs the transport model and reads the
 particles, with the reads of what STILT makes from the particles added: the
 footprints, the Jacobian, and the transport error of a selection. Both open
-the same directory; the workers use the particle part.
+the same directory; the workers use runtraj's.
 
 .. autosummary::
    :toctree: _api
    :nosignatures:
 
    Project
-   project.Project
 
 Release objects
 ----------------
@@ -56,38 +58,32 @@ Release objects
    ColumnRelease
    MultiPointRelease
    read_releases
-   releases.write_releases
-   releases.releases_to_frame
-   releases.releases_from_frame
-   releases.parse_release_id
 
 Simulation objects
 ------------------
 
-A :class:`~stilt.config.Variant` is one variant of a project, resolved: its configs, its
+A :class:`~runtraj.config.Variant` is one variant of a project, resolved: its configs, its
 met, the transport model build, and the hashes that find its results.
 ``project.variants`` holds them, and :meth:`ProjectConfig.resolve` makes
 them from a config.
 
 :class:`Simulation`, which ``project.simulation(release_id, variant)``
-returns, adds the footprint, the background and the transport error to the
-particle part, :class:`simulation.Simulation`, which the workers and the
-stages are given.
+returns, adds the footprint, the background and the transport error to
+runtraj's :class:`runtraj.Simulation`, which the workers and the stages are
+given.
 
 .. autosummary::
    :toctree: _api
    :nosignatures:
 
    Simulation
-   simulation.Simulation
-   config.Variant
 
 Settings and their hashes
 -------------------------
 
-:mod:`stilt.identity` records what a run was made with, as its folder's
+:mod:`runtraj.identity` records what a run was made with, as its folder's
 ``_settings.yaml`` holds it, and hashes it. A stage records its own settings
-(:meth:`stilt.stages.Stage.settings`; the footprint's are
+(:meth:`runtraj.stages.Stage.settings`; the footprint's are
 :func:`~stilt.footprint.config.footprint_settings`), which are hashed with
 the particles' hash and the hash of each stage it reads. A stored record is
 read back through the current config classes, so a setting added since, with
@@ -97,23 +93,16 @@ a default, still matches.
    :toctree: _api
    :nosignatures:
 
-   identity.run_settings
-   identity.read_run_settings
-   identity.transport_from_settings
-   identity.stage_hash
-   identity.settings_hash
-   identity.file_stamp
    footprint.config.footprint_settings
    footprint.config.read_footprint_settings
-   transport.ModelInfo
 
 Particles and footprints
 ------------------------
 
 A simulation's particles are a pandas DataFrame and its footprint an xarray
 DataArray. PYSTILT's methods on them are under ``.stilt``:
-:class:`~stilt.stilt_particles.ParticlesAccessor` (the particle part's
-:class:`~stilt.particles.ParticlesAccessor` with ``enhancement`` added) and
+:class:`~stilt.particles.ParticlesAccessor` (runtraj's
+:class:`~runtraj.particles.ParticlesAccessor` with ``enhancement`` added) and
 :class:`~stilt.footprint.FootprintAccessor`. The functions below read and
 write particle and footprint files without a project.
 
@@ -122,13 +111,10 @@ write particle and footprint files without a project.
    :nosignatures:
 
    read_particles
-   particles.particles_metadata
-   particles.write_particles
    read_footprint
    footprint.write_footprint
    footprint.write_empty_footprint
    footprint.open_footprints
-   stilt_particles.ParticlesAccessor
    particles.ParticlesAccessor
    footprint.FootprintAccessor
 
@@ -202,7 +188,7 @@ A :class:`Grid` works as well. It is documented under :doc:`configuration`.
 :mod:`stilt.footprint` also has the helpers that compute how much of each
 footprint cell falls in each target cell. These overlap weights are cached,
 so each geometry's weights are computed once per footprint grid.
-:mod:`stilt.spatial` has the CRS helpers.
+:mod:`runtraj.spatial` has the CRS helpers.
 
 .. autosummary::
    :toctree: _api
@@ -210,9 +196,6 @@ so each geometry's weights are computed once per footprint grid.
 
    footprint.overlap_weights
    footprint.check_resolution
-   spatial.same_crs
-   spatial.is_longlat
-   spatial.horizontal_dims
 
 Sampling fields
 ---------------

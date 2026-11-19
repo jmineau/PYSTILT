@@ -122,7 +122,7 @@ there too when the table has it.
 
 - The exit is the first time the particle crossed the edge. A particle that
   came back in, or ended long after at the edge of the meteorology, has the
-  same exit; :meth:`~stilt.particles.ParticlesAccessor.endpoints` gives
+  same exit; :meth:`~runtraj.particles.ParticlesAccessor.endpoints` gives
   where it ended.
 - The edge is the outer edge of the grid's cells. A projected grid is a
   rectangle in its projection, and a grid across the dateline is read
@@ -193,7 +193,7 @@ the hours before the overpass, so that air of every age is included.
 X-STILT's defaults are a 0.3° box, 10 m above ground, and releases from ten
 hours before the overpass up to the overpass, each followed twelve hours
 forward with 1000 particles. In PYSTILT each release is a
-:class:`~stilt.releases.MultiPointRelease`, and
+:class:`~runtraj.releases.MultiPointRelease`, and
 :func:`~stilt.observations.jitter_points` spreads its points over the box:
 
 .. code-block:: python
@@ -201,7 +201,7 @@ forward with 1000 particles. In PYSTILT each release is a
    import pandas as pd
    import stilt
    from stilt.observations import jitter_points
-   from stilt.releases import MultiPointRelease
+   from runtraj.releases import MultiPointRelease
 
    site = (-111.9, 40.75)                       # Salt Lake City
    overpass = pd.Timestamp("2023-10-19 19:42")  # from the sounding times

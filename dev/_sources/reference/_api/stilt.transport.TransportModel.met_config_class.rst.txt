@@ -1,6 +1,0 @@
-stilt.transport.TransportModel.met\_config\_class
-=================================================
-
-.. currentmodule:: stilt.transport
-
-.. autoproperty:: TransportModel.met_config_class

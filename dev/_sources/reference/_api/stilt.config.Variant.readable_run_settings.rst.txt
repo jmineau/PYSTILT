@@ -1,6 +1,0 @@
-stilt.config.Variant.readable\_run\_settings
-============================================
-
-.. currentmodule:: stilt.config
-
-.. autoproperty:: Variant.readable_run_settings

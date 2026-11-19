@@ -1,6 +1,0 @@
-﻿stilt.identity.read\_run\_settings
-==================================
-
-.. currentmodule:: stilt.identity
-
-.. autofunction:: read_run_settings

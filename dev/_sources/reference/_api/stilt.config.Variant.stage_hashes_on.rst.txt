@@ -1,5 +1,0 @@
-stilt.config.Variant.stage\_hashes\_on
-======================================
-
-.. currentmodule:: stilt.config
-.. automethod:: Variant.stage_hashes_on

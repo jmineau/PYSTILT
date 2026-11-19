@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=000a6a7f"></script>
+    <script src="../../../_static/documentation_options.js?v=3465ac01"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev30+g0d6d55b99" />
+  <meta name="docsearch:version" content="0.1.0a30.dev32+g7bfb1e505" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -473,11 +473,11 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pyarrow</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pa</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.releases</span><span class="w"> </span><span class="kn">import</span> <span class="n">parse_release_id</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.spatial</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grid</span><span class="p">,</span> <span class="n">horizontal_dims</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">scipy</span><span class="w"> </span><span class="kn">import</span> <span class="n">sparse</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">FootprintConfig</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.releases</span><span class="w"> </span><span class="kn">import</span> <span class="n">parse_release_id</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.spatial</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grid</span><span class="p">,</span> <span class="n">horizontal_dims</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">UNITS</span><span class="p">,</span> <span class="n">_naive_utc</span><span class="p">,</span> <span class="n">_naive_utc_ns</span><span class="p">,</span> <span class="n">_threads</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.targets</span><span class="w"> </span><span class="kn">import</span> <span class="n">Geometry</span><span class="p">,</span> <span class="n">Mesh</span><span class="p">,</span> <span class="n">Zones</span><span class="p">,</span> <span class="n">check_resolution</span><span class="p">,</span> <span class="n">overlap_weights</span>
@@ -830,7 +830,7 @@
 <span class="sd">    Sum the footprints in *table* onto a target, per time bin, as one sparse matrix.</span>
 
 <span class="sd">    The same operation as ``foot.stilt.aggregate``, for many footprints at</span>
-<span class="sd">    once. *table* is what :meth:`stilt.output.Output.table` reads: the</span>
+<span class="sd">    once. *table* is what :meth:`runtraj.output.Output.table` reads: the</span>
 <span class="sd">    stored non-zero cells of each release, all on the grid of *config*.</span>
 <span class="sd">    :meth:`stilt.Project.jacobian` reads a project's footprints one</span>
 <span class="sd">    release at a time instead, so a selection of any size fits in memory.</span>

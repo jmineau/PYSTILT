@@ -1,6 +1,0 @@
-﻿stilt.identity.file\_stamp
-==========================
-
-.. currentmodule:: stilt.identity
-
-.. autofunction:: file_stamp

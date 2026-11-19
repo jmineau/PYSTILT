@@ -1,6 +1,0 @@
-stilt.project.Project.releases\_path
-====================================
-
-.. currentmodule:: stilt.project
-
-.. autoproperty:: Project.releases_path

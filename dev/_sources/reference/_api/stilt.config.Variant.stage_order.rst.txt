@@ -1,6 +1,0 @@
-stilt.config.Variant.stage\_order
-=================================
-
-.. currentmodule:: stilt.config
-
-.. autoproperty:: Variant.stage_order

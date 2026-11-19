@@ -1,5 +1,0 @@
-stilt.output.Output.folders
-===========================
-
-.. currentmodule:: stilt.output
-.. automethod:: Output.folders

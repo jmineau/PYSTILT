@@ -95,7 +95,7 @@ Glossary
 
    compute root
       The folder the workdirs are made in, usually fast local disk: the
-      ``--compute-root`` option, else ``PYSTILT_COMPUTE_ROOT``, else
+      ``--compute-root`` option, else ``RUNTRAJ_COMPUTE_ROOT``, else
       ``$TMPDIR/pystilt/<project>``. Projects can share one.
 
    HYSPLIT

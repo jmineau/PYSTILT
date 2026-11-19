@@ -1,0 +1,5 @@
+runtraj.transport.TransportModel.version
+========================================
+
+.. currentmodule:: runtraj.transport
+.. automethod:: TransportModel.version

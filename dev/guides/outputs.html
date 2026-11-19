@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=000a6a7f"></script>
+    <script src="../_static/documentation_options.js?v=3465ac01"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev30+g0d6d55b99" />
+  <meta name="docsearch:version" content="0.1.0a30.dev32+g7bfb1e505" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -722,7 +722,7 @@ what a transport model must write.</p>
     <span class="s2">"202101150800_-111.848_40.766_10.parquet"</span>
 <span class="p">)</span>
 <span class="n">particles</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">read_particles</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-<span class="n">meta</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">particles</span><span class="o">.</span><span class="n">particles_metadata</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+<span class="n">meta</span> <span class="o">=</span> <span class="n">runtraj</span><span class="o">.</span><span class="n">particles</span><span class="o">.</span><span class="n">particles_metadata</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
 <span class="n">meta</span><span class="o">.</span><span class="n">release</span><span class="p">,</span> <span class="n">meta</span><span class="o">.</span><span class="n">settings</span><span class="p">,</span> <span class="n">meta</span><span class="o">.</span><span class="n">met_files</span><span class="p">,</span> <span class="n">meta</span><span class="o">.</span><span class="n">realization</span>
 </pre></div>
 </div>
@@ -951,9 +951,9 @@ cf-xarray, and other tools that read CF trajectory files open:</p>
 <span class="go">Attributes:</span>
 <span class="go">    Conventions:  CF-1.10</span>
 <span class="go">    featureType:  trajectory</span>
-<span class="go">    title:        PYSTILT particle trajectories</span>
-<span class="go">    source:       PYSTILT particle table</span>
-<span class="go">    history:      Converted from a PYSTILT particle table</span>
+<span class="go">    title:        runtraj particle trajectories</span>
+<span class="go">    source:       runtraj particle table</span>
+<span class="go">    history:      Converted from a runtraj particle table</span>
 </pre></div>
 </div>
 <p>Write it with <a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.Dataset.to_netcdf.html#xarray.Dataset.to_netcdf" title="(in xarray v2026.9.0)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">xarray.Dataset.to_netcdf()</span></code></a>. A particle table from
@@ -1078,7 +1078,7 @@ quantity as the PARIS units, (mol/mol)/(mol/m2/s).</p>
 <p>Pass the particles, as above: openghg also expects <code class="docutils literal notranslate"><span class="pre">particle_locations_n</span></code>,
 <code class="docutils literal notranslate"><span class="pre">_e</span></code>, <code class="docutils literal notranslate"><span class="pre">_s</span></code> and <code class="docutils literal notranslate"><span class="pre">_w</span></code>, the fraction of particles that first left the
 footprint grid through each edge, by cell along the edge and by 1 km height
-layer up to 20 km (<a class="reference internal" href="../reference/_api/stilt.particles.ParticlesAccessor.grid_exits.html#stilt.particles.ParticlesAccessor.grid_exits" title="stilt.particles.ParticlesAccessor.grid_exits"><code class="xref py py-meth docutils literal notranslate"><span class="pre">grid_exits()</span></code></a>).
+layer up to 20 km (<code class="xref py py-meth docutils literal notranslate"><span class="pre">grid_exits()</span></code>).
 Without the particles these are left out, and openghg refuses the file
 unless told not to expect them. A particle that never left the grid counts
 nowhere, so the four add up to the share that left:</p>

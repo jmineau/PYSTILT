@@ -1,5 +1,0 @@
-stilt.stages.Stage.settings
-===========================
-
-.. currentmodule:: stilt.stages
-.. automethod:: Stage.settings

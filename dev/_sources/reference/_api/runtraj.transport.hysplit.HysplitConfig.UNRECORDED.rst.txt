@@ -1,0 +1,6 @@
+runtraj.transport.hysplit.HysplitConfig.UNRECORDED
+==================================================
+
+.. currentmodule:: runtraj.transport.hysplit
+
+.. autoattribute:: HysplitConfig.UNRECORDED

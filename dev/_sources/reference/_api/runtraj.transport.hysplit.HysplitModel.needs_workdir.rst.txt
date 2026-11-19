@@ -1,0 +1,6 @@
+runtraj.transport.hysplit.HysplitModel.needs\_workdir
+=====================================================
+
+.. currentmodule:: runtraj.transport.hysplit
+
+.. autoattribute:: HysplitModel.needs_workdir

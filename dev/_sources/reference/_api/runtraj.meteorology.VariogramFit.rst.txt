@@ -1,0 +1,29 @@
+﻿runtraj.meteorology.VariogramFit
+================================
+
+.. currentmodule:: runtraj.meteorology
+
+
+
+
+
+
+.. class-signature:: runtraj.meteorology.VariogramFit
+
+
+.. class-parameters:: runtraj.meteorology.VariogramFit
+
+
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~VariogramFit.__call__
+
+
+

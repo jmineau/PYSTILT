@@ -1,6 +1,0 @@
-stilt.project.Project.output
-============================
-
-.. currentmodule:: stilt.project
-
-.. autoproperty:: Project.output

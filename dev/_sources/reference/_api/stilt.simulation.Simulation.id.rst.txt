@@ -1,6 +1,0 @@
-stilt.simulation.Simulation.id
-==============================
-
-.. currentmodule:: stilt.simulation
-
-.. autoproperty:: Simulation.id

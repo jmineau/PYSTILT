@@ -1,6 +1,0 @@
-﻿stilt.execution.worker.run\_releases
-====================================
-
-.. currentmodule:: stilt.execution.worker
-
-.. autofunction:: run_releases

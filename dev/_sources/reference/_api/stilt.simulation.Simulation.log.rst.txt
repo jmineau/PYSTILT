@@ -1,6 +1,0 @@
-stilt.simulation.Simulation.log
-===============================
-
-.. currentmodule:: stilt.simulation
-
-.. autoproperty:: Simulation.log

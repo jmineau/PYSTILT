@@ -1,0 +1,6 @@
+﻿runtraj.stages.get\_stage
+=========================
+
+.. currentmodule:: runtraj.stages
+
+.. autofunction:: get_stage

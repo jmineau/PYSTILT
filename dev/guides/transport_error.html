@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=000a6a7f"></script>
+    <script src="../_static/documentation_options.js?v=3465ac01"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -66,7 +66,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev30+g0d6d55b99" />
+  <meta name="docsearch:version" content="0.1.0a30.dev32+g7bfb1e505" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -966,15 +966,15 @@ since their heights above ground are unknown.</p>
 </section>
 <section id="step-2-the-scales">
 <h3>Step 2: the scales<a class="headerlink" href="#step-2-the-scales" title="Link to this heading">#</a></h3>
-<p><a class="reference internal" href="../reference/_api/stilt.meteorology.variogram.html#stilt.meteorology.variogram" title="stilt.meteorology.variogram"><code class="xref py py-func docutils literal notranslate"><span class="pre">variogram()</span></code></a> builds the empirical variogram. It
+<p><a class="reference internal" href="../reference/_api/runtraj.meteorology.variogram.html#runtraj.meteorology.variogram" title="runtraj.meteorology.variogram"><code class="xref py py-func docutils literal notranslate"><span class="pre">variogram()</span></code></a> builds the empirical variogram. It
 takes the errors, the coordinate the separation is measured in, and a
 <code class="docutils literal notranslate"><span class="pre">group</span></code> label. Only points with the same label are paired. The coordinate
 can also be two columns of longitude and latitude, and the separation is
 then the great-circle distance in kilometers.
-<a class="reference internal" href="../reference/_api/stilt.meteorology.fit_variogram.html#stilt.meteorology.fit_variogram" title="stilt.meteorology.fit_variogram"><code class="xref py py-func docutils literal notranslate"><span class="pre">fit_variogram()</span></code></a> fits the exponential model with
+<a class="reference internal" href="../reference/_api/runtraj.meteorology.fit_variogram.html#runtraj.meteorology.fit_variogram" title="runtraj.meteorology.fit_variogram"><code class="xref py py-func docutils literal notranslate"><span class="pre">fit_variogram()</span></code></a> fits the exponential model with
 σ fixed.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.meteorology</span><span class="w"> </span><span class="kn">import</span> <span class="n">fit_variogram</span><span class="p">,</span> <span class="n">variogram</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.meteorology</span><span class="w"> </span><span class="kn">import</span> <span class="n">fit_variogram</span><span class="p">,</span> <span class="n">variogram</span>
 
 <span class="k">def</span><span class="w"> </span><span class="nf">scale</span><span class="p">(</span><span class="n">errors</span><span class="p">,</span> <span class="n">lag</span><span class="p">,</span> <span class="n">group</span><span class="p">,</span> <span class="n">bins</span><span class="p">):</span>
     <span class="n">table</span> <span class="o">=</span> <span class="n">variogram</span><span class="p">(</span><span class="n">errors</span><span class="p">,</span> <span class="n">lag</span><span class="p">,</span> <span class="n">group</span><span class="o">=</span><span class="n">group</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="n">bins</span><span class="p">)</span>
@@ -1019,7 +1019,7 @@ at its smallest lags is the sign.</p></li>
 perturbation does not represent it.</p></li>
 </ul>
 <p>The four values go into <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> under the same names, or into
-<a class="reference internal" href="../reference/_api/stilt.transport.hysplit.HysplitConfig.html#stilt.transport.hysplit.HysplitConfig" title="stilt.transport.hysplit.HysplitConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">HysplitConfig</span></code></a>. Look at the fits before you trust
+<a class="reference internal" href="../reference/_api/runtraj.transport.hysplit.HysplitConfig.html#runtraj.transport.hysplit.HysplitConfig" title="runtraj.transport.hysplit.HysplitConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">HysplitConfig</span></code></a>. Look at the fits before you trust
 them:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
 

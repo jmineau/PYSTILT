@@ -1,0 +1,21 @@
+﻿runtraj.transport.ModelRun
+==========================
+
+.. currentmodule:: runtraj.transport
+
+
+
+
+
+
+.. class-signature:: runtraj.transport.ModelRun
+
+
+.. class-parameters:: runtraj.transport.ModelRun
+
+
+
+
+
+
+

@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=000a6a7f"></script>
+    <script src="../../_static/documentation_options.js?v=3465ac01"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev30+g0d6d55b99" />
+  <meta name="docsearch:version" content="0.1.0a30.dev32+g7bfb1e505" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -484,8 +484,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">numpy.typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">ArrayLike</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pandas.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">InvalidIndexError</span>
-
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.spatial</span><span class="w"> </span><span class="kn">import</span> <span class="n">horizontal_dims</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.spatial</span><span class="w"> </span><span class="kn">import</span> <span class="n">horizontal_dims</span>
 
 
 <div class="viewcode-block" id="nearest_cell">
@@ -759,13 +758,13 @@
 <span class="sd">        returned, add it: the release time plus ``age`` minutes.</span>
 <span class="sd">    files : iterable of path-like</span>
 <span class="sd">        ARL met files that cover the particles' times, such as the files the</span>
-<span class="sd">        run read (``met_files`` of :class:`stilt.transport.ModelRun` or of</span>
-<span class="sd">        :func:`stilt.particles.particles_metadata`).</span>
+<span class="sd">        run read (``met_files`` of :class:`runtraj.transport.ModelRun` or of</span>
+<span class="sd">        :func:`runtraj.particles.particles_metadata`).</span>
 <span class="sd">    columns : iterable of str, default ("mlht", "dens", "pres", "zsfc")</span>
 <span class="sd">        The columns to add.</span>
 <span class="sd">    z_top : float or None, default 25000</span>
 <span class="sd">        The top of the run's domain in meters (``z_top`` of</span>
-<span class="sd">        :class:`stilt.transport.hysplit.HysplitConfig`), since HYSPLIT's</span>
+<span class="sd">        :class:`runtraj.transport.hysplit.HysplitConfig`), since HYSPLIT's</span>
 <span class="sd">        internal levels depend on it. A stored run records it:</span>
 <span class="sd">        ``particles_metadata(path).settings["z_top"]``. ``None`` reads the</span>
 <span class="sd">        met's own levels, for a transport model that is not HYSPLIT; a row</span>
@@ -788,7 +787,9 @@
 
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
-<span class="sd">    &gt;&gt;&gt; meta = stilt.particles.particles_metadata(sim.particles_path)  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; meta = runtraj.particles.particles_metadata(</span>
+<span class="sd">    ...     sim.particles_path</span>
+<span class="sd">    ... )  # doctest: +SKIP</span>
 <span class="sd">    &gt;&gt;&gt; hysplit = sim.particles  # doctest: +SKIP</span>
 <span class="sd">    &gt;&gt;&gt; sampled = stilt.sampling.sample_met(  # doctest: +SKIP</span>
 <span class="sd">    ...     hysplit.drop(columns="pres"),</span>
@@ -938,7 +939,7 @@
 <span class="sd">        ``UMOF`` and ``VMOF``.</span>
 <span class="sd">    z_top : float, default 25000</span>
 <span class="sd">        The top of the domain in meters, which sets HYSPLIT's internal</span>
-<span class="sd">        levels (``z_top`` of :class:`stilt.transport.hysplit.HysplitConfig`).</span>
+<span class="sd">        levels (``z_top`` of :class:`runtraj.transport.hysplit.HysplitConfig`).</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -956,7 +957,9 @@
 
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
-<span class="sd">    &gt;&gt;&gt; meta = stilt.particles.particles_metadata(sim.particles_path)  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; meta = runtraj.particles.particles_metadata(</span>
+<span class="sd">    ...     sim.particles_path</span>
+<span class="sd">    ... )  # doctest: +SKIP</span>
 <span class="sd">    &gt;&gt;&gt; mlht = stilt.sampling.calc_pbl_height(</span>
 <span class="sd">    ...     sim.particles, meta.met_files</span>
 <span class="sd">    ... )  # doctest: +SKIP</span>

@@ -13,19 +13,19 @@ The design in brief
 
 There is no index, manifest, or registry. A project is a directory of inputs
 (:class:`stilt.Project`: ``config.yaml`` and ``releases.csv``) and an output
-directory (``stilt.output.Output``) that ``config.yaml`` names and that
+directory (``runtraj.output.Output``) that ``config.yaml`` names and that
 several projects can share. The simulations a project defines are its
 releases crossed with the named variants in ``config.yaml``, which must
 declare at least one.
 
-Each variant resolves into a ``Variant`` (``stilt.config``) with two records
-of settings (``stilt.identity``), and their hashes name its folders.
+Each variant resolves into a ``Variant`` (``runtraj.config``) with two records
+of settings (``runtraj.identity``), and their hashes name its folders.
 Variants with equal run settings share one run per release and differ only
 in the footprint made from it. Changing a setting never overwrites a result:
 it hashes to a new folder. :doc:`../reference/layout` describes the files.
 
 Whether a simulation is complete is decided by the files in the output
-directory, by ``stilt.output.completed``: the particles exist, and the
+directory, by ``runtraj.output.completed``: the particles exist, and the
 footprint when the variant has a grid. ``Output.complete``,
 ``Simulation.is_complete``, and ``Project.status`` all apply it.
 :ref:`finished-work` explains the consequences.
@@ -36,7 +36,7 @@ and a view of their results. Its only writes are to its inputs.
 ``Project.init`` (or ``stilt init``) writes ``config.yaml`` once and PYSTILT
 never rewrites it, ``add_releases`` appends to ``releases.csv``, and
 ``add_table`` writes ``tables/<name>.parquet``. It knows no scheduler or
-compute root. ``stilt.execution.run`` and ``submit``, which ``Project.run()``
+compute root. ``runtraj.execution.run`` and ``submit``, which ``Project.run()``
 and ``Project.submit()`` call, find the releases with missing results,
 resolve the compute root, and start the workers. The workers are the only
 code that writes results.
@@ -58,9 +58,9 @@ failure records) take the kind of result (``"particles"``, or the name of a
 stage such as ``"footprint"``), the variant, and release ids.
 
 The classes a STILT user holds, ``stilt.Project`` and ``stilt.Simulation``,
-are the particle part's ``stilt.project.Project`` and
-``stilt.simulation.Simulation`` with STILT's reads added
-(``stilt.stilt_project``, ``stilt.stilt_simulation``): ``footprints``,
+are the particle part's ``runtraj.project.Project`` and
+``runtraj.simulation.Simulation`` with STILT's reads added
+(``stilt.project``, ``stilt.simulation``): ``footprints``,
 ``jacobian`` and ``transport_error`` on the project; ``footprint``,
 ``has_footprint``, ``calc_footprint``, ``background``, ``transport_error``
 and ``plot`` on a simulation. They change nothing they inherit, which a test
@@ -70,7 +70,7 @@ part's, with the reads; the two compare equal), and ``stilt.Project.init``
 writes STILT-R's HYSPLIT values into a new project. The particle part has
 no hook for a subclass.
 The workers and the stages use the particle part, and nothing on disk names
-the subclasses, so ``stilt.project.Project(path)`` opens the same project.
+the subclasses, so ``runtraj.project.Project(path)`` opens the same project.
 
 ``stilt.__all__``, plus the ``__all__`` of each subpackage, is the public
 surface. Everything else is internal and can change.
@@ -78,73 +78,37 @@ surface. Everything else is internal and can change.
 Module map
 ----------
 
+The particle runs are `runtraj <https://github.com/jmineau/runtraj>`_'s:
+the project, its config, the releases, the output directory, the settings
+records, the stage protocol, the worker and the runner, the transport
+models, and the particle table. Its ``AGENTS.md`` has its module map. What
+this page says about them describes a PYSTILT project, which is a runtraj
+project whose ``stages`` block names the footprint.
+
 .. code-block:: text
 
    src/stilt/
-     cli.py             Typer CLI, the particle commands (check, fetch, run,
-                        submit, status); a thin adapter over Project and
-                        execution
-     stilt_cli.py       the stilt command: stilt init, which writes the
-                        starter config, and cli.py's commands
-     project.py         Project, the particle part: the project directory,
-                        its releases and simulations (DataFrames),
-                        run/submit, and a selection's status and particles
-     stilt_project.py   stilt.Project: adds a selection's footprints, Jacobian
-                        and transport error; init writes STILT-R's values
-     check.py           check_project: what would stop a project's runs,
-                        found from its inputs before any run (Project.check,
-                        stilt check); a transport model's check_met finds the
-                        met's part
-     fetch.py           fetch_project: gets the met files the unfinished
-                        simulations need (Project.fetch, stilt fetch); a
-                        transport model's fetch_met does the model's part
-     output.py          Output: the output directory, a tree per kind of
-                        result (particles, and each stage by its name) and a
-                        folder per settings hash; finding a variant's folder,
-                        which releases have results (present, complete),
-                        where a file is and where a stage writes it (path,
-                        make_path), failure records, writing particles
-     stages.py          the Stage protocol: what a class named under stages:
-                        provides; get_stage, the order stages run in, and
-                        check_stage for the tests of a stage of your own
+     cli.py             the stilt command: stilt init, which writes the
+                        starter config, and runtraj's commands
+     project.py         stilt.Project: runtraj's Project with a selection's
+                        footprints, Jacobian and transport error; init
+                        writes STILT-R's values
+     simulation.py      stilt.Simulation: runtraj's Simulation with the
+                        footprint, calc_footprint, the background, the
+                        transport error, and plot
+     particles.py       the .stilt pandas accessor, registered: runtraj's
+                        methods and enhancement
+     visualization.py   the plots of a footprint and of a simulation
      migration.py       read_stilt_r: STILT-R and X-STILT by-id output as
                         releases, particle tables, and footprints;
                         import_stilt_r writes it into an output directory
                         with the settings its files record
      stilt_r.py         StiltRModel, the stilt-r model of imported STILT-R
                         runs, named by its import path; it runs nothing
-     simulation.py      Simulation, the particle part: a frozen value
-                        (release, variant, output) that knows where its
-                        results are and whether they exist (path, has)
-     stilt_simulation.py stilt.Simulation: adds the footprint, calc_footprint,
-                        the background, the transport error, and plot
      background.py      background: the mole fraction at a release from a
                         field sampled where the particles end (sim.background)
      transport_error.py transport_error: the transport error of the
                         enhancement, one release or a selection in threads
-     config.py          ProjectConfig: reads config.yaml's blocks (mets, models,
-                        stages, variants), refuses a setting outside its
-                        block and an unknown key naming the nearest setting,
-                        checks each declared variant; resolve() makes each a
-                        Variant (its configs, the model build, its stages'
-                        settings, and the hash of its particles and of each
-                        stage)
-     identity.py        settings records and their hashes: what a run was
-                        made with, in _settings.yaml, and how a stage's
-                        record is hashed with what it reads
-     releases/
-       models.py        release types (frozen pydantic models: point, column,
-                        multipoint), their times, and their ids
-       table.py         the release table behind the CSV reader, writer, and
-                        appender: release_rows checks it once, and
-                        releases_from_rows builds releases from checked rows
-       validation.py    the checks a release must pass, written once for many
-                        points and shared by the models and the table
-     particles/         the particle table (a DataFrame)
-       table.py         its columns, particle files, release heights
-       accessor.py      the particle part of the .stilt pandas accessor
-     stilt_particles.py the .stilt pandas accessor, registered: the particle
-                        part's methods and enhancement
      footprint/         the footprint (a DataArray)
        config.py        FootprintConfig and the geometry specs; the record
                         of a footprint's settings
@@ -163,48 +127,19 @@ Module map
        accessor.py      the .stilt xarray accessor
      sampling.py        sampling a gridded field (a flux, a mole fraction) at
                         points; sample_met, ARL met at particle positions
-     spatial.py         rasters and CRS without shapely: Bounds, Grid,
-                        horizontal_dims, is_longlat, same_crs, haversine_km
-     meteorology.py     run_window, and the wind-error statistics
-                        (variogram, fit_variogram)
      transforms/        pre-footprint particle transforms, one module each
                         (averaging_kernel, pressure_weighting, lifetime); the
                         loader, YAML I/O, and apply_transforms in __init__.py
-     exceptions.py      every exception class, all under StiltError
-     visualization.py   matplotlib plots of particles, releases and
-                        projects, and their helpers (optional dependency)
-     stilt_visualization.py the plots of a footprint and of a simulation
-     _paths.py          local paths and object-store paths behind one interface
-     _plugins.py        import_class: a model or a stage class named by its
-                        import path in config.yaml
-     execution/         ExecutionConfig (config.py); the runner (plans what is
-                        missing, runs it here or submits a Slurm job array);
-                        the worker (runs the transport model in a workdir,
-                        then each stage, for one or many simulations)
+     exceptions.py      EmptyFootprint, the exception PYSTILT adds to runtraj's
      observations/      the X-STILT port: product readers and SOUNDING_SCHEMA,
                         overpass grouping and sounding selection, slant
                         geometry and releases_from_soundings, modelled_column,
                         plume backgrounds; releases_from_track for the
                         track of a moving platform; arrays in, plain
                         values out
-     transport/         the TransportModel and TransportConfig protocols,
-                        ModelRun, ModelInfo, get_model and its MODELS table,
-                        run_model and run_trajectories (__init__.py); one
-                        subpackage per transport model, which owns its config
-       hysplit/         HYSPLIT: HysplitConfig (config.py); MetConfig and Met,
-                        finding, downloading, and cropping ARL files through
-                        arlmet (met.py); Catalog, what a folder's files hold,
-                        read from their headers (catalog.py); HysplitModel
-                        (model.py); the driver
-                        (driver.py: write_inputs, read_particle_dat); the
-                        CONTROL file (control.py) and SETUP.CFG namelist
-                        (namelist.py) writers and readers; failure reasons read from its
-                        log (failures.py). No HYSPLIT file: find_hycs_std
-                        and data_tables take directory, else PATH
 
-   tests/               pytest; folders follow src/stilt (execution/,
-                        footprint/, observations/, particles/,
-                        transport/hysplit/); integration/ holds the end-to-end
+   tests/               pytest; folders follow src/stilt (footprint/,
+                        observations/); integration/ holds the end-to-end
                         runs, r_stilt/ the STILT-R comparisons, and fixtures/
                         the factories and helpers tests share
 
@@ -212,7 +147,7 @@ How a run goes
 --------------
 
 A run starts from ``Project.run()``, ``Project.submit()``, or ``stilt run``.
-``stilt.execution.run`` finds the releases with missing results and either
+``runtraj.execution.run`` finds the releases with missing results and either
 runs them in this process (``backend: local``) or submits them as one Slurm
 job array (``backend: slurm``).
 
@@ -261,7 +196,7 @@ one file per release, from the particles, from the files of other stages,
 or both. The footprint is the one stage PYSTILT has
 (``stilt.footprint.FootprintStage``). A ``stages`` block of ``config.yaml``
 names its stage's class by import path, and the class provides the members
-of ``stilt.stages.Stage``: a ``name``, a ``config_class``, the ``suffix`` of
+of ``runtraj.stages.Stage``: a ``name``, a ``config_class``, the ``suffix`` of
 its files, the stages it ``reads``, and ``resolve``, ``settings``, ``check``
 and ``run``. So the config, the settings records, the check before a run,
 the output directory and the worker handle any stage and import none.
@@ -287,7 +222,7 @@ realization in an ensemble, and a random part, as in
 ``202301011200_-111.85_40.77_5_hrrr_3f9a1c2e``), so projects can share a
 compute root and two runs never clear each other's files. A simulation that
 runs twice at once keeps its own files in each. The compute root comes from
-``--compute-root``, the ``PYSTILT_COMPUTE_ROOT`` environment variable, or
+``--compute-root``, the ``RUNTRAJ_COMPUTE_ROOT`` environment variable, or
 ``$TMPDIR/pystilt/<project>`` (``resolve_compute_root`` in the runner;
 ``Project`` does not read it). It changes where PYSTILT runs and never what it
 calculates, so it is not in ``config.yaml``.
@@ -330,7 +265,7 @@ The result files are the record
 PYSTILT keeps no separate list of which simulations have run. A simulation
 is complete when the model's output file exists, and so does the file of
 every stage its variant uses (:attr:`stilt.Simulation.is_complete`;
-:func:`stilt.output.completed` is the one rule, for one simulation and for
+:func:`runtraj.output.completed` is the one rule, for one simulation and for
 many). For a variant with a footprint that is:
 
 - the particle file,
@@ -364,7 +299,7 @@ Settings name the folders
 file holds.
 
 Each variant resolves into a record of settings for its particles and one
-for each stage it uses (:mod:`stilt.identity`). Its run settings hold
+for each stage it uses (:mod:`runtraj.identity`). Its run settings hold
 everything that changes the particles: the HYSPLIT parameters, the content
 of the meteorology, and the transport model's build. Their hash names the
 ``particles/`` folder. A stage writes the record of its own settings
@@ -383,7 +318,7 @@ same and they resolve to one ``particles/`` folder.
 A folder is found by reading its ``_settings.yaml`` back through the current
 config classes and hashing that, rather than by comparing stored digests. A
 stage's ``config_class`` reads back what its ``settings`` wrote
-(``stilt.stages.check_stage`` holds a stage to that in its tests); a record
+(``runtraj.stages.check_stage`` holds a stage to that in its tests); a record
 whose stage is not installed here is kept as written.
 So a setting added in a later version, with a default, still matches folders
 written before it existed; a default whose meaning changed does not, which
@@ -396,33 +331,17 @@ directory; deletion is by hand.
 Import layers
 -------------
 
-The import contracts in ``pyproject.toml``, checked by ``lint-imports`` in CI
-(``just imports``), hold this shape. One ``layers`` contract lists every
-top-level module from the CLI down to ``_paths`` and ``exceptions``. A module
-imports only the layers below it, and modules that import each other share a
-layer. The contract is exhaustive, so a new top-level module fails until it
-is placed. ``stilt.migration`` sits above the project config, because
-``import_stilt_r`` writes into an output directory through variants. Two
-short contracts hold what a layer cannot: only ``stilt.transport`` (its
-``get_model``) imports HYSPLIT's package, and the project config reads no
-results and runs nothing. STILT-R ran HYSPLIT, so the STILT-R reader and the
-``stilt-r`` model are the named exceptions: they read HYSPLIT's ``CONTROL``
-and ``SETUP.CFG`` files and record HYSPLIT's settings.
+The import contract in ``pyproject.toml``, checked by ``lint-imports`` in CI
+(``just imports``), holds this shape. One ``layers`` contract lists every
+top-level module from the CLI down to ``exceptions``. A module imports only
+the layers below it. The contract is exhaustive, so a new top-level module
+fails until it is placed. ``stilt.migration`` sits above the footprint,
+because ``import_stilt_r`` writes footprints into an output directory.
 
-A third short contract holds the line between the core that makes particle
-runs and what STILT adds on top of the particles: footprints (``foot`` and
-the near-field correction among them), transforms, observations, sampling
-fields at particles, background, transport error, the STILT-R model and
-reader, and the classes and commands a STILT user holds (``stilt.Project``,
-``stilt.Simulation``, the registered particle accessor, the footprint and
-simulation plots, ``stilt init`` and ``python -m stilt``). The core imports
-none of it, and its ``ignore_imports`` lists only imports within STILT's
-side. The config, the settings records, the check, the output directory and
-the worker reach a stage or a model by the import path ``config.yaml``
-names. A new crossing fails ``just imports``. The modules of STILT's side
-that extend a module of the core take its name with ``stilt_`` in front
-(``stilt_project`` over ``project``). A package's ``__init__`` importing its
-own modules is not checked.
+The line between the particle runs and what STILT adds on top of the
+particles is the line between two packages: runtraj imports nothing of
+``stilt``, and reaches the footprint stage and the ``stilt-r`` model by the
+import path ``config.yaml`` names.
 
 Configuration
 -------------
@@ -437,8 +356,8 @@ there is refused with a message naming its block.
   uses (``model:``); the model is the block's ``class`` (an import path) or,
   without one, the built-in model of the block's name. A class has one
   block. The parameters are checked by the model's own config class
-  (``stilt.transport.hysplit.HysplitConfig``), reached through
-  ``stilt.transport.get_model``: by name when the file loads, and by value
+  (``runtraj.transport.hysplit.HysplitConfig``), reached through
+  ``runtraj.transport.get_model``: by name when the file loads, and by value
   as a variant runs them (at load for a variant that changes none, else in
   ``resolve``), since a block need not be complete (the ``stilt-r`` model
   has no defaults, and ``n_hours`` has none in any model). Without
@@ -447,7 +366,7 @@ there is refused with a message naming its block.
   ``FIXED_SETUP`` sets. The settings HYSPLIT decides after reading
   ``SETUP.CFG`` (``capemin``, ``kblt``, ``kmixd``, ``krand``, ``vscales``)
   default to unset and are then not written. STILT-R's values are PYSTILT's
-  side: ``stilt.stilt_project.STILT_R_HYSPLIT``, which ``stilt init`` (the starter
+  side: ``stilt.project.STILT_R_HYSPLIT``, which ``stilt init`` (the starter
   config) and ``stilt.Project.init`` write into the ``hysplit`` block where it
   gives none, so what a project runs is in its file. ``run_trajectories``
   and a hand-written config get HYSPLIT's. A run records the resolved
@@ -492,15 +411,15 @@ there is refused with a message naming its block.
   ``config.yaml``.
 - Each part owns its config. ``FootprintConfig`` is in
   ``stilt.footprint.config``, ``ExecutionConfig`` in
-  ``stilt.execution.config``, and a model's config and met config in its
+  ``runtraj.execution.config``, and a model's config and met config in its
   package (``met_config_class``; HYSPLIT's ``MetConfig`` is in
-  ``stilt.transport.hysplit``). ``ProjectConfig.mets`` holds each met as
+  ``runtraj.transport.hysplit``). ``ProjectConfig.mets`` holds each met as
   written, and ``ProjectConfig.met_config(name, model)`` checks it with the
   met config of the model that reads it (``model`` a ``models`` block's
   name). With several models, a met no variant uses is not checked. ``Bounds`` and ``Grid`` are in
-  ``stilt.spatial``, which needs no shapely, since more than footprints use
-  rasters. ``stilt.config`` composes them, so nothing below the project's
-  layer imports ``stilt.config``.
+  ``runtraj.spatial``, which needs no shapely, since more than footprints use
+  rasters. ``runtraj.config`` composes them, so nothing below the project's
+  layer imports ``runtraj.config``.
 - Config classes do no I/O when they validate, so a ``config.yaml`` loads
   offline. Reading a geometry happens in ``ProjectConfig.resolve``; reading
   which weather a met holds (``Variant.met_settings``) and asking the model
@@ -521,7 +440,7 @@ there is refused with a message naming its block.
   record either, since a product's header changes over its archive's life;
   the met files a run read are recorded in its particle file.
 - Lookup reads each stored ``_settings.yaml`` back through the current
-  config classes (``stilt.identity``) and re-hashes, so a field added later
+  config classes (``runtraj.identity``) and re-hashes, so a field added later
   with a default still matches. Stored records ignore keys this version does
   not know.
 - Every field is a plain pydantic ``Field(default, description=...)``, and
@@ -577,11 +496,11 @@ answer (``footprints``, ``jacobian``, ``transport_error``), and builds releases 
 (``Project._releases``) when it needs them.
 
 ``Output.directory`` is a ``Path`` on a filesystem and a universal path
-(``UPath``) for a URL (``stilt._paths.location``). Code that touches the
+(``UPath``) for a URL (``runtraj._paths.location``). Code that touches the
 output checks ``isinstance(path, Path)`` for the local fast path
 (``os.scandir``, a temporary file and rename, pyarrow on the path) and
 otherwise uses the store's fsspec filesystem (``path.fs``), putting a file
-directly. Parquet is read through ``stilt._paths.readable``.
+directly. Parquet is read through ``runtraj._paths.readable``.
 
 Empty footprints
 ^^^^^^^^^^^^^^^^
@@ -753,5 +672,5 @@ order: ``age = 0`` rows when present (exact); a match on height when every
 release altitude differs; then horizontal position, with a warning when
 points are closer than 1 km. HYSPLIT 5.1.0, STILT-R's build, writes no ``age = 0``
 row. A build that does can be used through ``directory``, and nothing in
-PYSTILT changes. ``tests/transport/hysplit/test_release_assignment.py``
+PYSTILT changes. runtraj's ``tests/transport/hysplit/test_release_assignment.py``
 covers closely spaced slant points.

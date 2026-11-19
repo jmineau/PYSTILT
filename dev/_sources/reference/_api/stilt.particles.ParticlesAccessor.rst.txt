@@ -15,15 +15,6 @@
 
 
 
-Attributes
-----------
-
-.. autosummary::
-   :toctree:
-   :nosignatures:
-
-   ~ParticlesAccessor.plot
-
 
 
 Methods
@@ -32,9 +23,7 @@ Methods
 .. autosummary::
    :toctree:
 
-   ~ParticlesAccessor.endpoints
-   ~ParticlesAccessor.grid_exits
-   ~ParticlesAccessor.to_cf_trajectories
+   ~ParticlesAccessor.enhancement
 
 
 

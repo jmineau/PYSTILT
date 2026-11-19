@@ -1,0 +1,6 @@
+﻿runtraj.transport.hysplit.find\_hycs\_std
+=========================================
+
+.. currentmodule:: runtraj.transport.hysplit
+
+.. autofunction:: find_hycs_std

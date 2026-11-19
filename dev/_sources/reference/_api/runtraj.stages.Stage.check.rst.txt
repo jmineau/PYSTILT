@@ -1,0 +1,5 @@
+runtraj.stages.Stage.check
+==========================
+
+.. currentmodule:: runtraj.stages
+.. automethod:: Stage.check

@@ -1,5 +1,0 @@
-stilt.transport.hysplit.Met.check
-=================================
-
-.. currentmodule:: stilt.transport.hysplit
-.. automethod:: Met.check

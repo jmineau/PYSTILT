@@ -1,6 +1,0 @@
-stilt.transport.hysplit.HysplitModel.batched
-============================================
-
-.. currentmodule:: stilt.transport.hysplit
-
-.. autoattribute:: HysplitModel.batched

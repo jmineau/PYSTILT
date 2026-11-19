@@ -1,6 +1,0 @@
-﻿stilt.exceptions.WorkerDied
-===========================
-
-.. currentmodule:: stilt.exceptions
-
-.. autoexception:: WorkerDied

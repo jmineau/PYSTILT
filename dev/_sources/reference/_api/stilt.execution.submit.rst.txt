@@ -1,6 +1,0 @@
-﻿stilt.execution.submit
-======================
-
-.. currentmodule:: stilt.execution
-
-.. autofunction:: submit

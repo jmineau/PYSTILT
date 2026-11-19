@@ -1,0 +1,14 @@
+﻿runtraj.transport.hysplit.FailureReason
+=======================================
+
+.. currentmodule:: runtraj.transport.hysplit
+
+
+
+
+
+
+.. autoclass:: runtraj.transport.hysplit.FailureReason
+   :members:
+   :undoc-members:
+   :show-inheritance:

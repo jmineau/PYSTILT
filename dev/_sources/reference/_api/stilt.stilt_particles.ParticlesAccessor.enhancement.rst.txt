@@ -1,5 +1,0 @@
-stilt.stilt\_particles.ParticlesAccessor.enhancement
-====================================================
-
-.. currentmodule:: stilt.stilt_particles
-.. automethod:: ParticlesAccessor.enhancement

@@ -1,6 +1,0 @@
-﻿stilt.meteorology.variogram
-===========================
-
-.. currentmodule:: stilt.meteorology
-
-.. autofunction:: variogram

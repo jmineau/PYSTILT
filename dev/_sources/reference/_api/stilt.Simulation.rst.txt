@@ -41,11 +41,3 @@ Methods
 
 
 
-
-Inherited
----------
-
-
-From :class:`~.Simulation`: :py:obj:`~.Simulation.failure`, :py:obj:`~.Simulation.has`, :py:obj:`~.Simulation.has_particles`, :py:obj:`~.Simulation.id`, :py:obj:`~.Simulation.is_complete`, :py:obj:`~.Simulation.kept_workdir`, :py:obj:`~.Simulation.log`, :py:obj:`~.Simulation.log_path`, :py:obj:`~.Simulation.particles`, :py:obj:`~.Simulation.particles_path`, :py:obj:`~.Simulation.path`, :py:obj:`~.Simulation.transport`
-
-

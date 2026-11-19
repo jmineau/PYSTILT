@@ -36,7 +36,7 @@ What every container needs
   ``stilt run --output s3://bucket/...`` uses another output directory
   than ``config.yaml`` names, without editing it.
 - A compute root, where each run gets its workdir. Set
-  ``PYSTILT_COMPUTE_ROOT`` to a folder on fast local disk, such as an
+  ``RUNTRAJ_COMPUTE_ROOT`` to a folder on fast local disk, such as an
   ``emptyDir``.
 
 .. _fetch-once:
@@ -119,7 +119,7 @@ is the task number:
              command: ["sh", "-c"]
              args: ["exec stilt run /project --task $JOB_COMPLETION_INDEX/20 --cpus 4"]
              env:
-               - name: PYSTILT_COMPUTE_ROOT
+               - name: RUNTRAJ_COMPUTE_ROOT
                  value: /scratch
              resources:
                requests:

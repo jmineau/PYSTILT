@@ -1,0 +1,5 @@
+runtraj.transport.hysplit.MetConfig.crop
+========================================
+
+.. currentmodule:: runtraj.transport.hysplit
+.. automethod:: MetConfig.crop

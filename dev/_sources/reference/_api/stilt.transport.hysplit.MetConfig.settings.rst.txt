@@ -1,5 +1,0 @@
-stilt.transport.hysplit.MetConfig.settings
-==========================================
-
-.. currentmodule:: stilt.transport.hysplit
-.. automethod:: MetConfig.settings

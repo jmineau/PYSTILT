@@ -1,0 +1,5 @@
+runtraj.transport.TransportConfig.settings
+==========================================
+
+.. currentmodule:: runtraj.transport
+.. automethod:: TransportConfig.settings

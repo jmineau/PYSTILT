@@ -1,6 +1,0 @@
-﻿stilt.releases.releases\_to\_frame
-==================================
-
-.. currentmodule:: stilt.releases
-
-.. autofunction:: releases_to_frame

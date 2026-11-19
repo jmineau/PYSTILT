@@ -1,5 +1,0 @@
-stilt.transport.hysplit.HysplitModel.run
-========================================
-
-.. currentmodule:: stilt.transport.hysplit
-.. automethod:: HysplitModel.run

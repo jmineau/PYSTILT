@@ -1,6 +1,0 @@
-﻿stilt.execution.pending
-=======================
-
-.. currentmodule:: stilt.execution
-
-.. autofunction:: pending

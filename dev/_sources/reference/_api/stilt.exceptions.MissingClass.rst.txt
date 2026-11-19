@@ -1,6 +1,0 @@
-﻿stilt.exceptions.MissingClass
-=============================
-
-.. currentmodule:: stilt.exceptions
-
-.. autoexception:: MissingClass

@@ -5,36 +5,36 @@ Most users only need ``project.run()``, ``project.submit()``, or
 ``stilt run`` (:doc:`../guides/running`). The functions below do the
 work underneath.
 
-- :func:`~stilt.execution.run` is what ``project.run()`` calls. It finds the
+- :func:`~runtraj.execution.run` is what ``project.run()`` calls. It finds the
   releases with missing results, runs them, and waits until they finish.
-  ``task=(i, n)`` runs share ``i`` of ``n`` here (:func:`~stilt.execution.task_share`),
+  ``task=(i, n)`` runs share ``i`` of ``n`` here (:func:`~runtraj.execution.task_share`),
   which is what ``stilt run --task i/n`` does.
-- :func:`~stilt.execution.submit` is what ``project.submit()`` calls. It
-  writes a job array script (:func:`~stilt.execution.job_script`) whose
+- :func:`~runtraj.execution.submit` is what ``project.submit()`` calls. It
+  writes a job array script (:func:`~runtraj.execution.job_script`) whose
   tasks each run ``stilt run --task``, submits it with ``sbatch``, and
   returns the job id at once.
-- :func:`~stilt.execution.worker.run_particles` runs the transport model for one
+- :func:`~runtraj.execution.worker.run_particles` runs the transport model for one
   :class:`~stilt.Simulation` and writes its particles and log.
-- :func:`~stilt.execution.worker.run_stages` runs the stages of the variants
+- :func:`~runtraj.execution.worker.run_stages` runs the stages of the variants
   that share those particles, the footprint among them: each stage file
   that is missing, in the order the stages read one another, and each
   again when what it reads was made again.
-  :func:`~stilt.execution.worker.run_stage` runs one, which writes its own
+  :func:`~runtraj.execution.worker.run_stage` runs one, which writes its own
   file.
-- :func:`~stilt.execution.worker.run_release` runs every variant of one release,
+- :func:`~runtraj.execution.worker.run_release` runs every variant of one release,
   skipping what exists. Variants that share particles run the transport model once and
   run their stages on the particles in memory. A failure is recorded
   with the simulation (:attr:`stilt.Simulation.failure`). Workers are
   always handed releases.
-- :func:`~stilt.execution.worker.run_releases` runs a list of releases, in this
+- :func:`~runtraj.execution.worker.run_releases` runs a list of releases, in this
   process or in a process pool.
 
 On Slurm each task of the job array runs one share of the releases
-(:func:`~stilt.execution.task_share`) with ``stilt run --task``. A local
+(:func:`~runtraj.execution.task_share`) with ``stilt run --task``. A local
 run happens in this process. A program that starts the tasks itself, on
-another scheduler, writes :func:`~stilt.execution.pending` to the
+another scheduler, writes :func:`~runtraj.execution.pending` to the
 ``releases.txt`` each task reads (``stilt run --releases``);
-:func:`~stilt.execution.wait` waits for a
+:func:`~runtraj.execution.wait` waits for a
 Slurm job array by its id.
 
 Running
@@ -44,11 +44,11 @@ Running
    :toctree: _api
    :nosignatures:
 
-   stilt.execution.run
-   stilt.execution.submit
-   stilt.execution.pending
-   stilt.execution.wait
-   stilt.execution.task_share
+   runtraj.execution.run
+   runtraj.execution.submit
+   runtraj.execution.pending
+   runtraj.execution.wait
+   runtraj.execution.task_share
 
 Workers
 -------
@@ -59,12 +59,12 @@ Internal: importable from their modules, and free to change.
    :toctree: _api
    :nosignatures:
 
-   stilt.execution.runner.resolve_compute_root
-   stilt.execution.worker.run_particles
-   stilt.execution.worker.run_stage
-   stilt.execution.worker.run_stages
-   stilt.execution.worker.run_release
-   stilt.execution.worker.run_releases
+   runtraj.execution.runner.resolve_compute_root
+   runtraj.execution.worker.run_particles
+   runtraj.execution.worker.run_stage
+   runtraj.execution.worker.run_stages
+   runtraj.execution.worker.run_release
+   runtraj.execution.worker.run_releases
 
 Slurm job arrays
 ----------------
@@ -73,8 +73,8 @@ Slurm job arrays
    :toctree: _api
    :nosignatures:
 
-   stilt.execution.job_script
-   stilt.execution.fetch_script
+   runtraj.execution.job_script
+   runtraj.execution.fetch_script
 
 Transport model
 ----------------
@@ -93,14 +93,14 @@ of the run are a complete run.
    :toctree: _api
    :nosignatures:
 
-   stilt.transport.TransportModel
-   stilt.transport.BatchedTransportModel
-   stilt.transport.TransportConfig
-   stilt.transport.ModelRun
-   stilt.transport.get_model
-   stilt.transport.run_model
-   stilt.transport.run_model_many
-   stilt.transport.hysplit.HysplitModel
+   runtraj.transport.TransportModel
+   runtraj.transport.BatchedTransportModel
+   runtraj.transport.TransportConfig
+   runtraj.transport.ModelRun
+   runtraj.transport.get_model
+   runtraj.transport.run_model
+   runtraj.transport.run_model_many
+   runtraj.transport.hysplit.HysplitModel
    stilt.stilt_r.StiltRModel
    stilt.stilt_r.StiltRConfig
    stilt.stilt_r.StiltRMetConfig
@@ -113,13 +113,13 @@ transport model runs. The footprint is one
 (:class:`stilt.footprint.FootprintStage`). A ``stages`` block of
 ``config.yaml`` names its stage's class by import path, so a stage in a
 package of your own needs no registration, and CONTRIBUTING describes how to
-write one. Use :func:`~stilt.stages.check_stage` in its tests.
+write one. Use :func:`~runtraj.stages.check_stage` in its tests.
 
 .. autosummary::
    :toctree: _api
    :nosignatures:
 
-   stilt.stages.Stage
-   stilt.stages.get_stage
-   stilt.stages.ordered
-   stilt.stages.check_stage
+   runtraj.stages.Stage
+   runtraj.stages.get_stage
+   runtraj.stages.ordered
+   runtraj.stages.check_stage

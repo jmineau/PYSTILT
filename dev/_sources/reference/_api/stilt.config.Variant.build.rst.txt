@@ -1,6 +1,0 @@
-stilt.config.Variant.build
-==========================
-
-.. currentmodule:: stilt.config
-
-.. autoproperty:: Variant.build

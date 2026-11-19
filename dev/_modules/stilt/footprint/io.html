@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=000a6a7f"></script>
+    <script src="../../../_static/documentation_options.js?v=3465ac01"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev30+g0d6d55b99" />
+  <meta name="docsearch:version" content="0.1.0a30.dev32+g7bfb1e505" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -477,21 +477,20 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pyarrow</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pa</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj._paths</span><span class="w"> </span><span class="kn">import</span> <span class="n">location</span><span class="p">,</span> <span class="n">readable</span><span class="p">,</span> <span class="n">write_parquet</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.particles.table</span><span class="w"> </span><span class="kn">import</span> <span class="n">stored_release</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.releases</span><span class="w"> </span><span class="kn">import</span> <span class="n">Release</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.spatial</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grid</span><span class="p">,</span> <span class="n">_with_cf_grid</span><span class="p">,</span> <span class="n">horizontal_dims</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt._paths</span><span class="w"> </span><span class="kn">import</span> <span class="n">location</span><span class="p">,</span> <span class="n">readable</span><span class="p">,</span> <span class="n">write_parquet</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.config</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">FootprintConfig</span><span class="p">,</span>
     <span class="n">footprint_settings</span><span class="p">,</span>
     <span class="n">read_footprint_settings</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.particles.table</span><span class="w"> </span><span class="kn">import</span> <span class="n">stored_release</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.releases</span><span class="w"> </span><span class="kn">import</span> <span class="n">Release</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.spatial</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grid</span><span class="p">,</span> <span class="n">_with_cf_grid</span><span class="p">,</span> <span class="n">horizontal_dims</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">runtraj._paths</span><span class="w"> </span><span class="kn">import</span> <span class="n">Location</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">upath</span><span class="w"> </span><span class="kn">import</span> <span class="n">UPath</span>
-
-    <span class="kn">from</span><span class="w"> </span><span class="nn">stilt._paths</span><span class="w"> </span><span class="kn">import</span> <span class="n">Location</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_naive_utc</span><span class="p">(</span><span class="n">values</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DatetimeIndex</span><span class="p">:</span>
@@ -871,7 +870,7 @@
             <span class="p">],</span>
         <span class="p">}</span>
     <span class="p">)</span>
-    <span class="n">realization</span> <span class="o">=</span> <span class="n">footers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">b</span><span class="s2">"stilt:realization"</span><span class="p">)</span>
+    <span class="n">realization</span> <span class="o">=</span> <span class="n">footers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">b</span><span class="s2">"runtraj:realization"</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">realization</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">ds</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">"realization"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">realization</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">_with_cf_metadata</span><span class="p">(</span><span class="n">ds</span><span class="p">,</span> <span class="n">grid</span><span class="o">=</span><span class="n">grid</span><span class="p">)</span></div>
@@ -903,6 +902,16 @@
     <span class="k">return</span> <span class="n">idx</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_pystilt_version</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the installed PYSTILT version, which a footprint file records."""</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">importlib.metadata</span><span class="w"> </span><span class="kn">import</span> <span class="n">PackageNotFoundError</span><span class="p">,</span> <span class="n">version</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">version</span><span class="p">(</span><span class="s2">"pystilt"</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">PackageNotFoundError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">"0+unknown"</span>
+
+
 <span class="k">def</span><span class="w"> </span><span class="nf">_file_metadata</span><span class="p">(</span>
     <span class="n">release</span><span class="p">:</span> <span class="n">Release</span><span class="p">,</span>
     <span class="n">config</span><span class="p">:</span> <span class="n">FootprintConfig</span><span class="p">,</span>
@@ -913,7 +922,8 @@
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">bytes</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""Return what a footprint file records so that it reads alone."""</span>
     <span class="k">return</span> <span class="p">{</span>
-        <span class="sa">b</span><span class="s2">"stilt:release"</span><span class="p">:</span> <span class="n">release</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span><span class="o">.</span><span class="n">encode</span><span class="p">(),</span>
+        <span class="sa">b</span><span class="s2">"runtraj:release"</span><span class="p">:</span> <span class="n">release</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span><span class="o">.</span><span class="n">encode</span><span class="p">(),</span>
+        <span class="sa">b</span><span class="s2">"stilt:pystilt"</span><span class="p">:</span> <span class="n">_pystilt_version</span><span class="p">()</span><span class="o">.</span><span class="n">encode</span><span class="p">(),</span>
         <span class="sa">b</span><span class="s2">"stilt:name"</span><span class="p">:</span> <span class="n">name</span><span class="o">.</span><span class="n">encode</span><span class="p">(),</span>
         <span class="sa">b</span><span class="s2">"stilt:hours"</span><span class="p">:</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">hours</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(),</span>
         <span class="sa">b</span><span class="s2">"stilt:empty"</span><span class="p">:</span> <span class="sa">b</span><span class="s2">"true"</span> <span class="k">if</span> <span class="n">empty</span> <span class="k">else</span> <span class="sa">b</span><span class="s2">"false"</span><span class="p">,</span>

@@ -1,5 +1,0 @@
-stilt.transport.hysplit.MetConfig.model\_post\_init
-===================================================
-
-.. currentmodule:: stilt.transport.hysplit
-.. automethod:: MetConfig.model_post_init

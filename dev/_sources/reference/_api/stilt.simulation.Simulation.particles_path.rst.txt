@@ -1,6 +1,0 @@
-stilt.simulation.Simulation.particles\_path
-===========================================
-
-.. currentmodule:: stilt.simulation
-
-.. autoproperty:: Simulation.particles_path

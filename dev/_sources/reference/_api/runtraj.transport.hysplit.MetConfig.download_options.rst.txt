@@ -1,0 +1,6 @@
+runtraj.transport.hysplit.MetConfig.download\_options
+=====================================================
+
+.. currentmodule:: runtraj.transport.hysplit
+
+.. autoproperty:: MetConfig.download_options

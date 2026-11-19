@@ -1,5 +1,0 @@
-stilt.transport.hysplit.HysplitModel.downloads\_met
-===================================================
-
-.. currentmodule:: stilt.transport.hysplit
-.. automethod:: HysplitModel.downloads_met

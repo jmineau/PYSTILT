@@ -1,5 +1,0 @@
-stilt.output.Output.present
-===========================
-
-.. currentmodule:: stilt.output
-.. automethod:: Output.present

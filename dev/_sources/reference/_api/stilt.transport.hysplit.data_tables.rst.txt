@@ -1,6 +1,0 @@
-﻿stilt.transport.hysplit.data\_tables
-====================================
-
-.. currentmodule:: stilt.transport.hysplit
-
-.. autofunction:: data_tables
