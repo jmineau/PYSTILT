@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=3465ac01"></script>
+    <script src="../../_static/documentation_options.js?v=0675f255"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev32+g7bfb1e505" />
+  <meta name="docsearch:version" content="0.1.0a30.dev33+g376c5d4ea" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -889,8 +889,7 @@
 <dt class="sig sig-object py" id="runtraj.transport.hysplit.HysplitConfig.realizations">
 <span class="sig-prename descclassname"><span class="pre">HysplitConfig.</span></span><span class="sig-name descname"><span class="pre">realizations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/runtraj/transport/hysplit/config.html#HysplitConfig.realizations"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#runtraj.transport.hysplit.HysplitConfig.realizations" title="Link to this definition">#</a></dt>
 <dd><p>Return <em>n</em> realizations of this config, realization <code class="docutils literal notranslate"><span class="pre">k</span></code> with <code class="docutils literal notranslate"><span class="pre">seed</span> <span class="pre">+</span> <span class="pre">k</span></code>.</p>
-<p>Realization 0 uses the configured seed, as STILT-R’s single error run
-does.</p>
+<p>Realization 0 uses the configured seed.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Raises<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If <em>n</em> is more than one and the runs would repeat one another:

@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=3465ac01"></script>
+    <script src="../../../_static/documentation_options.js?v=0675f255"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev32+g7bfb1e505" />
+  <meta name="docsearch:version" content="0.1.0a30.dev33+g376c5d4ea" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -1242,7 +1242,7 @@
 <span class="sd">    the second worker after waking the thread that watches the workers, which</span>
 <span class="sd">    may already have made its list. If that worker is the one killed, the pool</span>
 <span class="sd">    learns of it only when another release finishes, which can be hours later</span>
-<span class="sd">    (PYSTILT#400). Workers stay alive until the loop in :func:`_run_in_pool` ends, so</span>
+<span class="sd">    . Workers stay alive until the loop in :func:`_run_in_pool` ends, so</span>
 <span class="sd">    one that is not alive has died.</span>
 <span class="sd">    """</span>
     <span class="k">return</span> <span class="nb">any</span><span class="p">(</span><span class="ow">not</span> <span class="n">process</span><span class="o">.</span><span class="n">is_alive</span><span class="p">()</span> <span class="k">for</span> <span class="n">process</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">executor</span><span class="o">.</span><span class="n">_processes</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>

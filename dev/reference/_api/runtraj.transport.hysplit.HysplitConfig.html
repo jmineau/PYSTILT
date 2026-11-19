@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=3465ac01"></script>
+    <script src="../../_static/documentation_options.js?v=0675f255"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev32+g7bfb1e505" />
+  <meta name="docsearch:version" content="0.1.0a30.dev33+g376c5d4ea" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -897,8 +897,8 @@ or not at all.</p>
 <p><code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> entries that cannot change the particles, such as <code class="docutils literal notranslate"><span class="pre">delt</span></code>
 and <code class="docutils literal notranslate"><span class="pre">ichem</span></code>, are not settings: runtraj writes the same value in every
 run (<code class="xref py py-data docutils literal notranslate"><span class="pre">FIXED_SETUP</span></code>), and a config that sets one is refused.</p>
-<p>The defaults are HYSPLIT’s own, in the STILT mode those fixed entries
-set. HYSPLIT decides <code class="docutils literal notranslate"><span class="pre">capemin</span></code>, <code class="docutils literal notranslate"><span class="pre">kblt</span></code>, <code class="docutils literal notranslate"><span class="pre">kmixd</span></code>, <code class="docutils literal notranslate"><span class="pre">krand</span></code> and
+<p>The defaults are HYSPLIT’s own, in the mode those fixed entries set
+(<code class="docutils literal notranslate"><span class="pre">ICHEM=8</span></code>). HYSPLIT decides <code class="docutils literal notranslate"><span class="pre">capemin</span></code>, <code class="docutils literal notranslate"><span class="pre">kblt</span></code>, <code class="docutils literal notranslate"><span class="pre">kmixd</span></code>, <code class="docutils literal notranslate"><span class="pre">krand</span></code> and
 <code class="docutils literal notranslate"><span class="pre">vscales</span></code> only after it has read <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code>, from the mode and
 <code class="docutils literal notranslate"><span class="pre">numpar</span></code>, so they are unset by default: an unset setting is not
 written, and HYSPLIT chooses. <code class="docutils literal notranslate"><span class="pre">n_hours</span></code> has no default.</p>
@@ -924,7 +924,7 @@ written, and HYSPLIT chooses. <code class="docutils literal notranslate"><span c
 <td><p>Required</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">seed</span></code></p></td>
-<td><p>Random seed for a reproducible run. Different seeds give different runs. Requires <code class="docutils literal notranslate"><span class="pre">krand:</span> <span class="pre">2</span></code>. HYSPLIT 5.1.0 (STILT-R’s build) ignores the seed under <code class="docutils literal notranslate"><span class="pre">krand</span></code> 4 and 10 to 13, and under 1 uses it only for the initial turbulent velocity. runtraj writes it to <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> as <code class="docutils literal notranslate"><span class="pre">-(abs(seed)</span> <span class="pre">+</span> <span class="pre">1)</span></code>, because HYSPLIT reseeds its generator only from a negative value and gives every <code class="docutils literal notranslate"><span class="pre">SEED</span></code> of 0 or more the same stream. Realization <code class="docutils literal notranslate"><span class="pre">k</span></code> of a variant runs with <code class="docutils literal notranslate"><span class="pre">seed</span> <span class="pre">+</span> <span class="pre">k</span></code>, so realization 0 shares the unperturbed run’s seed, as STILT-R’s error run does.</p></td>
+<td><p>Random seed for a reproducible run. Different seeds give different runs. Requires <code class="docutils literal notranslate"><span class="pre">krand:</span> <span class="pre">2</span></code>. HYSPLIT 5.1.0 ignores the seed under <code class="docutils literal notranslate"><span class="pre">krand</span></code> 4 and 10 to 13, and under 1 uses it only for the initial turbulent velocity. runtraj writes it to <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> as <code class="docutils literal notranslate"><span class="pre">-(abs(seed)</span> <span class="pre">+</span> <span class="pre">1)</span></code>, because HYSPLIT reseeds its generator only from a negative value and gives every <code class="docutils literal notranslate"><span class="pre">SEED</span></code> of 0 or more the same stream. Realization <code class="docutils literal notranslate"><span class="pre">k</span></code> of a variant runs with <code class="docutils literal notranslate"><span class="pre">seed</span> <span class="pre">+</span> <span class="pre">k</span></code>, so realization 0 shares the unperturbed run’s seed.</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">numpar</span></code></p></td>
@@ -940,7 +940,7 @@ written, and HYSPLIT chooses. <code class="docutils literal notranslate"><span c
 <td><p><code class="docutils literal notranslate"><span class="pre">['time',</span> <span class="pre">'indx',</span> <span class="pre">'long',</span> <span class="pre">'lati',</span> <span class="pre">'zagl',</span> <span class="pre">'sigw',</span> <span class="pre">'tlgr',</span> <span class="pre">'zsfc',</span> <span class="pre">'temp',</span> <span class="pre">'samt',</span> <span class="pre">'foo...</span></code></p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">capemin</span></code></p></td>
-<td><p>Convection option. -1 turns convection off, -2 uses the Grell scheme, and a positive value mixes vertically when CAPE exceeds it, in J/kg. Unset, HYSPLIT chooses -2 in STILT mode.</p></td>
+<td><p>Convection option. -1 turns convection off, -2 uses the Grell scheme, and a positive value mixes vertically when CAPE exceeds it, in J/kg. Unset, HYSPLIT chooses -2 with <code class="docutils literal notranslate"><span class="pre">ICHEM=8</span></code>.</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">emisshrs</span></code></p></td>
@@ -960,7 +960,7 @@ written, and HYSPLIT chooses. <code class="docutils literal notranslate"><span c
 <td><p><code class="docutils literal notranslate"><span class="pre">1</span></code></p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">kblt</span></code></p></td>
-<td><p>Boundary-layer turbulence scheme: 1 Beljaars, 2 Kantha-Clayson, 3 TKE, 4 measured variances, 5 Hanna. Unset, HYSPLIT chooses 5 in STILT mode.</p></td>
+<td><p>Boundary-layer turbulence scheme: 1 Beljaars, 2 Kantha-Clayson, 3 TKE, 4 measured variances, 5 Hanna. Unset, HYSPLIT chooses 5 with <code class="docutils literal notranslate"><span class="pre">ICHEM=8</span></code>.</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">kdef</span></code></p></td>
@@ -972,7 +972,7 @@ written, and HYSPLIT chooses. <code class="docutils literal notranslate"><span c
 <td><p><code class="docutils literal notranslate"><span class="pre">150</span></code></p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">kmixd</span></code></p></td>
-<td><p>Mixed-layer depth source: 0 from the meteorology, 1 from the temperature profile, 2 from the TKE profile, 3 from a modified Richardson number. Unset, HYSPLIT chooses 3 in STILT mode.</p></td>
+<td><p>Mixed-layer depth source: 0 from the meteorology, 1 from the temperature profile, 2 from the TKE profile, 3 from a modified Richardson number. Unset, HYSPLIT chooses 3 with <code class="docutils literal notranslate"><span class="pre">ICHEM=8</span></code>.</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">krand</span></code></p></td>
@@ -996,7 +996,7 @@ written, and HYSPLIT chooses. <code class="docutils literal notranslate"><span c
 <td><p><code class="docutils literal notranslate"><span class="pre">0</span></code></p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">outdt</span></code></p></td>
-<td><p>Interval between particle outputs in <code class="docutils literal notranslate"><span class="pre">PARTICLE_STILT.DAT</span></code>, in minutes. 0 writes every time step. HYSPLIT writes no particles for a negative value, so it is refused. Only at 0 does runtraj check where the particles of a run that stopped early ended, to tell met that ran out from particles that left the met’s domain.</p></td>
+<td><p>Interval between particle outputs in the particle file, in minutes. 0 writes every time step. HYSPLIT writes no particles for a negative value, so it is refused. Only at 0 does runtraj check where the particles of a run that stopped early ended, to tell met that ran out from particles that left the met’s domain.</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">0</span></code></p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">qcycle</span></code></p></td>
@@ -1012,7 +1012,7 @@ written, and HYSPLIT chooses. <code class="docutils literal notranslate"><span c
 <td><p><code class="docutils literal notranslate"><span class="pre">0.18</span></code></p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">tlfrac</span></code></p></td>
-<td><p>Fraction of the vertical Lagrangian timescale used as the time step of the STILT dispersion scheme.</p></td>
+<td><p>Fraction of the vertical Lagrangian timescale used as the time step of the dispersion scheme.</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">0.1</span></code></p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">tvmix</span></code></p></td>
@@ -1032,7 +1032,7 @@ written, and HYSPLIT chooses. <code class="docutils literal notranslate"><span c
 <td><p><code class="docutils literal notranslate"><span class="pre">200.0</span></code></p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">vscales</span></code></p></td>
-<td><p>Vertical Lagrangian timescale in a stable boundary layer, in seconds. -1 uses the Hanna timescale, which varies with the turbulence, and then <code class="docutils literal notranslate"><span class="pre">vscaleu</span></code> is not used. Unset, HYSPLIT chooses -1 in STILT mode.</p></td>
+<td><p>Vertical Lagrangian timescale in a stable boundary layer, in seconds. -1 uses the Hanna timescale, which varies with the turbulence, and then <code class="docutils literal notranslate"><span class="pre">vscaleu</span></code> is not used. Unset, HYSPLIT chooses -1 with <code class="docutils literal notranslate"><span class="pre">ICHEM=8</span></code>.</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">w_option</span></code></p></td>
