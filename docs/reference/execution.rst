@@ -82,7 +82,7 @@ Transport model
 The worker runs a simulation through the transport model its settings name.
 HYSPLIT is the one built in that runs, and CONTRIBUTING describes how to add
 another, named by its import path. PYSTILT's ``stilt-r`` model
-(``class: stilt.stilt_r.StiltRModel``) is one of those, and runs nothing: its
+(``class: stilt.migration.StiltRModel``) is one of those, and runs nothing: its
 variants read the runs :func:`stilt.migration.import_stilt_r` imported from
 STILT-R, with the settings STILT-R's files record.
 A model fails a run that its meteorology does not cover, as
@@ -101,9 +101,9 @@ of the run are a complete run.
    runtraj.models.run_model
    runtraj.models.run_model_many
    runtraj.models.hysplit.HysplitModel
-   stilt.stilt_r.StiltRModel
-   stilt.stilt_r.StiltRConfig
-   stilt.stilt_r.StiltRMetConfig
+   stilt.migration.StiltRModel
+   stilt.migration.StiltRConfig
+   stilt.migration.StiltRMetConfig
 
 Stages
 ------

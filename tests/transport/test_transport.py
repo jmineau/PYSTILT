@@ -24,7 +24,7 @@ def test_stilt_r_is_no_built_in_model():
 def test_stilt_r_is_a_model_named_by_import_path_that_cannot_run(point_release):
     from runtraj.exceptions import SimulationError
 
-    from stilt.stilt_r import STILT_R_MODEL, StiltRMetConfig, StiltRModel
+    from stilt.migration import STILT_R_MODEL, StiltRMetConfig, StiltRModel
 
     model = get_model(STILT_R_MODEL)
     assert isinstance(model, StiltRModel)
@@ -37,7 +37,7 @@ def test_stilt_r_is_a_model_named_by_import_path_that_cannot_run(point_release):
 
 
 def test_stilt_r_settings_have_no_defaults():
-    from stilt.stilt_r import STILT_R_MODEL, StiltRConfig
+    from stilt.migration import STILT_R_MODEL, StiltRConfig
 
     settings = HysplitConfig(n_hours=-24).settings()
     with pytest.raises(ValueError, match="missing: numpar"):

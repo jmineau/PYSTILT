@@ -350,7 +350,7 @@ STILT-R project folder:
 
 It prints the blocks that name the imported folders, for ``config.yaml``:
 the met, the ``stilt-r`` model (PYSTILT's model of imported runs, named by
-its import path, :class:`stilt.stilt_r.StiltRModel`), the footprint stage,
+its import path, :class:`stilt.migration.StiltRModel`), the footprint stage,
 and the variant.
 
 .. code-block:: yaml
@@ -359,7 +359,7 @@ and the variant.
      stilt-r:
        met_path: /data/hrrr
    models:
-     stilt-r: {class: stilt.stilt_r.StiltRModel}
+     stilt-r: {class: stilt.migration.StiltRModel}
    stages:
      footprint: {class: stilt.footprint.FootprintStage}
    variants:

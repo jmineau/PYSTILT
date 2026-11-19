@@ -151,7 +151,6 @@ layers = [
     "simulation",
     "transport_error",
     "background",
-    "stilt_r",
     "footprint",
     "particles",
     "visualization",
