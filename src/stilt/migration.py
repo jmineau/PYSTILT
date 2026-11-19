@@ -36,16 +36,16 @@ import pandas as pd
 import xarray as xr
 import yaml
 from runtraj.config import VARIANT_NAME_RE, Variant
-from runtraj.output import Output
-from runtraj.particles import check_particles
-from runtraj.releases import Release
-from runtraj.spatial import Grid
-from runtraj.transport.hysplit.config import (
+from runtraj.models.hysplit.config import (
     FIXED_SETUP,
     WIND_ERROR_SETTINGS,
     ZI_ERROR_SETTINGS,
 )
-from runtraj.transport.hysplit.namelist import read_namelist
+from runtraj.models.hysplit.namelist import read_namelist
+from runtraj.output import Output
+from runtraj.particles import check_particles
+from runtraj.releases import Release
+from runtraj.spatial import Grid
 
 from stilt.footprint import FOOTPRINT_STAGE
 from stilt.footprint.config import FootprintConfig, footprint_settings
@@ -54,7 +54,7 @@ from stilt.footprint.stage import store_empty_footprint, store_footprint
 from stilt.stilt_r import STILT_R_MODEL, StiltRConfig, StiltRMetConfig, StiltRModel
 
 if TYPE_CHECKING:
-    from runtraj.transport.hysplit.control import ControlFile
+    from runtraj.models.hysplit.control import ControlFile
 
 #: PYSTILT's names for STILT-R's particle columns. HYSPLIT's driver renames
 #: the first four the same way; ``xhgt`` is the release height STILT-R adds
@@ -392,7 +392,7 @@ def _smooth_factor(
 def _control(path: Path) -> ControlFile:
     """Return a run's ``CONTROL`` file, read as PYSTILT reads its own."""
     # STILT-R runs HYSPLIT, so its CONTROL file is HYSPLIT's.
-    from runtraj.transport.hysplit.control import ControlFile
+    from runtraj.models.hysplit.control import ControlFile
 
     try:
         return ControlFile.read(path)
@@ -790,7 +790,7 @@ def _hysplit_settings(folder: Path, control: ControlFile) -> tuple[dict[str, Any
     but for ``WINDERRTF``, so that flag is returned on its own. STILT-R
     writes no ``SEED``: HYSPLIT seeded its random numbers itself, which is
     ``seed: null``. The entries of
-    :data:`~runtraj.transport.hysplit.config.FIXED_SETUP` are left out: they
+    :data:`~runtraj.models.hysplit.config.FIXED_SETUP` are left out: they
     cannot change the particles, and PYSTILT has no setting for them.
     """
     path = folder / _SETUP

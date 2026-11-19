@@ -98,8 +98,8 @@ def _downloading_project(tmp_path, n: int) -> Project:
     """A project like :func:`_hourly_project` whose met downloads HRRR."""
     import datetime as dt
 
+    from runtraj.models.hysplit import MetConfig
     from runtraj.releases import PointRelease
-    from runtraj.transport.hysplit import MetConfig
 
     config = make_project_config(
         tmp_path,

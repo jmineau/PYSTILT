@@ -6,14 +6,14 @@ import numpy as np
 import pandas as pd
 import pytest
 from runtraj.identity import run_settings
+from runtraj.models import ModelInfo
+from runtraj.models.hysplit import HysplitConfig
 from runtraj.particles import (
     particles_metadata,
     read_particles,
     write_particles,
 )
 from runtraj.releases import ColumnRelease, PointRelease
-from runtraj.transport import ModelInfo
-from runtraj.transport.hysplit import HysplitConfig
 
 from ..fixtures.particles import finished
 

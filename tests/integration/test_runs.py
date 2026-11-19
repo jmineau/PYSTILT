@@ -17,8 +17,8 @@ import pandas as pd
 import pytest
 from runtraj.config import ProjectConfig
 from runtraj.identity import transport_from_settings
+from runtraj.models.hysplit.driver import winderrtf
 from runtraj.particles import particles_metadata
-from runtraj.transport.hysplit.driver import winderrtf
 
 from stilt import Project
 from stilt.footprint.targets import Mesh
@@ -249,7 +249,7 @@ def _project_on_met_cut_short(tmp_path, wbb_release, traj_only_config, met_dir):
 
 def _skip_the_met_checks(monkeypatch, tmp_path) -> None:
     """Give HYSPLIT the run's files, the one cut short too, as if nothing had looked at them first."""
-    from runtraj.transport.hysplit import Met
+    from runtraj.models.hysplit import Met
 
     blocks = ("20210114_18-23*", "20210115_00-05*", "20210115_06-11*")
     files = [next((tmp_path / "met").glob(block)).resolve() for block in blocks]

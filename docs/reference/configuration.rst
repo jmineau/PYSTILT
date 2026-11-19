@@ -25,9 +25,9 @@ Configuration
    output: output
 
 ``mets`` names the meteorology (for HYSPLIT,
-:class:`~runtraj.transport.hysplit.MetConfig`). ``models`` names the transport
+:class:`~runtraj.models.hysplit.MetConfig`). ``models`` names the transport
 models, each block with that model's settings
-(:class:`~runtraj.transport.hysplit.HysplitConfig` for ``hysplit``).
+(:class:`~runtraj.models.hysplit.HysplitConfig` for ``hysplit``).
 ``stages`` names what is made from each simulation's particles: the
 footprint, with the footprint settings (:class:`FootprintConfig`). A stage's
 block is named for its stage, so the footprint's is ``footprint``, the name
@@ -36,7 +36,7 @@ of its folder in the output directory and of its column in
 ``variants`` says what runs, and ``execution`` where
 (:class:`ExecutionConfig`). Each class lives next to the code that uses it
 (``stilt.footprint.config``, ``runtraj.execution.config``,
-``runtraj.transport.hysplit``), and all but the transport model's are
+``runtraj.models.hysplit``), and all but the transport model's are
 importable from ``stilt``.
 
 No setting sits at the top level. One written there is refused with a
@@ -78,7 +78,7 @@ it runs. ``stilt init`` and :meth:`stilt.Project.init` write STILT-R's values
 where they differ (:data:`stilt.project.STILT_R_HYSPLIT`; the list is in
 :doc:`../guides/migration/stilt_r`).
 
-.. config-model:: runtraj.transport.hysplit.HysplitConfig
+.. config-model:: runtraj.models.hysplit.HysplitConfig
 
 A model in another package gets a block of any name that gives the model
 class's import path as ``class``, then that model's own settings:
@@ -164,7 +164,7 @@ A met
 The keys of one entry under ``mets:``, for HYSPLIT
 (:doc:`../guides/meteorology`).
 
-.. config-model:: runtraj.transport.hysplit.MetConfig
+.. config-model:: runtraj.models.hysplit.MetConfig
 
 Execution
 ~~~~~~~~~
@@ -219,7 +219,7 @@ Parameters
 The settings that shape a run's particles belong to the transport model,
 and are written in its block under ``models:`` (``hysplit`` when the config
 has no ``models``). HYSPLIT's are in
-:class:`runtraj.transport.hysplit.HysplitConfig`, under HYSPLIT's names (see
+:class:`runtraj.models.hysplit.HysplitConfig`, under HYSPLIT's names (see
 :doc:`hysplit`). Each model's block holds all of its settings, the ones
 PYSTILT reads itself among them (``n_hours`` and ``seed``): nothing passes
 from one model's block to another's.

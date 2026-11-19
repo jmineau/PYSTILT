@@ -16,7 +16,7 @@ import yaml
 from pydantic import RootModel
 from runtraj.config import ProjectConfig
 from runtraj.execution.config import ExecutionConfig
-from runtraj.transport import TransportConfig
+from runtraj.models import TransportConfig
 
 from stilt.footprint import FOOTPRINT_STAGE
 from stilt.footprint.config import FootprintConfig

@@ -77,7 +77,7 @@ plain data: do not wrap a table or an array in a class.
 `stilt.__all__` (and each subpackage's) is the public surface. It re-exports
 runtraj's names a STILT user types (`ProjectConfig`, the release classes,
 `Grid`, `run_trajectories`, `read_particles`, `RuntrajError`); the rest of
-runtraj is imported from `runtraj` (`runtraj.transport.hysplit.HysplitConfig`).
+runtraj is imported from `runtraj` (`runtraj.models.hysplit.HysplitConfig`).
 
 ```
 src/stilt/

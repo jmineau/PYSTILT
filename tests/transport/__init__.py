@@ -1,1 +1,1 @@
-"""Tests for runtraj.transport."""
+"""Tests for runtraj.models."""

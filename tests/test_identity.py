@@ -4,8 +4,8 @@ import pytest
 import yaml
 from runtraj.config import ProjectConfig, Variant
 from runtraj.identity import read_run_settings, settings_hash
+from runtraj.models.hysplit import MetConfig
 from runtraj.output import Output
-from runtraj.transport.hysplit import MetConfig
 
 from stilt.footprint.stage import store_empty_footprint
 from tests.fixtures.factories import blocks

@@ -19,9 +19,9 @@ from pathlib import Path
 import pandas as pd
 import pytest
 import yaml
-from runtraj.transport.hysplit import HysplitConfig
-from runtraj.transport.hysplit.driver import setup_entries, winderrtf
-from runtraj.transport.hysplit.namelist import NameList, read_namelist
+from runtraj.models.hysplit import HysplitConfig
+from runtraj.models.hysplit.driver import setup_entries, winderrtf
+from runtraj.models.hysplit.namelist import NameList, read_namelist
 
 from stilt.project import STARTER_CONFIG
 

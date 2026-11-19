@@ -112,8 +112,8 @@ def test_a_tree_this_layout_did_not_write_is_listed_as_it_records_itself(
 def test_a_variant_without_stages_needs_no_particles_hash_to_say_so(tmp_path, release):
     """Asking about a stage a variant does not use reads neither the met nor the model's build."""
     from runtraj.config import Variant
+    from runtraj.models.hysplit import HysplitConfig, MetConfig
     from runtraj.output import Output
-    from runtraj.transport.hysplit import HysplitConfig, MetConfig
 
     variant = Variant(
         name="hrrr",

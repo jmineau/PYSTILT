@@ -4,10 +4,10 @@ import pandas as pd
 import pytest
 import xarray as xr
 from runtraj.config import Variant
+from runtraj.models.hysplit import MetConfig
 from runtraj.output import Output
 from runtraj.particles import particles_metadata
 from runtraj.spatial import Grid
-from runtraj.transport.hysplit import MetConfig
 
 from stilt import Simulation
 from stilt.footprint.config import FootprintConfig

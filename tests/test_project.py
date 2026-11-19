@@ -13,11 +13,11 @@ import xarray as xr
 from runtraj.config import ProjectConfig
 from runtraj.execution.config import ExecutionConfig
 from runtraj.execution.runner import resolve_compute_root
+from runtraj.models.hysplit import MetConfig
+from runtraj.models.hysplit.driver import winderrtf
 from runtraj.output import Output
 from runtraj.releases import ColumnRelease, PointRelease
 from runtraj.spatial import Grid
-from runtraj.transport.hysplit import MetConfig
-from runtraj.transport.hysplit.driver import winderrtf
 
 from stilt import Project, transport_error
 from stilt.footprint.stage import store_empty_footprint, store_footprint

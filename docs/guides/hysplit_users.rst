@@ -214,7 +214,7 @@ writes the rest itself:
    * - ``SETUP.CFG`` ``DELT``, ``ICHEM``, ``KAGL``, ``CMASS`` and 37 more
      - Fixed: STILT mode overrides them, or only concentration grids, puffs,
        dump files or other HYSPLIT programs read them
-       (:data:`~runtraj.transport.hysplit.config.FIXED_SETUP`)
+       (:data:`~runtraj.models.hysplit.config.FIXED_SETUP`)
 
 To read the files of one run, pass ``workdir="run"`` to
 :func:`~stilt.run_trajectories`: the folder keeps ``CONTROL``,
