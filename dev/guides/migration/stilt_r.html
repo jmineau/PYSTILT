@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=dcb4150b"></script>
+    <script src="../../_static/documentation_options.js?v=ac295cc2"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev38+g3cfdd68e7" />
+  <meta name="docsearch:version" content="0.1.0a30.dev40+g9ffbcfd0e" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -645,10 +645,9 @@ for <code class="docutils literal notranslate"><span class="pre">n_hours</span> 
 <td><p>same names, under <code class="docutils literal notranslate"><span class="pre">models:</span> <span class="pre">hysplit:</span></code>. The footprint reads
 <code class="docutils literal notranslate"><span class="pre">veght</span></code> for the near-field correction, as STILT-R does.</p></td>
 </tr>
-<tr class="row-odd"><td><p>HYSPLIT settings that cannot change the particles (<code class="docutils literal notranslate"><span class="pre">delt</span></code>,
-<code class="docutils literal notranslate"><span class="pre">cmass</span></code>, <code class="docutils literal notranslate"><span class="pre">conage</span></code>, <code class="docutils literal notranslate"><span class="pre">ichem</span></code>, <code class="docutils literal notranslate"><span class="pre">kagl</span></code>, …)</p></td>
-<td><p>no setting: PYSTILT writes STILT-R’s values to <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> in
-every run</p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ichem</span></code>, <code class="docutils literal notranslate"><span class="pre">idsp</span></code></p></td>
+<td><p>no setting: every run writes STILT-R’s <code class="docutils literal notranslate"><span class="pre">ICHEM=8</span></code> and <code class="docutils literal notranslate"><span class="pre">IDSP=2</span></code>,
+the only values with which HYSPLIT writes particles</p></td>
 </tr>
 <tr class="row-even"><td><p>wind and mixing-depth error settings (<code class="docutils literal notranslate"><span class="pre">siguverr</span></code>, <code class="docutils literal notranslate"><span class="pre">tluverr</span></code>,
 <code class="docutils literal notranslate"><span class="pre">sigzierr</span></code>, …)</p></td>
@@ -713,6 +712,14 @@ HYSPLIT with other values for a few settings. So <code class="docutils literal n
 <span class="w">    </span><span class="nt">krand</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4</span>
 <span class="w">    </span><span class="nt">vscales</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">-1</span>
 <span class="w">    </span><span class="nt">wvert</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+<span class="w">    </span><span class="nt">conage</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">48</span>
+<span class="w">    </span><span class="nt">cpack</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+<span class="w">    </span><span class="nt">delt</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.0</span>
+<span class="w">    </span><span class="nt">kagl</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+<span class="w">    </span><span class="nt">mhrs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">9999</span>
+<span class="w">    </span><span class="nt">pinbc</span><span class="p">:</span><span class="w"> </span><span class="s">""</span>
+<span class="w">    </span><span class="nt">pinpf</span><span class="p">:</span><span class="w"> </span><span class="s">""</span>
+<span class="w">    </span><span class="nt">poutf</span><span class="p">:</span><span class="w"> </span><span class="s">""</span>
 <span class="w">    </span><span class="nt">varsiwant</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">time</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">indx</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">long</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">lati</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">zagl</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">foot</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">mlht</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">pres</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">dens</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">samt</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">sigw</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">tlgr</span><span class="p p-Indicator">]</span>
 </pre></div>
 </div>
@@ -758,6 +765,18 @@ run</p></td>
 <td><p>5, 3, -1</p></td>
 <td><p>unset; HYSPLIT chooses the same values when it runs. They are written
 so that <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> matches STILT-R’s entry for entry.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">conage</span></code>, <code class="docutils literal notranslate"><span class="pre">cpack</span></code>, <code class="docutils literal notranslate"><span class="pre">delt</span></code>, <code class="docutils literal notranslate"><span class="pre">kagl</span></code>, <code class="docutils literal notranslate"><span class="pre">mhrs</span></code></p></td>
+<td><p>48, 1, 1, 1, 9999</p></td>
+<td><p>24, unset, 0, 0, 0. None changes the particles: HYSPLIT steps 1
+minute whatever <code class="docutils literal notranslate"><span class="pre">delt</span></code> is, and the others are read only for puffs,
+the concentration grid or HYSPLIT’s trajectory model. Written so that
+<code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> matches STILT-R’s.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">pinbc</span></code>, <code class="docutils literal notranslate"><span class="pre">pinpf</span></code>, <code class="docutils literal notranslate"><span class="pre">poutf</span></code></p></td>
+<td><p>blank</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">PARINBC</span></code>, <code class="docutils literal notranslate"><span class="pre">PARINIT</span></code>, <code class="docutils literal notranslate"><span class="pre">PARDUMP</span></code>: particle files a run has none
+of and writes none of. Written so that <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> matches STILT-R’s.</p></td>
 </tr>
 </tbody>
 </table>

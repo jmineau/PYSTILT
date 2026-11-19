@@ -43,11 +43,3 @@ Methods
 
 
 
-
-Inherited
----------
-
-
-From :class:`~.Bounds`: :py:obj:`~.Bounds.contains`
-
-

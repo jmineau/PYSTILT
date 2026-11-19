@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=dcb4150b"></script>
+    <script src="../../_static/documentation_options.js?v=ac295cc2"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev38+g3cfdd68e7" />
+  <meta name="docsearch:version" content="0.1.0a30.dev40+g9ffbcfd0e" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -890,8 +890,8 @@
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">stilt.</span></span><span class="sig-name descname"><span class="pre">Release</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kind</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">time</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/datetime.html#datetime.datetime" title="(in Python v3.15)"><span class="pre">datetime.datetime</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">altitude_ref</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Literal['agl'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'msl']</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'agl'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">attrs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict[str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">typing.Any]</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&lt;factory&gt;</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/runtraj/releases/models.html#Release"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.Release" title="Link to this definition">#</a></dt>
 <dd><p>Base class of the release types.</p>
 <p>A release is a frozen value: its release time, its release points, and
-the vertical reference of their heights. Iterating one yields
-<code class="docutils literal notranslate"><span class="pre">(lat,</span> <span class="pre">lon,</span> <span class="pre">alt)</span></code> for each release point. Two releases are equal when
+the vertical reference of their heights. <code class="docutils literal notranslate"><span class="pre">coords()</span></code> gives
+<code class="docutils literal notranslate"><span class="pre">(lon,</span> <span class="pre">lat,</span> <span class="pre">alt)</span></code> for each release point. Two releases are equal when
 their type, time, points, and <code class="docutils literal notranslate"><span class="pre">altitude_ref</span></code> match; <code class="docutils literal notranslate"><span class="pre">attrs</span></code> do not
 count.</p>
 </dd></dl>
@@ -959,7 +959,7 @@ count.</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="stilt.Release.coords.html#stilt.Release.coords" title="stilt.Release.coords"><code class="xref py py-obj docutils literal notranslate"><span class="pre">coords</span></code></a>()</p></td>
-<td><p>Return <code class="docutils literal notranslate"><span class="pre">(lat,</span> <span class="pre">lon,</span> <span class="pre">alt)</span></code> of each release point.</p></td>
+<td><p>Return <code class="docutils literal notranslate"><span class="pre">(lon,</span> <span class="pre">lat,</span> <span class="pre">alt)</span></code> of each release point, the order <code class="docutils literal notranslate"><span class="pre">from_points</span></code> takes.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="stilt.Release.from_dict.html#stilt.Release.from_dict" title="stilt.Release.from_dict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_dict</span></code></a>(d)</p></td>
 <td><p>Build a release of the right type from a dict made by <code class="xref py py-meth docutils literal notranslate"><span class="pre">to_dict()</span></code>.</p></td>

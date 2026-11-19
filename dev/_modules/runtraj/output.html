@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=dcb4150b"></script>
+    <script src="../../_static/documentation_options.js?v=ac295cc2"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev38+g3cfdd68e7" />
+  <meta name="docsearch:version" content="0.1.0a30.dev40+g9ffbcfd0e" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -542,7 +542,6 @@
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">upath</span><span class="w"> </span><span class="kn">import</span> <span class="n">UPath</span>
 
-    <span class="kn">from</span><span class="w"> </span><span class="nn">runtraj._paths</span><span class="w"> </span><span class="kn">import</span> <span class="n">Location</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">Variant</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
@@ -589,7 +588,7 @@
     <span class="k">return</span> <span class="sa">f</span><span class="s2">"date=</span><span class="si">{</span><span class="n">time</span><span class="si">:</span><span class="s2">%Y-%m-%d</span><span class="si">}</span><span class="s2">"</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_names</span><span class="p">(</span><span class="n">folder</span><span class="p">:</span> <span class="n">Location</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_names</span><span class="p">(</span><span class="n">folder</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the names in *folder*, or none when it does not exist.</span>
 
@@ -608,8 +607,8 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_list_release_files</span><span class="p">(</span>
-    <span class="n">root</span><span class="p">:</span> <span class="n">Location</span><span class="p">,</span> <span class="n">suffix</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">among</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Location</span><span class="p">]:</span>
+    <span class="n">root</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span><span class="p">,</span> <span class="n">suffix</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">among</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return ``{release_id: path}`` for every ``date=*/&lt;id&gt;&lt;suffix&gt;`` under *root*, in date order.</span>
 
@@ -645,12 +644,12 @@
     <span class="k">return</span> <span class="n">found</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_read_yaml</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Location</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_read_yaml</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""Return a YAML file of one mapping as a dict; an empty file is ``{}``."""</span>
     <span class="k">return</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">read_text</span><span class="p">())</span> <span class="ow">or</span> <span class="p">{}</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_write_yaml</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Location</span><span class="p">,</span> <span class="n">record</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_write_yaml</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span><span class="p">,</span> <span class="n">record</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Write *record* to *path* as YAML in one step, making its folder as needed."""</span>
     <span class="n">path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="k">with</span> <span class="n">atomic_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">as</span> <span class="n">tmp</span><span class="p">:</span>
@@ -659,7 +658,7 @@
         <span class="p">)</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_write_settings</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Location</span><span class="p">,</span> <span class="n">record</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_write_settings</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span><span class="p">,</span> <span class="n">record</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Write a ``settings.yaml`` once. An existing file with the same hash is left alone."""</span>
     <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
         <span class="n">existing</span> <span class="o">=</span> <span class="n">_read_yaml</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
@@ -733,7 +732,9 @@
 <span class="p">)</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_old_files_message</span><span class="p">(</span><span class="n">kind</span><span class="p">:</span> <span class="n">Kind</span><span class="p">,</span> <span class="n">folder</span><span class="p">:</span> <span class="n">Location</span><span class="p">,</span> <span class="n">paths</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Location</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_old_files_message</span><span class="p">(</span>
+    <span class="n">kind</span><span class="p">:</span> <span class="n">Kind</span><span class="p">,</span> <span class="n">folder</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span><span class="p">,</span> <span class="n">paths</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Return the error for files that hold ``receptor`` where they now hold ``release``, naming the first."""</span>
     <span class="n">first</span> <span class="o">=</span> <span class="n">paths</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
     <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">paths</span><span class="p">:</span>
@@ -752,7 +753,7 @@
 <span class="p">)</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_settings_folders</span><span class="p">(</span><span class="n">tree</span><span class="p">:</span> <span class="n">Location</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_settings_folders</span><span class="p">(</span><span class="n">tree</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""Return the ``settings=`` values under *tree* that hold a settings file, in name order."""</span>
     <span class="k">return</span> <span class="p">[</span>
         <span class="n">name</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="s2">"settings="</span><span class="p">)</span> <span class="p">:]</span>
@@ -762,8 +763,8 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_release_file</span><span class="p">(</span>
-    <span class="n">folder</span><span class="p">:</span> <span class="n">Location</span><span class="p">,</span> <span class="n">release_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">suffix</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">".parquet"</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span><span class="p">:</span>
+    <span class="n">folder</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span><span class="p">,</span> <span class="n">release_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">suffix</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">".parquet"</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Return a release's file in *folder*: ``date=YYYY-MM-DD/&lt;release_id&gt;&lt;suffix&gt;``."""</span>
     <span class="k">return</span> <span class="n">folder</span> <span class="o">/</span> <span class="n">_date_dir</span><span class="p">(</span><span class="n">release_id</span><span class="p">)</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">release_id</span><span class="si">}{</span><span class="n">suffix</span><span class="si">}</span><span class="s2">"</span>
 
@@ -784,7 +785,7 @@
 
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_count_files</span><span class="p">(</span><span class="n">folder</span><span class="p">:</span> <span class="n">Location</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_count_files</span><span class="p">(</span><span class="n">folder</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Return how many result files a settings folder holds, in every ``realization=k`` partition."""</span>
     <span class="n">parts</span> <span class="o">=</span> <span class="p">[</span><span class="n">n</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">_names</span><span class="p">(</span><span class="n">folder</span><span class="p">)</span> <span class="k">if</span> <span class="n">n</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"realization="</span><span class="p">)]</span>
     <span class="n">roots</span> <span class="o">=</span> <span class="p">[</span><span class="n">folder</span> <span class="o">/</span> <span class="n">n</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">parts</span><span class="p">]</span> <span class="k">if</span> <span class="n">parts</span> <span class="k">else</span> <span class="p">[</span><span class="n">folder</span><span class="p">]</span>
@@ -821,7 +822,7 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_differences</span><span class="p">(</span>
-    <span class="n">kind</span><span class="p">:</span> <span class="n">Kind</span><span class="p">,</span> <span class="n">record</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Location</span>
+    <span class="n">kind</span><span class="p">:</span> <span class="n">Kind</span><span class="p">,</span> <span class="n">record</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Return how a folder's stored settings differ from *variant*'s, the first four, ``; ``-joined."""</span>
     <span class="k">if</span> <span class="n">kind</span> <span class="o">==</span> <span class="s2">"particles"</span><span class="p">:</span>
@@ -894,7 +895,7 @@
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="c1">#: The output directory, a Path or a universal path on an object store.</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="p">:</span> <span class="n">Location</span> <span class="o">=</span> <span class="n">location</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span> <span class="o">=</span> <span class="n">location</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="c1"># Each folder's settings hash, by kind and folder name. Reading one</span>
         <span class="c1"># means reading its _settings.yaml and hashing it again, so each is</span>
         <span class="c1"># read once; a lookup that misses lists the tree again.</span>
@@ -1134,7 +1135,7 @@
 
 <div class="viewcode-block" id="Output.folder">
 <a class="viewcode-back" href="../../reference/_api/runtraj.output.Output.folder.html#runtraj.output.Output.folder">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">folder</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kind</span><span class="p">:</span> <span class="n">Kind</span><span class="p">,</span> <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">folder</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kind</span><span class="p">:</span> <span class="n">Kind</span><span class="p">,</span> <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Return *variant*'s folder of *kind*, or ``None`` before it exists.</span>
 
@@ -1144,7 +1145,7 @@
         <span class="k">return</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dir</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span></div>
 
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tree</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tree</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Return the folder *name* of a tree: ``&lt;tree&gt;/settings=&lt;name&gt;``."""</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">directory</span> <span class="o">/</span> <span class="n">tree</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"settings=</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span>
 
@@ -1204,7 +1205,7 @@
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_part</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">tree</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span><span class="p">:</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Return the folder *name* of a tree, inside its ``realization=k`` partition for an ensemble.</span>
 
@@ -1219,7 +1220,7 @@
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_found</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">kind</span><span class="p">:</span> <span class="n">Kind</span><span class="p">,</span> <span class="n">tree</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Return the existing folder of *variant*'s results of *kind* in *tree*, or ``None``."""</span>
         <span class="n">_check_realization</span><span class="p">(</span><span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
         <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">variant</span><span class="p">)</span>
@@ -1227,7 +1228,7 @@
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_made</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">kind</span><span class="p">:</span> <span class="n">Kind</span><span class="p">,</span> <span class="n">tree</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span><span class="p">:</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Return the folder of *variant*'s results of *kind* in *tree*, making the settings folder on first use."""</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_part</span><span class="p">(</span><span class="n">tree</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">variant</span><span class="p">),</span> <span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
 
@@ -1241,7 +1242,7 @@
         <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span>
         <span class="n">release_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Return the file of one release's result, whether or not it exists.</span>
 
@@ -1263,7 +1264,7 @@
         <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span>
         <span class="n">release_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span><span class="p">:</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Return where one release's result of *kind* is written, making the variant's settings folder on first use.</span>
 
@@ -1334,7 +1335,7 @@
 <a class="viewcode-back" href="../../reference/_api/runtraj.output.Output.log_path.html#runtraj.output.Output.log_path">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">log_path</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span> <span class="n">release_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Return where the log of a release's transport model run is kept, or ``None`` before its folder exists."""</span>
         <span class="n">logs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_found</span><span class="p">(</span><span class="s2">"particles"</span><span class="p">,</span> <span class="s2">"logs"</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
         <span class="k">return</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">logs</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">_release_file</span><span class="p">(</span><span class="n">logs</span><span class="p">,</span> <span class="n">release_id</span><span class="p">,</span> <span class="s2">".log"</span><span class="p">)</span></div>
@@ -1344,7 +1345,7 @@
 <a class="viewcode-back" href="../../reference/_api/runtraj.output.Output.kept_workdir.html#runtraj.output.Output.kept_workdir">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">kept_workdir</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span> <span class="n">release_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Return where a release's failed run's working directory is kept, or ``None`` before its folder exists."""</span>
         <span class="n">kept</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_found</span><span class="p">(</span><span class="s2">"particles"</span><span class="p">,</span> <span class="s2">"scratch"</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
         <span class="k">return</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">kept</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">kept</span> <span class="o">/</span> <span class="n">_date_dir</span><span class="p">(</span><span class="n">release_id</span><span class="p">)</span> <span class="o">/</span> <span class="n">release_id</span></div>
@@ -1579,7 +1580,7 @@
         <span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
         <span class="n">met_files</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">],</span>
         <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span><span class="p">:</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Write a release's particles (:func:`runtraj.particles.write_particles`).</span>
 
@@ -1638,7 +1639,7 @@
         <span class="n">release_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span><span class="p">:</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Write the log of a release's transport model run."""</span>
         <span class="n">logs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_made</span><span class="p">(</span><span class="s2">"particles"</span><span class="p">,</span> <span class="s2">"logs"</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
         <span class="n">path</span> <span class="o">=</span> <span class="n">_release_file</span><span class="p">(</span><span class="n">logs</span><span class="p">,</span> <span class="n">release_id</span><span class="p">,</span> <span class="s2">".log"</span><span class="p">)</span>
@@ -1655,7 +1656,7 @@
         <span class="n">release_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">workdir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
         <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span><span class="p">:</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Copy a run's working directory to :meth:`kept_workdir`, replacing an earlier copy.</span>
 
