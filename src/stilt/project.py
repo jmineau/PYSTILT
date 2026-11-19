@@ -24,7 +24,7 @@ import yaml
 from runtraj import project
 from runtraj.config import ProjectConfig, Variant
 from runtraj.particles import read_particles
-from runtraj.project import _one_group
+from runtraj.project import _rows
 from runtraj.releases import Release
 
 from stilt.footprint import Geometry, Jacobian
@@ -137,6 +137,27 @@ output: ./output
 #     cpus: 1         # releases at once in each task
 #     time: "02:00:00"
 """
+
+
+def _one_group(frame: pd.DataFrame, what: str) -> tuple[str, int | None]:
+    """Return the one ``(variant, realization)`` of a selection, or raise."""
+    groups = list(dict.fromkeys((v, k) for _, v, k in _rows(frame)))
+    variants = list(dict.fromkeys(v for v, _ in groups))
+    if len(variants) == 1 and len(groups) > 1:
+        realizations = [k for _, k in groups]
+        raise ValueError(
+            f"{what} is made from one realization of an ensemble; this "
+            f"selection holds realizations {realizations} of {variants[0]!r}. "
+            "Pick one with the realization column, as in "
+            f"ens[ens.realization == {realizations[0]}]."
+        )
+    if len(groups) != 1:
+        raise ValueError(
+            f"{what} is made from one variant (and one realization of an "
+            f"ensemble); this selection has {groups}. Select one first, as in "
+            "sims[sims.variant == 'hrrr']."
+        )
+    return groups[0]
 
 
 def _with_stilt_r_values(config: ProjectConfig) -> ProjectConfig:
