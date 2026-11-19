@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=5ff965c5"></script>
+    <script src="../../../_static/documentation_options.js?v=000a6a7f"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev25+g739e87834" />
+  <meta name="docsearch:version" content="0.1.0a30.dev30+g0d6d55b99" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -486,7 +486,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">FootprintConfig</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.foot</span><span class="w"> </span><span class="kn">import</span> <span class="n">_near_field</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.particles</span><span class="w"> </span><span class="kn">import</span> <span class="n">FOOTPRINT_COLUMNS</span><span class="p">,</span> <span class="n">check_particles</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.receptors</span><span class="w"> </span><span class="kn">import</span> <span class="n">Receptor</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.releases</span><span class="w"> </span><span class="kn">import</span> <span class="n">Release</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.spatial</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grid</span><span class="p">,</span> <span class="n">_east_edge</span><span class="p">,</span> <span class="n">_grid_cell_starts</span><span class="p">,</span> <span class="n">haversine_km</span><span class="p">,</span> <span class="n">is_longlat</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">apply_transforms</span>
 
@@ -515,22 +515,22 @@
 
 
 <span class="c1">#: How far a particle's first row may be from its release point, in km, before</span>
-<span class="c1">#: the particles are taken to come from another receptor: a margin, plus</span>
+<span class="c1">#: the particles are taken to come from another release: a margin, plus</span>
 <span class="c1">#: 100 m/s (6 km a minute, jet-stream speed) for the minutes to that row.</span>
 <span class="n">_RELEASE_MARGIN_KM</span> <span class="o">=</span> <span class="mf">10.0</span>
 <span class="n">_MAX_KM_PER_MINUTE</span> <span class="o">=</span> <span class="mf">6.0</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_check_particles_for_footprint</span><span class="p">(</span><span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_check_particles_for_footprint</span><span class="p">(</span><span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">release</span><span class="p">:</span> <span class="n">Release</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Refuse a particle table that would give a wrong footprint, and warn about rows left out.</span>
 
 <span class="sd">    Refused: an infinite ``foot``; two rows of one particle at one ``age``</span>
-<span class="sd">    (a table concatenated twice, or several receptors' particles); a</span>
-<span class="sd">    ``time`` column that does not equal the receptor time plus ``age``</span>
-<span class="sd">    (another receptor's time, or ``age`` in hours or seconds); and first</span>
+<span class="sd">    (a table concatenated twice, or several releases' particles); a</span>
+<span class="sd">    ``time`` column that does not equal the release time plus ``age``</span>
+<span class="sd">    (another release's time, or ``age`` in hours or seconds); and first</span>
 <span class="sd">    positions farther from every release point than the particles could</span>
-<span class="sd">    have gone by then (another receptor's place). Rows with no ``particle``,</span>
+<span class="sd">    have gone by then (another release's place). Rows with no ``particle``,</span>
 <span class="sd">    ``age``, ``lon``, ``lat`` or ``foot`` are left out of the footprint, with a</span>
 <span class="sd">    warning that counts them.</span>
 <span class="sd">    """</span>
@@ -546,7 +546,7 @@
     <span class="k">if</span> <span class="n">n_missing</span><span class="p">:</span>
         <span class="n">columns</span> <span class="o">=</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">_FOOTPRINT_INPUTS</span> <span class="k">if</span> <span class="n">missing</span><span class="p">[</span><span class="n">c</span><span class="p">]</span><span class="o">.</span><span class="n">any</span><span class="p">())</span>
         <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">n_missing</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> of </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">p</span><span class="p">)</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> particle rows have no "</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">release</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">n_missing</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> of </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">p</span><span class="p">)</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> particle rows have no "</span>
             <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">columns</span><span class="si">}</span><span class="s2"> and are left out of the footprint."</span><span class="p">,</span>
             <span class="n">stacklevel</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
         <span class="p">)</span>
@@ -560,14 +560,14 @@
             <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">repeated</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> particle rows repeat a particle at an age it "</span>
             <span class="sa">f</span><span class="s2">"already has, the first particle </span><span class="si">{</span><span class="n">first</span><span class="p">[</span><span class="s1">'particle'</span><span class="p">]</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> at age "</span>
             <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">first</span><span class="p">[</span><span class="s1">'age'</span><span class="p">]</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">. A particle has one row per time step: give one "</span>
-            <span class="s2">"receptor's particles, from one run, once."</span>
+            <span class="s2">"release's particles, from one run, once."</span>
         <span class="p">)</span>
-    <span class="n">_check_release_time</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">receptor</span><span class="p">)</span>
-    <span class="n">_check_release_point</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">receptor</span><span class="p">)</span>
+    <span class="n">_check_release_time</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">release</span><span class="p">)</span>
+    <span class="n">_check_release_point</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">release</span><span class="p">)</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_check_release_time</span><span class="p">(</span><span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Refuse particles whose ``time`` minus ``age`` is not the receptor time; a table without ``time`` passes."""</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_check_release_time</span><span class="p">(</span><span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">release</span><span class="p">:</span> <span class="n">Release</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Refuse particles whose ``time`` minus ``age`` is not the release time; a table without ``time`` passes."""</span>
     <span class="k">if</span> <span class="s2">"time"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">particles</span><span class="o">.</span><span class="n">columns</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">pd</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">types</span><span class="o">.</span><span class="n">is_datetime64_any_dtype</span><span class="p">(</span>
         <span class="n">particles</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span>
     <span class="p">):</span>
@@ -578,32 +578,32 @@
     <span class="n">released</span> <span class="o">=</span> <span class="p">(</span><span class="n">time</span> <span class="o">-</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_timedelta</span><span class="p">(</span><span class="n">particles</span><span class="p">[</span><span class="s2">"age"</span><span class="p">],</span> <span class="n">unit</span><span class="o">=</span><span class="s2">"min"</span><span class="p">))</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span>
     <span class="k">if</span> <span class="n">released</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
         <span class="k">return</span>
-    <span class="n">receptor_time</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">receptor</span><span class="o">.</span><span class="n">time</span><span class="p">)</span>
-    <span class="n">off</span> <span class="o">=</span> <span class="p">(</span><span class="n">released</span> <span class="o">-</span> <span class="n">receptor_time</span><span class="p">)</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span> <span class="o">&gt;=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">release_time</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">release</span><span class="o">.</span><span class="n">time</span><span class="p">)</span>
+    <span class="n">off</span> <span class="o">=</span> <span class="p">(</span><span class="n">released</span> <span class="o">-</span> <span class="n">release_time</span><span class="p">)</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span> <span class="o">&gt;=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">off</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
         <span class="k">return</span>
     <span class="k">if</span> <span class="n">released</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">-</span> <span class="n">released</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
             <span class="sa">f</span><span class="s2">"These particles were released at </span><span class="si">{</span><span class="n">released</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">%Y-%m-%d %H:%M</span><span class="si">}</span><span class="s2"> "</span>
-            <span class="sa">f</span><span class="s2">"(their time minus age), not at the receptor's time, "</span>
-            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">receptor_time</span><span class="si">:</span><span class="s2">%Y-%m-%d %H:%M</span><span class="si">}</span><span class="s2">. Give the receptor they were "</span>
+            <span class="sa">f</span><span class="s2">"(their time minus age), not at the release's time, "</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">release_time</span><span class="si">:</span><span class="s2">%Y-%m-%d %H:%M</span><span class="si">}</span><span class="s2">. Give the release they were "</span>
             <span class="s2">"released from."</span>
         <span class="p">)</span>
     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
         <span class="sa">f</span><span class="s2">"age does not agree with time on </span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">off</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> of </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">off</span><span class="p">)</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> "</span>
-        <span class="s2">"particle rows: time is the receptor time plus age, and age is in "</span>
+        <span class="s2">"particle rows: time is the release time plus age, and age is in "</span>
         <span class="s2">"minutes since release. Is age in hours or seconds?"</span>
     <span class="p">)</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_check_release_point</span><span class="p">(</span><span class="n">p</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_check_release_point</span><span class="p">(</span><span class="n">p</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">release</span><span class="p">:</span> <span class="n">Release</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Refuse particles whose first positions are farther from every release point than they could have gone."""</span>
     <span class="n">first</span> <span class="o">=</span> <span class="p">(</span>
         <span class="n">p</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">_age</span><span class="o">=</span><span class="n">p</span><span class="p">[</span><span class="s2">"age"</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">())</span>
         <span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s2">"_age"</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">"stable"</span><span class="p">)</span>
         <span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="s2">"particle"</span><span class="p">)</span>
     <span class="p">)</span>
-    <span class="n">points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">receptor</span><span class="o">.</span><span class="n">coords</span><span class="p">(),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">release</span><span class="o">.</span><span class="n">coords</span><span class="p">(),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
     <span class="n">distance</span> <span class="o">=</span> <span class="n">haversine_km</span><span class="p">(</span>
         <span class="n">first</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)[:,</span> <span class="kc">None</span><span class="p">],</span>
         <span class="n">first</span><span class="p">[</span><span class="s2">"lat"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)[:,</span> <span class="kc">None</span><span class="p">],</span>
@@ -616,8 +616,8 @@
         <span class="n">where</span> <span class="o">=</span> <span class="s2">"release point"</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">points</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="s2">"nearest release point"</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
             <span class="sa">f</span><span class="s2">"These particles' first positions, </span><span class="si">{</span><span class="n">minutes</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> minutes from release, "</span>
-            <span class="sa">f</span><span class="s2">"are a median </span><span class="si">{</span><span class="n">median</span><span class="si">:</span><span class="s2">,.0f</span><span class="si">}</span><span class="s2"> km from the receptor's </span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">, farther "</span>
-            <span class="s2">"than particles travel in that time. Give the receptor they were "</span>
+            <span class="sa">f</span><span class="s2">"are a median </span><span class="si">{</span><span class="n">median</span><span class="si">:</span><span class="s2">,.0f</span><span class="si">}</span><span class="s2"> km from the release's </span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">, farther "</span>
+            <span class="s2">"than particles travel in that time. Give the release they were "</span>
             <span class="s2">"released from."</span>
         <span class="p">)</span>
 
@@ -676,7 +676,7 @@
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Add interpolated positions in the first 100 minutes when particles jump grid cells.</span>
 
-<span class="sd">    Near the receptor, particles can move more than a grid cell per output</span>
+<span class="sd">    Near the release, particles can move more than a grid cell per output</span>
 <span class="sd">    step. When the median step does, along either axis of the grid,</span>
 <span class="sd">    positions and ``foot`` are linearly interpolated onto finer times (every</span>
 <span class="sd">    0.1 min to 10 min, 0.2 min to 20 min, and 0.5 min to 100 min). ``foot``</span>
@@ -1054,7 +1054,7 @@
 
 <span class="sd">    Returns ``(p, layers)``. ``p`` has columns ``loi, lai, time, rtime,</span>
 <span class="sd">    foot, layer``, and ``layers`` holds the sorted layer indices, each</span>
-<span class="sd">    *layer_minutes* minutes long from the receptor time. Both are empty</span>
+<span class="sd">    *layer_minutes* minutes long from the release time. Both are empty</span>
 <span class="sd">    when no particle is on the padded grid. On a *longlat* grid a particle a whole turn from the</span>
 <span class="sd">    padded grid is on it (``_onto_padded_axis``).</span>
 <span class="sd">    """</span>
@@ -1239,7 +1239,7 @@
 <a class="viewcode-back" href="../../../reference/_api/stilt.calc_footprint.html#stilt.calc_footprint">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">calc_footprint</span><span class="p">(</span>
     <span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
-    <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">,</span>
+    <span class="n">release</span><span class="p">:</span> <span class="n">Release</span><span class="p">,</span>
     <span class="n">grid</span><span class="p">:</span> <span class="n">Grid</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
     <span class="n">smooth_factor</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
@@ -1256,7 +1256,7 @@
 
 <span class="sd">    The near-field correction is applied first (*hnf_plume*), then the</span>
 <span class="sd">    particle *transforms*, in order, so the footprint records exactly what</span>
-<span class="sd">    it was made with. Near the receptor,</span>
+<span class="sd">    it was made with. Near the release,</span>
 <span class="sd">    particle tracks are interpolated to finer times when particles cross</span>
 <span class="sd">    more than a grid cell per step. Each particle's ``foot`` is added to the</span>
 <span class="sd">    cell it is in, and each time step is smoothed with a Gaussian kernel</span>
@@ -1296,10 +1296,10 @@
 
 <span class="sd">    The particle table is checked first for mistakes that would otherwise</span>
 <span class="sd">    give a plausible footprint. A particle with two rows at one ``age`` (a</span>
-<span class="sd">    table concatenated with itself, or several receptors' particles) is</span>
+<span class="sd">    table concatenated with itself, or several releases' particles) is</span>
 <span class="sd">    refused, as is an infinite ``foot``. When the table has a ``time``</span>
-<span class="sd">    column, ``time`` minus ``age`` must be the receptor time, which catches</span>
-<span class="sd">    another receptor's particles and an ``age`` in hours or seconds; without</span>
+<span class="sd">    column, ``time`` minus ``age`` must be the release time, which catches</span>
+<span class="sd">    another release's particles and an ``age`` in hours or seconds; without</span>
 <span class="sd">    one, the time is not checked. Each particle's first row must be within</span>
 <span class="sd">    10 km of a release point, plus 6 km (100 m/s) for each minute since</span>
 <span class="sd">    release. Rows with no ``particle``, ``age``, ``lon``, ``lat`` or</span>
@@ -1311,8 +1311,8 @@
 <span class="sd">        Particle table, such as :func:`stilt.run_trajectories` returns or</span>
 <span class="sd">        ``sim.particles``, with columns ``particle``, ``age`` (minutes since</span>
 <span class="sd">        release), ``lon``, ``lat``, and ``foot``.</span>
-<span class="sd">    receptor : Receptor</span>
-<span class="sd">        Receptor the particles were released from.</span>
+<span class="sd">    release : Release</span>
+<span class="sd">        Release the particles were released from.</span>
 <span class="sd">    grid : Grid</span>
 <span class="sd">        Domain and resolution of the footprint. Its longitudes count modulo</span>
 <span class="sd">        360, so ``xmin=-10, xmax=190`` is a grid across 180 degrees. For a</span>
@@ -1322,11 +1322,11 @@
 <span class="sd">        Factor on the width of the Gaussian smoothing kernel. 0 turns</span>
 <span class="sd">        smoothing off.</span>
 <span class="sd">    tres : str or timedelta, default "1h"</span>
-<span class="sd">        Length of each time layer from the receptor time, a duration in</span>
+<span class="sd">        Length of each time layer from the release time, a duration in</span>
 <span class="sd">        whole minutes such as ``"15min"``, ``"1h"`` or ``"1D"``. A particle</span>
 <span class="sd">        row at ``age`` minutes falls in layer ``floor(age / minutes)``.</span>
 <span class="sd">    hnf_plume : bool, default True</span>
-<span class="sd">        Correct ``foot`` for the thin plume near the receptor first</span>
+<span class="sd">        Correct ``foot`` for the thin plume near the release first</span>
 <span class="sd">        (:func:`stilt.footprint.correct_near_field`), as STILT-R does by</span>
 <span class="sd">        default. Particles without the columns it reads get no correction,</span>
 <span class="sd">        and a warning is logged.</span>
@@ -1369,8 +1369,8 @@
 <span class="sd">    ValueError</span>
 <span class="sd">        If *tres* is not a positive whole number of minutes, or the</span>
 <span class="sd">        particles fail a check above: rows repeated, an infinite ``foot``,</span>
-<span class="sd">        a ``time`` that is not the receptor time plus ``age``, or first</span>
-<span class="sd">        positions too far from the receptor.</span>
+<span class="sd">        a ``time`` that is not the release time plus ``age``, or first</span>
+<span class="sd">        positions too far from the release.</span>
 <span class="sd">    EmptyFootprint</span>
 <span class="sd">        If no particle is over the grid, no row has a positive ``foot``,</span>
 <span class="sd">        or the table has no rows. Its message says which.</span>
@@ -1381,7 +1381,7 @@
 <span class="sd">    ...     xmin=-113, xmax=-110.5, ymin=40, ymax=42, xres=0.01, yres=0.01</span>
 <span class="sd">    ... )</span>
 <span class="sd">    &gt;&gt;&gt; foot = stilt.calc_footprint(</span>
-<span class="sd">    ...     particles, receptor, grid, smooth_factor=0.5</span>
+<span class="sd">    ...     particles, release, grid, smooth_factor=0.5</span>
 <span class="sd">    ... )  # doctest: +SKIP</span>
 <span class="sd">    """</span>
     <span class="k">if</span> <span class="n">grid</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -1403,11 +1403,11 @@
     <span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">particles</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
         <span class="n">check_particles</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">need</span><span class="o">=</span><span class="n">FOOTPRINT_COLUMNS</span><span class="p">)</span>
-        <span class="n">_check_particles_for_footprint</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">receptor</span><span class="p">)</span>
+        <span class="n">_check_particles_for_footprint</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">release</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">hnf_plume</span><span class="p">:</span>
-            <span class="n">particles</span> <span class="o">=</span> <span class="n">_near_field</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">footprint_depth</span><span class="p">)</span>
+            <span class="n">particles</span> <span class="o">=</span> <span class="n">_near_field</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">footprint_depth</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">transforms</span><span class="p">:</span>
-        <span class="n">particles</span> <span class="o">=</span> <span class="n">apply_transforms</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">transforms</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">directory</span><span class="p">)</span>
+        <span class="n">particles</span> <span class="o">=</span> <span class="n">apply_transforms</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">transforms</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">directory</span><span class="p">)</span>
     <span class="n">crs</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">crs</span>
     <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">xres</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">xmin</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">xmax</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">xres</span>
     <span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span><span class="p">,</span> <span class="n">yres</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">ymin</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">ymax</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">yres</span>
@@ -1522,7 +1522,7 @@
     <span class="c1"># file has the same coordinates as the one calculated.</span>
     <span class="n">x_coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">glong</span> <span class="o">+</span> <span class="n">xres</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
     <span class="n">y_coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">glati</span> <span class="o">+</span> <span class="n">yres</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">_footprint_array</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">layers</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">x_coords</span><span class="p">,</span> <span class="n">y_coords</span><span class="p">)</span></div>
+    <span class="k">return</span> <span class="n">_footprint_array</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">layers</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">x_coords</span><span class="p">,</span> <span class="n">y_coords</span><span class="p">)</span></div>
 
 </pre></div>
 

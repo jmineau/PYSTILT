@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=5ff965c5"></script>
+    <script src="../../_static/documentation_options.js?v=000a6a7f"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev25+g739e87834" />
+  <meta name="docsearch:version" content="0.1.0a30.dev30+g0d6d55b99" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -417,7 +417,7 @@
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Setting up a project</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../receptors.html">Receptors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../releases.html">Releases (receptors)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../tracks.html">Mobile Measurements</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../meteorology.html">Meteorology</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../projects.html">Projects And Variants</a></li>
@@ -525,11 +525,11 @@ PYSTILT’s footprints match STILT-R’s cell by cell, to a relative tolerance
 of 1e-7 in the 21 scenarios the tests compare. What changes is where the
 settings live. Instead of editing variables in <code class="docutils literal notranslate"><span class="pre">run_stilt.r</span></code>, you write
 them in <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> or pass them to <a class="reference internal" href="../../reference/_api/stilt.Project.init.html#stilt.Project.init" title="stilt.Project.init"><code class="xref py py-meth docutils literal notranslate"><span class="pre">stilt.Project.init()</span></code></a>, and the
-receptors go in <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>.</p>
+releases go in <code class="docutils literal notranslate"><span class="pre">releases.csv</span></code>.</p>
 <p>A few cases differ on purpose, and <a class="reference internal" href="../../development/stilt_r_parity.html#stilt-r-parity"><span class="std std-ref">STILT-R Parity</span></a> gives each one
 and why:</p>
 <ul class="simple">
-<li><p>the near-field correction of a receptor above sea level, whose plume
+<li><p>the near-field correction of a release above sea level, whose plume
 PYSTILT grows from the ground</p></li>
 <li><p>projected grids, where PYSTILT smooths as widely as on a
 longitude/latitude grid and runs the early-time interpolation</p></li>
@@ -564,7 +564,7 @@ longitudes</p></li>
 </tr>
 <tr class="row-even"><td><p>Define receptors</p></td>
 <td><p>build a <code class="docutils literal notranslate"><span class="pre">receptors</span></code> data frame in <code class="docutils literal notranslate"><span class="pre">run_stilt.r</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>, or receptor objects in Python</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">releases.csv</span></code>, or release objects in Python</p></td>
 </tr>
 <tr class="row-odd"><td><p>Run</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">Rscript</span> <span class="pre">r/run_stilt.r</span></code></p></td>
@@ -680,12 +680,12 @@ footprint settings; it shares the particles
 (<a class="reference internal" href="../projects.html"><span class="doc">Projects And Variants</span></a>).</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">simulation_id</span></code> (run a subset)</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">project.run(receptors=[...])</span></code> with the receptor ids you want,
-or <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">--receptors</span> <span class="pre">ids.txt</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">project.run(releases=[...])</span></code> with the release ids you want,
+or <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">--releases</span> <span class="pre">ids.txt</span></code></p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ziscale</span></code> as one list per receptor</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">ziscale</span></code> per variant, as one factor or one factor per hour. It is
-the same for every receptor; PYSTILT has no per-receptor
+the same for every release; PYSTILT has no per-release
 factors.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">stilt_wd</span></code>, <code class="docutils literal notranslate"><span class="pre">output_wd</span></code></p></td>
@@ -770,9 +770,9 @@ of a new project with the one STILT-R writes.</p>
 </section>
 <section id="other-differences">
 <h2>Other differences<a class="headerlink" href="#other-differences" title="Link to this heading">#</a></h2>
-<p>A project runs its receptors under named <em>variants</em>. A variant is a
+<p>A project runs its releases under named <em>variants</em>. A variant is a
 met plus any settings that differ from the defaults (see
-<a class="reference internal" href="../projects.html"><span class="doc">Projects And Variants</span></a>). One project can run the same receptors with
+<a class="reference internal" href="../projects.html"><span class="doc">Projects And Variants</span></a>). One project can run the same releases with
 several mets, a range of <code class="docutils literal notranslate"><span class="pre">ziscale</span></code> values, or a second
 footprint grid. Each variant gets its own folder.</p>
 <p>The transport error run is a variant too. STILT-R runs HYSPLIT a second time
@@ -789,10 +789,10 @@ over whenever <code class="docutils literal notranslate"><span class="pre">run_t
 new folder and the old one stays until you delete it (see
 <a class="reference internal" href="../projects.html"><span class="doc">Projects And Variants</span></a>).</p>
 </section>
-<section id="receptors">
-<h2>Receptors<a class="headerlink" href="#receptors" title="Link to this heading">#</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code> holds the same information as STILT-R’s <code class="docutils literal notranslate"><span class="pre">receptors</span></code> data
-frame. STILT-R’s column names <code class="docutils literal notranslate"><span class="pre">long</span></code>, <code class="docutils literal notranslate"><span class="pre">lati</span></code>, and <code class="docutils literal notranslate"><span class="pre">zagl</span></code> work as they
+<section id="releases-receptors">
+<h2>Releases (receptors)<a class="headerlink" href="#releases-receptors" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">releases.csv</span></code> holds the same information as STILT-R’s <code class="docutils literal notranslate"><span class="pre">receptors</span></code> data
+frame. PYSTILT says <em>release</em> where STILT-R says <em>receptor</em>. STILT-R’s column names <code class="docutils literal notranslate"><span class="pre">long</span></code>, <code class="docutils literal notranslate"><span class="pre">lati</span></code>, and <code class="docutils literal notranslate"><span class="pre">zagl</span></code> work as they
 are. Rename <code class="docutils literal notranslate"><span class="pre">run_time</span></code> to <code class="docutils literal notranslate"><span class="pre">time</span></code>. In the particle table, STILT-R’s
 <code class="docutils literal notranslate"><span class="pre">long</span></code>, <code class="docutils literal notranslate"><span class="pre">lati</span></code>, <code class="docutils literal notranslate"><span class="pre">indx</span></code>, <code class="docutils literal notranslate"><span class="pre">time</span></code>, and <code class="docutils literal notranslate"><span class="pre">xhgt</span></code> are <code class="docutils literal notranslate"><span class="pre">lon</span></code>, <code class="docutils literal notranslate"><span class="pre">lat</span></code>,
 <code class="docutils literal notranslate"><span class="pre">particle</span></code>, <code class="docutils literal notranslate"><span class="pre">age</span></code>, and <code class="docutils literal notranslate"><span class="pre">release_height</span></code>. PYSTILT’s <code class="docutils literal notranslate"><span class="pre">time</span></code> column is
@@ -803,8 +803,8 @@ in minutes must use <code class="docutils literal notranslate"><span class="pre"
 </pre></div>
 </div>
 <p>STILT-R makes a column receptor from a row with several <code class="docutils literal notranslate"><span class="pre">zagl</span></code> values. In
-<code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>, a column or multipoint receptor is several rows that share
-an <code class="docutils literal notranslate"><span class="pre">r_idx</span></code> value. See <a class="reference internal" href="../receptors.html"><span class="doc">Receptors</span></a>.</p>
+<code class="docutils literal notranslate"><span class="pre">releases.csv</span></code>, a column or multipoint release is several rows that share
+a <code class="docutils literal notranslate"><span class="pre">group</span></code> value. See <a class="reference internal" href="../releases.html"><span class="doc">Releases (receptors)</span></a>.</p>
 </section>
 <section id="outputs">
 <h2>Outputs<a class="headerlink" href="#outputs" title="Link to this heading">#</a></h2>
@@ -813,11 +813,11 @@ in Python with pandas or <a class="reference internal" href="../../reference/_ap
 <code class="docutils literal notranslate"><span class="pre">arrow::read_parquet</span></code>. Footprints are saved as Parquet too, holding only
 the cells the particles reached. <code class="docutils literal notranslate"><span class="pre">foot.stilt.to_netcdf(path)</span></code> writes one
 as CF NetCDF with dimensions <code class="docutils literal notranslate"><span class="pre">(time,</span> <span class="pre">lat,</span> <span class="pre">lon)</span></code>, as STILT-R does, and
-keeps the receptor and the settings in it.</p>
-<p>A point receptor’s id has the same form as STILT-R’s simulation ID, and
+keeps the release and the settings in it.</p>
+<p>A point release’s id has the same form as STILT-R’s simulation ID, and
 names its files in each variant’s settings folder:
 <code class="docutils literal notranslate"><span class="pre">date=2015-07-05/201507050000_-111.8472_40.7665_21.parquet</span></code> (see
-<a class="reference internal" href="../projects.html"><span class="doc">Projects And Variants</span></a>). A column receptor’s id adds its bottom and top
+<a class="reference internal" href="../projects.html"><span class="doc">Projects And Variants</span></a>). A column release’s id adds its bottom and top
 after the <code class="docutils literal notranslate"><span class="pre">X</span></code>.</p>
 </section>
 <section id="reading-stilt-r-output">
@@ -829,16 +829,16 @@ which reads R’s <code class="docutils literal notranslate"><span class="pre">.
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"pystilt[stilt-r]"</span>
 </pre></div>
 </div>
-<p>Each simulation gives its receptor, its particles, and its footprint, one
+<p>Each simulation gives its release, its particles, and its footprint, one
 folder at a time:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">stilt.migration</span><span class="w"> </span><span class="kn">import</span> <span class="n">read_stilt_r</span>
 
-<span class="k">for</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="n">foot</span> <span class="ow">in</span> <span class="n">read_stilt_r</span><span class="p">(</span><span class="s2">"my_project/out/by-id"</span><span class="p">):</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">particles</span><span class="p">),</span> <span class="n">foot</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">release</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="n">foot</span> <span class="ow">in</span> <span class="n">read_stilt_r</span><span class="p">(</span><span class="s2">"my_project/out/by-id"</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">release</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">particles</span><span class="p">),</span> <span class="n">foot</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Each run’s receptor comes from two files in its folder. The release points are
-the ones in <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code>, the numbers HYSPLIT read, so a point receptor’s id is
+<p>Each run’s release comes from two files in its folder. The release points are
+the ones in <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code>, the numbers HYSPLIT read, so a point release’s id is
 the folder’s name. The time is the one in <code class="docutils literal notranslate"><span class="pre">&lt;id&gt;_traj.rds</span></code>, which keeps the
 seconds that <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code> drops. A folder without <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code> stops the read
 with an error that names it.</p>
@@ -895,7 +895,7 @@ STILT-R project folder:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.migration</span><span class="w"> </span><span class="kn">import</span> <span class="n">import_stilt_r</span>
 
-<span class="n">receptors</span> <span class="o">=</span> <span class="n">import_stilt_r</span><span class="p">(</span><span class="s2">"my_project/out/by-id"</span><span class="p">,</span> <span class="s2">"output"</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="s2">"1d936c1"</span><span class="p">)</span>
+<span class="n">releases</span> <span class="o">=</span> <span class="n">import_stilt_r</span><span class="p">(</span><span class="s2">"my_project/out/by-id"</span><span class="p">,</span> <span class="s2">"output"</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="s2">"1d936c1"</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>It prints the blocks that name the imported folders, for <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>:
@@ -930,18 +930,18 @@ and the variant.</p>
 <span class="w">        </span><span class="nt">transforms</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span>
 </pre></div>
 </div>
-<p>and returns the receptors, for <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>. Paste the printed lines into
+<p>and returns the releases, for <code class="docutils literal notranslate"><span class="pre">releases.csv</span></code>. Paste the printed lines into
 the <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> of a project whose <code class="docutils literal notranslate"><span class="pre">output</span></code> is that directory. In a
 project that already has blocks of those names, add the printed entries to
 them; with a <code class="docutils literal notranslate"><span class="pre">hysplit</span></code> block beside <code class="docutils literal notranslate"><span class="pre">stilt-r</span></code>, each variant then names
-its <code class="docutils literal notranslate"><span class="pre">model</span></code>. Then add the receptors:</p>
+its <code class="docutils literal notranslate"><span class="pre">model</span></code>. Then add the releases:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">"my_project_py"</span><span class="p">)</span>
-<span class="n">project</span><span class="o">.</span><span class="n">add_receptors</span><span class="p">(</span><span class="n">receptors</span><span class="p">)</span>
+<span class="n">project</span><span class="o">.</span><span class="n">add_releases</span><span class="p">(</span><span class="n">releases</span><span class="p">)</span>
 <span class="n">project</span><span class="o">.</span><span class="n">status</span><span class="p">()</span>
 </pre></div>
 </div>
 <p>A <code class="docutils literal notranslate"><span class="pre">stilt-r</span></code> variant reads what the import wrote and runs nothing: a run of
-one fails (<code class="docutils literal notranslate"><span class="pre">NOT_RUNNABLE</span></code>), so its receptors that STILT-R did not run stay
+one fails (<code class="docutils literal notranslate"><span class="pre">NOT_RUNNABLE</span></code>), so its releases that STILT-R did not run stay
 failed. Run them with a <code class="docutils literal notranslate"><span class="pre">hysplit</span></code> variant instead.</p>
 <p>Runs imported with PYSTILT 0.1.0a29 or earlier name the model <code class="docutils literal notranslate"><span class="pre">stilt-r</span></code>,
 from before it was named by its class, so a project does not find them:
@@ -989,7 +989,7 @@ still exist</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">&lt;id&gt;_foot.nc</span></code>. A footprint STILT-R summed over time
 (<code class="docutils literal notranslate"><span class="pre">time_integrate</span> <span class="pre">=</span> <span class="pre">T</span></code>) is one layer as long as the run: <code class="docutils literal notranslate"><span class="pre">tres</span></code>
 the run’s <code class="docutils literal notranslate"><span class="pre">n_hours</span></code>, stamped at the start of the run, not at the
-receptor time</p></td>
+release time</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">smooth_factor</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">params.RDS</span></code>, or the <code class="docutils literal notranslate"><span class="pre">smooth_factor</span></code> argument, as for
@@ -1027,8 +1027,8 @@ seconds each, so import a large project in a Slurm job.</p>
 values, and copy your <code class="docutils literal notranslate"><span class="pre">run_stilt.r</span></code> settings into it using the table
 above. Start with one met and one variant that runs the defaults
 (<code class="docutils literal notranslate"><span class="pre">variants:</span> <span class="pre">{hrrr:</span> <span class="pre">{}}</span></code>).</p></li>
-<li><p>Write your receptors to <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>.</p></li>
-<li><p>Run a few receptors that you already have STILT-R results for, and
+<li><p>Write your releases to <code class="docutils literal notranslate"><span class="pre">releases.csv</span></code>.</p></li>
+<li><p>Run a few releases that you already have STILT-R results for, and
 compare the footprints.</p></li>
 <li><p>Run everything.</p></li>
 </ol>
@@ -1088,7 +1088,7 @@ compare the footprints.</p></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#other-differences">Other differences</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#receptors">Receptors</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#releases-receptors">Releases (receptors)</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#outputs">Outputs</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#reading-stilt-r-output">Reading STILT-R output</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#importing-stilt-r-output-into-a-project">Importing STILT-R output into a project</a></li>

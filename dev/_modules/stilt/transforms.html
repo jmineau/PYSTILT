@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=5ff965c5"></script>
+    <script src="../../_static/documentation_options.js?v=000a6a7f"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev25+g739e87834" />
+  <meta name="docsearch:version" content="0.1.0a30.dev30+g0d6d55b99" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -458,7 +458,7 @@
 
 <span class="sd">A column measurement needs its averaging kernel and pressure weighting,</span>
 <span class="sd">and a species lost on the way needs the fraction that survives to the</span>
-<span class="sd">receptor. List the transforms in ``config.yaml``; the built-ins are</span>
+<span class="sd">release. List the transforms in ``config.yaml``; the built-ins are</span>
 <span class="sd">pydantic models whose fields are their keys::</span>
 
 <span class="sd">    transforms:</span>
@@ -467,7 +467,7 @@
 <span class="sd">        values: [1.0, 0.9, 0.7]</span>
 <span class="sd">      - kind: pressure_weighting</span>
 
-<span class="sd">An averaging kernel that differs per receptor (every satellite sounding has</span>
+<span class="sd">An averaging kernel that differs per release (every satellite sounding has</span>
 <span class="sd">its own) comes from a table in the project instead::</span>
 
 <span class="sd">      - kind: averaging_kernel</span>
@@ -482,14 +482,14 @@
 <span class="sd">:mod:`~stilt.transforms.oxidation`. The functions they are built on are</span>
 <span class="sd">public so your own transforms can use them: :func:`particle_pwf` and</span>
 <span class="sd">:func:`ak_weights`, the column weighting ported from X-STILT;</span>
-<span class="sd">:func:`survival`, the fraction of a tracer that reaches the receptor for any</span>
+<span class="sd">:func:`survival`, the fraction of a tracer that reaches the release for any</span>
 <span class="sd">loss rate; and :func:`dry_deposition_survival`, that fraction for a</span>
 <span class="sd">depositing tracer. This module also loads transforms from a config and</span>
 <span class="sd">applies them.</span>
 
 <span class="sd">A transform of your own is any object with</span>
-<span class="sd">``apply(particles, receptor=None, directory=None) -&gt; DataFrame``: the</span>
-<span class="sd">particle table, the receptor the particles were released from, and the</span>
+<span class="sd">``apply(particles, release=None, directory=None) -&gt; DataFrame``: the</span>
+<span class="sd">particle table, the release the particles were released from, and the</span>
 <span class="sd">directory a relative file name in its settings starts from (the</span>
 <span class="sd">project's). A ``kind`` containing a dot is its import path (the "Writing</span>
 <span class="sd">your own transform" section of the Particle Weighting guide). The footprint</span>
@@ -498,10 +498,10 @@
 <span class="sd">and the transport error rely on to read each particle's weight.</span>
 
 <span class="sd">Two optional parts let ``stilt check`` look at a project before it runs: a</span>
-<span class="sd">``check(receptors, directory)`` method that returns what is wrong with the</span>
-<span class="sd">transform's inputs for those receptor ids, as ``(check, receptor id or</span>
+<span class="sd">``check(releases, directory)`` method that returns what is wrong with the</span>
+<span class="sd">transform's inputs for those release ids, as ``(check, release id or</span>
 <span class="sd">None, message)`` tuples, and ``reads_zsfc = True`` for a transform that</span>
-<span class="sd">reads ``zsfc`` for a receptor above sea level.</span>
+<span class="sd">reads ``zsfc`` for a release above sea level.</span>
 <span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
@@ -526,7 +526,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transforms.pressure_weighting</span><span class="w"> </span><span class="kn">import</span> <span class="n">PressureWeighting</span><span class="p">,</span> <span class="n">particle_pwf</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.receptors</span><span class="w"> </span><span class="kn">import</span> <span class="n">Receptor</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.releases</span><span class="w"> </span><span class="kn">import</span> <span class="n">Release</span>
 
 <span class="n">BuiltinTransform</span> <span class="o">=</span> <span class="n">Annotated</span><span class="p">[</span>
     <span class="n">AveragingKernel</span>
@@ -637,16 +637,16 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">apply_transforms</span><span class="p">(</span>
     <span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
     <span class="n">transforms</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span>
-    <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">release</span><span class="p">:</span> <span class="n">Release</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">directory</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Apply *transforms* in order, each with the receptor and the directory.</span>
+<span class="sd">    Apply *transforms* in order, each with the release and the directory.</span>
 
 <span class="sd">    Returns ``particles`` itself when there are none.</span>
 <span class="sd">    """</span>
     <span class="k">for</span> <span class="n">transform</span> <span class="ow">in</span> <span class="n">transforms</span><span class="p">:</span>
-        <span class="n">particles</span> <span class="o">=</span> <span class="n">transform</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">directory</span><span class="p">)</span>
+        <span class="n">particles</span> <span class="o">=</span> <span class="n">transform</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">directory</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">particles</span></div>
 
 

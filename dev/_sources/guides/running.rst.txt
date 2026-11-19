@@ -3,7 +3,7 @@ Running
 
 The same project runs on your computer or on an HPC cluster, and only the
 ``execution`` section of ``config.yaml`` changes. We start every project on
-a laptop or one node with a few receptors, because a mistake shows up in
+a laptop or one node with a few releases, because a mistake shows up in
 minutes there, and move it to Slurm once the footprints look right.
 
 .. list-table::
@@ -56,7 +56,7 @@ again.
 Use several CPU cores
 ---------------------
 
-To run several receptors at once, set ``cpus`` in the ``local`` block of
+To run several releases at once, set ``cpus`` in the ``local`` block of
 ``execution``, which holds the settings of a run on this machine:
 
 .. code-block:: yaml
@@ -67,7 +67,7 @@ To run several receptors at once, set ``cpus`` in the ``local`` block of
        cpus: 4
 
 or, for one run, ``stilt run ./my_project --cpus 4``. Each of the ``cpus``
-processes runs one receptor at a time, with all of that receptor's
+processes runs one release at a time, with all of that release's
 variants. Set it to the number of CPU cores you can spare, because each
 HYSPLIT run uses one core. A Slurm run has its own ``cpus``, per array task,
 in the ``slurm`` block (:doc:`slurm`).
@@ -89,13 +89,13 @@ script runs again in every worker. ``Project.init`` there stops with a
 ``stilt run --cpus 4`` and a ``cpus`` of 1 need no guard.
 
 You can stop a run at any time with Ctrl-C (or ``SIGTERM`` from ``kill``,
-Slurm or Kubernetes). Receptors that finished stay finished, and running
+Slurm or Kubernetes). Releases that finished stay finished, and running
 again starts the ones that were cut off from the beginning.
 
 If a worker process is killed outright, most often by the kernel's
 out-of-memory killer, the run stops with an error
 (:class:`~stilt.exceptions.WorkerDied`) and ``stilt run`` exits with 3. The pool
-cannot say which receptor the worker held, so the error names every receptor
+cannot say which release the worker held, so the error names every release
 that was in progress. Nothing is marked failed and what finished stays
 finished: run it again and only what is missing runs, with a lower ``cpus`` or
 more memory per task if memory was the cause. The killed worker's directory in
@@ -104,23 +104,23 @@ the compute root is not removed; clear it by hand.
 Save now, run later
 -------------------
 
-``Project.init`` and ``project.add_receptors()`` save settings and
-receptors to the project folder without running anything.
-``add_receptors`` returns the ids of the receptors it added:
+``Project.init`` and ``project.add_releases()`` save settings and
+releases to the project folder without running anything.
+``add_releases`` returns the ids of the releases it added:
 
 .. code-block:: python
 
    project = stilt.Project("./my_project")
-   receptor_ids = project.add_receptors(receptors)
+   release_ids = project.add_releases(releases)
 
 Any machine that can see the folder can then run the project. To run only
-the new receptors, every variant of each, give their ids:
+the new releases, every variant of each, give their ids:
 
 .. code-block:: python
 
-   project.run(receptors=receptor_ids)
+   project.run(releases=release_ids)
 
-``stilt run --receptors ids.txt`` does the same from a file with one id
+``stilt run --releases ids.txt`` does the same from a file with one id
 per line.
 
 Commands
@@ -128,11 +128,11 @@ Commands
 
 ``stilt init <project>``
    Create a project folder with a starter ``config.yaml`` and
-   ``receptors.csv``.
+   ``releases.csv``.
 
 ``stilt check <project>``
    List what would stop the project's runs, before any run starts, such as
-   met files a receptor's run needs that are not there, a receptor outside
+   met files a release's run needs that are not there, a release outside
    the met's crop or the footprint grid, or a transform's input that is
    missing. Nothing is run or downloaded. It exits with 0 when it finds
    nothing and 1 when it lists anything (:doc:`checking` lists every
@@ -142,7 +142,7 @@ Commands
    Get the met files the unfinished simulations need, then exit. A met with
    ``download`` downloads what is missing, cropped to its subgrid, so the
    runs that follow download nothing; a met without it is only checked for
-   missing files. ``--receptors FILE`` and ``--output DIR`` are as for
+   missing files. ``--releases FILE`` and ``--output DIR`` are as for
    ``stilt run``. It exits with 0 when every file is there, 1 when the
    archive lacks some, and 3 when it was stopped (Ctrl-C or SIGTERM) or the
    archive was busy or unreachable (:ref:`fetch-once`).
@@ -159,10 +159,10 @@ Commands
    as a Slurm job array. Its options:
 
    - ``--backend`` and ``--n-workers`` override ``config.yaml`` for this run.
-   - ``--cpus N`` runs ``N`` receptors at once. Ctrl-C or ``SIGTERM`` stops
+   - ``--cpus N`` runs ``N`` releases at once. Ctrl-C or ``SIGTERM`` stops
      them all and exits with 3, as does a worker killed for memory.
    - ``--no-skip`` reruns every simulation, finished or not.
-   - ``--receptors FILE`` runs only the receptors listed in ``FILE``, one
+   - ``--releases FILE`` runs only the releases listed in ``FILE``, one
      id per line.
    - ``--output DIR`` uses another output directory than ``config.yaml``
      names.

@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=5ff965c5"></script>
+    <script src="../_static/documentation_options.js?v=000a6a7f"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -59,13 +59,13 @@
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Receptors" href="receptors.html" />
+    <link rel="next" title="Releases (receptors)" href="releases.html" />
     <link rel="prev" title="Tutorial: A Satellite Column, Start To Finish" href="../tutorials/satellite_column.html" />
   
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev25+g739e87834" />
+  <meta name="docsearch:version" content="0.1.0a30.dev30+g0d6d55b99" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -417,7 +417,7 @@
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Setting up a project</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="receptors.html">Receptors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="releases.html">Releases (receptors)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tracks.html">Mobile Measurements</a></li>
 <li class="toctree-l1"><a class="reference internal" href="meteorology.html">Meteorology</a></li>
 <li class="toctree-l1"><a class="reference internal" href="projects.html">Projects And Variants</a></li>
@@ -520,10 +520,10 @@
 you are new to PYSTILT, start with <a class="reference internal" href="../getting_started/quickstart.html"><span class="doc">Your First Footprint</span></a>.</p>
 <p><strong>Setting up a project</strong></p>
 <ul class="simple">
-<li><p><a class="reference internal" href="receptors.html"><span class="doc">Receptors</span></a>: where and when you measured (towers, columns,
+<li><p><a class="reference internal" href="releases.html"><span class="doc">Releases (receptors)</span></a>: releases (receptors), where and when you measured (towers, columns,
 satellites)</p></li>
-<li><p><a class="reference internal" href="tracks.html"><span class="doc">Mobile Measurements</span></a>: receptors along the track of a car, train, aircraft, or
-ship, and the link from each measurement to its receptor</p></li>
+<li><p><a class="reference internal" href="tracks.html"><span class="doc">Mobile Measurements</span></a>: releases along the track of a car, train, aircraft, or
+ship, and the link from each measurement to its release</p></li>
 <li><p><a class="reference internal" href="meteorology.html"><span class="doc">Meteorology</span></a>: use your own ARL files or download them from NOAA</p></li>
 <li><p><a class="reference internal" href="projects.html"><span class="doc">Projects And Variants</span></a>: what goes in <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>, variants, and how reruns
 and changed settings work</p></li>
@@ -550,7 +550,7 @@ and many at once into a Jacobian</p></li>
 <li><p><a class="reference internal" href="transport_error.html"><span class="doc">Transport Error</span></a>: the transport uncertainty of a modeled
 enhancement, and the wind-error statistics it needs</p></li>
 <li><p><a class="reference internal" href="background.html"><span class="doc">Background</span></a>: the mole fraction at the trajectory endpoints, as a
-background for the receptor</p></li>
+background for the release</p></li>
 <li><p><a class="reference internal" href="trajectory_analyses.html"><span class="doc">Trajectory-Style Analyses</span></a>: residence time, PSCF, CWT, mean paths, and
 the transit time from a source, from particles and footprints</p></li>
 </ul>
@@ -565,7 +565,7 @@ footprint needs</p></li>
 <li><p><a class="reference internal" href="background.html#plume-background"><span class="std std-ref">A background from a satellite swath</span></a>: a background from the soundings a forward-run
 plume did not reach</p></li>
 <li><p><a class="reference internal" href="../tutorials/satellite_column.html"><span class="doc">Tutorial: A Satellite Column, Start To Finish</span></a>: from satellite soundings to
-receptors, kernels, and modeled enhancements</p></li>
+releases, kernels, and modeled enhancements</p></li>
 </ul>
 <p><strong>HYSPLIT</strong></p>
 <ul class="simple">
@@ -580,7 +580,7 @@ steps are in PYSTILT.</p>
 <ul class="simple">
 <li><p><a class="reference internal" href="migration/stilt_r.html"><span class="doc">Coming From STILT-R</span></a>: where each <code class="docutils literal notranslate"><span class="pre">run_stilt.r</span></code> setting lives, and what
 PYSTILT does differently</p></li>
-<li><p><a class="reference internal" href="migration/x_stilt.html"><span class="doc">Coming From X-STILT</span></a>: the column and satellite workflow (receptors from
+<li><p><a class="reference internal" href="migration/x_stilt.html"><span class="doc">Coming From X-STILT</span></a>: the column and satellite workflow (releases from
 soundings, averaging kernels, backgrounds, and transport error)</p></li>
 <li><p><a class="reference internal" href="migration/stiltctl.html"><span class="doc">Coming From stiltctl</span></a>: running STILT on cloud infrastructure, and what
 replaces the work queue and the long-lived workers</p></li>
@@ -622,11 +622,11 @@ closest</p></li>
       </div>
     </a>
     <a class="right-next"
-       href="receptors.html"
+       href="releases.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Receptors</p>
+        <p class="prev-next-title">Releases (receptors)</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>

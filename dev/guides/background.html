@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=5ff965c5"></script>
+    <script src="../_static/documentation_options.js?v=000a6a7f"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev25+g739e87834" />
+  <meta name="docsearch:version" content="0.1.0a30.dev30+g0d6d55b99" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -417,7 +417,7 @@
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Setting up a project</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="receptors.html">Receptors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="releases.html">Releases (receptors)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tracks.html">Mobile Measurements</a></li>
 <li class="toctree-l1"><a class="reference internal" href="meteorology.html">Meteorology</a></li>
 <li class="toctree-l1"><a class="reference internal" href="projects.html">Projects And Variants</a></li>
@@ -526,7 +526,7 @@ compare a modeled value with an observed one, or to subtract the
 background from observations for an inversion, you need both.</p>
 <p>Each back-trajectory ends where its air came from. Sample a mole-fraction
 field at every particle’s endpoint, average over the particles, and you
-have the background the receptor saw. <code class="docutils literal notranslate"><span class="pre">sim.background(field)</span></code> does this
+have the background the release saw. <code class="docutils literal notranslate"><span class="pre">sim.background(field)</span></code> does this
 with any field you give it (<a class="reference internal" href="../reference/_api/stilt.background.html#stilt.background" title="stilt.background"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.background()</span></code></a> without a
 project). X-STILT does the same with
 CarbonTracker in <code class="docutils literal notranslate"><span class="pre">endpts.trajfoot</span></code>. For a satellite swath you can also
@@ -557,34 +557,34 @@ instead of a field, as a Series indexed by particle number (<code class="docutil
 <code class="docutils literal notranslate"><span class="pre">sim.particles.stilt.endpoints()</span></code> gives the endpoints as a table for this:
 one row per particle, with every column of the particle table.</p>
 </section>
-<section id="the-background-at-a-receptor">
-<h2>The background at a receptor<a class="headerlink" href="#the-background-at-a-receptor" title="Link to this heading">#</a></h2>
+<section id="the-background-at-a-release">
+<h2>The background at a release<a class="headerlink" href="#the-background-at-a-release" title="Link to this heading">#</a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">rows</span> <span class="o">=</span> <span class="p">[]</span>
-<span class="k">for</span> <span class="n">rid</span> <span class="ow">in</span> <span class="n">project</span><span class="o">.</span><span class="n">receptors</span><span class="o">.</span><span class="n">receptor</span><span class="p">:</span>
+<span class="k">for</span> <span class="n">rid</span> <span class="ow">in</span> <span class="n">project</span><span class="o">.</span><span class="n">releases</span><span class="o">.</span><span class="n">release</span><span class="p">:</span>
     <span class="n">sim</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">rid</span><span class="p">,</span> <span class="s2">"hrrr"</span><span class="p">)</span>
     <span class="n">bg</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">background</span><span class="p">(</span><span class="n">field</span><span class="p">)</span>
     <span class="n">enhancement</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">footprint</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">enhancement</span><span class="p">(</span><span class="n">flux</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
-    <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">"receptor"</span><span class="p">:</span> <span class="n">sim</span><span class="o">.</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="s2">"background"</span><span class="p">:</span> <span class="n">bg</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+    <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">"release"</span><span class="p">:</span> <span class="n">sim</span><span class="o">.</span><span class="n">release</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="s2">"background"</span><span class="p">:</span> <span class="n">bg</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
                  <span class="s2">"enhancement"</span><span class="p">:</span> <span class="n">enhancement</span><span class="p">,</span> <span class="s2">"modeled"</span><span class="p">:</span> <span class="n">bg</span><span class="o">.</span><span class="n">value</span> <span class="o">+</span> <span class="n">enhancement</span><span class="p">})</span>
 </pre></div>
 </div>
 <p>The background is weighted the way the footprint is, with the variant’s
-transforms: the averaging kernel (including one from a per-receptor
+transforms: the averaging kernel (including one from a per-release
 table), pressure weighting, and any loss on the way (lifetime, deposition,
-oxidation). So the background and the enhancement add. For a tower receptor there are no transforms, and the
+oxidation). So the background and the enhancement add. For a tower release there are no transforms, and the
 value is the plain mean over the particles.</p>
 <p><code class="docutils literal notranslate"><span class="pre">bg.per_particle</span></code> is the field at each endpoint, and <code class="docutils literal notranslate"><span class="pre">bg.weights</span></code> is
 each particle’s share of the average. Both are indexed by particle. The
 spread of <code class="docutils literal notranslate"><span class="pre">per_particle</span></code> shows how uniform the background was over the
-air the receptor sampled.</p>
+air the release sampled.</p>
 </section>
 <section id="what-a-column-s-weights-cover">
 <h2>What a column’s weights cover<a class="headerlink" href="#what-a-column-s-weights-cover" title="Link to this heading">#</a></h2>
 <p>With pressure weighting, the weights sum to the fraction of the column’s
 air mass that the particles cover, <code class="docutils literal notranslate"><span class="pre">(p_sfc</span> <span class="pre">-</span> <span class="pre">p_top)</span> <span class="pre">/</span> <span class="pre">p_sfc</span></code>. The
 enhancement covers the same fraction, which is why the two add. It also
-means <code class="docutils literal notranslate"><span class="pre">bg.value</span></code> is the background over the receptor’s levels only. The
-air above the receptor top saw no fluxes, so its share is the field alone.
+means <code class="docutils literal notranslate"><span class="pre">bg.value</span></code> is the background over the release’s levels only. The
+air above the release top saw no fluxes, so its share is the field alone.
 Take it from the same model with the same pressure weights and averaging
 kernel, and add it in your own code.</p>
 </section>
@@ -660,7 +660,7 @@ modulo 360.</p></li>
 <li><p>A particle whose first row is already outside the grid has no row inside
 to interpolate from. It is reported at that row, on the edge it is
 farthest beyond. HYSPLIT 5.1.0, STILT-R’s build, writes no row at
-the release, so a receptor next to the edge can give such a particle.</p></li>
+the release, so a release next to the edge can give such a particle.</p></li>
 </ul>
 </section>
 <section id="with-transport-error">
@@ -669,7 +669,7 @@ the release, so a receptor next to the edge can give such a particle.</p></li>
 the background field has gradients, this adds to the transport error. Pass
 the field to <code class="docutils literal notranslate"><span class="pre">sim.transport_error</span></code>, and it works with each particle’s
 modeled mole fraction, enhancement plus background:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">err</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="s2">"hrrr-err"</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">err</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">release</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="s2">"hrrr-err"</span><span class="p">)</span>
 <span class="n">result</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">transport_error</span><span class="p">(</span><span class="n">err</span><span class="p">,</span> <span class="n">flux</span><span class="p">,</span> <span class="n">background</span><span class="o">=</span><span class="n">field</span><span class="p">)</span>
 <span class="n">result</span><span class="o">.</span><span class="n">enhancement</span> <span class="o">-</span> <span class="n">result</span><span class="o">.</span><span class="n">background</span>   <span class="c1"># the enhancement alone</span>
 </pre></div>
@@ -685,7 +685,7 @@ the background should be sampled.</p></li>
 interpolation. Before the first or after the last time or level, the end
 value is used. Outside the grid there is no value.</p></li>
 <li><p>A loss transform (lifetime, deposition, oxidation) scales the background
-by the fraction that survives from the endpoint to the receptor, as it
+by the fraction that survives from the endpoint to the release, as it
 scales the enhancement along the trajectory.</p></li>
 <li><p>Particles without a value are left out, and the others carry their
 weight. This assumes the missing particles have the same mean as the
@@ -708,7 +708,8 @@ soundings. This follows X-STILT’s <code class="docutils literal notranslate"><
 <section id="forward-runs">
 <h3>Forward runs<a class="headerlink" href="#forward-runs" title="Link to this heading">#</a></h3>
 <p>A forward run is a run with a positive <code class="docutils literal notranslate"><span class="pre">n_hours</span></code>. Everything else stays
-the same. The receptor is where and when the particles are released, and
+the same. The release is where and when the particles are released, here at
+the source (<a class="reference internal" href="releases.html#release-source-receptor"><span class="std std-ref">the diagram</span></a>), and
 the particle table records where they go.</p>
 <p>A plume is what the whole city puts out, so spread the release over a box
 around the city, just above the surface. Repeat it every half hour over
@@ -716,12 +717,12 @@ the hours before the overpass, so that air of every age is included.
 X-STILT’s defaults are a 0.3° box, 10 m above ground, and releases from ten
 hours before the overpass up to the overpass, each followed twelve hours
 forward with 1000 particles. In PYSTILT each release is a
-<code class="xref py py-class docutils literal notranslate"><span class="pre">MultiPointReceptor</span></code>, and
+<code class="xref py py-class docutils literal notranslate"><span class="pre">MultiPointRelease</span></code>, and
 <a class="reference internal" href="../reference/_api/stilt.observations.jitter_points.html#stilt.observations.jitter_points" title="stilt.observations.jitter_points"><code class="xref py py-func docutils literal notranslate"><span class="pre">jitter_points()</span></code></a> spreads its points over the box:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.observations</span><span class="w"> </span><span class="kn">import</span> <span class="n">jitter_points</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.receptors</span><span class="w"> </span><span class="kn">import</span> <span class="n">MultiPointReceptor</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.releases</span><span class="w"> </span><span class="kn">import</span> <span class="n">MultiPointRelease</span>
 
 <span class="n">site</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mf">111.9</span><span class="p">,</span> <span class="mf">40.75</span><span class="p">)</span>                       <span class="c1"># Salt Lake City</span>
 <span class="n">overpass</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="s2">"2023-10-19 19:42"</span><span class="p">)</span>  <span class="c1"># from the sounding times</span>
@@ -730,8 +731,8 @@ forward with 1000 particles. In PYSTILT each release is a
        <span class="p">(</span><span class="n">site</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">half</span><span class="p">,</span> <span class="n">site</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">half</span><span class="p">),</span> <span class="p">(</span><span class="n">site</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">half</span><span class="p">,</span> <span class="n">site</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">half</span><span class="p">)]</span>
 <span class="n">points</span> <span class="o">=</span> <span class="n">jitter_points</span><span class="p">(</span><span class="n">box</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
 
-<span class="n">receptors</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="n">MultiPointReceptor</span><span class="p">(</span>
+<span class="n">releases</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">MultiPointRelease</span><span class="p">(</span>
         <span class="n">time</span><span class="o">=</span><span class="n">t</span><span class="p">,</span>
         <span class="n">longitudes</span><span class="o">=</span><span class="p">[</span><span class="n">p</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">points</span><span class="p">],</span>
         <span class="n">latitudes</span><span class="o">=</span><span class="p">[</span><span class="n">p</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">points</span><span class="p">],</span>
@@ -742,7 +743,7 @@ forward with 1000 particles. In PYSTILT each release is a
 
 <span class="n">forward</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="o">.</span><span class="n">init</span><span class="p">(</span>
     <span class="s2">"./forward_12h"</span><span class="p">,</span>             <span class="c1"># keep forward runs in a project of their own</span>
-    <span class="n">receptors</span><span class="o">=</span><span class="n">receptors</span><span class="p">,</span>
+    <span class="n">releases</span><span class="o">=</span><span class="n">releases</span><span class="p">,</span>
     <span class="n">mets</span><span class="o">=</span><span class="p">{</span><span class="s2">"hrrr"</span><span class="p">:</span> <span class="n">met</span><span class="p">},</span>          <span class="c1"># as in the quickstart</span>
     <span class="n">models</span><span class="o">=</span><span class="p">{</span><span class="s2">"hysplit"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"n_hours"</span><span class="p">:</span> <span class="mi">12</span><span class="p">,</span> <span class="s2">"numpar"</span><span class="p">:</span> <span class="mi">1000</span><span class="p">}},</span>   <span class="c1"># positive: forward in time</span>
     <span class="n">variants</span><span class="o">=</span><span class="p">{</span><span class="s2">"hrrr"</span><span class="p">:</span> <span class="p">{}},</span>
@@ -890,7 +891,7 @@ outline counts as inside or outside by where its center falls.</p></li>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-field">The field</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-background-at-a-receptor">The background at a receptor</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-background-at-a-release">The background at a release</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-a-column-s-weights-cover">What a column’s weights cover</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#at-the-edge-of-the-footprint-grid">At the edge of the footprint grid</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#with-transport-error">With transport error</a></li>

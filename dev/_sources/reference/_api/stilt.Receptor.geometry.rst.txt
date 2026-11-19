@@ -1,6 +1,0 @@
-stilt.Receptor.geometry
-=======================
-
-.. currentmodule:: stilt
-
-.. autoproperty:: Receptor.geometry

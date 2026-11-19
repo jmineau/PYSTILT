@@ -1,0 +1,50 @@
+﻿stilt.Release
+=============
+
+.. currentmodule:: stilt
+
+
+
+
+
+
+.. class-signature:: stilt.Release
+
+
+Parameters
+----------
+
+.. config-model:: stilt.Release
+
+
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+   :nosignatures:
+
+   ~Release.geometry
+   ~Release.id
+   ~Release.location_id
+   ~Release.plot
+   ~Release.points
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~Release.coords
+   ~Release.from_dict
+   ~Release.from_json
+   ~Release.from_points
+   ~Release.to_dict
+   ~Release.to_json
+
+
+

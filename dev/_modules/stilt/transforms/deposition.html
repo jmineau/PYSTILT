@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=5ff965c5"></script>
+    <script src="../../../_static/documentation_options.js?v=000a6a7f"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev25+g739e87834" />
+  <meta name="docsearch:version" content="0.1.0a30.dev30+g0d6d55b99" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -457,7 +457,7 @@
                   
   <h1>Source code for stilt.transforms.deposition</h1><div class="highlight"><pre>
 <span></span><span class="sd">"""</span>
-<span class="sd">The dry deposition transform: weigh each particle's ``foot`` by the tracer that survives to the receptor.</span>
+<span class="sd">The dry deposition transform: weigh each particle's ``foot`` by the tracer that survives to the release.</span>
 <span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
@@ -473,7 +473,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transforms.lifetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">survival</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.receptors</span><span class="w"> </span><span class="kn">import</span> <span class="n">Receptor</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.releases</span><span class="w"> </span><span class="kn">import</span> <span class="n">Release</span>
 
 <span class="c1">#: The longest time step, in minutes, the surviving fraction is computed over.</span>
 <span class="c1">#: A particle can cross the surface layer within a few minutes, so rows</span>
@@ -490,7 +490,7 @@
     <span class="n">surface_layer_depth</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">50.0</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">"""</span>
-<span class="sd">    Return the fraction of a depositing tracer that survives from each row to the receptor.</span>
+<span class="sd">    Return the fraction of a depositing tracer that survives from each row to the release.</span>
 
 <span class="sd">    A particle below ``surface_layer_depth`` loses tracer at the rate</span>
 <span class="sd">    ``velocity / surface_layer_depth``, HYSPLIT's dry deposition rule.</span>
@@ -570,7 +570,7 @@
 <span class="sd">    Use it for a species that deposits to the ground, such as a soluble gas</span>
 <span class="sd">    or a fine aerosol. Each row's ``foot`` is multiplied by</span>
 <span class="sd">    :func:`dry_deposition_survival`, the fraction of tracer emitted there</span>
-<span class="sd">    that reaches the receptor.</span>
+<span class="sd">    that reaches the release.</span>
 <span class="sd">    """</span>
 
     <span class="n">model_config</span> <span class="o">=</span> <span class="n">ConfigDict</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -592,7 +592,7 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">apply</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
-        <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">release</span><span class="p">:</span> <span class="n">Release</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">directory</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Return the particles with ``foot`` scaled by the surviving fraction."""</span>

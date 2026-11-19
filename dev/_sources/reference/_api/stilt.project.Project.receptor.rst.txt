@@ -1,5 +1,0 @@
-stilt.project.Project.receptor
-==============================
-
-.. currentmodule:: stilt.project
-.. automethod:: Project.receptor

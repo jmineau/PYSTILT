@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=5ff965c5"></script>
+    <script src="../_static/documentation_options.js?v=000a6a7f"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev25+g739e87834" />
+  <meta name="docsearch:version" content="0.1.0a30.dev30+g0d6d55b99" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -491,14 +491,14 @@ and the rules a change must keep.</p>
 <section id="the-design-in-brief">
 <h2>The design in brief<a class="headerlink" href="#the-design-in-brief" title="Link to this heading">#</a></h2>
 <p>There is no index, manifest, or registry. A project is a directory of inputs
-(<a class="reference internal" href="../reference/_api/stilt.Project.html#stilt.Project" title="stilt.Project"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.Project</span></code></a>: <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> and <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>) and an output
+(<a class="reference internal" href="../reference/_api/stilt.Project.html#stilt.Project" title="stilt.Project"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.Project</span></code></a>: <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> and <code class="docutils literal notranslate"><span class="pre">releases.csv</span></code>) and an output
 directory (<code class="docutils literal notranslate"><span class="pre">stilt.output.Output</span></code>) that <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> names and that
 several projects can share. The simulations a project defines are its
-receptors crossed with the named variants in <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>, which must
+releases crossed with the named variants in <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>, which must
 declare at least one.</p>
 <p>Each variant resolves into a <code class="docutils literal notranslate"><span class="pre">Variant</span></code> (<code class="docutils literal notranslate"><span class="pre">stilt.config</span></code>) with two records
 of settings (<code class="docutils literal notranslate"><span class="pre">stilt.identity</span></code>), and their hashes name its folders.
-Variants with equal run settings share one run per receptor and differ only
+Variants with equal run settings share one run per release and differ only
 in the footprint made from it. Changing a setting never overwrites a result:
 it hashes to a new folder. <a class="reference internal" href="../reference/layout.html"><span class="doc">Output Layout</span></a> describes the files.</p>
 <p>Whether a simulation is complete is decided by the files in the output
@@ -507,13 +507,13 @@ footprint when the variant has a grid. <code class="docutils literal notranslate
 <code class="docutils literal notranslate"><span class="pre">Simulation.is_complete</span></code>, and <code class="docutils literal notranslate"><span class="pre">Project.status</span></code> all apply it.
 <a class="reference internal" href="#finished-work"><span class="std std-ref">How PYSTILT tracks finished work</span></a> explains the consequences.</p>
 <p><code class="docutils literal notranslate"><span class="pre">Project</span></code> reads, and the workers write results. <code class="docutils literal notranslate"><span class="pre">Project(path)</span></code> opens a
-project directory: its config, its receptors, the simulations they define,
+project directory: its config, its releases, the simulations they define,
 and a view of their results. Its only writes are to its inputs.
 <code class="docutils literal notranslate"><span class="pre">Project.init</span></code> (or <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">init</span></code>) writes <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> once and PYSTILT
-never rewrites it, <code class="docutils literal notranslate"><span class="pre">add_receptors</span></code> appends to <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>, and
+never rewrites it, <code class="docutils literal notranslate"><span class="pre">add_releases</span></code> appends to <code class="docutils literal notranslate"><span class="pre">releases.csv</span></code>, and
 <code class="docutils literal notranslate"><span class="pre">add_table</span></code> writes <code class="docutils literal notranslate"><span class="pre">tables/&lt;name&gt;.parquet</span></code>. It knows no scheduler or
 compute root. <code class="docutils literal notranslate"><span class="pre">stilt.execution.run</span></code> and <code class="docutils literal notranslate"><span class="pre">submit</span></code>, which <code class="docutils literal notranslate"><span class="pre">Project.run()</span></code>
-and <code class="docutils literal notranslate"><span class="pre">Project.submit()</span></code> call, find the receptors with missing results,
+and <code class="docutils literal notranslate"><span class="pre">Project.submit()</span></code> call, find the releases with missing results,
 resolve the compute root, and start the workers. The workers are the only
 code that writes results.</p>
 <p>Tables are plain DataFrames, and the verbs are on <code class="docutils literal notranslate"><span class="pre">Project</span></code>.
@@ -522,15 +522,15 @@ it as in pandas (<code class="docutils literal notranslate"><span class="pre">si
 the project: <code class="docutils literal notranslate"><span class="pre">status</span></code>, <code class="docutils literal notranslate"><span class="pre">incomplete</span></code>, <code class="docutils literal notranslate"><span class="pre">particles</span></code> (one long table),
 <code class="docutils literal notranslate"><span class="pre">footprints</span></code> (one lazy dataset stacked on the hour), <code class="docutils literal notranslate"><span class="pre">jacobian</span></code>, or
 <code class="docutils literal notranslate"><span class="pre">transport_error</span></code> (the selection with the estimate’s columns). A
-selection is any table with <code class="docutils literal notranslate"><span class="pre">receptor</span></code> and <code class="docutils literal notranslate"><span class="pre">variant</span></code> columns (pandas,
+selection is any table with <code class="docutils literal notranslate"><span class="pre">release</span></code> and <code class="docutils literal notranslate"><span class="pre">variant</span></code> columns (pandas,
 polars, pyarrow) or a boolean mask over <code class="docutils literal notranslate"><span class="pre">project.simulations</span></code>, and the
-methods read only those two columns. <code class="docutils literal notranslate"><span class="pre">project.receptors</span></code> is a plain
-DataFrame too. <code class="docutils literal notranslate"><span class="pre">project.receptor(id)</span></code> and <code class="docutils literal notranslate"><span class="pre">project.simulation(id,</span>
+methods read only those two columns. <code class="docutils literal notranslate"><span class="pre">project.releases</span></code> is a plain
+DataFrame too. <code class="docutils literal notranslate"><span class="pre">project.release(id)</span></code> and <code class="docutils literal notranslate"><span class="pre">project.simulation(id,</span>
 <span class="pre">variant)</span></code> return values, and <code class="docutils literal notranslate"><span class="pre">sim.particles</span></code> and <code class="docutils literal notranslate"><span class="pre">sim.footprint</span></code> are
 data. <code class="docutils literal notranslate"><span class="pre">Output</span></code> has no folder classes: its methods (<code class="docutils literal notranslate"><span class="pre">path</span></code>,
 <code class="docutils literal notranslate"><span class="pre">make_path</span></code>, <code class="docutils literal notranslate"><span class="pre">read</span></code>, <code class="docutils literal notranslate"><span class="pre">present</span></code>, <code class="docutils literal notranslate"><span class="pre">complete</span></code>, <code class="docutils literal notranslate"><span class="pre">table</span></code>, and the
 failure records) take the kind of result (<code class="docutils literal notranslate"><span class="pre">&quot;particles&quot;</span></code>, or the name of a
-stage such as <code class="docutils literal notranslate"><span class="pre">&quot;footprint&quot;</span></code>), the variant, and receptor ids.</p>
+stage such as <code class="docutils literal notranslate"><span class="pre">&quot;footprint&quot;</span></code>), the variant, and release ids.</p>
 <p>The classes a STILT user holds, <code class="docutils literal notranslate"><span class="pre">stilt.Project</span></code> and <code class="docutils literal notranslate"><span class="pre">stilt.Simulation</span></code>,
 are the particle part’s <code class="docutils literal notranslate"><span class="pre">stilt.project.Project</span></code> and
 <code class="docutils literal notranslate"><span class="pre">stilt.simulation.Simulation</span></code> with STILT’s reads added
@@ -557,7 +557,7 @@ surface. Everything else is internal and can change.</p>
   stilt_cli.py       the stilt command: stilt init, which writes the
                      starter config, and cli.py's commands
   project.py         Project, the particle part: the project directory,
-                     its receptors and simulations (DataFrames),
+                     its releases and simulations (DataFrames),
                      run/submit, and a selection's status and particles
   stilt_project.py   stilt.Project: adds a selection's footprints, Jacobian
                      and transport error; init writes STILT-R's values
@@ -571,27 +571,27 @@ surface. Everything else is internal and can change.</p>
   output.py          Output: the output directory, a tree per kind of
                      result (particles, and each stage by its name) and a
                      folder per settings hash; finding a variant's folder,
-                     which receptors have results (present, complete),
+                     which releases have results (present, complete),
                      where a file is and where a stage writes it (path,
                      make_path), failure records, writing particles
   stages.py          the Stage protocol: what a class named under stages:
                      provides; get_stage, the order stages run in, and
                      check_stage for the tests of a stage of your own
   migration.py       read_stilt_r: STILT-R and X-STILT by-id output as
-                     receptors, particle tables, and footprints;
+                     releases, particle tables, and footprints;
                      import_stilt_r writes it into an output directory
                      with the settings its files record
   stilt_r.py         StiltRModel, the stilt-r model of imported STILT-R
                      runs, named by its import path; it runs nothing
   simulation.py      Simulation, the particle part: a frozen value
-                     (receptor, variant, output) that knows where its
+                     (release, variant, output) that knows where its
                      results are and whether they exist (path, has)
   stilt_simulation.py stilt.Simulation: adds the footprint, calc_footprint,
                      the background, the transport error, and plot
-  background.py      background: the mole fraction at a receptor from a
+  background.py      background: the mole fraction at a release from a
                      field sampled where the particles end (sim.background)
   transport_error.py transport_error: the transport error of the
-                     enhancement, one receptor or a selection in threads
+                     enhancement, one release or a selection in threads
   config.py          ProjectConfig: reads config.yaml's blocks (mets, models,
                      stages, variants), refuses a setting outside its
                      block and an unknown key naming the nearest setting,
@@ -602,13 +602,13 @@ surface. Everything else is internal and can change.</p>
   identity.py        settings records and their hashes: what a run was
                      made with, in _settings.yaml, and how a stage's
                      record is hashed with what it reads
-  receptors/
-    models.py        receptor types (frozen pydantic models: point, column,
+  releases/
+    models.py        release types (frozen pydantic models: point, column,
                      multipoint), their times, and their ids
-    table.py         the receptor table behind the CSV reader, writer, and
-                     appender: receptor_rows checks it once, and
-                     receptors_from_rows builds receptors from checked rows
-    validation.py    the checks a receptor must pass, written once for many
+    table.py         the release table behind the CSV reader, writer, and
+                     appender: release_rows checks it once, and
+                     releases_from_rows builds releases from checked rows
+    validation.py    the checks a release must pass, written once for many
                      points and shared by the models and the table
   particles/         the particle table (a DataFrame)
     table.py         its columns, particle files, release heights
@@ -641,7 +641,7 @@ surface. Everything else is internal and can change.</p>
                      (averaging_kernel, pressure_weighting, lifetime); the
                      loader, YAML I/O, and apply_transforms in __init__.py
   exceptions.py      every exception class, all under StiltError
-  visualization.py   matplotlib plots of particles, receptors and
+  visualization.py   matplotlib plots of particles, releases and
                      projects, and their helpers (optional dependency)
   stilt_visualization.py the plots of a footprint and of a simulation
   _paths.py          local paths and object-store paths behind one interface
@@ -653,8 +653,8 @@ surface. Everything else is internal and can change.</p>
                      then each stage, for one or many simulations)
   observations/      the X-STILT port: product readers and SOUNDING_SCHEMA,
                      overpass grouping and sounding selection, slant
-                     geometry and receptors_from_soundings, modelled_column,
-                     plume backgrounds; receptors_from_track for the
+                     geometry and releases_from_soundings, modelled_column,
+                     plume backgrounds; releases_from_track for the
                      track of a moving platform; arrays in, plain
                      values out
   transport/         the TransportModel and TransportConfig protocols,
@@ -683,22 +683,22 @@ tests/               pytest; folders follow src/stilt (execution/,
 <section id="how-a-run-goes">
 <h2>How a run goes<a class="headerlink" href="#how-a-run-goes" title="Link to this heading">#</a></h2>
 <p>A run starts from <code class="docutils literal notranslate"><span class="pre">Project.run()</span></code>, <code class="docutils literal notranslate"><span class="pre">Project.submit()</span></code>, or <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span></code>.
-<code class="docutils literal notranslate"><span class="pre">stilt.execution.run</span></code> finds the receptors with missing results and either
+<code class="docutils literal notranslate"><span class="pre">stilt.execution.run</span></code> finds the releases with missing results and either
 runs them in this process (<code class="docutils literal notranslate"><span class="pre">backend:</span> <span class="pre">local</span></code>) or submits them as one Slurm
 job array (<code class="docutils literal notranslate"><span class="pre">backend:</span> <span class="pre">slurm</span></code>).</p>
 <p>For Slurm, <code class="docutils literal notranslate"><span class="pre">submit</span></code> writes
-<code class="docutils literal notranslate"><span class="pre">_slurm/&lt;stamp&gt;/{receptors.txt,receptors.parquet,execution.yaml,job.sh}</span></code> in
-the project and calls <code class="docutils literal notranslate"><span class="pre">sbatch</span></code>. Each task runs <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">--receptors</span>
-<span class="pre">receptors.parquet</span> <span class="pre">--task</span> <span class="pre">$SLURM_ARRAY_TASK_ID/N</span> <span class="pre">--execution</span> <span class="pre">execution.yaml</span>
+<code class="docutils literal notranslate"><span class="pre">_slurm/&lt;stamp&gt;/{releases.txt,releases.parquet,execution.yaml,job.sh}</span></code> in
+the project and calls <code class="docutils literal notranslate"><span class="pre">sbatch</span></code>. Each task runs <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">--releases</span>
+<span class="pre">releases.parquet</span> <span class="pre">--task</span> <span class="pre">$SLURM_ARRAY_TASK_ID/N</span> <span class="pre">--execution</span> <span class="pre">execution.yaml</span>
 <span class="pre">--cpus</span> <span class="pre">&lt;cpus&gt;</span></code>: a task runs its share in its own process, as a local run
 does, so the script hands it the array’s <code class="docutils literal notranslate"><span class="pre">cpus</span></code>.
-The parquet file holds the submitted receptors’ checked rows, which the
-task’s project takes in place of <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>. <code class="docutils literal notranslate"><span class="pre">submit</span></code> returns the job
+The parquet file holds the submitted releases’ checked rows, which the
+task’s project takes in place of <code class="docutils literal notranslate"><span class="pre">releases.csv</span></code>. <code class="docutils literal notranslate"><span class="pre">submit</span></code> returns the job
 id at once, and <code class="docutils literal notranslate"><span class="pre">run</span></code> waits by polling <code class="docutils literal notranslate"><span class="pre">sacct</span></code>.</p>
 <p>When a simulation whose particles are missing uses a met that downloads
 (the transport model’s <code class="docutils literal notranslate"><span class="pre">downloads_met</span></code>), <code class="docutils literal notranslate"><span class="pre">submit</span></code> first submits
-<code class="docutils literal notranslate"><span class="pre">fetch.sh</span></code> (<code class="docutils literal notranslate"><span class="pre">fetch_script</span></code>), one task of <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">fetch</span> <span class="pre">--receptors</span>
-<span class="pre">receptors.parquet</span></code> with the resources of <code class="docutils literal notranslate"><span class="pre">execution.slurm.fetch</span></code>, and gives the
+<code class="docutils literal notranslate"><span class="pre">fetch.sh</span></code> (<code class="docutils literal notranslate"><span class="pre">fetch_script</span></code>), one task of <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">fetch</span> <span class="pre">--releases</span>
+<span class="pre">releases.parquet</span></code> with the resources of <code class="docutils literal notranslate"><span class="pre">execution.slurm.fetch</span></code>, and gives the
 array <code class="docutils literal notranslate"><span class="pre">--dependency=afterany:&lt;fetch</span> <span class="pre">job&gt;</span></code>. <code class="docutils literal notranslate"><span class="pre">afterany</span></code> because Slurm
 cannot tell <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">fetch</span></code>’s exit 1 (some files missing) from 3 (stopped,
 archive unreachable), and in both cases the runs whose met is there should
@@ -712,17 +712,17 @@ it got SIGUSR1, which the script asks for two minutes before the time limit
 so a preempted task may never get SIGUSR1. A task stopped by <code class="docutils literal notranslate"><span class="pre">scancel</span></code> is
 not requeued, and a task stops for good after <code class="docutils literal notranslate"><span class="pre">MAX_REQUEUES</span></code> requeues.</p>
 <p><code class="docutils literal notranslate"><span class="pre">run(task=(i,</span> <span class="pre">n))</span></code> (<code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">--task</span> <span class="pre">i/n</span></code>) runs one share here, whatever
-the backend. The share is taken from all the receptors before the complete
+the backend. The share is taken from all the releases before the complete
 ones are dropped (<code class="docutils literal notranslate"><span class="pre">task_share</span></code>), so tasks that start at different times
 never overlap. Any scheduler that can start a command line with an index can
 run a project this way.</p>
-<p>The unit of work is a receptor. <code class="docutils literal notranslate"><span class="pre">run_receptor</span></code> runs the transport model
+<p>The unit of work is a release. <code class="docutils literal notranslate"><span class="pre">run_release</span></code> runs the transport model
 once per distinct run-settings hash, then runs the stages of every variant
 that shares those particles (<code class="docutils literal notranslate"><span class="pre">run_stages</span></code>). A worker handles the variants
-of its receptor in config order. A variant whose particles are missing runs
+of its release in config order. A variant whose particles are missing runs
 the model, and the variants that share those particles reuse them.</p>
 <p>A stage is what is made from a simulation’s results after the model runs:
-one file per receptor, from the particles, from the files of other stages,
+one file per release, from the particles, from the files of other stages,
 or both. The footprint is the one stage PYSTILT has
 (<code class="docutils literal notranslate"><span class="pre">stilt.footprint.FootprintStage</span></code>). A <code class="docutils literal notranslate"><span class="pre">stages</span></code> block of <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>
 names its stage’s class by import path, and the class provides the members
@@ -740,12 +740,12 @@ itself, under a temporary name the worker moves into place, and the worker
 never looks inside. The stage’s earlier file is removed before it runs, so
 a stage that fails leaves none, old or half-written. A stage whose input
 failed is left for the next run. A batched model (<code class="docutils literal notranslate"><span class="pre">batched</span> <span class="pre">=</span> <span class="pre">True</span></code>,
-with <code class="docutils literal notranslate"><span class="pre">run_many</span></code>) is the exception: <code class="docutils literal notranslate"><span class="pre">run_receptors</span></code> first runs each of its
-variant groups once for all the receptors that need particles, then the
-per-receptor loop does the rest. HYSPLIT is not batched.</p>
+with <code class="docutils literal notranslate"><span class="pre">run_many</span></code>) is the exception: <code class="docutils literal notranslate"><span class="pre">run_releases</span></code> first runs each of its
+variant groups once for all the releases that need particles, then the
+per-release loop does the rest. HYSPLIT is not batched.</p>
 <p>HYSPLIT has to run in a local folder that holds its input files, the run’s
 workdir. Each run’s workdir is a new path in the compute root
-(<code class="docutils literal notranslate"><span class="pre">_new_workdir</span></code> in the worker: the receptor id, the variant, the
+(<code class="docutils literal notranslate"><span class="pre">_new_workdir</span></code> in the worker: the release id, the variant, the
 realization in an ensemble, and a random part, as in
 <code class="docutils literal notranslate"><span class="pre">202301011200_-111.85_40.77_5_hrrr_3f9a1c2e</span></code>), so projects can share a
 compute root and two runs never clear each other’s files. A simulation that
@@ -762,7 +762,7 @@ same simulation, so CONTROL, SETUP.CFG, and MESSAGE survive the job. A run
 killed outright (<code class="docutils literal notranslate"><span class="pre">SIGKILL</span></code>, or a node that fails) cannot clean up, and its
 workdir stays in the compute root until that folder is cleaned.</p>
 <p>Files are written through a temporary name and renamed into place, so a reader
-never sees a partial file, and two workers that run the same receptor by
+never sees a partial file, and two workers that run the same release by
 accident produce equivalent files with the last rename winning. Each of them
 runs in its own workdir. No lock is needed.</p>
 <p>Slurm tasks rebuild the model from the project in another process on another
@@ -770,8 +770,8 @@ node, so anything a worker needs must be in the project or the output
 directory, never only in memory.</p>
 <p>The observation-driven path sits above this. A reader yields a DataFrame of
 soundings, <code class="docutils literal notranslate"><span class="pre">stilt.observations</span></code> helpers thin and group it, and each row
-becomes a receptor (<code class="docutils literal notranslate"><span class="pre">receptors_from_soundings</span></code>, which also gives the kernel
-table, kept with <code class="docutils literal notranslate"><span class="pre">project.add_table</span></code>). Then <code class="docutils literal notranslate"><span class="pre">add_receptors</span></code> and a run go
+becomes a release (<code class="docutils literal notranslate"><span class="pre">releases_from_soundings</span></code>, which also gives the kernel
+table, kept with <code class="docutils literal notranslate"><span class="pre">project.add_table</span></code>). Then <code class="docutils literal notranslate"><span class="pre">add_releases</span></code> and a run go
 as usual. Observation logic stays out of <code class="docutils literal notranslate"><span class="pre">project.py</span></code>.</p>
 </section>
 <section id="how-pystilt-tracks-finished-work">
@@ -788,7 +788,7 @@ every stage its variant uses (<code class="xref py py-attr docutils literal notr
 many). For a variant with a footprint that is:</p>
 <ul class="simple">
 <li><p>the particle file,
-<code class="docutils literal notranslate"><span class="pre">particles/settings=&lt;variant&gt;-&lt;hash&gt;/date=&lt;day&gt;/&lt;receptor&gt;.parquet</span></code></p></li>
+<code class="docutils literal notranslate"><span class="pre">particles/settings=&lt;variant&gt;-&lt;hash&gt;/date=&lt;day&gt;/&lt;release&gt;.parquet</span></code></p></li>
 <li><p>the footprint file in the variant’s <code class="docutils literal notranslate"><span class="pre">footprint/</span></code> folder. A footprint
 that no particle reached is a file with no rows, marked
 <code class="docutils literal notranslate"><span class="pre">stilt:empty:</span> <span class="pre">true</span></code> in its metadata, and it counts.</p></li>
@@ -798,12 +798,12 @@ variant that sets a stage to null needs no file of it.</p>
 <p>Each result has one expected path, so checking one simulation is a file
 lookup. For many simulations (<code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span></code>, or planning a run) PYSTILT
 lists the date folders the selection falls in, once each, and reads the
-answer for every receptor from that. That keeps a project of a hundred
-thousand receptors quick to check, and a few simulations of it cheap.
+answer for every release from that. That keeps a project of a hundred
+thousand releases quick to check, and a few simulations of it cheap.
 A notebook, a Slurm task, and another project sharing the directory all see
 the same files, so they agree on what’s finished without talking to each
 other. Deleting a result file makes that simulation unfinished again.</p>
-<p>A project’s simulations are its receptors (<code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>) run under each
+<p>A project’s simulations are its releases (<code class="docutils literal notranslate"><span class="pre">releases.csv</span></code>) run under each
 of its variants (<code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>), and <code class="docutils literal notranslate"><span class="pre">project.simulations</span></code> is exactly that
 set, one row per simulation. Both files are in the project folder before
 anything runs, so any worker on any machine can open the project from the
@@ -824,7 +824,7 @@ the particles’ hash, and the hash of each stage it reads, it names the
 folder in the stage’s tree (<code class="docutils literal notranslate"><span class="pre">footprint/</span></code>). Each folder holds a
 <code class="docutils literal notranslate"><span class="pre">_settings.yaml</span></code> with the settings written out in full.</p>
 <p>That is how PYSTILT knows a setting changed: the variant now hashes to a
-folder that does not exist yet, so its receptors run again into it. The old
+folder that does not exist yet, so its releases run again into it. The old
 folder is untouched. It is also how two variants come to share particles:
 if only their footprint fields differ, their transport settings hash the
 same and they resolve to one <code class="docutils literal notranslate"><span class="pre">particles/</span></code> folder.</p>
@@ -975,7 +975,7 @@ the settings inside a block stay flat (<code class="docutils literal notranslate
 <code class="docutils literal notranslate"><span class="pre">CONTRIBUTING.md</span></code> explains how a HYSPLIT field is routed to
 <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code>, <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code>, <code class="docutils literal notranslate"><span class="pre">WINDERR</span></code>, or <code class="docutils literal notranslate"><span class="pre">ZIERR</span></code>.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">ExecutionConfig</span></code> (<code class="docutils literal notranslate"><span class="pre">execution:</span></code> in <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>) says where
-receptors run. <code class="docutils literal notranslate"><span class="pre">backend</span></code> names the place, and each backend’s settings
+releases run. <code class="docutils literal notranslate"><span class="pre">backend</span></code> names the place, and each backend’s settings
 are in the block of its name (<code class="docutils literal notranslate"><span class="pre">LocalConfig</span></code>, <code class="docutils literal notranslate"><span class="pre">SlurmConfig</span></code>), <code class="docutils literal notranslate"><span class="pre">cpus</span></code>
 included; only <code class="docutils literal notranslate"><span class="pre">timeout</span></code> and <code class="docutils literal notranslate"><span class="pre">keep_workdir</span></code> sit beside <code class="docutils literal notranslate"><span class="pre">backend</span></code>.
 <code class="docutils literal notranslate"><span class="pre">ExecutionConfig.cpus</span></code> and <code class="docutils literal notranslate"><span class="pre">.fetch</span></code> read the block <code class="docutils literal notranslate"><span class="pre">backend</span></code> names.
@@ -993,9 +993,9 @@ user class.</p></li>
 <h3>Results are plain data<a class="headerlink" href="#results-are-plain-data" title="Link to this heading">#</a></h3>
 <p><code class="docutils literal notranslate"><span class="pre">sim.particles</span></code> is a pandas DataFrame and <code class="docutils literal notranslate"><span class="pre">sim.footprint</span></code> an xarray
 DataArray. PYSTILT’s methods on them live in <code class="docutils literal notranslate"><span class="pre">.stilt</span></code> accessors. A
-footprint carries its receptor id as a scalar coordinate (kept through
-arithmetic) and the full receptor and settings as attributes
-(<code class="docutils literal notranslate"><span class="pre">stilt_receptor</span></code>, <code class="docutils literal notranslate"><span class="pre">stilt_footprint</span></code>), which the accessor reads. Every
+footprint carries its release id as a scalar coordinate (kept through
+arithmetic) and the full release and settings as attributes
+(<code class="docutils literal notranslate"><span class="pre">stilt_release</span></code>, <code class="docutils literal notranslate"><span class="pre">stilt_footprint</span></code>), which the accessor reads. Every
 result file records what it needs to be read alone (<code class="docutils literal notranslate"><span class="pre">read_particles</span></code>,
 <code class="docutils literal notranslate"><span class="pre">read_footprint</span></code>).</p>
 <p><code class="docutils literal notranslate"><span class="pre">sim.particles</span></code> and <code class="docutils literal notranslate"><span class="pre">sim.footprint</span></code> are <code class="docutils literal notranslate"><span class="pre">cached_property</span></code> attributes of
@@ -1005,17 +1005,17 @@ would hide the result when it lands. <code class="docutils literal notranslate">
 grid, an empty footprint). Use <code class="docutils literal notranslate"><span class="pre">has_particles</span></code> and <code class="docutils literal notranslate"><span class="pre">has_footprint</span></code> to
 test presence; never write to a simulation’s <code class="docutils literal notranslate"><span class="pre">__dict__</span></code>.</p>
 <p><code class="docutils literal notranslate"><span class="pre">project.simulations</span></code> is built once, and each access returns a copy, so a
-user’s new column stays theirs. <code class="docutils literal notranslate"><span class="pre">add_receptors</span></code> drops the cache. A
+user’s new column stays theirs. <code class="docutils literal notranslate"><span class="pre">add_releases</span></code> drops the cache. A
 <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> edited by hand needs a new <code class="docutils literal notranslate"><span class="pre">Project(path)</span></code>.</p>
 </section>
 <section id="bulk-methods-and-listings">
 <h3>Bulk methods and listings<a class="headerlink" href="#bulk-methods-and-listings" title="Link to this heading">#</a></h3>
 <p>A method of <code class="docutils literal notranslate"><span class="pre">Project</span></code> that takes a selection works from folder listings and
-receptor ids. It never builds a <code class="docutils literal notranslate"><span class="pre">Simulation</span></code> per row, which costs
+release ids. It never builds a <code class="docutils literal notranslate"><span class="pre">Simulation</span></code> per row, which costs
 milliseconds each and adds up to many minutes on tens of thousands of
 footprints. It opens a file per row only when the file’s contents are the
-answer (<code class="docutils literal notranslate"><span class="pre">footprints</span></code>, <code class="docutils literal notranslate"><span class="pre">jacobian</span></code>, <code class="docutils literal notranslate"><span class="pre">transport_error</span></code>), and builds receptors together
-(<code class="docutils literal notranslate"><span class="pre">Project._receptors</span></code>) when it needs them.</p>
+answer (<code class="docutils literal notranslate"><span class="pre">footprints</span></code>, <code class="docutils literal notranslate"><span class="pre">jacobian</span></code>, <code class="docutils literal notranslate"><span class="pre">transport_error</span></code>), and builds releases together
+(<code class="docutils literal notranslate"><span class="pre">Project._releases</span></code>) when it needs them.</p>
 <p><code class="docutils literal notranslate"><span class="pre">Output.directory</span></code> is a <code class="docutils literal notranslate"><span class="pre">Path</span></code> on a filesystem and a universal path
 (<code class="docutils literal notranslate"><span class="pre">UPath</span></code>) for a URL (<code class="docutils literal notranslate"><span class="pre">stilt._paths.location</span></code>). Code that touches the
 output checks <code class="docutils literal notranslate"><span class="pre">isinstance(path,</span> <span class="pre">Path)</span></code> for the local fast path
@@ -1036,7 +1036,7 @@ would flow into a comparison or an inversion unnoticed.</p>
 <section id="failure-records">
 <h3>Failure records<a class="headerlink" href="#failure-records" title="Link to this heading">#</a></h3>
 <p>When the model run or a stage fails, the worker writes
-<code class="docutils literal notranslate"><span class="pre">&lt;receptor</span> <span class="pre">id&gt;.failure.yaml</span></code> in the
+<code class="docutils literal notranslate"><span class="pre">&lt;release</span> <span class="pre">id&gt;.failure.yaml</span></code> in the
 logs of the folder whose result failed (<code class="docutils literal notranslate"><span class="pre">logs/settings=&lt;key&gt;/date=.../</span></code>:
 the particles’ folder for the run, the stage’s own for a stage), and
 removes it when that result is written. Its <code class="docutils literal notranslate"><span class="pre">stage</span></code> is <code class="docutils literal notranslate"><span class="pre">particles</span></code> or
@@ -1101,7 +1101,7 @@ can call it for another transport model that knows its domain.</p>
 </section>
 <section id="realizations">
 <h3>Realizations<a class="headerlink" href="#realizations" title="Link to this heading">#</a></h3>
-<p><code class="docutils literal notranslate"><span class="pre">realizations:</span> <span class="pre">N</span></code> makes one variant whose simulations are <code class="docutils literal notranslate"><span class="pre">(receptor,</span>
+<p><code class="docutils literal notranslate"><span class="pre">realizations:</span> <span class="pre">N</span></code> makes one variant whose simulations are <code class="docutils literal notranslate"><span class="pre">(release,</span>
 <span class="pre">variant,</span> <span class="pre">k)</span></code>, with <code class="docutils literal notranslate"><span class="pre">k</span></code> in <code class="docutils literal notranslate"><span class="pre">0..N-1</span></code>, the <code class="docutils literal notranslate"><span class="pre">realization</span></code> column of
 <code class="docutils literal notranslate"><span class="pre">project.simulations</span></code>. They share one settings folder, with a
 <code class="docutils literal notranslate"><span class="pre">realization=k/</span></code> partition each. The run record says <code class="docutils literal notranslate"><span class="pre">ensemble:</span> <span class="pre">true</span></code>
@@ -1129,8 +1129,8 @@ mapping.</p>
 <h3>Line sources<a class="headerlink" href="#line-sources" title="Link to this heading">#</a></h3>
 <p>In HYSPLIT’s <code class="docutils literal notranslate"><span class="pre">emspnt.f</span></code>, consecutive <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code> starting locations at the
 same latitude and longitude become one vertical line source, and only the
-last pair is released. That is how <code class="docutils literal notranslate"><span class="pre">ColumnReceptor</span></code> works (two lines:
-bottom and top), and why a <code class="docutils literal notranslate"><span class="pre">MultiPointReceptor</span></code> may not repeat a horizontal
+last pair is released. That is how <code class="docutils literal notranslate"><span class="pre">ColumnRelease</span></code> works (two lines:
+bottom and top), and why a <code class="docutils literal notranslate"><span class="pre">MultiPointRelease</span></code> may not repeat a horizontal
 location (the constructor raises). HYSPLIT 5.1.0 releases column
 particles bottom to top in <code class="docutils literal notranslate"><span class="pre">indx</span></code> order (the table’s <code class="docutils literal notranslate"><span class="pre">particle</span></code>), which
 <code class="docutils literal notranslate"><span class="pre">add_release_heights</span></code> falls back to when a model writes no <code class="docutils literal notranslate"><span class="pre">age</span> <span class="pre">=</span> <span class="pre">0</span></code>
@@ -1141,11 +1141,11 @@ release row.</p>
 <p><code class="docutils literal notranslate"><span class="pre">PressureWeighting</span></code> fits <code class="docutils literal notranslate"><span class="pre">ln</span> <span class="pre">p</span> <span class="pre">=</span> <span class="pre">b</span> <span class="pre">+</span> <span class="pre">a·z</span></code> to the particles’ first-step
 <code class="docutils literal notranslate"><span class="pre">(zagl,</span> <span class="pre">pres)</span></code> and gives each distinct release height the pressure slab
 centered on it (<code class="docutils literal notranslate"><span class="pre">particle_pwf</span></code>), split evenly among the particles released
-there (a multipoint receptor releases many per point). The fit is made in the
-receptor’s own datum: for <code class="docutils literal notranslate"><span class="pre">altitude_ref=&quot;msl&quot;</span></code> it uses <code class="docutils literal notranslate"><span class="pre">zagl</span> <span class="pre">+</span> <span class="pre">zsfc</span></code> (so
+there (a multipoint release releases many per point). The fit is made in the
+release’s own datum: for <code class="docutils literal notranslate"><span class="pre">altitude_ref=&quot;msl&quot;</span></code> it uses <code class="docutils literal notranslate"><span class="pre">zagl</span> <span class="pre">+</span> <span class="pre">zsfc</span></code> (so
 <code class="docutils literal notranslate"><span class="pre">zsfc</span></code> must be in <code class="docutils literal notranslate"><span class="pre">varsiwant</span></code>), and the ground closing the bottom slab is
 the terrain under the lowest point. <code class="docutils literal notranslate"><span class="pre">PressureWeighting.apply</span></code> reads
-<code class="docutils literal notranslate"><span class="pre">altitude_ref</span></code> from the receptor it is given; with none it assumes AGL.
+<code class="docutils literal notranslate"><span class="pre">altitude_ref</span></code> from the release it is given; with none it assumes AGL.
 <code class="docutils literal notranslate"><span class="pre">AveragingKernel</span></code> holds only the kernel. <code class="docutils literal notranslate"><span class="pre">calc_footprint</span></code> divides by the
 particle count, so weights are scaled by <code class="docutils literal notranslate"><span class="pre">N</span></code>. Weights sum to the column’s
 mass fraction (less than 1) by design: the rest of the atmosphere is above
@@ -1169,10 +1169,10 @@ is needed only for the two-parameter <code class="docutils literal notranslate">
 <p>The particle table’s contract asks a model to write each particle’s release
 at <code class="docutils literal notranslate"><span class="pre">age</span> <span class="pre">=</span> <span class="pre">0</span></code>. From it <code class="docutils literal notranslate"><span class="pre">add_release_heights</span></code> (<code class="docutils literal notranslate"><span class="pre">particles/table.py</span></code>, a
 core step the worker applies to any model’s particles, as is
-<code class="docutils literal notranslate"><span class="pre">correct_near_field</span></code>) finds which point of a multipoint receptor a particle
+<code class="docutils literal notranslate"><span class="pre">correct_near_field</span></code>) finds which point of a multipoint release a particle
 left from, or which slab of a column. <code class="docutils literal notranslate"><span class="pre">release_height</span></code> is that point’s
 altitude or that slab’s center, never the random height inside the slab.</p>
-<p>For a multipoint or slant receptor, <code class="docutils literal notranslate"><span class="pre">_multipoint_release_heights</span></code> uses, in
+<p>For a multipoint or slant release, <code class="docutils literal notranslate"><span class="pre">_multipoint_release_heights</span></code> uses, in
 order: <code class="docutils literal notranslate"><span class="pre">age</span> <span class="pre">=</span> <span class="pre">0</span></code> rows when present (exact); a match on height when every
 release altitude differs; then horizontal position, with a warning when
 points are closer than 1 km. HYSPLIT 5.1.0, STILT-R’s build, writes no <code class="docutils literal notranslate"><span class="pre">age</span> <span class="pre">=</span> <span class="pre">0</span></code>

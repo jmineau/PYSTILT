@@ -1,5 +1,0 @@
-stilt.PointReceptor.coords
-==========================
-
-.. currentmodule:: stilt
-.. automethod:: PointReceptor.coords

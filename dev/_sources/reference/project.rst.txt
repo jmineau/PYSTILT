@@ -1,7 +1,7 @@
 Project And Output
 ==================
 
-A project is a folder holding ``config.yaml`` and ``receptors.csv``. Its
+A project is a folder holding ``config.yaml`` and ``releases.csv``. Its
 results go to the output directory that ``config.yaml`` names, one tree per
 kind of result with a folder per set of settings (see
 :doc:`../guides/projects` and :ref:`finished-work`). Most

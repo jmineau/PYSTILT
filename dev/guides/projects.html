@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=5ff965c5"></script>
+    <script src="../_static/documentation_options.js?v=000a6a7f"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev25+g739e87834" />
+  <meta name="docsearch:version" content="0.1.0a30.dev30+g0d6d55b99" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -417,7 +417,7 @@
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Setting up a project</span></p>
 <ul class="current nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="receptors.html">Receptors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="releases.html">Releases (receptors)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tracks.html">Mobile Measurements</a></li>
 <li class="toctree-l1"><a class="reference internal" href="meteorology.html">Meteorology</a></li>
 <li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">Projects And Variants</a></li>
@@ -520,17 +520,17 @@
   <section id="projects-and-variants">
 <h1>Projects And Variants<a class="headerlink" href="#projects-and-variants" title="Link to this heading">#</a></h1>
 <p>A PYSTILT <a class="reference internal" href="../getting_started/glossary.html#term-project"><span class="xref std std-term">project</span></a> is a folder with your settings and your
-receptors. Every receptor runs once under each <a class="reference internal" href="../getting_started/glossary.html#term-variant"><span class="xref std std-term">variant</span></a>, a named set
+releases. Every release runs once under each <a class="reference internal" href="../getting_started/glossary.html#term-variant"><span class="xref std std-term">variant</span></a>, a named set
 of settings, and the results go to an output directory the settings name.
 We keep one project per study, because a project reruns only what is
-missing and never overwrites a result, so you can add receptors and try
+missing and never overwrites a result, so you can add releases and try
 other settings as the study grows. Most projects need only the settings
 below, and <a class="reference internal" href="../reference/configuration.html"><span class="doc">Configuration</span></a> lists every option.</p>
 <section id="the-project-folder">
 <h2>The project folder<a class="headerlink" href="#the-project-folder" title="Link to this heading">#</a></h2>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>my_project/
   config.yaml        # your settings: meteorology, transport model, footprint, variants
-  receptors.csv      # your receptors: where and when to release particles
+  releases.csv      # your releases: where and when to release particles
   tables/            # other inputs, such as averaging kernels (project.add_table)
 </pre></div>
 </div>
@@ -540,7 +540,7 @@ below, and <a class="reference internal" href="../reference/configuration.html">
 <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> once, so it reads the same either way. <code class="docutils literal notranslate"><span class="pre">Project.init</span></code>
 stops if the folder already has a <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>.</p>
 <p>Both files are yours to edit. PYSTILT never rewrites <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>, and it
-only appends to <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>. <code class="docutils literal notranslate"><span class="pre">project.add_table(&quot;kernels&quot;,</span> <span class="pre">table)</span></code>
+only appends to <code class="docutils literal notranslate"><span class="pre">releases.csv</span></code>. <code class="docutils literal notranslate"><span class="pre">project.add_table(&quot;kernels&quot;,</span> <span class="pre">table)</span></code>
 adds rows to <code class="docutils literal notranslate"><span class="pre">tables/kernels.parquet</span></code> the same way, and a transform names
 it as <code class="docutils literal notranslate"><span class="pre">table:</span> <span class="pre">kernels</span></code>. A Slurm run also makes a <code class="docutils literal notranslate"><span class="pre">_slurm/</span></code> folder with
 its job scripts and logs (<a class="reference internal" href="slurm.html"><span class="doc">On An HPC Cluster (Slurm)</span></a>).</p>
@@ -567,7 +567,7 @@ its job scripts and logs (<a class="reference internal" href="slurm.html"><span 
 <span class="w">      </span><span class="nt">yres</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.01</span>
 
 <span class="nt">variants</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">hrrr</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span><span class="w">            </span><span class="c1"># every receptor runs once, with these settings</span>
+<span class="w">  </span><span class="nt">hrrr</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span><span class="w">            </span><span class="c1"># every release runs once, with these settings</span>
 </pre></div>
 </div>
 <p>The file is four blocks, and each names its entries. <code class="docutils literal notranslate"><span class="pre">mets</span></code> is your
@@ -606,7 +606,7 @@ check their spelling yourself.</p>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">n_hours</span></code>, under <code class="docutils literal notranslate"><span class="pre">models:</span> <span class="pre">hysplit:</span></code></p></td>
 <td><p>How many hours to follow the particles. Negative values run backward
 in time, which is what footprints need. Positive values run forward
-from the receptor (see <a class="reference internal" href="background.html#plume-background"><span class="std std-ref">A background from a satellite swath</span></a>).</p></td>
+from the release (see <a class="reference internal" href="background.html#plume-background"><span class="std std-ref">A background from a satellite swath</span></a>).</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">-24</span></code> to <code class="docutils literal notranslate"><span class="pre">-72</span></code></p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">numpar</span></code>, under <code class="docutils literal notranslate"><span class="pre">models:</span> <span class="pre">hysplit:</span></code></p></td>
@@ -649,10 +649,10 @@ standard STILT, unless you are testing how much the smoothing matters;
 smaller values smooth less.</p>
 </dd>
 <dt><code class="docutils literal notranslate"><span class="pre">tres</span></code></dt><dd><p>The length of each time layer of the footprint. The default, <code class="docutils literal notranslate"><span class="pre">1h</span></code>,
-gives one layer per hour back from the receptor time, as STILT-R does.
+gives one layer per hour back from the release time, as STILT-R does.
 Use <code class="docutils literal notranslate"><span class="pre">15min</span></code> for 15-minute observations such as EM27/SUN columns, or
 <code class="docutils literal notranslate"><span class="pre">1D</span></code> for daily layers in a coarse inversion. Layers are counted from
-the receptor time, so a receptor at 18:30 with <code class="docutils literal notranslate"><span class="pre">tres:</span> <span class="pre">15min</span></code> has
+the release time, so a release at 18:30 with <code class="docutils literal notranslate"><span class="pre">tres:</span> <span class="pre">15min</span></code> has
 layers starting at 18:15, 18:00, and so on. In
 <a class="reference internal" href="../reference/_api/stilt.Project.footprints.html#stilt.Project.footprints" title="stilt.Project.footprints"><code class="xref py py-meth docutils literal notranslate"><span class="pre">footprints()</span></code></a> the layer dimension is named for the
 unit <code class="docutils literal notranslate"><span class="pre">tres</span></code> is written in and counts in it: <code class="docutils literal notranslate"><span class="pre">hour</span></code> -1, -2, … for
@@ -679,11 +679,11 @@ describes each one.</p>
 </section>
 <section id="variants">
 <h2>Variants<a class="headerlink" href="#variants" title="Link to this heading">#</a></h2>
-<p>Every receptor runs once per variant. A variant has a name, a met, and any
+<p>Every release runs once per variant. A variant has a name, a met, and any
 settings that differ from the blocks above, which are the defaults: its
 model’s block and the footprint’s. Every config lists its variants, and only
 those run. An entry with no overrides (<code class="docutils literal notranslate"><span class="pre">hrrr:</span> <span class="pre">{}</span></code> below) runs the defaults
-unchanged. Add more entries to run the same receptors under other settings:</p>
+unchanged. Add more entries to run the same releases under other settings:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">variants</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">hrrr</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span><span class="w">                     </span><span class="c1"># the defaults with the hrrr met</span>
 <span class="w">  </span><span class="nt">hrrr-zi08</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">ziscale</span><span class="p">:</span><span class="w"> </span><span class="nv">0.8</span><span class="p p-Indicator">}</span><span class="w">    </span><span class="c1"># a mixed-layer sensitivity</span>
@@ -696,7 +696,7 @@ unchanged. Add more entries to run the same receptors under other settings:</p>
 <span class="w">    </span><span class="nt">stages</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">footprint</span><span class="p">:</span><span class="w"> </span><span class="nv">null</span><span class="p p-Indicator">}</span><span class="w">  </span><span class="c1"># particles only</span>
 </pre></div>
 </div>
-<p>Each variant of each receptor is one simulation, so 100 receptors and
+<p>Each variant of each release is one simulation, so 100 releases and
 three variants make 300 simulations. A variant may set:</p>
 <dl class="simple">
 <dt><code class="docutils literal notranslate"><span class="pre">met</span></code></dt><dd><p>Which met to use. A variant named after a met uses that met.
@@ -746,7 +746,7 @@ from them:</p>
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">hrrr-regional</span></code> and <code class="docutils literal notranslate"><span class="pre">hrrr-ak</span></code> have the same transport settings as
-<code class="docutils literal notranslate"><span class="pre">hrrr</span></code>, so HYSPLIT runs once per receptor for the three of them. There is
+<code class="docutils literal notranslate"><span class="pre">hrrr</span></code>, so HYSPLIT runs once per release for the three of them. There is
 nothing to declare: PYSTILT sees that the settings that decide the particles
 are equal. Add such a variant to a finished project and run again, and
 PYSTILT makes only the new footprints, from the stored particles.</p>
@@ -766,19 +766,19 @@ directory share it.</p>
   particles/
     settings=hrrr-a3f9c2/                 # one folder per set of transport settings
       _settings.yaml                      # the settings, written out in full
-      date=2023-07-15/&lt;receptor id&gt;.parquet
+      date=2023-07-15/&lt;release id&gt;.parquet
     settings=hrrr-err-7be104/             # an ensemble: a folder per realization
-      realization=0/date=2023-07-15/&lt;receptor id&gt;.parquet
+      realization=0/date=2023-07-15/&lt;release id&gt;.parquet
   footprint/
     settings=hrrr-93278c/                 # one folder per variant's footprint settings
       _settings.yaml                      # names the particles folder it was made from
-      date=2023-07-15/&lt;receptor id&gt;.parquet
+      date=2023-07-15/&lt;release id&gt;.parquet
   logs/
-    settings=hrrr-a3f9c2/date=2023-07-15/&lt;receptor id&gt;.log
-    settings=hrrr-a3f9c2/date=2023-07-15/&lt;receptor id&gt;.failure.yaml   # a failed run
-    settings=hrrr-93278c/date=2023-07-15/&lt;receptor id&gt;.failure.yaml   # a failed footprint
+    settings=hrrr-a3f9c2/date=2023-07-15/&lt;release id&gt;.log
+    settings=hrrr-a3f9c2/date=2023-07-15/&lt;release id&gt;.failure.yaml   # a failed run
+    settings=hrrr-93278c/date=2023-07-15/&lt;release id&gt;.failure.yaml   # a failed footprint
   scratch/
-    settings=hrrr-a3f9c2/date=2023-07-15/&lt;receptor id&gt;/              # a kept workdir
+    settings=hrrr-a3f9c2/date=2023-07-15/&lt;release id&gt;/              # a kept workdir
 </pre></div>
 </div>
 <p>Each <a class="reference internal" href="../getting_started/glossary.html#term-settings-folder"><span class="xref std std-term">settings folder</span></a> is named after the variant that first made it,
@@ -835,7 +835,7 @@ everything again, pass <code class="docutils literal notranslate"><span class="p
 <p>Edit <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> and run again. Change a setting, including a default
 the variant inherits or a setting of its met, and the variant’s settings
 now point at a folder that does not exist yet. The next run fills it, for
-every receptor, and the old folder stays as it was.</p>
+every release, and the old folder stays as it was.</p>
 <p><code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span></code> lists every settings folder in the output directory, how
 many result files it holds, which variants use it, and how a folder this
 project does not use differs from the variant of its name. The folders this
@@ -932,24 +932,24 @@ Build them in code with <code class="docutils literal notranslate"><span class="
 </section>
 <section id="simulation-ids">
 <h2>Simulation IDs<a class="headerlink" href="#simulation-ids" title="Link to this heading">#</a></h2>
-<p>A simulation is one receptor run under one variant. Its ID is the receptor
+<p>A simulation is one release run under one variant. Its ID is the release
 ID and the variant name joined by a slash:</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>{YYYYMMDDHHMM}_{location}/{variant}
 
 202307151800_-111.848_40.766_10/hrrr
 </pre></div>
 </div>
-<p>For a point receptor, the location is the longitude, latitude, and
-altitude. A column receptor has <code class="docutils literal notranslate"><span class="pre">X</span></code> and its bottom and top in place of
+<p>For a point release, the location is the longitude, latitude, and
+altitude. A column release has <code class="docutils literal notranslate"><span class="pre">X</span></code> and its bottom and top in place of
 the altitude, as in <code class="docutils literal notranslate"><span class="pre">202101150600_-112_40.5_X0-3000</span></code>. A multipoint
-receptor uses <code class="docutils literal notranslate"><span class="pre">multi_</span></code> and a short hash of its points, which does not
+release uses <code class="docutils literal notranslate"><span class="pre">multi_</span></code> and a short hash of its points, which does not
 change if you reorder them. Heights above mean sea level add <code class="docutils literal notranslate"><span class="pre">msl</span></code> at
 the end, as in <code class="docutils literal notranslate"><span class="pre">_100msl</span></code> or <code class="docutils literal notranslate"><span class="pre">_X0-3000msl</span></code>. Heights above ground have no
 marker.</p>
-<p>In the output directory the receptor ID is the file name, in a folder for
-the day of the receptor time. Each particle file also has a <code class="docutils literal notranslate"><span class="pre">receptor</span></code>
+<p>In the output directory the release ID is the file name, in a folder for
+the day of the release time. Each particle file also has a <code class="docutils literal notranslate"><span class="pre">release</span></code>
 column, so a scan of the whole <code class="docutils literal notranslate"><span class="pre">particles/</span></code> tree with pyarrow, DuckDB, or
-R can tell the receptors apart.</p>
+R can tell the releases apart.</p>
 </section>
 <section id="opening-a-project-again">
 <h2>Opening a project again<a class="headerlink" href="#opening-a-project-again" title="Link to this heading">#</a></h2>
@@ -961,13 +961,13 @@ R can tell the receptors apart.</p>
 </pre></div>
 </div>
 <p>Opening a project only reads it. To change a setting, edit <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>.
-To add receptors, add them and run:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">project</span><span class="o">.</span><span class="n">add_receptors</span><span class="p">(</span><span class="n">new_receptors</span><span class="p">)</span>     <span class="c1"># returns the ids of the new ones</span>
+To add releases, add them and run:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">project</span><span class="o">.</span><span class="n">add_releases</span><span class="p">(</span><span class="n">new_releases</span><span class="p">)</span>     <span class="c1"># returns the ids of the new ones</span>
 <span class="n">project</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 </pre></div>
 </div>
-<p>New receptors are appended to <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code> in the file’s own columns.
-Receptors already in the file are left as they are.</p>
+<p>New releases are appended to <code class="docutils literal notranslate"><span class="pre">releases.csv</span></code> in the file’s own columns.
+Releases already in the file are left as they are.</p>
 </section>
 <section id="the-same-settings-in-python">
 <h2>The same settings in Python<a class="headerlink" href="#the-same-settings-in-python" title="Link to this heading">#</a></h2>

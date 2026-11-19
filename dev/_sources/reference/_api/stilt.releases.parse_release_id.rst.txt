@@ -1,0 +1,6 @@
+﻿stilt.releases.parse\_release\_id
+=================================
+
+.. currentmodule:: stilt.releases
+
+.. autofunction:: parse_release_id

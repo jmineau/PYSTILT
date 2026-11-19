@@ -1,6 +1,0 @@
-﻿stilt.execution.worker.run\_receptor
-====================================
-
-.. currentmodule:: stilt.execution.worker
-
-.. autofunction:: run_receptor

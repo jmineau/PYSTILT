@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=5ff965c5"></script>
+    <script src="../../_static/documentation_options.js?v=000a6a7f"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev25+g739e87834" />
+  <meta name="docsearch:version" content="0.1.0a30.dev30+g0d6d55b99" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -462,7 +462,7 @@
 <span class="sd">    my_project/</span>
 <span class="sd">      out/by-id/</span>
 <span class="sd">        201507050000_-111.85_40.77_5/</span>
-<span class="sd">          201507050000_-111.85_40.77_5_traj.rds   receptor time, particles</span>
+<span class="sd">          201507050000_-111.85_40.77_5_traj.rds   release time, particles</span>
 <span class="sd">          201507050000_-111.85_40.77_5_foot.nc    footprint</span>
 <span class="sd">          CONTROL                                 the release points, run length, met files</span>
 <span class="sd">          SETUP.CFG                               HYSPLIT's other settings</span>
@@ -470,7 +470,7 @@
 <span class="sd">      _rslurm_my_project/</span>
 <span class="sd">        params.RDS                                every run's settings (Slurm runs only)</span>
 
-<span class="sd">:func:`read_stilt_r` reads these folders as PYSTILT's receptors, particle</span>
+<span class="sd">:func:`read_stilt_r` reads these folders as PYSTILT's releases, particle</span>
 <span class="sd">tables, and footprints. :func:`import_stilt_r` writes them into an output</span>
 <span class="sd">directory, in folders named by the settings the files record, so a project</span>
 <span class="sd">reads them as its own (:class:`stilt.stilt_r.StiltRModel`). The</span>
@@ -497,7 +497,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.stage</span><span class="w"> </span><span class="kn">import</span> <span class="n">store_empty_footprint</span><span class="p">,</span> <span class="n">store_footprint</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.output</span><span class="w"> </span><span class="kn">import</span> <span class="n">Output</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.particles</span><span class="w"> </span><span class="kn">import</span> <span class="n">check_particles</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.receptors</span><span class="w"> </span><span class="kn">import</span> <span class="n">Receptor</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.releases</span><span class="w"> </span><span class="kn">import</span> <span class="n">Release</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.spatial</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grid</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.stilt_r</span><span class="w"> </span><span class="kn">import</span> <span class="n">STILT_R_MODEL</span><span class="p">,</span> <span class="n">StiltRConfig</span><span class="p">,</span> <span class="n">StiltRMetConfig</span><span class="p">,</span> <span class="n">StiltRModel</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transport.hysplit.config</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
@@ -512,7 +512,7 @@
 
 <span class="c1">#: PYSTILT's names for STILT-R's particle columns. HYSPLIT's driver renames</span>
 <span class="c1">#: the first four the same way; ``xhgt`` is the release height STILT-R adds</span>
-<span class="c1">#: for a column receptor.</span>
+<span class="c1">#: for a column release.</span>
 <span class="n">_COLUMNS</span> <span class="o">=</span> <span class="p">{</span>
     <span class="s2">"indx"</span><span class="p">:</span> <span class="s2">"particle"</span><span class="p">,</span>
     <span class="s2">"time"</span><span class="p">:</span> <span class="s2">"age"</span><span class="p">,</span>
@@ -551,38 +551,38 @@
     <span class="n">by_id_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span>
     <span class="n">smooth_factor</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">error</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Receptor</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]]:</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Release</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]]:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Read STILT-R or X-STILT ``by-id`` output, one simulation at a time.</span>
 
 <span class="sd">    Each folder of *by_id_dir* that holds ``&lt;id&gt;_traj.rds`` is a</span>
-<span class="sd">    simulation. Its receptor, particles, and footprint come back as</span>
-<span class="sd">    PYSTILT's: a :class:`~stilt.Receptor`, a particle table</span>
+<span class="sd">    simulation. Its release, particles, and footprint come back as</span>
+<span class="sd">    PYSTILT's: a :class:`~stilt.Release`, a particle table</span>
 <span class="sd">    (:doc:`/reference/particles`), and a footprint array, as</span>
 <span class="sd">    :func:`stilt.read_particles` and :func:`stilt.read_footprint` return</span>
 <span class="sd">    them. The folders are read in name order, which is time order, and each</span>
 <span class="sd">    one only when the loop reaches it.</span>
 
-<span class="sd">    The receptor's release points are the ones in the folder's ``CONTROL``</span>
-<span class="sd">    file, the numbers HYSPLIT read, so a point receptor's id is the folder's</span>
+<span class="sd">    The release's release points are the ones in the folder's ``CONTROL``</span>
+<span class="sd">    file, the numbers HYSPLIT read, so a point release's id is the folder's</span>
 <span class="sd">    name. Its time is the ``.rds`` file's, which keeps the seconds that</span>
-<span class="sd">    ``CONTROL`` drops. A receptor with one release point is a</span>
-<span class="sd">    :class:`~stilt.PointReceptor`, two heights at one place are a</span>
-<span class="sd">    :class:`~stilt.ColumnReceptor`, and release points at different places,</span>
-<span class="sd">    such as X-STILT's slant columns, are a :class:`~stilt.MultiPointReceptor`.</span>
+<span class="sd">    ``CONTROL`` drops. A release with one release point is a</span>
+<span class="sd">    :class:`~stilt.PointRelease`, two heights at one place are a</span>
+<span class="sd">    :class:`~stilt.ColumnRelease`, and release points at different places,</span>
+<span class="sd">    such as X-STILT's slant columns, are a :class:`~stilt.MultiPointRelease`.</span>
 
 <span class="sd">    The particle columns get PYSTILT's names: ``indx``, ``time``, ``long``,</span>
 <span class="sd">    ``lati``, and ``xhgt`` become ``particle``, ``age`` (minutes since</span>
 <span class="sd">    release), ``lon``, ``lat``, and ``release_height``. ``time`` is then the</span>
-<span class="sd">    UTC time of each row, the receptor time plus ``age``. Every other column</span>
+<span class="sd">    UTC time of each row, the release time plus ``age``. Every other column</span>
 <span class="sd">    keeps its STILT-R name, ``foot_no_hnf_dilution`` included: the</span>
 <span class="sd">    near-field correction STILT-R applied stays as it is.</span>
 
 <span class="sd">    The footprint is ``&lt;id&gt;_foot.nc``, on the grid its file gives, with</span>
-<span class="sd">    layers stamped at the receptor time plus whole hours, as STILT-R stamps</span>
+<span class="sd">    layers stamped at the release time plus whole hours, as STILT-R stamps</span>
 <span class="sd">    them. Its settings hold that grid, ``tres``, and ``smooth_factor``.</span>
 <span class="sd">    ``tres`` is ``1h``, except for a backward run whose footprint STILT-R</span>
-<span class="sd">    summed over time (``time_integrate = T``, one layer at the receptor</span>
+<span class="sd">    summed over time (``time_integrate = T``, one layer at the release</span>
 <span class="sd">    time): that is one layer as long as the run, ``tres`` the run's</span>
 <span class="sd">    ``n_hours``, stamped at the start of the run. The footprint file does not record ``smooth_factor``.</span>
 <span class="sd">    It comes from ``params.RDS``, which STILT-R's Slurm runs (rslurm) leave</span>
@@ -608,7 +608,7 @@
 
 <span class="sd">    Yields</span>
 <span class="sd">    ------</span>
-<span class="sd">    receptor : Receptor</span>
+<span class="sd">    release : Release</span>
 <span class="sd">        Where and when the particles were released.</span>
 <span class="sd">    particles : pandas.DataFrame</span>
 <span class="sd">        One row per particle per output step, as STILT-R saved them.</span>
@@ -625,10 +625,10 @@
 <span class="sd">        file, or a folder that does has no ``CONTROL`` file.</span>
 <span class="sd">    ValueError</span>
 <span class="sd">        When a simulation is read, if its files are not as STILT-R writes</span>
-<span class="sd">        them: a ``_traj.rds`` without the particle columns or the receptor</span>
+<span class="sd">        them: a ``_traj.rds`` without the particle columns or the release</span>
 <span class="sd">        time, a ``CONTROL`` file that cannot be read, or a footprint on a</span>
 <span class="sd">        projected grid (only longitude/latitude grids are read) or with</span>
-<span class="sd">        layers that are not whole hours from the receptor time. When a</span>
+<span class="sd">        layers that are not whole hours from the release time. When a</span>
 <span class="sd">        footprint is read, if its ``smooth_factor`` is not known (no</span>
 <span class="sd">        ``params.RDS`` and no *smooth_factor*), if ``params.RDS`` disagrees</span>
 <span class="sd">        with the run's ``n_hours`` or ``numpar``, or if it records a</span>
@@ -653,10 +653,10 @@
 
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
-<span class="sd">    &gt;&gt;&gt; for receptor, particles, foot in stilt.migration.read_stilt_r(</span>
+<span class="sd">    &gt;&gt;&gt; for release, particles, foot in stilt.migration.read_stilt_r(</span>
 <span class="sd">    ...     "out/by-id"</span>
 <span class="sd">    ... ):  # doctest: +SKIP</span>
-<span class="sd">    ...     print(receptor.id, len(particles), foot is not None)</span>
+<span class="sd">    ...     print(release.id, len(particles), foot is not None)</span>
 
 <span class="sd">    A project run on one machine has no ``params.RDS``; give the</span>
 <span class="sd">    ``smooth_factor`` from its ``run_stilt.r``:</span>
@@ -667,10 +667,10 @@
 
 <span class="sd">    The particles of the transport-error run:</span>
 
-<span class="sd">    &gt;&gt;&gt; for receptor, perturbed, _ in stilt.migration.read_stilt_r(  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; for release, perturbed, _ in stilt.migration.read_stilt_r(  # doctest: +SKIP</span>
 <span class="sd">    ...     "out/by-id", error=True</span>
 <span class="sd">    ... ):</span>
-<span class="sd">    ...     print(receptor.id, len(perturbed))</span>
+<span class="sd">    ...     print(release.id, len(perturbed))</span>
 <span class="sd">    """</span>
     <span class="n">root</span><span class="p">,</span> <span class="n">runs</span> <span class="o">=</span> <span class="n">_runs</span><span class="p">(</span><span class="n">by_id_dir</span><span class="p">)</span>
     <span class="n">rdata</span> <span class="o">=</span> <span class="n">_rdata</span><span class="p">()</span>
@@ -713,7 +713,7 @@
     <span class="k">if</span> <span class="n">no_control</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
             <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">no_control</span><span class="p">)</span><span class="si">}</span><span class="s2"> folders of </span><span class="si">{</span><span class="n">root</span><span class="si">}</span><span class="s2"> have no </span><span class="si">{</span><span class="n">_CONTROL</span><span class="si">}</span><span class="s2"> file, the "</span>
-            <span class="sa">f</span><span class="s2">"first </span><span class="si">{</span><span class="n">no_control</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">. The receptor is read from the </span><span class="si">{</span><span class="n">_CONTROL</span><span class="si">}</span><span class="s2"> "</span>
+            <span class="sa">f</span><span class="s2">"first </span><span class="si">{</span><span class="n">no_control</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">. The release is read from the </span><span class="si">{</span><span class="n">_CONTROL</span><span class="si">}</span><span class="s2"> "</span>
             <span class="s2">"file STILT-R writes in every by-id folder."</span>
         <span class="p">)</span>
     <span class="k">return</span> <span class="n">root</span><span class="p">,</span> <span class="n">runs</span>
@@ -857,9 +857,9 @@
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> cannot be read as a CONTROL file: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_receptor</span><span class="p">(</span><span class="n">stored</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">control</span><span class="p">:</span> <span class="n">ControlFile</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Receptor</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_release</span><span class="p">(</span><span class="n">stored</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">control</span><span class="p">:</span> <span class="n">ControlFile</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Release</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Return the receptor of a run: its release points from ``CONTROL``, its time from the ``.rds``.</span>
+<span class="sd">    Return the release of a run: its release points from ``CONTROL``, its time from the ``.rds``.</span>
 
 <span class="sd">    STILT-R writes ``CONTROL``'s time to the minute; the ``.rds`` keeps the</span>
 <span class="sd">    seconds. Every point is released at the first ``run_time``</span>
@@ -867,13 +867,13 @@
 <span class="sd">    """</span>
     <span class="n">stored</span> <span class="o">=</span> <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">k</span><span class="p">):</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="p">(</span><span class="n">stored</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
     <span class="k">if</span> <span class="s2">"run_time"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">stored</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">: the receptor has no run_time."</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">: the release has no run_time."</span><span class="p">)</span>
     <span class="n">time</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DatetimeIndex</span><span class="p">(</span><span class="n">stored</span><span class="p">[</span><span class="s2">"run_time"</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
     <span class="n">points</span> <span class="o">=</span> <span class="p">[(</span><span class="n">lon</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">alt</span><span class="p">)</span> <span class="k">for</span> <span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">,</span> <span class="n">alt</span> <span class="ow">in</span> <span class="n">control</span><span class="o">.</span><span class="n">locations</span><span class="p">]</span>
-    <span class="k">return</span> <span class="n">Receptor</span><span class="o">.</span><span class="n">from_points</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="n">points</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">Release</span><span class="o">.</span><span class="n">from_points</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="n">points</span><span class="p">)</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_particles</span><span class="p">(</span><span class="n">stored</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_particles</span><span class="p">(</span><span class="n">stored</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">release</span><span class="p">:</span> <span class="n">Release</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Return STILT-R's particle table with PYSTILT's column names and a UTC ``time`` column."""</span>
     <span class="n">particles</span> <span class="o">=</span> <span class="n">stored</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">_COLUMNS</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
@@ -882,7 +882,7 @@
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
     <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"particle"</span><span class="p">,</span> <span class="s2">"age"</span><span class="p">):</span>
         <span class="n">particles</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">particles</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">"float64"</span><span class="p">)</span>
-    <span class="n">particles</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">receptor</span><span class="o">.</span><span class="n">time</span><span class="p">)</span> <span class="o">+</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_timedelta</span><span class="p">(</span>
+    <span class="n">particles</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">release</span><span class="o">.</span><span class="n">time</span><span class="p">)</span> <span class="o">+</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_timedelta</span><span class="p">(</span>
         <span class="n">particles</span><span class="p">[</span><span class="s2">"age"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">unit</span><span class="o">=</span><span class="s2">"min"</span>
     <span class="p">)</span>
     <span class="k">return</span> <span class="n">particles</span>
@@ -902,7 +902,7 @@
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_footprint</span><span class="p">(</span>
     <span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
-    <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">,</span>
+    <span class="n">release</span><span class="p">:</span> <span class="n">Release</span><span class="p">,</span>
     <span class="n">backward</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
     <span class="n">smooth_factor</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">n_hours</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
@@ -914,7 +914,7 @@
 <span class="sd">    (seconds since 1970-01-01 UTC), at cell centers. The grid is rebuilt from</span>
 <span class="sd">    the centers and checked against them, so the footprint has the</span>
 <span class="sd">    coordinates of a PYSTILT footprint on the same grid. A backward</span>
-<span class="sd">    footprint STILT-R summed over time has one layer, at the receptor time;</span>
+<span class="sd">    footprint STILT-R summed over time has one layer, at the release time;</span>
 <span class="sd">    it becomes one layer of *n_hours*, layer -1, which starts where the run</span>
 <span class="sd">    ends.</span>
 <span class="sd">    """</span>
@@ -942,19 +942,19 @@
 
     <span class="c1"># Seconds since 1970 in UTC; the units say so with a trailing "Z".</span>
     <span class="n">times</span> <span class="o">=</span> <span class="n">_posixct</span><span class="p">(</span><span class="n">foot</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="p">{})</span>
-    <span class="n">offsets</span> <span class="o">=</span> <span class="p">(</span><span class="n">times</span> <span class="o">-</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">receptor</span><span class="o">.</span><span class="n">time</span><span class="p">))</span> <span class="o">/</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">(</span><span class="n">hours</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">offsets</span> <span class="o">=</span> <span class="p">(</span><span class="n">times</span> <span class="o">-</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">release</span><span class="o">.</span><span class="n">time</span><span class="p">))</span> <span class="o">/</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">(</span><span class="n">hours</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
     <span class="n">hours</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">offsets</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">))</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">offsets</span><span class="p">,</span> <span class="n">hours</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
             <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">: the footprint's layers are not whole hours from the "</span>
-            <span class="sa">f</span><span class="s2">"receptor time </span><span class="si">{</span><span class="n">receptor</span><span class="o">.</span><span class="n">time</span><span class="si">}</span><span class="s2">."</span>
+            <span class="sa">f</span><span class="s2">"release time </span><span class="si">{</span><span class="n">release</span><span class="o">.</span><span class="n">time</span><span class="si">}</span><span class="s2">."</span>
         <span class="p">)</span>
     <span class="n">tres</span> <span class="o">=</span> <span class="s2">"1h"</span>
     <span class="k">if</span> <span class="n">backward</span> <span class="ow">and</span> <span class="n">hours</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">hours</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
         <span class="n">tres</span><span class="p">,</span> <span class="n">hours</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">abs</span><span class="p">(</span><span class="n">n_hours</span><span class="p">)</span><span class="si">}</span><span class="s2">h"</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">-</span><span class="mf">1.0</span><span class="p">])</span>
     <span class="n">config</span> <span class="o">=</span> <span class="n">FootprintConfig</span><span class="p">(</span><span class="n">grid</span><span class="o">=</span><span class="n">grid</span><span class="p">,</span> <span class="n">smooth_factor</span><span class="o">=</span><span class="n">smooth_factor</span><span class="p">,</span> <span class="n">tres</span><span class="o">=</span><span class="n">tres</span><span class="p">)</span>
     <span class="n">values</span> <span class="o">=</span> <span class="n">foot</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">"float64"</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">_footprint_array</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">hours</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">),</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="s2">""</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_footprint_array</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">hours</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">),</span> <span class="n">release</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="s2">""</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_read_simulation</span><span class="p">(</span>
@@ -963,23 +963,23 @@
     <span class="n">rslurm</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Path</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">set</span><span class="p">[</span><span class="nb">float</span><span class="p">]]]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">smooth_factor</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">error</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Receptor</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""Return the receptor, particles, and footprint of one ``by-id`` folder, or the receptor and its error particles."""</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Release</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Return the release, particles, and footprint of one ``by-id`` folder, or the release and its error particles."""</span>
     <span class="n">traj</span> <span class="o">=</span> <span class="n">folder</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">folder</span><span class="o">.</span><span class="n">name</span><span class="si">}{</span><span class="n">_TRAJ</span><span class="si">}</span><span class="s2">"</span>
     <span class="n">output</span> <span class="o">=</span> <span class="n">_read_rds</span><span class="p">(</span><span class="n">traj</span><span class="p">,</span> <span class="n">rdata</span><span class="p">)</span>
     <span class="n">control</span> <span class="o">=</span> <span class="n">_control</span><span class="p">(</span><span class="n">folder</span> <span class="o">/</span> <span class="n">_CONTROL</span><span class="p">)</span>
-    <span class="n">receptor</span> <span class="o">=</span> <span class="n">_receptor</span><span class="p">(</span><span class="n">output</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"receptor"</span><span class="p">),</span> <span class="n">control</span><span class="p">,</span> <span class="n">traj</span><span class="p">)</span>
+    <span class="n">release</span> <span class="o">=</span> <span class="n">_release</span><span class="p">(</span><span class="n">output</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"receptor"</span><span class="p">),</span> <span class="n">control</span><span class="p">,</span> <span class="n">traj</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">error</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">_error_particles</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">traj</span><span class="p">),</span> <span class="kc">None</span>
-    <span class="n">particles</span> <span class="o">=</span> <span class="n">_particles</span><span class="p">(</span><span class="n">output</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">],</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">traj</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">release</span><span class="p">,</span> <span class="n">_error_particles</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">traj</span><span class="p">),</span> <span class="kc">None</span>
+    <span class="n">particles</span> <span class="o">=</span> <span class="n">_particles</span><span class="p">(</span><span class="n">output</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">],</span> <span class="n">release</span><span class="p">,</span> <span class="n">traj</span><span class="p">)</span>
     <span class="n">foot</span> <span class="o">=</span> <span class="n">_folder_footprint</span><span class="p">(</span>
-        <span class="n">folder</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="n">control</span><span class="p">,</span> <span class="n">output</span><span class="p">,</span> <span class="n">rslurm</span><span class="p">,</span> <span class="n">smooth_factor</span>
+        <span class="n">folder</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="n">control</span><span class="p">,</span> <span class="n">output</span><span class="p">,</span> <span class="n">rslurm</span><span class="p">,</span> <span class="n">smooth_factor</span>
     <span class="p">)</span>
-    <span class="k">return</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="n">foot</span>
+    <span class="k">return</span> <span class="n">release</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="n">foot</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_error_particles</span><span class="p">(</span>
-    <span class="n">output</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Path</span>
+    <span class="n">output</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">release</span><span class="p">:</span> <span class="n">Release</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Path</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Return the particles of a run's transport-error set, with PYSTILT's column names."""</span>
     <span class="n">stored</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"particle_error"</span><span class="p">)</span>
@@ -988,12 +988,12 @@
             <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> holds no transport-error particles (particle_error): "</span>
             <span class="s2">"STILT-R ran it without wind or mixed-layer errors."</span>
         <span class="p">)</span>
-    <span class="k">return</span> <span class="n">_particles</span><span class="p">(</span><span class="n">stored</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_particles</span><span class="p">(</span><span class="n">stored</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_folder_footprint</span><span class="p">(</span>
     <span class="n">folder</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
-    <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">,</span>
+    <span class="n">release</span><span class="p">:</span> <span class="n">Release</span><span class="p">,</span>
     <span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
     <span class="n">control</span><span class="p">:</span> <span class="n">ControlFile</span><span class="p">,</span>
     <span class="n">output</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
@@ -1009,7 +1009,7 @@
     <span class="p">)</span>
     <span class="c1"># STILT-R reads the run's direction the same way (calc_footprint).</span>
     <span class="n">backward</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">particles</span><span class="p">[</span><span class="s2">"age"</span><span class="p">])</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">_footprint</span><span class="p">(</span><span class="n">foot_path</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">backward</span><span class="p">,</span> <span class="n">smooth</span><span class="p">,</span> <span class="n">control</span><span class="o">.</span><span class="n">n_hours</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_footprint</span><span class="p">(</span><span class="n">foot_path</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">backward</span><span class="p">,</span> <span class="n">smooth</span><span class="p">,</span> <span class="n">control</span><span class="o">.</span><span class="n">n_hours</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="import_stilt_r">
@@ -1022,7 +1022,7 @@
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"stilt-r"</span><span class="p">,</span>
     <span class="n">smooth_factor</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">met_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Receptor</span><span class="p">]:</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Release</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Write the runs of a STILT-R or X-STILT ``by-id`` folder into a PYSTILT output directory.</span>
 
@@ -1033,7 +1033,7 @@
 <span class="sd">    ``config.yaml`` has that variant reads them as its own results:</span>
 <span class="sd">    ``project.status``, ``project.particles``, ``project.footprints``, and</span>
 <span class="sd">    ``project.jacobian``. The import prints the variant and its met, to paste</span>
-<span class="sd">    into ``config.yaml``, and returns the receptors, for ``receptors.csv``.</span>
+<span class="sd">    into ``config.yaml``, and returns the releases, for ``releases.csv``.</span>
 
 <span class="sd">    Every folder of an output directory is named by the hash of its</span>
 <span class="sd">    settings, and an imported run's settings are only what STILT-R's files</span>
@@ -1087,9 +1087,9 @@
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    list of Receptor</span>
-<span class="sd">        The receptors of the runs, in folder order, for</span>
-<span class="sd">        :meth:`stilt.Project.add_receptors`.</span>
+<span class="sd">    list of Release</span>
+<span class="sd">        The releases of the runs, in folder order, for</span>
+<span class="sd">        :meth:`stilt.Project.add_releases`.</span>
 
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
@@ -1110,7 +1110,7 @@
 
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
-<span class="sd">    &gt;&gt;&gt; receptors = stilt.migration.import_stilt_r(  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; releases = stilt.migration.import_stilt_r(  # doctest: +SKIP</span>
 <span class="sd">    ...     "my_project/out/by-id", "output", version="1d936c1"</span>
 <span class="sd">    ... )</span>
 <span class="sd">    mets:</span>
@@ -1126,7 +1126,7 @@
 <span class="sd">        version: 1d936c1</span>
 <span class="sd">        capemin: -1</span>
 <span class="sd">        ...</span>
-<span class="sd">    &gt;&gt;&gt; project = stilt.Project.init("my_project_py", receptors, output="output", ...)  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; project = stilt.Project.init("my_project_py", releases, output="output", ...)  # doctest: +SKIP</span>
 <span class="sd">    """</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">VARIANT_NAME_RE</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
@@ -1150,26 +1150,26 @@
     <span class="n">made</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Variant</span><span class="p">,</span> <span class="n">Path</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="c1"># The first footprint's settings, and its folder.</span>
     <span class="n">first_foot</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">FootprintConfig</span><span class="p">,</span> <span class="n">Path</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="n">empty</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Receptor</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="n">receptors</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">empty</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Release</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">releases</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">folder</span> <span class="ow">in</span> <span class="n">runs</span><span class="p">:</span>
         <span class="n">hysplit</span><span class="p">,</span> <span class="n">winderrtf</span> <span class="o">=</span> <span class="n">recorded</span><span class="p">[</span><span class="n">folder</span><span class="p">]</span>
         <span class="n">control</span> <span class="o">=</span> <span class="n">controls</span><span class="p">[</span><span class="n">folder</span><span class="p">]</span>
         <span class="n">traj</span> <span class="o">=</span> <span class="n">folder</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">folder</span><span class="o">.</span><span class="n">name</span><span class="si">}{</span><span class="n">_TRAJ</span><span class="si">}</span><span class="s2">"</span>
         <span class="n">stored</span> <span class="o">=</span> <span class="n">_read_rds</span><span class="p">(</span><span class="n">traj</span><span class="p">,</span> <span class="n">rdata</span><span class="p">)</span>
-        <span class="n">receptor</span> <span class="o">=</span> <span class="n">_receptor</span><span class="p">(</span><span class="n">stored</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"receptor"</span><span class="p">),</span> <span class="n">control</span><span class="p">,</span> <span class="n">traj</span><span class="p">)</span>
-        <span class="n">receptors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">receptor</span><span class="p">)</span>
+        <span class="n">release</span> <span class="o">=</span> <span class="n">_release</span><span class="p">(</span><span class="n">stored</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"receptor"</span><span class="p">),</span> <span class="n">control</span><span class="p">,</span> <span class="n">traj</span><span class="p">)</span>
+        <span class="n">releases</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">release</span><span class="p">)</span>
         <span class="n">log</span> <span class="o">=</span> <span class="n">folder</span> <span class="o">/</span> <span class="n">_LOG</span>
 
-        <span class="n">particles</span> <span class="o">=</span> <span class="n">_particles</span><span class="p">(</span><span class="n">stored</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">],</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">traj</span><span class="p">)</span>
+        <span class="n">particles</span> <span class="o">=</span> <span class="n">_particles</span><span class="p">(</span><span class="n">stored</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">],</span> <span class="n">release</span><span class="p">,</span> <span class="n">traj</span><span class="p">)</span>
         <span class="n">hnf_plume</span> <span class="o">=</span> <span class="s2">"foot_no_hnf_dilution"</span> <span class="ow">in</span> <span class="n">particles</span><span class="o">.</span><span class="n">columns</span>
         <span class="n">particles</span> <span class="o">=</span> <span class="n">_uncorrected</span><span class="p">(</span><span class="n">particles</span><span class="p">)</span>
         <span class="n">settings</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">hysplit</span><span class="p">,</span> <span class="o">**</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">_ERROR_SETTINGS</span><span class="p">)}</span>
         <span class="n">base</span> <span class="o">=</span> <span class="n">_variant</span><span class="p">(</span><span class="n">made</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">met</span><span class="p">,</span> <span class="n">settings</span><span class="p">,</span> <span class="n">version</span><span class="p">,</span> <span class="n">folder</span><span class="p">)</span>
-        <span class="n">_write_particles</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">base</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="n">control</span><span class="p">,</span> <span class="n">log</span><span class="p">)</span>
+        <span class="n">_write_particles</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">base</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="n">control</span><span class="p">,</span> <span class="n">log</span><span class="p">)</span>
 
         <span class="n">foot</span> <span class="o">=</span> <span class="n">_folder_footprint</span><span class="p">(</span>
-            <span class="n">folder</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="n">control</span><span class="p">,</span> <span class="n">stored</span><span class="p">,</span> <span class="n">rslurm</span><span class="p">,</span> <span class="n">smooth_factor</span>
+            <span class="n">folder</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="n">control</span><span class="p">,</span> <span class="n">stored</span><span class="p">,</span> <span class="n">rslurm</span><span class="p">,</span> <span class="n">smooth_factor</span>
         <span class="p">)</span>
         <span class="k">if</span> <span class="n">foot</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="c1"># STILT-R's footprints are made from HYSPLIT's foot, so the</span>
@@ -1186,10 +1186,10 @@
                 <span class="n">folder</span><span class="p">,</span>
             <span class="p">)</span>
             <span class="n">with_foot</span> <span class="o">=</span> <span class="n">_with_footprint</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="n">first_foot</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-            <span class="k">if</span> <span class="n">_missing</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="s2">"footprint"</span><span class="p">,</span> <span class="n">with_foot</span><span class="p">,</span> <span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">_missing</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="s2">"footprint"</span><span class="p">,</span> <span class="n">with_foot</span><span class="p">,</span> <span class="n">release</span><span class="o">.</span><span class="n">id</span><span class="p">):</span>
                 <span class="n">store_footprint</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">with_foot</span><span class="p">,</span> <span class="n">foot</span><span class="p">)</span>
         <span class="k">elif</span> <span class="n">log</span><span class="o">.</span><span class="n">is_file</span><span class="p">()</span> <span class="ow">and</span> <span class="n">_EMPTY_FOOTPRINT</span> <span class="ow">in</span> <span class="n">log</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">errors</span><span class="o">=</span><span class="s2">"replace"</span><span class="p">):</span>
-            <span class="n">empty</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">receptor</span><span class="p">)</span>
+            <span class="n">empty</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">release</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">stored</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"particle_error"</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">winderrtf</span><span class="p">:</span>
@@ -1205,19 +1205,19 @@
                 <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">folder</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">_SETUP</span><span class="si">}</span><span class="s2"> gives WINDERRTF=</span><span class="si">{</span><span class="n">winderrtf</span><span class="si">}</span><span class="s2">, and the "</span>
                 <span class="sa">f</span><span class="s2">"particle_error_params of </span><span class="si">{</span><span class="n">traj</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">recorded_tf</span><span class="si">}</span><span class="s2">."</span>
             <span class="p">)</span>
-        <span class="n">perturbed</span> <span class="o">=</span> <span class="n">_uncorrected</span><span class="p">(</span><span class="n">_error_particles</span><span class="p">(</span><span class="n">stored</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">traj</span><span class="p">))</span>
+        <span class="n">perturbed</span> <span class="o">=</span> <span class="n">_uncorrected</span><span class="p">(</span><span class="n">_error_particles</span><span class="p">(</span><span class="n">stored</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">traj</span><span class="p">))</span>
         <span class="n">error_settings</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">hysplit</span><span class="p">,</span> <span class="o">**</span><span class="n">errors</span><span class="p">}</span>
         <span class="n">error</span> <span class="o">=</span> <span class="n">_variant</span><span class="p">(</span>
             <span class="n">made</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">-err"</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">met</span><span class="p">,</span> <span class="n">error_settings</span><span class="p">,</span> <span class="n">version</span><span class="p">,</span> <span class="n">folder</span>
         <span class="p">)</span>
-        <span class="n">_write_particles</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">perturbed</span><span class="p">,</span> <span class="n">control</span><span class="p">,</span> <span class="n">log</span><span class="p">)</span>
+        <span class="n">_write_particles</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">perturbed</span><span class="p">,</span> <span class="n">control</span><span class="p">,</span> <span class="n">log</span><span class="p">)</span>
 
     <span class="n">printed</span> <span class="o">=</span> <span class="p">[</span><span class="n">made</span><span class="p">[</span><span class="n">name</span><span class="p">][</span><span class="mi">0</span><span class="p">]]</span>
     <span class="k">if</span> <span class="n">first_foot</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">printed</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">_with_footprint</span><span class="p">(</span><span class="n">printed</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">first_foot</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-        <span class="k">for</span> <span class="n">receptor</span> <span class="ow">in</span> <span class="n">empty</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">_missing</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="s2">"footprint"</span><span class="p">,</span> <span class="n">printed</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">):</span>
-                <span class="n">store_empty_footprint</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">printed</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">receptor</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">release</span> <span class="ow">in</span> <span class="n">empty</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">_missing</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="s2">"footprint"</span><span class="p">,</span> <span class="n">printed</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">release</span><span class="o">.</span><span class="n">id</span><span class="p">):</span>
+                <span class="n">store_empty_footprint</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">printed</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">release</span><span class="p">)</span>
     <span class="k">if</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">-err"</span> <span class="ow">in</span> <span class="n">made</span><span class="p">:</span>
         <span class="n">printed</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">made</span><span class="p">[</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">-err"</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
     <span class="n">config</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
@@ -1229,7 +1229,7 @@
         <span class="n">config</span><span class="p">[</span><span class="s2">"stages"</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"footprint"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"class"</span><span class="p">:</span> <span class="n">FOOTPRINT_STAGE</span><span class="p">}}</span>
     <span class="n">config</span><span class="p">[</span><span class="s2">"variants"</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="n">v</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">_variant_entry</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">footprints</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">printed</span><span class="p">}</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">yaml</span><span class="o">.</span><span class="n">safe_dump</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default_flow_style</span><span class="o">=</span><span class="kc">None</span><span class="p">),</span> <span class="n">end</span><span class="o">=</span><span class="s2">""</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">receptors</span></div>
+    <span class="k">return</span> <span class="n">releases</span></div>
 
 
 
@@ -1411,26 +1411,26 @@
         <span class="p">)</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_missing</span><span class="p">(</span><span class="n">output</span><span class="p">:</span> <span class="n">Output</span><span class="p">,</span> <span class="n">kind</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span> <span class="n">receptor_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Whether a receptor's result of *kind* is not in the output directory yet."""</span>
-    <span class="n">path</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">receptor_id</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_missing</span><span class="p">(</span><span class="n">output</span><span class="p">:</span> <span class="n">Output</span><span class="p">,</span> <span class="n">kind</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span> <span class="n">release_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Whether a release's result of *kind* is not in the output directory yet."""</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">release_id</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">path</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_write_particles</span><span class="p">(</span>
     <span class="n">output</span><span class="p">:</span> <span class="n">Output</span><span class="p">,</span>
     <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span>
-    <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">,</span>
+    <span class="n">release</span><span class="p">:</span> <span class="n">Release</span><span class="p">,</span>
     <span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
     <span class="n">control</span><span class="p">:</span> <span class="n">ControlFile</span><span class="p">,</span>
     <span class="n">log</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Write a run's particles, with the met files its ``CONTROL`` names and its ``stilt.log``, unless they are there."""</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">_missing</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="s2">"particles"</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">_missing</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="s2">"particles"</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">release</span><span class="o">.</span><span class="n">id</span><span class="p">):</span>
         <span class="k">return</span>
-    <span class="n">output</span><span class="o">.</span><span class="n">write_particles</span><span class="p">(</span><span class="n">variant</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="n">control</span><span class="o">.</span><span class="n">met_files</span><span class="p">)</span>
+    <span class="n">output</span><span class="o">.</span><span class="n">write_particles</span><span class="p">(</span><span class="n">variant</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="n">control</span><span class="o">.</span><span class="n">met_files</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">log</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
-        <span class="n">output</span><span class="o">.</span><span class="n">write_log</span><span class="p">(</span><span class="n">variant</span><span class="p">,</span> <span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">log</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">errors</span><span class="o">=</span><span class="s2">"replace"</span><span class="p">))</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">write_log</span><span class="p">(</span><span class="n">variant</span><span class="p">,</span> <span class="n">release</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">log</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">errors</span><span class="o">=</span><span class="s2">"replace"</span><span class="p">))</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_variant_entry</span><span class="p">(</span><span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span> <span class="n">footprints</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>

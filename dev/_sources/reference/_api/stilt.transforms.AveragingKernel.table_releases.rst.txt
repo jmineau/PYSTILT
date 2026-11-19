@@ -1,0 +1,5 @@
+stilt.transforms.AveragingKernel.table\_releases
+================================================
+
+.. currentmodule:: stilt.transforms
+.. automethod:: AveragingKernel.table_releases

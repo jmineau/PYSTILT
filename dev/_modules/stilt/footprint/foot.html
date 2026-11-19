@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=5ff965c5"></script>
+    <script src="../../../_static/documentation_options.js?v=000a6a7f"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev25+g739e87834" />
+  <meta name="docsearch:version" content="0.1.0a30.dev30+g0d6d55b99" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -459,7 +459,7 @@
 <span class="sd">:func:`add_foot` gives each particle its sensitivity to surface fluxes</span>
 <span class="sd">(``foot``) for a transport model that writes only positions, or with</span>
 <span class="sd">another mixed-layer height (``pbl_height``). :func:`correct_near_field`</span>
-<span class="sd">corrects ``foot`` for the thin plume close to the receptor, as STILT-R's</span>
+<span class="sd">corrects ``foot`` for the thin plume close to the release, as STILT-R's</span>
 <span class="sd">``calc_plume_dilution`` does. The footprint stage applies both</span>
 <span class="sd">(:func:`stilt.footprint.footprint_particles`); a particle file holds what</span>
 <span class="sd">the model wrote.</span>
@@ -475,7 +475,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.receptors</span><span class="w"> </span><span class="kn">import</span> <span class="n">PointReceptor</span><span class="p">,</span> <span class="n">Receptor</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.releases</span><span class="w"> </span><span class="kn">import</span> <span class="n">PointRelease</span><span class="p">,</span> <span class="n">Release</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.sampling</span><span class="w"> </span><span class="kn">import</span> <span class="n">calc_pbl_height</span><span class="p">,</span> <span class="n">sample_met</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
@@ -563,7 +563,7 @@
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    particles : pandas.DataFrame</span>
-<span class="sd">        Particle table with ``time``, the receptor time plus ``age``</span>
+<span class="sd">        Particle table with ``time``, the release time plus ``age``</span>
 <span class="sd">        minutes. A ``mlht`` column (m above ground) is used as it is</span>
 <span class="sd">        unless *pbl_height* is set.</span>
 <span class="sd">    met_files : iterable of path-like</span>
@@ -680,7 +680,7 @@
 <div class="viewcode-block" id="correct_near_field">
 <a class="viewcode-back" href="../../../reference/_api/stilt.footprint.correct_near_field.html#stilt.footprint.correct_near_field">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">correct_near_field</span><span class="p">(</span>
-    <span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">,</span> <span class="n">footprint_depth</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">release</span><span class="p">:</span> <span class="n">Release</span><span class="p">,</span> <span class="n">footprint_depth</span><span class="p">:</span> <span class="nb">float</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Correct ``foot`` for plume dilution in the hyper-near field, as STILT-R's ``calc_plume_dilution`` does.</span>
@@ -688,7 +688,7 @@
 <span class="sd">    ``foot`` assumes surface fluxes are mixed through the air below</span>
 <span class="sd">    *footprint_depth*: a fraction of the mixed-layer height when it is 1 or</span>
 <span class="sd">    less, and a height in meters above ground when it is larger, as HYSPLIT</span>
-<span class="sd">    reads ``VEGHT``. Close to the receptor, the plume from the release point is</span>
+<span class="sd">    reads ``VEGHT``. Close to the release, the plume from the release point is</span>
 <span class="sd">    thinner than that. Following STILT-R, the plume depth grows from the</span>
 <span class="sd">    release height with the turbulence each particle meets. While it is</span>
 <span class="sd">    below that height, ``foot`` is recalculated with the plume</span>
@@ -699,7 +699,7 @@
 
 <span class="sd">    Needs the columns :data:`HNF_PLUME_COLUMNS`, and the release height:</span>
 <span class="sd">    ``release_height`` (:func:`stilt.particles.add_release_heights`) or the altitude of a point</span>
-<span class="sd">    receptor. The plume grows from the ground, so for a receptor whose</span>
+<span class="sd">    release. The plume grows from the ground, so for a release whose</span>
 <span class="sd">    heights are above sea level (``altitude_ref="msl"``) it starts at the</span>
 <span class="sd">    release height minus the terrain under it, the median ``zsfc`` of the</span>
 <span class="sd">    first rows of the particles released there, which must be a column too.</span>
@@ -708,8 +708,8 @@
 <span class="sd">    ----------</span>
 <span class="sd">    particles : pandas.DataFrame</span>
 <span class="sd">        Particle table.</span>
-<span class="sd">    receptor : Receptor</span>
-<span class="sd">        Receptor the particles were released from.</span>
+<span class="sd">    release : Release</span>
+<span class="sd">        Release the particles were released from.</span>
 <span class="sd">    footprint_depth : float</span>
 <span class="sd">        Height that surface fluxes are mixed through (``VEGHT`` in HYSPLIT</span>
 <span class="sd">        and STILT-R): a fraction of the mixed-layer height when 1 or less,</span>
@@ -727,14 +727,14 @@
 <span class="sd">        If a required column is missing, or the release height is unknown.</span>
 <span class="sd">    """</span>
     <span class="n">missing</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">HNF_PLUME_COLUMNS</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">particles</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">receptor</span><span class="o">.</span><span class="n">altitude_ref</span> <span class="o">==</span> <span class="s2">"msl"</span> <span class="ow">and</span> <span class="s2">"zsfc"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">particles</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">release</span><span class="o">.</span><span class="n">altitude_ref</span> <span class="o">==</span> <span class="s2">"msl"</span> <span class="ow">and</span> <span class="s2">"zsfc"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">particles</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
         <span class="n">missing</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">"zsfc"</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
             <span class="s2">"The near-field correction needs the particle columns "</span>
             <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">missing</span><span class="p">))</span><span class="si">}</span><span class="s2">."</span>
         <span class="p">)</span>
-    <span class="n">r_zagl</span> <span class="o">=</span> <span class="n">receptor</span><span class="o">.</span><span class="n">altitude</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">receptor</span><span class="p">,</span> <span class="n">PointReceptor</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="n">r_zagl</span> <span class="o">=</span> <span class="n">release</span><span class="o">.</span><span class="n">altitude</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">release</span><span class="p">,</span> <span class="n">PointRelease</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
 
     <span class="n">p</span> <span class="o">=</span> <span class="n">particles</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
     <span class="n">p</span><span class="p">[</span><span class="s2">"foot_no_hnf_dilution"</span><span class="p">]</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="s2">"foot"</span><span class="p">]</span>
@@ -758,7 +758,7 @@
             <span class="s2">"The near-field correction needs each particle's release height: "</span>
             <span class="s2">"add release_height first (add_release_heights)."</span>
         <span class="p">)</span>
-    <span class="k">if</span> <span class="n">receptor</span><span class="o">.</span><span class="n">altitude_ref</span> <span class="o">==</span> <span class="s2">"msl"</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">release</span><span class="o">.</span><span class="n">altitude_ref</span> <span class="o">==</span> <span class="s2">"msl"</span><span class="p">:</span>
         <span class="c1"># mlht and footprint_depth are heights above ground, so the plume is too.</span>
         <span class="n">start_h</span> <span class="o">=</span> <span class="n">_above_ground</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">start_h</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">p</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">))</span>
     <span class="c1"># The plume grows outward from the release point, so the cumsum must walk</span>
@@ -781,27 +781,27 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_near_field</span><span class="p">(</span>
-    <span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">,</span> <span class="n">footprint_depth</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">release</span><span class="p">:</span> <span class="n">Release</span><span class="p">,</span> <span class="n">footprint_depth</span><span class="p">:</span> <span class="nb">float</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return *particles* with the near-field correction, or as they are when they lack its columns.</span>
 
 <span class="sd">    A transport model that writes no ``dens``, ``samt``, ``sigw``,</span>
-<span class="sd">    ``tlgr``, or ``mlht`` (or no ``zsfc``, for a receptor above sea level)</span>
+<span class="sd">    ``tlgr``, or ``mlht`` (or no ``zsfc``, for a release above sea level)</span>
 <span class="sd">    gets no correction, and a warning says so.</span>
 <span class="sd">    """</span>
     <span class="n">needed</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">HNF_PLUME_COLUMNS</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span>
-        <span class="p">{</span><span class="s2">"zsfc"</span><span class="p">}</span> <span class="k">if</span> <span class="n">receptor</span><span class="o">.</span><span class="n">altitude_ref</span> <span class="o">==</span> <span class="s2">"msl"</span> <span class="k">else</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="p">{</span><span class="s2">"zsfc"</span><span class="p">}</span> <span class="k">if</span> <span class="n">release</span><span class="o">.</span><span class="n">altitude_ref</span> <span class="o">==</span> <span class="s2">"msl"</span> <span class="k">else</span> <span class="nb">set</span><span class="p">()</span>
     <span class="p">)</span>
     <span class="n">missing</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">needed</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">particles</span><span class="o">.</span><span class="n">columns</span><span class="p">))</span>
     <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
             <span class="s2">"</span><span class="si">%s</span><span class="s2">: near-field correction skipped: no </span><span class="si">%s</span><span class="s2"> columns"</span><span class="p">,</span>
-            <span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+            <span class="n">release</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
             <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing</span><span class="p">),</span>
         <span class="p">)</span>
         <span class="k">return</span> <span class="n">particles</span>
-    <span class="k">return</span> <span class="n">correct_near_field</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">footprint_depth</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">correct_near_field</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">footprint_depth</span><span class="p">)</span>
 
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"HNF_PLUME_COLUMNS"</span><span class="p">,</span> <span class="s2">"add_foot"</span><span class="p">,</span> <span class="s2">"correct_near_field"</span><span class="p">]</span>

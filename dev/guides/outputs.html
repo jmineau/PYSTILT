@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=5ff965c5"></script>
+    <script src="../_static/documentation_options.js?v=000a6a7f"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev25+g739e87834" />
+  <meta name="docsearch:version" content="0.1.0a30.dev30+g0d6d55b99" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -417,7 +417,7 @@
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Setting up a project</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="receptors.html">Receptors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="releases.html">Releases (receptors)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tracks.html">Mobile Measurements</a></li>
 <li class="toctree-l1"><a class="reference internal" href="meteorology.html">Meteorology</a></li>
 <li class="toctree-l1"><a class="reference internal" href="projects.html">Projects And Variants</a></li>
@@ -519,7 +519,7 @@
                   
   <section id="footprints-and-particles">
 <h1>Footprints And Particles<a class="headerlink" href="#footprints-and-particles" title="Link to this heading">#</a></h1>
-<p>Each simulation is one receptor run under one variant
+<p>Each simulation is one release run under one variant
 (<a class="reference internal" href="projects.html"><span class="doc">Projects And Variants</span></a>). It has up to two results in the output directory:</p>
 <ul class="simple">
 <li><p>the <strong>particles</strong>, where every particle went, as a Parquet file</p></li>
@@ -546,7 +546,7 @@ Jacobian.</p>
 
 <span class="gp">In [5]: </span><span class="n">sim</span><span class="o">.</span><span class="n">particles</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">map</span><span class="p">();</span>   <span class="c1"># particle paths</span>
 
-<span class="gp">In [6]: </span><span class="n">sim</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">map</span><span class="p">();</span>                   <span class="c1"># receptor, particles, and footprint together</span>
+<span class="gp">In [6]: </span><span class="n">sim</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">map</span><span class="p">();</span>                   <span class="c1"># release, particles, and footprint together</span>
 </pre></div>
 </div>
 <a class="reference internal image-reference" href="../_images/outputs_footprint.png"><img alt="../_images/outputs_footprint.png" src="../_images/outputs_footprint.png" style="width: 6in;" />
@@ -555,11 +555,11 @@ Jacobian.</p>
 </a>
 <a class="reference internal image-reference" href="../_images/outputs_simulation.png"><img alt="../_images/outputs_simulation.png" src="../_images/outputs_simulation.png" style="width: 6in;" />
 </a>
-<p>A simulation is named by its receptor id and its variant. To see them all,
+<p>A simulation is named by its release id and its variant. To see them all,
 look at <code class="docutils literal notranslate"><span class="pre">project.simulations</span></code>, a DataFrame with one row per simulation:</p>
-<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [7]: </span><span class="n">project</span><span class="o">.</span><span class="n">simulations</span><span class="p">[[</span><span class="s2">"receptor"</span><span class="p">,</span> <span class="s2">"variant"</span><span class="p">]]</span>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [7]: </span><span class="n">project</span><span class="o">.</span><span class="n">simulations</span><span class="p">[[</span><span class="s2">"release"</span><span class="p">,</span> <span class="s2">"variant"</span><span class="p">]]</span>
 <span class="gh">Out[7]: </span>
-<span class="go">                          receptor variant</span>
+<span class="go">                           release variant</span>
 <span class="go">0  202101150600_-111.848_40.766_10    hrrr</span>
 <span class="go">1  202101150700_-111.848_40.766_10    hrrr</span>
 <span class="go">2  202101150800_-111.848_40.766_10    hrrr</span>
@@ -570,22 +570,22 @@ look at <code class="docutils literal notranslate"><span class="pre">project.sim
 also show coastlines and state borders. There are a few other plots:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">foot.stilt.plot.facet()</span></code> draws one panel per hour.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">receptor.plot.map()</span></code> shows where the receptor is.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">project.plot.availability()</span></code> shows the receptor times at each
+<li><p><code class="docutils literal notranslate"><span class="pre">release.plot.map()</span></code> shows where the release is.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">project.plot.availability()</span></code> shows the release times at each
 location.</p></li>
 </ul>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [8]: </span><span class="n">sim</span><span class="o">.</span><span class="n">footprint</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">facet</span><span class="p">();</span>
 
 <span class="gp">In [9]: </span><span class="n">project</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">availability</span><span class="p">();</span>
 
-<span class="gp">In [10]: </span><span class="n">sim</span><span class="o">.</span><span class="n">receptor</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">map</span><span class="p">();</span>
+<span class="gp">In [10]: </span><span class="n">sim</span><span class="o">.</span><span class="n">release</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">map</span><span class="p">();</span>
 </pre></div>
 </div>
 <a class="reference internal image-reference" href="../_images/outputs_facet.png"><img alt="../_images/outputs_facet.png" src="../_images/outputs_facet.png" style="width: 6in;" />
 </a>
 <a class="reference internal image-reference" href="../_images/outputs_availability.png"><img alt="../_images/outputs_availability.png" src="../_images/outputs_availability.png" style="width: 6in;" />
 </a>
-<a class="reference internal image-reference" href="../_images/outputs_receptor.png"><img alt="../_images/outputs_receptor.png" src="../_images/outputs_receptor.png" style="width: 6in;" />
+<a class="reference internal image-reference" href="../_images/outputs_release.png"><img alt="../_images/outputs_release.png" src="../_images/outputs_release.png" style="width: 6in;" />
 </a>
 <p>A map takes a <code class="docutils literal notranslate"><span class="pre">tiler</span></code>, any cartopy tiler, to draw map tiles under the data.
 The maps in these docs are drawn on shaded-relief tiles of the USGS National
@@ -612,7 +612,7 @@ when the map is drawn, and <code class="docutils literal notranslate"><span clas
 </pre></div>
 </div>
 <p>It has dimensions <code class="docutils literal notranslate"><span class="pre">(time,</span> <span class="pre">lat,</span> <span class="pre">lon)</span></code>, or <code class="docutils literal notranslate"><span class="pre">(time,</span> <span class="pre">y,</span> <span class="pre">x)</span></code> on a projected
-grid. There is one map for each hour back from the receptor time (each
+grid. There is one map for each hour back from the release time (each
 <code class="docutils literal notranslate"><span class="pre">tres</span></code> back, when the footprint settings give another length), in
 units of ppm per (µmol m⁻² s⁻¹). <code class="docutils literal notranslate"><span class="pre">foot.sum(&quot;time&quot;)</span></code> is one map of the
 whole run. Use xarray as you would on any other array:</p>
@@ -621,9 +621,9 @@ whole run. Use xarray as you would on any other array:</p>
 <span class="gp">In [14]: </span><span class="n">last_hours</span> <span class="o">=</span> <span class="n">foot</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="s2">"2021-01-15 02:00"</span><span class="p">,</span> <span class="s2">"2021-01-15 07:00"</span><span class="p">))</span>
 </pre></div>
 </div>
-<p>Methods that need the receptor or the grid are under <code class="docutils literal notranslate"><span class="pre">foot.stilt</span></code>:</p>
-<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [15]: </span><span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">receptor</span>      <span class="c1"># the receptor</span>
-<span class="gh">Out[15]: </span><span class="go">PointReceptor(id='202101150800_-111.848_40.766_10', lon=-111.84800, lat=40.76600, alt=10 agl)</span>
+<p>Methods that need the release or the grid are under <code class="docutils literal notranslate"><span class="pre">foot.stilt</span></code>:</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [15]: </span><span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">release</span>      <span class="c1"># the release</span>
+<span class="gh">Out[15]: </span><span class="go">PointRelease(id='202101150800_-111.848_40.766_10', lon=-111.84800, lat=40.76600, alt=10 agl)</span>
 
 <span class="gp">In [16]: </span><span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">grid</span>          <span class="c1"># the grid it was made on</span>
 <span class="gh">Out[16]: </span><span class="go">Grid(xmin=-113.0, xmax=-110.5, ymin=40.0, ymax=42.0, xres=0.01, yres=0.01, crs='+proj=longlat')</span>
@@ -632,7 +632,7 @@ whole run. Use xarray as you would on any other array:</p>
 <span class="gh">Out[17]: </span><span class="go">FootprintConfig(grid=Grid(xmin=-113.0, xmax=-110.5, ymin=40.0, ymax=42.0, xres=0.01, yres=0.01, crs='+proj=longlat'), geometry=None, cells_per_target=4.0, smooth_factor=1.0, tres='1h', hnf_plume=True, footprint_depth=0.5, pbl_height=None, pbl_height_min=0.0, transforms=[], geometry_hash=None)</span>
 </pre></div>
 </div>
-<p>The receptor id is also a coordinate, <code class="docutils literal notranslate"><span class="pre">foot.receptor</span></code>. It stays on the
+<p>The release id is also a coordinate, <code class="docutils literal notranslate"><span class="pre">foot.release</span></code>. It stays on the
 array through sums and arithmetic.</p>
 <p><code class="docutils literal notranslate"><span class="pre">stilt.read_footprint</span></code> opens a footprint file from the output directory,
 such as <code class="docutils literal notranslate"><span class="pre">sim.footprint_path</span></code>, with nothing else around it. To write one as
@@ -681,7 +681,7 @@ ppm per (µmol m⁻² s⁻¹)</p></td>
 <td><p>Particle number (STILT-R’s <code class="docutils literal notranslate"><span class="pre">indx</span></code>)</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">release_height</span></code></p></td>
-<td><p>Release height, for column and multipoint receptors (STILT-R’s
+<td><p>Release height, for column and multipoint releases (STILT-R’s
 <code class="docutils literal notranslate"><span class="pre">xhgt</span></code>)</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">mlht</span></code>, <code class="docutils literal notranslate"><span class="pre">sigw</span></code>, <code class="docutils literal notranslate"><span class="pre">tlgr</span></code>, <code class="docutils literal notranslate"><span class="pre">pres</span></code></p></td>
@@ -723,10 +723,10 @@ what a transport model must write.</p>
 <span class="p">)</span>
 <span class="n">particles</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">read_particles</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
 <span class="n">meta</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">particles</span><span class="o">.</span><span class="n">particles_metadata</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-<span class="n">meta</span><span class="o">.</span><span class="n">receptor</span><span class="p">,</span> <span class="n">meta</span><span class="o">.</span><span class="n">settings</span><span class="p">,</span> <span class="n">meta</span><span class="o">.</span><span class="n">met_files</span><span class="p">,</span> <span class="n">meta</span><span class="o">.</span><span class="n">realization</span>
+<span class="n">meta</span><span class="o">.</span><span class="n">release</span><span class="p">,</span> <span class="n">meta</span><span class="o">.</span><span class="n">settings</span><span class="p">,</span> <span class="n">meta</span><span class="o">.</span><span class="n">met_files</span><span class="p">,</span> <span class="n">meta</span><span class="o">.</span><span class="n">realization</span>
 </pre></div>
 </div>
-<p>The file holds the receptor, the meteorology files the run read, and the
+<p>The file holds the release, the meteorology files the run read, and the
 settings it ran with, the same ones as its folder’s <code class="docutils literal notranslate"><span class="pre">_settings.yaml</span></code>.
 <code class="docutils literal notranslate"><span class="pre">realization</span></code> is which realization of an ensemble the file is, or
 <code class="docutils literal notranslate"><span class="pre">None</span></code> for a single run. <a class="reference internal" href="../reference/layout.html"><span class="doc">Output Layout</span></a> lists every key.</p>
@@ -741,15 +741,15 @@ zeros; <a class="reference internal" href="checking.html"><span class="doc">Chec
 </section>
 <section id="many-simulations-at-once">
 <h2>Many simulations at once<a class="headerlink" href="#many-simulations-at-once" title="Link to this heading">#</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">project.simulations</span></code> is a table with one row per receptor under each
+<p><code class="docutils literal notranslate"><span class="pre">project.simulations</span></code> is a table with one row per release under each
 variant. Its columns are:</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">receptor</span></code>, the receptor id</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">release</span></code>, the release id</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">variant</span></code>, the variant name</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">realization</span></code>, <code class="docutils literal notranslate"><span class="pre">0</span></code> to <code class="docutils literal notranslate"><span class="pre">N</span> <span class="pre">-</span> <span class="pre">1</span></code> for a variant declared with
 <code class="docutils literal notranslate"><span class="pre">realizations:</span> <span class="pre">N</span></code>, and empty for one that runs once.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">time</span></code>, <code class="docutils literal notranslate"><span class="pre">kind</span></code>, and <code class="docutils literal notranslate"><span class="pre">location</span></code> of the receptor</p></li>
-<li><p>one column for each extra column of <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">time</span></code>, <code class="docutils literal notranslate"><span class="pre">kind</span></code>, and <code class="docutils literal notranslate"><span class="pre">location</span></code> of the release</p></li>
+<li><p>one column for each extra column of <code class="docutils literal notranslate"><span class="pre">releases.csv</span></code></p></li>
 </ul>
 <p>Select rows the way you would in pandas, then hand the selection to the
 project to load its results:</p>
@@ -761,46 +761,46 @@ project to load its results:</p>
 <span class="gp">   ....: </span><span class="p">]</span>
 <span class="gp">   ....: </span>
 
-<span class="gp">In [24]: </span><span class="n">footprints</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">footprints</span><span class="p">(</span><span class="n">morning</span><span class="p">)</span>   <span class="c1"># one dataset: receptor, hour, lat, lon</span>
+<span class="gp">In [24]: </span><span class="n">footprints</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">footprints</span><span class="p">(</span><span class="n">morning</span><span class="p">)</span>   <span class="c1"># one dataset: release, hour, lat, lon</span>
 
-<span class="gp">In [25]: </span><span class="n">particles</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">particles</span><span class="p">(</span><span class="n">morning</span><span class="p">)</span>     <span class="c1"># one table, with receptor and variant columns</span>
+<span class="gp">In [25]: </span><span class="n">particles</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">particles</span><span class="p">(</span><span class="n">morning</span><span class="p">)</span>     <span class="c1"># one table, with release and variant columns</span>
 </pre></div>
 </div>
 <p>Leave the selection out to load every simulation. Any table with
-<code class="docutils literal notranslate"><span class="pre">receptor</span></code> and <code class="docutils literal notranslate"><span class="pre">variant</span></code> columns works as a selection, such as your
+<code class="docutils literal notranslate"><span class="pre">release</span></code> and <code class="docutils literal notranslate"><span class="pre">variant</span></code> columns works as a selection, such as your
 observations merged with <code class="docutils literal notranslate"><span class="pre">sims</span></code>, or a polars or pyarrow table, and so
 does a boolean mask over <code class="docutils literal notranslate"><span class="pre">project.simulations</span></code>.</p>
 <p>The footprints of one variant come back as one <a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.Dataset.html#xarray.Dataset" title="(in xarray v2026.9.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">xarray.Dataset</span></code></a>
-with dimensions <code class="docutils literal notranslate"><span class="pre">(receptor,</span> <span class="pre">hour,</span> <span class="pre">lat,</span> <span class="pre">lon)</span></code>. Receptors at different
+with dimensions <code class="docutils literal notranslate"><span class="pre">(release,</span> <span class="pre">hour,</span> <span class="pre">lat,</span> <span class="pre">lon)</span></code>. Releases at different
 times cannot share a time axis, so they line up on <code class="docutils literal notranslate"><span class="pre">hour</span></code>: the hours
-after each receptor’s time, where a backward run’s first hour is -1. With
+after each release’s time, where a backward run’s first hour is -1. With
 other layers the dimension is named for the unit <code class="docutils literal notranslate"><span class="pre">tres</span></code> is written in
 (<code class="docutils literal notranslate"><span class="pre">day</span></code> for <code class="docutils literal notranslate"><span class="pre">1D</span></code>, <code class="docutils literal notranslate"><span class="pre">minute</span></code> for <code class="docutils literal notranslate"><span class="pre">15min</span></code>) and counts in it. The
-<code class="docutils literal notranslate"><span class="pre">time</span></code> coordinate gives the clock time each receptor’s hours start:</p>
+<code class="docutils literal notranslate"><span class="pre">time</span></code> coordinate gives the clock time each release’s hours start:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [26]: </span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
-<span class="gp">In [27]: </span><span class="n">rid</span> <span class="o">=</span> <span class="n">morning</span><span class="o">.</span><span class="n">receptor</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>                         <span class="c1"># the first receptor</span>
+<span class="gp">In [27]: </span><span class="n">rid</span> <span class="o">=</span> <span class="n">morning</span><span class="o">.</span><span class="n">release</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>                         <span class="c1"># the first release</span>
 
-<span class="gp">In [28]: </span><span class="n">mean</span> <span class="o">=</span> <span class="n">footprints</span><span class="o">.</span><span class="n">foot</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="s2">"hour"</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="s2">"receptor"</span><span class="p">)</span>    <span class="c1"># the mean footprint</span>
+<span class="gp">In [28]: </span><span class="n">mean</span> <span class="o">=</span> <span class="n">footprints</span><span class="o">.</span><span class="n">foot</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="s2">"hour"</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="s2">"release"</span><span class="p">)</span>    <span class="c1"># the mean footprint</span>
 
 <span class="gp">In [29]: </span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">mean</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">mean</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">))</span><span class="o">.</span><span class="n">plot</span><span class="p">();</span>                 <span class="c1"># most cells are 0: use a log scale</span>
 
-<span class="gp">In [30]: </span><span class="n">footprints</span><span class="o">.</span><span class="n">foot</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">receptor</span><span class="o">=</span><span class="n">rid</span><span class="p">)</span>                      <span class="c1"># one receptor's hours</span>
+<span class="gp">In [30]: </span><span class="n">footprints</span><span class="o">.</span><span class="n">foot</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">release</span><span class="o">=</span><span class="n">rid</span><span class="p">)</span>                      <span class="c1"># one release's hours</span>
 <span class="gh">Out[30]: </span>
 <span class="go">&lt;xarray.DataArray 'foot' (hour: 14, lat: 200, lon: 250)&gt; Size: 3MB</span>
 <span class="go">dask.array&lt;getitem, shape=(14, 200, 250), dtype=float32, chunksize=(14, 200, 250), chunktype=numpy.ndarray&gt;</span>
 <span class="go">Coordinates:</span>
-<span class="go">  * hour      (hour) int64 112B -14 -13 -12 -11 -10 -9 -8 -7 -6 -5 -4 -3 -2 -1</span>
-<span class="go">    time      (hour) datetime64[us] 112B 2021-01-14T16:00:00 ... 2021-01-15T0...</span>
-<span class="go">  * lat       (lat) float64 2kB 40.01 40.02 40.02 40.03 ... 41.98 41.98 41.99</span>
-<span class="go">  * lon       (lon) float64 2kB -113.0 -113.0 -113.0 ... -110.5 -110.5 -110.5</span>
-<span class="go">    receptor  &lt;U31 124B '202101150600_-111.848_40.766_10'</span>
+<span class="go">  * hour     (hour) int64 112B -14 -13 -12 -11 -10 -9 -8 -7 -6 -5 -4 -3 -2 -1</span>
+<span class="go">    time     (hour) datetime64[us] 112B 2021-01-14T16:00:00 ... 2021-01-15T05...</span>
+<span class="go">  * lat      (lat) float64 2kB 40.01 40.02 40.02 40.03 ... 41.98 41.98 41.99</span>
+<span class="go">  * lon      (lon) float64 2kB -113.0 -113.0 -113.0 ... -110.5 -110.5 -110.5</span>
+<span class="go">    release  &lt;U31 124B '202101150600_-111.848_40.766_10'</span>
 <span class="go">Attributes:</span>
 <span class="go">    units:         ppm m2 s umol-1</span>
 <span class="go">    long_name:     footprint</span>
 <span class="go">    grid_mapping:  crs</span>
 
-<span class="gp">In [31]: </span><span class="n">footprints</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">receptor</span><span class="o">=</span><span class="n">rid</span><span class="p">)</span>                      <span class="c1"># and when they start</span>
+<span class="gp">In [31]: </span><span class="n">footprints</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">release</span><span class="o">=</span><span class="n">rid</span><span class="p">)</span>                      <span class="c1"># and when they start</span>
 <span class="gh">Out[31]: </span>
 <span class="go">&lt;xarray.DataArray 'time' (hour: 14)&gt; Size: 112B</span>
 <span class="go">array(['2021-01-14T16:00:00.000000', '2021-01-14T17:00:00.000000',</span>
@@ -812,9 +812,9 @@ other layers the dimension is named for the unit <code class="docutils literal n
 <span class="go">       '2021-01-15T04:00:00.000000', '2021-01-15T05:00:00.000000'],</span>
 <span class="go">      dtype='datetime64[us]')</span>
 <span class="go">Coordinates:</span>
-<span class="go">  * hour      (hour) int64 112B -14 -13 -12 -11 -10 -9 -8 -7 -6 -5 -4 -3 -2 -1</span>
-<span class="go">    time      (hour) datetime64[us] 112B 2021-01-14T16:00:00 ... 2021-01-15T0...</span>
-<span class="go">    receptor  &lt;U31 124B '202101150600_-111.848_40.766_10'</span>
+<span class="go">  * hour     (hour) int64 112B -14 -13 -12 -11 -10 -9 -8 -7 -6 -5 -4 -3 -2 -1</span>
+<span class="go">    time     (hour) datetime64[us] 112B 2021-01-14T16:00:00 ... 2021-01-15T05...</span>
+<span class="go">    release  &lt;U31 124B '202101150600_-111.848_40.766_10'</span>
 <span class="go">Attributes:</span>
 <span class="go">    standard_name:  time</span>
 <span class="go">    axis:           T</span>
@@ -823,21 +823,21 @@ other layers the dimension is named for the unit <code class="docutils literal n
 <a class="reference internal image-reference" href="../_images/outputs_mean_footprint.png"><img alt="../_images/outputs_mean_footprint.png" src="../_images/outputs_mean_footprint.png" style="width: 6in;" />
 </a>
 <p>The values are read from the files only when a computation needs them, a
-day’s receptors at a time, so opening a month of footprints is quick.
+day’s releases at a time, so opening a month of footprints is quick.
 Loading them all at once takes about 35 MB per footprint on a 300 by 300
 grid over 24 hours. Select one variant first, as above; a selection of
-several raises an error. Receptors whose footprint is empty are listed in
+several raises an error. Releases whose footprint is empty are listed in
 <code class="docutils literal notranslate"><span class="pre">footprints.attrs[&quot;empty&quot;]</span></code>, and those not run yet in
 <code class="docutils literal notranslate"><span class="pre">footprints.attrs[&quot;missing&quot;]</span></code>.</p>
-<p>For one receptor, <code class="docutils literal notranslate"><span class="pre">project.simulation(rid,</span> <span class="pre">&quot;hrrr&quot;).footprint</span></code> is its
+<p>For one release, <code class="docutils literal notranslate"><span class="pre">project.simulation(rid,</span> <span class="pre">&quot;hrrr&quot;).footprint</span></code> is its
 footprint as a <a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.DataArray.html#xarray.DataArray" title="(in xarray v2026.9.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">xarray.DataArray</span></code></a> with absolute times, which the
 <code class="docutils literal notranslate"><span class="pre">foot.stilt</span></code> methods work on.</p>
 <p>To sum a selection’s footprints onto your flux cells, as one matrix, use
 <code class="docutils literal notranslate"><span class="pre">project.jacobian</span></code> (<a class="reference internal" href="aggregation.html"><span class="doc">Summing Footprints: Areas And The Jacobian</span></a>).</p>
 <p>The particles come back as one table, so pandas can group them:</p>
-<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [32]: </span><span class="n">particles</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"receptor"</span><span class="p">)[</span><span class="s2">"foot"</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [32]: </span><span class="n">particles</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"release"</span><span class="p">)[</span><span class="s2">"foot"</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
 <span class="gh">Out[32]: </span>
-<span class="go">receptor</span>
+<span class="go">release</span>
 <span class="go">202101150600_-111.848_40.766_10     88.836758</span>
 <span class="go">202101150700_-111.848_40.766_10     95.820162</span>
 <span class="go">202101150800_-111.848_40.766_10    165.770876</span>
@@ -851,22 +851,22 @@ read the <code class="docutils literal notranslate"><span class="pre">particles/
 DuckDB, or polars instead. To find a single file, use
 <code class="docutils literal notranslate"><span class="pre">sim.footprint_path</span></code> or <code class="docutils literal notranslate"><span class="pre">sim.particles_path</span></code>.</p>
 <p>To work with one simulation of a selection, look it up by its row:</p>
-<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [33]: </span><span class="k">for</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">variant</span> <span class="ow">in</span> <span class="n">morning</span><span class="p">[[</span><span class="s2">"receptor"</span><span class="p">,</span> <span class="s2">"variant"</span><span class="p">]]</span><span class="o">.</span><span class="n">itertuples</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-<span class="gp">   ....: </span>    <span class="n">sim</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">receptor</span><span class="p">,</span> <span class="n">variant</span><span class="p">)</span>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [33]: </span><span class="k">for</span> <span class="n">release</span><span class="p">,</span> <span class="n">variant</span> <span class="ow">in</span> <span class="n">morning</span><span class="p">[[</span><span class="s2">"release"</span><span class="p">,</span> <span class="s2">"variant"</span><span class="p">]]</span><span class="o">.</span><span class="n">itertuples</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="gp">   ....: </span>    <span class="n">sim</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">release</span><span class="p">,</span> <span class="n">variant</span><span class="p">)</span>
 <span class="gp">   ....: </span>
 </pre></div>
 </div>
-<p>The extra columns of <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code> select one satellite scene or one
+<p>The extra columns of <code class="docutils literal notranslate"><span class="pre">releases.csv</span></code> select one satellite scene or one
 site:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">scene</span> <span class="o">=</span> <span class="n">sims</span><span class="p">[(</span><span class="n">sims</span><span class="o">.</span><span class="n">variant</span> <span class="o">==</span> <span class="s2">"hrrr"</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">sims</span><span class="o">.</span><span class="n">scene</span> <span class="o">==</span> <span class="s2">"A"</span><span class="p">)]</span>
-<span class="n">ensemble</span> <span class="o">=</span> <span class="n">sims</span><span class="p">[</span><span class="n">sims</span><span class="o">.</span><span class="n">variant</span> <span class="o">==</span> <span class="s2">"hrrr-err"</span><span class="p">]</span>        <span class="c1"># every realization of every receptor</span>
+<span class="n">ensemble</span> <span class="o">=</span> <span class="n">sims</span><span class="p">[</span><span class="n">sims</span><span class="o">.</span><span class="n">variant</span> <span class="o">==</span> <span class="s2">"hrrr-err"</span><span class="p">]</span>        <span class="c1"># every realization of every release</span>
 </pre></div>
 </div>
 <p>To see what is left to do:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [34]: </span><span class="n">project</span><span class="o">.</span><span class="n">incomplete</span><span class="p">()</span>       <span class="c1"># the simulations that are not complete</span>
 <span class="gh">Out[34]: </span>
 <span class="go">Empty DataFrame</span>
-<span class="go">Columns: [receptor, variant, realization, model, time, kind, location]</span>
+<span class="go">Columns: [release, variant, realization, model, time, kind, location]</span>
 <span class="go">Index: []</span>
 
 <span class="gp">In [35]: </span><span class="n">st</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">status</span><span class="p">()</span>      <span class="c1"># every simulation, with what it has and where it stands</span>
@@ -883,12 +883,12 @@ site:</p>
 <span class="gp">In [37]: </span><span class="n">st</span><span class="p">[</span><span class="n">st</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="s2">"failed"</span><span class="p">]</span>   <span class="c1"># the failed simulations, and why</span>
 <span class="gh">Out[37]: </span>
 <span class="go">Empty DataFrame</span>
-<span class="go">Columns: [receptor, variant, realization, model, time, kind, location, particles, footprint, state, stage, reason, message]</span>
+<span class="go">Columns: [release, variant, realization, model, time, kind, location, particles, footprint, state, stage, reason, message]</span>
 <span class="go">Index: []</span>
 
 <span class="gp">In [38]: </span><span class="n">project</span><span class="o">.</span><span class="n">status</span><span class="p">(</span><span class="n">morning</span><span class="p">)</span>    <span class="c1"># the same, for a selection</span>
 <span class="gh">Out[38]: </span>
-<span class="go">                          receptor variant  ... reason message</span>
+<span class="go">                           release variant  ... reason message</span>
 <span class="go">0  202101150600_-111.848_40.766_10    hrrr  ...   &lt;NA&gt;    &lt;NA&gt;</span>
 <span class="go">1  202101150700_-111.848_40.766_10    hrrr  ...   &lt;NA&gt;    &lt;NA&gt;</span>
 <span class="go">2  202101150800_-111.848_40.766_10    hrrr  ...   &lt;NA&gt;    &lt;NA&gt;</span>
@@ -917,7 +917,7 @@ trajectories, and a footprint in the PARIS format that openghg reads.</p>
 <span class="gp">In [40]: </span><span class="n">foot</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">read_footprint</span><span class="p">(</span><span class="s2">"footprint_2021-01-15_08.nc"</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>The file follows the CF-1.8 conventions and records the receptor and the
+<p>The file follows the CF-1.8 conventions and records the release and the
 settings used to make it, so <code class="docutils literal notranslate"><span class="pre">stilt.read_footprint</span></code> reads it back whole.</p>
 </section>
 <section id="particles-in-trajan-and-other-cf-tools">
@@ -1023,15 +1023,15 @@ does footprints from NAME and FLEXPART. The footprint must have hourly layers
 <span class="go">    Conventions:  CF-1.8</span>
 <span class="go">    model:        STILT</span>
 <span class="go">    source:       PYSTILT footprint</span>
-<span class="go">    receptor:     202101150900_-111.848_40.766_10</span>
+<span class="go">    release:      202101150900_-111.848_40.766_10</span>
 <span class="go">    history:      Converted from a PYSTILT footprint</span>
 </pre></div>
 </div>
 <p>openghg stores a time-resolved footprint along <code class="docutils literal notranslate"><span class="pre">H_back</span></code>, hours back from
 the footprint’s time, and pairs <code class="docutils literal notranslate"><span class="pre">H_back</span> <span class="pre">=</span> <span class="pre">k</span></code> with the flux hour that
-<em>starts</em> <code class="docutils literal notranslate"><span class="pre">k</span></code> hours before it. The footprint’s time is the receptor time.
+<em>starts</em> <code class="docutils literal notranslate"><span class="pre">k</span></code> hours before it. The footprint’s time is the release time.
 The first layer of a backward run, layer -1, covers the hour before the
-receptor time, so it goes to <code class="docutils literal notranslate"><span class="pre">H_back</span> <span class="pre">=</span> <span class="pre">1</span></code>. With the receptor at 18:00:</p>
+release time, so it goes to <code class="docutils literal notranslate"><span class="pre">H_back</span> <span class="pre">=</span> <span class="pre">1</span></code>. With the release at 18:00:</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p><code class="docutils literal notranslate"><span class="pre">H_back</span></code></p></th>
@@ -1073,8 +1073,8 @@ quantity as the PARIS units, (mol/mol)/(mol/m2/s).</p>
 <span class="gh">Out[47]: </span><span class="go">0.0</span>
 </pre></div>
 </div>
-<p>One receptor of <code class="docutils literal notranslate"><span class="pre">project.footprints().foot</span></code>,
-<code class="docutils literal notranslate"><span class="pre">footprints.foot.sel(receptor=rid)</span></code>, converts as <code class="docutils literal notranslate"><span class="pre">sim.footprint</span></code> does.</p>
+<p>One release of <code class="docutils literal notranslate"><span class="pre">project.footprints().foot</span></code>,
+<code class="docutils literal notranslate"><span class="pre">footprints.foot.sel(release=rid)</span></code>, converts as <code class="docutils literal notranslate"><span class="pre">sim.footprint</span></code> does.</p>
 <p>Pass the particles, as above: openghg also expects <code class="docutils literal notranslate"><span class="pre">particle_locations_n</span></code>,
 <code class="docutils literal notranslate"><span class="pre">_e</span></code>, <code class="docutils literal notranslate"><span class="pre">_s</span></code> and <code class="docutils literal notranslate"><span class="pre">_w</span></code>, the fraction of particles that first left the
 footprint grid through each edge, by cell along the edge and by 1 km height
@@ -1086,12 +1086,12 @@ nowhere, so the four add up to the share that left:</p>
 <span class="gh">Out[48]: </span><span class="go">0.0</span>
 </pre></div>
 </div>
-<p>A PARIS file holds one site, with one entry along <code class="docutils literal notranslate"><span class="pre">time</span></code> for each receptor
-time. Convert each receptor, concatenate along <code class="docutils literal notranslate"><span class="pre">time</span></code>, write the file, and
+<p>A PARIS file holds one site, with one entry along <code class="docutils literal notranslate"><span class="pre">time</span></code> for each release
+time. Convert each release, concatenate along <code class="docutils literal notranslate"><span class="pre">time</span></code>, write the file, and
 add it to openghg’s object store:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
 
-<span class="n">site</span> <span class="o">=</span> <span class="p">[</span><span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">morning</span><span class="p">[[</span><span class="s2">"receptor"</span><span class="p">,</span> <span class="s2">"variant"</span><span class="p">]]</span><span class="o">.</span><span class="n">itertuples</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)]</span>
+<span class="n">site</span> <span class="o">=</span> <span class="p">[</span><span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">morning</span><span class="p">[[</span><span class="s2">"release"</span><span class="p">,</span> <span class="s2">"variant"</span><span class="p">]]</span><span class="o">.</span><span class="n">itertuples</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)]</span>
 <span class="n">ds</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span>
     <span class="p">[</span><span class="n">s</span><span class="o">.</span><span class="n">footprint</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">to_paris</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">particles</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">site</span><span class="p">],</span>
     <span class="n">dim</span><span class="o">=</span><span class="s2">"time"</span><span class="p">,</span>
@@ -1129,20 +1129,20 @@ reader in another language.</p>
 <a class="reference external" href="https://duckdb.org">DuckDB</a>, from Python, R, or its own shell, a
 question about thousands of simulations is one query:</p>
 <div class="highlight-sql notranslate"><div class="highlight"><pre><span></span><span class="c1">-- footprints per settings folder and day</span>
-<span class="k">SELECT</span><span class="w"> </span><span class="n">settings</span><span class="p">,</span><span class="w"> </span><span class="nb">date</span><span class="p">,</span><span class="w"> </span><span class="k">count</span><span class="p">(</span><span class="k">DISTINCT</span><span class="w"> </span><span class="n">receptor</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">footprints</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">settings</span><span class="p">,</span><span class="w"> </span><span class="nb">date</span><span class="p">,</span><span class="w"> </span><span class="k">count</span><span class="p">(</span><span class="k">DISTINCT</span><span class="w"> </span><span class="n">release</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">footprints</span>
 <span class="k">FROM</span><span class="w"> </span><span class="n">read_parquet</span><span class="p">(</span><span class="s1">'output/footprint/*/*/*.parquet'</span><span class="p">,</span><span class="w"> </span><span class="n">hive_partitioning</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">true</span><span class="p">)</span>
 <span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">settings</span><span class="p">,</span><span class="w"> </span><span class="nb">date</span>
 <span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">settings</span><span class="p">,</span><span class="w"> </span><span class="nb">date</span><span class="p">;</span>
 
-<span class="c1">-- the total influence of each receptor's footprint</span>
-<span class="k">SELECT</span><span class="w"> </span><span class="n">receptor</span><span class="p">,</span><span class="w"> </span><span class="k">sum</span><span class="p">(</span><span class="n">foot</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">total</span>
+<span class="c1">-- the total influence of each release's footprint</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">release</span><span class="p">,</span><span class="w"> </span><span class="k">sum</span><span class="p">(</span><span class="n">foot</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">total</span>
 <span class="k">FROM</span><span class="w"> </span><span class="n">read_parquet</span><span class="p">(</span><span class="s1">'output/footprint/settings=hrrr-93278c/*/*.parquet'</span><span class="p">,</span><span class="w"> </span><span class="n">hive_partitioning</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">true</span><span class="p">)</span>
-<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">receptor</span><span class="p">;</span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">release</span><span class="p">;</span>
 
-<span class="c1">-- where each particle of one day's receptors ended up</span>
-<span class="k">SELECT</span><span class="w"> </span><span class="n">receptor</span><span class="p">,</span><span class="w"> </span><span class="n">particle</span><span class="p">,</span><span class="w"> </span><span class="n">arg_min</span><span class="p">(</span><span class="n">lon</span><span class="p">,</span><span class="w"> </span><span class="k">time</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">lon</span><span class="p">,</span><span class="w"> </span><span class="n">arg_min</span><span class="p">(</span><span class="n">lat</span><span class="p">,</span><span class="w"> </span><span class="k">time</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">lat</span>
+<span class="c1">-- where each particle of one day's releases ended up</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">release</span><span class="p">,</span><span class="w"> </span><span class="n">particle</span><span class="p">,</span><span class="w"> </span><span class="n">arg_min</span><span class="p">(</span><span class="n">lon</span><span class="p">,</span><span class="w"> </span><span class="k">time</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">lon</span><span class="p">,</span><span class="w"> </span><span class="n">arg_min</span><span class="p">(</span><span class="n">lat</span><span class="p">,</span><span class="w"> </span><span class="k">time</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">lat</span>
 <span class="k">FROM</span><span class="w"> </span><span class="n">read_parquet</span><span class="p">(</span><span class="s1">'output/particles/settings=hrrr-a3f9c2/date=2021-01-15/*.parquet'</span><span class="p">,</span><span class="w"> </span><span class="n">hive_partitioning</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">true</span><span class="p">)</span>
-<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">receptor</span><span class="p">,</span><span class="w"> </span><span class="n">particle</span><span class="p">;</span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">release</span><span class="p">,</span><span class="w"> </span><span class="n">particle</span><span class="p">;</span>
 </pre></div>
 </div>
 <p>A footprint file holds the cells the particles reached, as <code class="docutils literal notranslate"><span class="pre">hour</span></code>,

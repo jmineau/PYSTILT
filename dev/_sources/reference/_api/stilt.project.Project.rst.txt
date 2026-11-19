@@ -27,8 +27,8 @@ Attributes
    ~Project.name
    ~Project.output
    ~Project.plot
-   ~Project.receptors
-   ~Project.receptors_path
+   ~Project.releases
+   ~Project.releases_path
    ~Project.simulations
    ~Project.variants
 
@@ -40,7 +40,7 @@ Methods
 .. autosummary::
    :toctree:
 
-   ~Project.add_receptors
+   ~Project.add_releases
    ~Project.add_table
    ~Project.check
    ~Project.fetch
@@ -48,7 +48,7 @@ Methods
    ~Project.incomplete
    ~Project.init
    ~Project.particles
-   ~Project.receptor
+   ~Project.release
    ~Project.run
    ~Project.simulation
    ~Project.status

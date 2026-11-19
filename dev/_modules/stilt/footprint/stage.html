@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=5ff965c5"></script>
+    <script src="../../../_static/documentation_options.js?v=000a6a7f"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev25+g739e87834" />
+  <meta name="docsearch:version" content="0.1.0a30.dev30+g0d6d55b99" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -483,7 +483,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.foot</span><span class="w"> </span><span class="kn">import</span> <span class="n">HNF_PLUME_COLUMNS</span><span class="p">,</span> <span class="n">add_foot</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.identity</span><span class="w"> </span><span class="kn">import</span> <span class="n">file_stamp</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.particles</span><span class="w"> </span><span class="kn">import</span> <span class="n">particles_metadata</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.receptors</span><span class="w"> </span><span class="kn">import</span> <span class="n">Receptor</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.releases</span><span class="w"> </span><span class="kn">import</span> <span class="n">Release</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.spatial</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grid</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">.config</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
@@ -504,7 +504,7 @@
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
-<span class="c1">#: One thing :meth:`FootprintStage.check` found: the check, the receptor it is about (or ``None``), and what is wrong.</span>
+<span class="c1">#: One thing :meth:`FootprintStage.check` found: the check, the release it is about (or ``None``), and what is wrong.</span>
 <span class="n">_Finding</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span>
 
 <span class="n">_GEOMETRY_SPEC</span><span class="p">:</span> <span class="n">TypeAdapter</span><span class="p">[</span><span class="n">GeometrySpec</span><span class="p">]</span> <span class="o">=</span> <span class="n">TypeAdapter</span><span class="p">(</span><span class="n">GeometrySpec</span><span class="p">)</span>
@@ -630,15 +630,15 @@
 <div class="viewcode-block" id="FootprintStage.check">
 <a class="viewcode-back" href="../../../reference/_api/stilt.footprint.FootprintStage.check.html#stilt.footprint.FootprintStage.check">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">check</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">FootprintConfig</span><span class="p">,</span> <span class="n">receptors</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">directory</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">FootprintConfig</span><span class="p">,</span> <span class="n">releases</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">directory</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">_Finding</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Return what would stop the footprints of *receptors*, found without a run.</span>
+<span class="sd">        Return what would stop the footprints of *releases*, found without a run.</span>
 
 <span class="sd">        Variants whose footprints share a grid or a transform share that</span>
-<span class="sd">        part of the check: each is made once for a table of receptors.</span>
+<span class="sd">        part of the check: each is made once for a table of releases.</span>
 
-<span class="sd">        The receptors with a release point outside the footprint grid</span>
+<span class="sd">        The releases with a release point outside the footprint grid</span>
 <span class="sd">        (``grid``), and what each transform finds wrong with its own inputs,</span>
 <span class="sd">        such as an averaging kernel's table. A missing ``zsfc`` is the</span>
 <span class="sd">        project check's to find (:attr:`FootprintConfig.zsfc_reasons` says</span>
@@ -647,18 +647,18 @@
         <span class="n">found</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">_Finding</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">if</span> <span class="p">(</span><span class="n">grid</span> <span class="o">:=</span> <span class="n">config</span><span class="o">.</span><span class="n">grid</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">found</span> <span class="o">+=</span> <span class="n">_once</span><span class="p">(</span>
-                <span class="n">receptors</span><span class="p">,</span>
+                <span class="n">releases</span><span class="p">,</span>
                 <span class="p">(</span><span class="s2">"grid"</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">model_dump_json</span><span class="p">()),</span>
-                <span class="k">lambda</span><span class="p">:</span> <span class="n">_outside</span><span class="p">(</span><span class="n">receptors</span><span class="p">,</span> <span class="n">grid</span><span class="p">),</span>
+                <span class="k">lambda</span><span class="p">:</span> <span class="n">_outside</span><span class="p">(</span><span class="n">releases</span><span class="p">,</span> <span class="n">grid</span><span class="p">),</span>
             <span class="p">)</span>
         <span class="k">for</span> <span class="n">transform</span> <span class="ow">in</span> <span class="n">config</span><span class="o">.</span><span class="n">transforms</span><span class="p">:</span>
             <span class="n">check</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">transform</span><span class="p">,</span> <span class="s2">"check"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">check</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="k">continue</span>
             <span class="n">found</span> <span class="o">+=</span> <span class="n">_once</span><span class="p">(</span>
-                <span class="n">receptors</span><span class="p">,</span>
+                <span class="n">releases</span><span class="p">,</span>
                 <span class="p">(</span><span class="s2">"transform"</span><span class="p">,</span> <span class="nb">repr</span><span class="p">(</span><span class="n">transform</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">directory</span><span class="p">)),</span>
-                <span class="k">lambda</span> <span class="n">check</span><span class="o">=</span><span class="n">check</span><span class="p">:</span> <span class="n">_transform_findings</span><span class="p">(</span><span class="n">check</span><span class="p">,</span> <span class="n">receptors</span><span class="p">,</span> <span class="n">directory</span><span class="p">),</span>
+                <span class="k">lambda</span> <span class="n">check</span><span class="o">=</span><span class="n">check</span><span class="p">:</span> <span class="n">_transform_findings</span><span class="p">(</span><span class="n">check</span><span class="p">,</span> <span class="n">releases</span><span class="p">,</span> <span class="n">directory</span><span class="p">),</span>
             <span class="p">)</span>
         <span class="k">return</span> <span class="n">found</span></div>
 
@@ -695,7 +695,7 @@
         <span class="k">try</span><span class="p">:</span>
             <span class="n">foot</span> <span class="o">=</span> <span class="n">calc_footprint</span><span class="p">(</span>
                 <span class="n">simulation_particles</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="n">config</span><span class="p">),</span>
-                <span class="n">sim</span><span class="o">.</span><span class="n">receptor</span><span class="p">,</span>
+                <span class="n">sim</span><span class="o">.</span><span class="n">release</span><span class="p">,</span>
                 <span class="n">config</span><span class="o">.</span><span class="n">grid</span><span class="p">,</span>
                 <span class="n">smooth_factor</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">smooth_factor</span><span class="p">,</span>
                 <span class="n">tres</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">tres</span><span class="p">,</span>
@@ -708,9 +708,7 @@
             <span class="p">)</span>
         <span class="k">except</span> <span class="n">EmptyFootprint</span><span class="p">:</span>
             <span class="n">foot</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="n">_write</span><span class="p">(</span>
-            <span class="n">path</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">variant</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">receptor</span><span class="p">,</span> <span class="n">foot</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">realization</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span>
-        <span class="p">)</span></div>
+        <span class="n">_write</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">variant</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">release</span><span class="p">,</span> <span class="n">foot</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">realization</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span></div>
 </div>
 
 
@@ -835,7 +833,7 @@
 
 <span class="sd">    The met files are read from the particle file's metadata only when</span>
 <span class="sd">    ``foot`` is computed. For that, particles without ``time`` (the run's</span>
-<span class="sd">    own, in memory) get it from *start*, the receptor time, and lose it</span>
+<span class="sd">    own, in memory) get it from *start*, the release time, and lose it</span>
 <span class="sd">    again.</span>
 <span class="sd">    """</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">_computes_foot</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">config</span><span class="p">):</span>
@@ -857,7 +855,7 @@
         <span class="n">sim</span><span class="o">.</span><span class="n">particles</span><span class="p">,</span>
         <span class="n">config</span><span class="p">,</span>
         <span class="n">sim</span><span class="o">.</span><span class="n">particles_path</span><span class="p">,</span>
-        <span class="n">start</span><span class="o">=</span><span class="n">sim</span><span class="o">.</span><span class="n">receptor</span><span class="o">.</span><span class="n">time</span><span class="p">,</span>
+        <span class="n">start</span><span class="o">=</span><span class="n">sim</span><span class="o">.</span><span class="n">release</span><span class="o">.</span><span class="n">time</span><span class="p">,</span>
         <span class="n">z_top</span><span class="o">=</span><span class="nb">getattr</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">transport</span><span class="p">,</span> <span class="s2">"z_top"</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
     <span class="p">)</span>
 
@@ -916,32 +914,32 @@
 <span class="sd">    folder's hash, and the hash of the particles it was made from, so it</span>
 <span class="sd">    reads alone.</span>
 <span class="sd">    """</span>
-    <span class="n">receptor</span> <span class="o">=</span> <span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">receptor</span>
+    <span class="n">release</span> <span class="o">=</span> <span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">release</span>
     <span class="n">name</span> <span class="o">=</span> <span class="n">FootprintStage</span><span class="o">.</span><span class="n">name</span>
-    <span class="n">path</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">make_path</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">),</span> <span class="n">realization</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">_write</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">variant</span><span class="o">.</span><span class="n">stages</span><span class="p">[</span><span class="n">name</span><span class="p">],</span> <span class="n">variant</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">foot</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">make_path</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">release</span><span class="o">.</span><span class="n">id</span><span class="p">),</span> <span class="n">realization</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_write</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">variant</span><span class="o">.</span><span class="n">stages</span><span class="p">[</span><span class="n">name</span><span class="p">],</span> <span class="n">variant</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">foot</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">store_empty_footprint</span><span class="p">(</span>
-    <span class="n">output</span><span class="p">:</span> <span class="n">Output</span><span class="p">,</span> <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span> <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">,</span> <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">output</span><span class="p">:</span> <span class="n">Output</span><span class="p">,</span> <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span> <span class="n">release</span><span class="p">:</span> <span class="n">Release</span><span class="p">,</span> <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Record in *variant*'s footprint folder that a receptor's footprint is empty: no particle reached the grid."""</span>
+<span class="w">    </span><span class="sd">"""Record in *variant*'s footprint folder that a release's footprint is empty: no particle reached the grid."""</span>
     <span class="n">name</span> <span class="o">=</span> <span class="n">FootprintStage</span><span class="o">.</span><span class="n">name</span>
-    <span class="n">path</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">make_path</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">),</span> <span class="n">realization</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">_write</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">variant</span><span class="o">.</span><span class="n">stages</span><span class="p">[</span><span class="n">name</span><span class="p">],</span> <span class="n">variant</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">make_path</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">release</span><span class="o">.</span><span class="n">id</span><span class="p">),</span> <span class="n">realization</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_write</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">variant</span><span class="o">.</span><span class="n">stages</span><span class="p">[</span><span class="n">name</span><span class="p">],</span> <span class="n">variant</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_write</span><span class="p">(</span>
     <span class="n">path</span><span class="p">:</span> <span class="n">Location</span><span class="p">,</span>
     <span class="n">config</span><span class="p">:</span> <span class="n">FootprintConfig</span><span class="p">,</span>
     <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span>
-    <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">,</span>
+    <span class="n">release</span><span class="p">:</span> <span class="n">Release</span><span class="p">,</span>
     <span class="n">foot</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">stage</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">FootprintStage</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Write a receptor's footprint, made with *config*, at *path*; the empty one when *foot* is ``None``.</span>
+<span class="sd">    Write a release's footprint, made with *config*, at *path*; the empty one when *foot* is ``None``.</span>
 
 <span class="sd">    The file records what every result file does</span>
 <span class="sd">    (:func:`stilt.identity.file_stamp`, with the hash of *variant*'s folder</span>
@@ -950,36 +948,36 @@
     <span class="n">stamp</span> <span class="o">=</span> <span class="n">file_stamp</span><span class="p">(</span><span class="n">variant</span><span class="o">.</span><span class="n">stage_hashes</span><span class="p">[</span><span class="n">stage</span><span class="p">],</span> <span class="n">realization</span><span class="p">)</span>
     <span class="n">stamp</span><span class="p">[</span><span class="sa">b</span><span class="s2">"stilt:particles_hash"</span><span class="p">]</span> <span class="o">=</span> <span class="n">variant</span><span class="o">.</span><span class="n">particles_hash</span><span class="o">.</span><span class="n">encode</span><span class="p">()</span>
     <span class="k">if</span> <span class="n">foot</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">write_empty_footprint</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">variant</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">stamp</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">write_empty_footprint</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">variant</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">stamp</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">write_footprint</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">foot</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">stamp</span><span class="p">)</span>
 
 
-<span class="c1">#: The findings of each part of a check for one table of receptors, so that</span>
+<span class="c1">#: The findings of each part of a check for one table of releases, so that</span>
 <span class="c1">#: variants whose footprints share a grid or a transform share its check.</span>
 <span class="n">_CHECKED</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">weakref</span><span class="o">.</span><span class="n">ref</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">_Finding</span><span class="p">]]]]</span> <span class="o">=</span> <span class="p">{}</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_once</span><span class="p">(</span>
-    <span class="n">receptors</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">make</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="nb">list</span><span class="p">[</span><span class="n">_Finding</span><span class="p">]]</span>
+    <span class="n">releases</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">make</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="nb">list</span><span class="p">[</span><span class="n">_Finding</span><span class="p">]]</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">_Finding</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""Return the findings *make* gives for *receptors* and *key*, made once while that table is in use."""</span>
-    <span class="n">known</span> <span class="o">=</span> <span class="n">_CHECKED</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">(</span><span class="n">receptors</span><span class="p">))</span>
-    <span class="k">if</span> <span class="n">known</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">known</span><span class="p">[</span><span class="mi">0</span><span class="p">]()</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">receptors</span><span class="p">:</span>
-        <span class="n">_CHECKED</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>  <span class="c1"># one table at a time: a project's receptors</span>
-        <span class="n">known</span> <span class="o">=</span> <span class="n">_CHECKED</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">receptors</span><span class="p">)]</span> <span class="o">=</span> <span class="p">(</span><span class="n">weakref</span><span class="o">.</span><span class="n">ref</span><span class="p">(</span><span class="n">receptors</span><span class="p">),</span> <span class="p">{})</span>
+<span class="w">    </span><span class="sd">"""Return the findings *make* gives for *releases* and *key*, made once while that table is in use."""</span>
+    <span class="n">known</span> <span class="o">=</span> <span class="n">_CHECKED</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">(</span><span class="n">releases</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">known</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">known</span><span class="p">[</span><span class="mi">0</span><span class="p">]()</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">releases</span><span class="p">:</span>
+        <span class="n">_CHECKED</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>  <span class="c1"># one table at a time: a project's releases</span>
+        <span class="n">known</span> <span class="o">=</span> <span class="n">_CHECKED</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">releases</span><span class="p">)]</span> <span class="o">=</span> <span class="p">(</span><span class="n">weakref</span><span class="o">.</span><span class="n">ref</span><span class="p">(</span><span class="n">releases</span><span class="p">),</span> <span class="p">{})</span>
     <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">known</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
         <span class="n">known</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">make</span><span class="p">()</span>
     <span class="k">return</span> <span class="n">known</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="n">key</span><span class="p">]</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_transform_findings</span><span class="p">(</span>
-    <span class="n">check</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">receptors</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">directory</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">check</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">releases</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">directory</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">_Finding</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""Return what a transform's own check finds for the receptors, as plain tuples."""</span>
-    <span class="n">ids</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">receptors</span><span class="p">[</span><span class="s2">"receptor"</span><span class="p">]))</span>
+<span class="w">    </span><span class="sd">"""Return what a transform's own check finds for the releases, as plain tuples."""</span>
+    <span class="n">ids</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">releases</span><span class="p">[</span><span class="s2">"release"</span><span class="p">]))</span>
     <span class="k">return</span> <span class="p">[</span>
-        <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">name</span><span class="p">),</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">receptor</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="n">receptor</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">message</span><span class="p">))</span>
-        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">message</span> <span class="ow">in</span> <span class="n">check</span><span class="p">(</span><span class="n">ids</span><span class="p">,</span> <span class="n">directory</span><span class="p">)</span>
+        <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">name</span><span class="p">),</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">release</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="n">release</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">message</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">message</span> <span class="ow">in</span> <span class="n">check</span><span class="p">(</span><span class="n">ids</span><span class="p">,</span> <span class="n">directory</span><span class="p">)</span>
     <span class="p">]</span>
 
 
@@ -1009,7 +1007,7 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_outside</span><span class="p">(</span><span class="n">rows</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">grid</span><span class="p">:</span> <span class="n">Grid</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">_Finding</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""List the receptors with a release point outside *grid*, which is bounded in longitude and latitude."""</span>
+<span class="w">    </span><span class="sd">"""List the releases with a release point outside *grid*, which is bounded in longitude and latitude."""</span>
     <span class="n">outside</span> <span class="o">=</span> <span class="n">rows</span><span class="p">[</span><span class="o">~</span><span class="n">grid</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="n">rows</span><span class="p">[</span><span class="s2">"longitude"</span><span class="p">],</span> <span class="n">rows</span><span class="p">[</span><span class="s2">"latitude"</span><span class="p">])]</span>
     <span class="n">box</span> <span class="o">=</span> <span class="p">(</span>
         <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">grid</span><span class="o">.</span><span class="n">xmin</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">grid</span><span class="o">.</span><span class="n">xmax</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> longitude, "</span>
@@ -1018,11 +1016,11 @@
     <span class="k">return</span> <span class="p">[</span>
         <span class="p">(</span>
             <span class="s2">"grid"</span><span class="p">,</span>
-            <span class="nb">str</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">receptor</span><span class="p">),</span>
+            <span class="nb">str</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">release</span><span class="p">),</span>
             <span class="sa">f</span><span class="s2">"longitude </span><span class="si">{</span><span class="n">row</span><span class="o">.</span><span class="n">longitude</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> and latitude </span><span class="si">{</span><span class="n">row</span><span class="o">.</span><span class="n">latitude</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> are "</span>
             <span class="sa">f</span><span class="s2">"outside the footprint grid (</span><span class="si">{</span><span class="n">box</span><span class="si">}</span><span class="s2">)"</span><span class="p">,</span>
         <span class="p">)</span>
-        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">outside</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="s2">"receptor"</span><span class="p">)</span><span class="o">.</span><span class="n">itertuples</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">outside</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="s2">"release"</span><span class="p">)</span><span class="o">.</span><span class="n">itertuples</span><span class="p">()</span>
     <span class="p">]</span>
 
 

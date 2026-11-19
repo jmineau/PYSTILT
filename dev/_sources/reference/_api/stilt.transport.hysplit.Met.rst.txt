@@ -33,7 +33,7 @@ Methods
    :toctree:
 
    ~Met.check
-   ~Met.check_receptors
+   ~Met.check_releases
    ~Met.fetch
    ~Met.files_for
    ~Met.missing

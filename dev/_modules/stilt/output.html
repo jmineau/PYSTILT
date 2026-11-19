@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=5ff965c5"></script>
+    <script src="../../_static/documentation_options.js?v=000a6a7f"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev25+g739e87834" />
+  <meta name="docsearch:version" content="0.1.0a30.dev30+g0d6d55b99" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -465,27 +465,27 @@
 <span class="sd">      particles/</span>
 <span class="sd">        settings=hrrr-a3f9c2/            variant name + short hash of the transport settings</span>
 <span class="sd">          _settings.yaml</span>
-<span class="sd">          date=2024-07-01/&lt;receptor&gt;.parquet</span>
+<span class="sd">          date=2024-07-01/&lt;release&gt;.parquet</span>
 <span class="sd">        settings=hrrr-err-7be104/        an ensemble: one folder, a partition per realization</span>
-<span class="sd">          realization=0/date=2024-07-01/&lt;receptor&gt;.parquet</span>
+<span class="sd">          realization=0/date=2024-07-01/&lt;release&gt;.parquet</span>
 <span class="sd">      footprint/</span>
 <span class="sd">        settings=hrrr-93278c/            variant name + short hash of transport + footprint settings</span>
 <span class="sd">          _settings.yaml                 names the particles folder it was made from</span>
-<span class="sd">          date=2024-07-01/&lt;receptor&gt;.parquet</span>
+<span class="sd">          date=2024-07-01/&lt;release&gt;.parquet</span>
 <span class="sd">        settings=hrrr-hexes-1b2c3d/      same particles, other footprint settings</span>
 <span class="sd">      logs/</span>
-<span class="sd">        settings=hrrr-a3f9c2/date=2024-07-01/&lt;receptor&gt;.log</span>
-<span class="sd">        settings=hrrr-a3f9c2/date=2024-07-01/&lt;receptor&gt;.failure.yaml   a failed run</span>
-<span class="sd">        settings=hrrr-93278c/date=2024-07-01/&lt;receptor&gt;.failure.yaml   a failed footprint</span>
+<span class="sd">        settings=hrrr-a3f9c2/date=2024-07-01/&lt;release&gt;.log</span>
+<span class="sd">        settings=hrrr-a3f9c2/date=2024-07-01/&lt;release&gt;.failure.yaml   a failed run</span>
+<span class="sd">        settings=hrrr-93278c/date=2024-07-01/&lt;release&gt;.failure.yaml   a failed footprint</span>
 <span class="sd">      scratch/</span>
-<span class="sd">        settings=hrrr-a3f9c2/date=2024-07-01/&lt;receptor&gt;/               a kept workdir</span>
+<span class="sd">        settings=hrrr-a3f9c2/date=2024-07-01/&lt;release&gt;/               a kept workdir</span>
 
 <span class="sd">A folder is found by the hash of its settings, so two projects that run the</span>
 <span class="sd">same settings share one folder, and a changed setting lands in a new folder</span>
 <span class="sd">beside the old one instead of overwriting it. ``pyarrow.dataset``, DuckDB,</span>
 <span class="sd">polars, and R's arrow read ``settings`` and ``date`` as columns of the whole</span>
-<span class="sd">tree. Particles are one Parquet file per receptor. A stage writes its own</span>
-<span class="sd">file per receptor, with the extension it declares</span>
+<span class="sd">tree. Particles are one Parquet file per release. A stage writes its own</span>
+<span class="sd">file per release, with the extension it declares</span>
 <span class="sd">(:attr:`stilt.stages.Stage.suffix`), at the path this module gives it, and</span>
 <span class="sd">this module never looks inside one. The footprint's are sparse tables of</span>
 <span class="sd">the non-zero cells; an empty footprint is a file with no rows, marked</span>
@@ -502,10 +502,10 @@
 <span class="sd">and the variant::</span>
 
 <span class="sd">    out = Output("output")</span>
-<span class="sd">    out.write_particles(variant, receptor, frame, met_files)</span>
-<span class="sd">    out.path("particles", variant, receptor.id)  # one receptor's file</span>
-<span class="sd">    out.present("footprint", variant, receptor_ids)  # which have a footprint</span>
-<span class="sd">    out.make_path("footprint", variant, receptor.id)  # where a stage writes</span>
+<span class="sd">    out.write_particles(variant, release, frame, met_files)</span>
+<span class="sd">    out.path("particles", variant, release.id)  # one release's file</span>
+<span class="sd">    out.present("footprint", variant, release_ids)  # which have a footprint</span>
+<span class="sd">    out.make_path("footprint", variant, release.id)  # where a stage writes</span>
 <span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
@@ -537,7 +537,8 @@
     <span class="n">stage_hash</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.particles</span><span class="w"> </span><span class="kn">import</span> <span class="n">write_particles</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.receptors</span><span class="w"> </span><span class="kn">import</span> <span class="n">Receptor</span><span class="p">,</span> <span class="n">parse_receptor_id</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.particles.table</span><span class="w"> </span><span class="kn">import</span> <span class="n">OLD_FILE</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.releases</span><span class="w"> </span><span class="kn">import</span> <span class="n">Release</span><span class="p">,</span> <span class="n">parse_release_id</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.stages</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_stage</span><span class="p">,</span> <span class="n">reads</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
@@ -550,7 +551,7 @@
 
 <span class="c1">#: Underscore-prefixed, so dataset readers skip it.</span>
 <span class="n">SETTINGS_FILE</span> <span class="o">=</span> <span class="s2">"_settings.yaml"</span>
-<span class="c1">#: The suffix of a receptor's failure record, ``&lt;receptor_id&gt;.failure.yaml``, in its folder's logs.</span>
+<span class="c1">#: The suffix of a release's failure record, ``&lt;release_id&gt;.failure.yaml``, in its folder's logs.</span>
 <span class="n">FAILURE_SUFFIX</span> <span class="o">=</span> <span class="s2">".failure.yaml"</span>
 <span class="n">HASH_CHARS</span> <span class="o">=</span> <span class="mi">6</span>
 
@@ -563,16 +564,16 @@
     <span class="k">return</span> <span class="sa">f</span><span class="s2">"date=</span><span class="si">{</span><span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">day</span><span class="p">,</span><span class="w"> </span><span class="s1">'%Y%m</span><span class="si">%d</span><span class="s1">'</span><span class="p">)</span><span class="si">:</span><span class="s2">%Y-%m-%d</span><span class="si">}</span><span class="s2">"</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_date_dir</span><span class="p">(</span><span class="n">receptor_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_date_dir</span><span class="p">(</span><span class="n">release_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Return the ``date=YYYY-MM-DD`` folder of a receptor id, which starts with the receptor time.</span>
+<span class="sd">    Return the ``date=YYYY-MM-DD`` folder of a release id, which starts with the release time.</span>
 
 <span class="sd">    The folder is the id's first eight characters, ``YYYYMMDD``, so a listing</span>
 <span class="sd">    of hundreds of thousands of ids reads each day once and does not parse</span>
-<span class="sd">    each id's time. An id that :func:`stilt.receptors.parse_receptor_id`</span>
+<span class="sd">    each id's time. An id that :func:`stilt.releases.parse_release_id`</span>
 <span class="sd">    rejects raises its error.</span>
 <span class="sd">    """</span>
-    <span class="n">rid</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">receptor_id</span><span class="p">)</span>
+    <span class="n">rid</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">release_id</span><span class="p">)</span>
     <span class="n">stamp</span> <span class="o">=</span> <span class="n">rid</span><span class="p">[:</span><span class="mi">12</span><span class="p">]</span>  <span class="c1"># YYYYMMDDHHMM</span>
     <span class="k">if</span> <span class="p">(</span>
         <span class="nb">len</span><span class="p">(</span><span class="n">rid</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">13</span>
@@ -585,8 +586,8 @@
         <span class="k">try</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">_day_folder</span><span class="p">(</span><span class="n">stamp</span><span class="p">[:</span><span class="mi">8</span><span class="p">])</span>
         <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
-            <span class="k">pass</span>  <span class="c1"># not a real date; parse_receptor_id says so</span>
-    <span class="n">time</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">parse_receptor_id</span><span class="p">(</span><span class="n">rid</span><span class="p">)</span>
+            <span class="k">pass</span>  <span class="c1"># not a real date; parse_release_id says so</span>
+    <span class="n">time</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">parse_release_id</span><span class="p">(</span><span class="n">rid</span><span class="p">)</span>
     <span class="k">return</span> <span class="sa">f</span><span class="s2">"date=</span><span class="si">{</span><span class="n">time</span><span class="si">:</span><span class="s2">%Y-%m-%d</span><span class="si">}</span><span class="s2">"</span>
 
 
@@ -608,13 +609,13 @@
     <span class="k">return</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">item</span><span class="p">)</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">"/"</span><span class="p">)</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">"/"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">listed</span><span class="p">]</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_list_receptor_files</span><span class="p">(</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_list_release_files</span><span class="p">(</span>
     <span class="n">root</span><span class="p">:</span> <span class="n">Location</span><span class="p">,</span> <span class="n">suffix</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">among</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Location</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Return ``{receptor_id: path}`` for every ``date=*/&lt;id&gt;&lt;suffix&gt;`` under *root*, in date order.</span>
+<span class="sd">    Return ``{release_id: path}`` for every ``date=*/&lt;id&gt;&lt;suffix&gt;`` under *root*, in date order.</span>
 
-<span class="sd">    With *among*, only those receptors are returned, and only their date</span>
+<span class="sd">    With *among*, only those releases are returned, and only their date</span>
 <span class="sd">    folders are listed. The date folders are listed in a few threads: on a</span>
 <span class="sd">    network filesystem or an object store the listing waits on the server,</span>
 <span class="sd">    and a project can have thousands of date folders.</span>
@@ -728,10 +729,24 @@
 <span class="n">_OTHER_TREES</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"logs"</span><span class="p">,</span> <span class="s2">"scratch"</span><span class="p">)</span>
 
 <span class="c1">#: What :meth:`Output.table` returns when no file is read: for particles, and for a stage.</span>
-<span class="n">_NO_PARTICLES</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">table</span><span class="p">({</span><span class="s2">"receptor"</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([],</span> <span class="n">pa</span><span class="o">.</span><span class="n">string</span><span class="p">())})</span>
+<span class="n">_NO_PARTICLES</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">table</span><span class="p">({</span><span class="s2">"release"</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([],</span> <span class="n">pa</span><span class="o">.</span><span class="n">string</span><span class="p">())})</span>
 <span class="n">_NO_STAGE_FILES</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">table</span><span class="p">(</span>
-    <span class="p">{</span><span class="s2">"receptor"</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([],</span> <span class="n">pa</span><span class="o">.</span><span class="n">string</span><span class="p">()),</span> <span class="s2">"date"</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([],</span> <span class="n">pa</span><span class="o">.</span><span class="n">date32</span><span class="p">())}</span>
+    <span class="p">{</span><span class="s2">"release"</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([],</span> <span class="n">pa</span><span class="o">.</span><span class="n">string</span><span class="p">()),</span> <span class="s2">"date"</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([],</span> <span class="n">pa</span><span class="o">.</span><span class="n">date32</span><span class="p">())}</span>
 <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_old_files_message</span><span class="p">(</span><span class="n">kind</span><span class="p">:</span> <span class="n">Kind</span><span class="p">,</span> <span class="n">folder</span><span class="p">:</span> <span class="n">Location</span><span class="p">,</span> <span class="n">paths</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Location</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the error for files that hold ``receptor`` where they now hold ``release``, naming the first."""</span>
+    <span class="n">first</span> <span class="o">=</span> <span class="n">paths</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">paths</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">readable</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">as</span> <span class="n">source</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s2">"release"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">pq</span><span class="o">.</span><span class="n">read_schema</span><span class="p">(</span><span class="n">source</span><span class="p">)</span><span class="o">.</span><span class="n">names</span><span class="p">:</span>
+                <span class="n">first</span> <span class="o">=</span> <span class="n">path</span>
+                <span class="k">break</span>
+    <span class="k">return</span> <span class="n">OLD_FILE</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+        <span class="n">what</span><span class="o">=</span><span class="sa">f</span><span class="s2">"The </span><span class="si">{</span><span class="n">kind</span><span class="si">}</span><span class="s2"> file </span><span class="si">{</span><span class="n">first</span><span class="si">}</span><span class="s2">, and perhaps others in </span><span class="si">{</span><span class="n">folder</span><span class="si">}</span><span class="s2">,"</span>
+    <span class="p">)</span>
+
 
 <span class="c1">#: The ``date=YYYY-MM-DD`` folders, read as a ``date32`` column.</span>
 <span class="n">_DATE_PARTITIONING</span> <span class="o">=</span> <span class="n">pads</span><span class="o">.</span><span class="n">partitioning</span><span class="p">(</span>
@@ -748,22 +763,22 @@
     <span class="p">]</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_receptor_file</span><span class="p">(</span>
-    <span class="n">folder</span><span class="p">:</span> <span class="n">Location</span><span class="p">,</span> <span class="n">receptor_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">suffix</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">".parquet"</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_release_file</span><span class="p">(</span>
+    <span class="n">folder</span><span class="p">:</span> <span class="n">Location</span><span class="p">,</span> <span class="n">release_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">suffix</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">".parquet"</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Return a receptor's file in *folder*: ``date=YYYY-MM-DD/&lt;receptor_id&gt;&lt;suffix&gt;``."""</span>
-    <span class="k">return</span> <span class="n">folder</span> <span class="o">/</span> <span class="n">_date_dir</span><span class="p">(</span><span class="n">receptor_id</span><span class="p">)</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">receptor_id</span><span class="si">}{</span><span class="n">suffix</span><span class="si">}</span><span class="s2">"</span>
+<span class="w">    </span><span class="sd">"""Return a release's file in *folder*: ``date=YYYY-MM-DD/&lt;release_id&gt;&lt;suffix&gt;``."""</span>
+    <span class="k">return</span> <span class="n">folder</span> <span class="o">/</span> <span class="n">_date_dir</span><span class="p">(</span><span class="n">release_id</span><span class="p">)</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">release_id</span><span class="si">}{</span><span class="n">suffix</span><span class="si">}</span><span class="s2">"</span>
 
 
 <div class="viewcode-block" id="completed">
 <a class="viewcode-back" href="../../reference/_api/stilt.output.completed.html#stilt.output.completed">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">completed</span><span class="p">(</span><span class="n">particles</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="o">*</span><span class="n">stages</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Return the receptors that are complete, from the ones with particles and the ones with each stage's file.</span>
+<span class="sd">    Return the releases that are complete, from the ones with particles and the ones with each stage's file.</span>
 
 <span class="sd">    The one definition of done. A simulation is complete when the model's</span>
 <span class="sd">    output file exists, and so does the file of every stage its variant</span>
-<span class="sd">    uses. *stages* is one set of receptors for each stage the variant uses,</span>
+<span class="sd">    uses. *stages* is one set of releases for each stage the variant uses,</span>
 <span class="sd">    none for a variant that makes particles only. A stage's file is a file</span>
 <span class="sd">    whatever it holds, so an empty footprint is complete.</span>
 <span class="sd">    """</span>
@@ -1227,7 +1242,7 @@
 <span class="w">        </span><span class="sd">"""Return the folder of *variant*'s results of *kind* in *tree*, making the settings folder on first use."""</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_part</span><span class="p">(</span><span class="n">tree</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">variant</span><span class="p">),</span> <span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
 
-    <span class="c1"># -- one receptor's files ------------------------------------------------</span>
+    <span class="c1"># -- one release's files ------------------------------------------------</span>
 
 <div class="viewcode-block" id="Output.path">
 <a class="viewcode-back" href="../../reference/_api/stilt.output.Output.path.html#stilt.output.Output.path">[docs]</a>
@@ -1235,11 +1250,11 @@
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">kind</span><span class="p">:</span> <span class="n">Kind</span><span class="p">,</span>
         <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span>
-        <span class="n">receptor_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">release_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Return the file of one receptor's result, whether or not it exists.</span>
+<span class="sd">        Return the file of one release's result, whether or not it exists.</span>
 
 <span class="sd">        ``None`` before the variant's folder of *kind* exists, and for a</span>
 <span class="sd">        stage the variant does not use. An ensemble's results are in a</span>
@@ -1248,7 +1263,7 @@
         <span class="n">folder</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_found</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">kind</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">folder</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">None</span>
-        <span class="k">return</span> <span class="n">_receptor_file</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="n">receptor_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_suffix</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">variant</span><span class="p">))</span></div>
+        <span class="k">return</span> <span class="n">_release_file</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="n">release_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_suffix</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">variant</span><span class="p">))</span></div>
 
 
 <div class="viewcode-block" id="Output.make_path">
@@ -1257,11 +1272,11 @@
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">kind</span><span class="p">:</span> <span class="n">Kind</span><span class="p">,</span>
         <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span>
-        <span class="n">receptor_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">release_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Return where one receptor's result of *kind* is written, making the variant's settings folder on first use.</span>
+<span class="sd">        Return where one release's result of *kind* is written, making the variant's settings folder on first use.</span>
 
 <span class="sd">        What :meth:`path` returns once the folder exists. The worker hands</span>
 <span class="sd">        it to a stage, which writes its own file there.</span>
@@ -1272,7 +1287,7 @@
 <span class="sd">            If *kind* is a stage the variant does not use.</span>
 <span class="sd">        """</span>
         <span class="n">folder</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_made</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">kind</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">_receptor_file</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="n">receptor_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_suffix</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">variant</span><span class="p">))</span></div>
+        <span class="k">return</span> <span class="n">_release_file</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="n">release_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_suffix</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">variant</span><span class="p">))</span></div>
 
 
     <span class="nd">@staticmethod</span>
@@ -1286,17 +1301,17 @@
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">kind</span><span class="p">:</span> <span class="n">Kind</span><span class="p">,</span>
         <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span>
-        <span class="n">receptor_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">release_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">columns</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Return one receptor's result file as a table of its stored columns.</span>
+<span class="sd">        Return one release's result file as a table of its stored columns.</span>
 
 <span class="sd">        The file as written, with no ``date`` column: what :meth:`table`</span>
-<span class="sd">        reads for many receptors at once, for one. :meth:`table` builds a</span>
+<span class="sd">        reads for many releases at once, for one. :meth:`table` builds a</span>
 <span class="sd">        dataset over its files, which costs more than this on a single</span>
-<span class="sd">        one, so a method that reads receptors one at a time uses this.</span>
+<span class="sd">        one, so a method that reads releases one at a time uses this.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -1305,8 +1320,8 @@
 <span class="sd">            Parquet, as the footprint's are.</span>
 <span class="sd">        variant : Variant</span>
 <span class="sd">            Whose result.</span>
-<span class="sd">        receptor_id : str</span>
-<span class="sd">            The receptor, whose file must exist (:meth:`present`).</span>
+<span class="sd">        release_id : str</span>
+<span class="sd">            The release, whose file must exist (:meth:`present`).</span>
 <span class="sd">        realization : int, optional</span>
 <span class="sd">            Which realization of an ensemble.</span>
 <span class="sd">        columns : list of str, optional</span>
@@ -1315,9 +1330,9 @@
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
 <span class="sd">        FileNotFoundError</span>
-<span class="sd">            If the receptor has no file, or the variant no folder.</span>
+<span class="sd">            If the release has no file, or the variant no folder.</span>
 <span class="sd">        """</span>
-        <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">receptor_id</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">release_id</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">"No </span><span class="si">{</span><span class="n">kind</span><span class="si">}</span><span class="s2"> folder for variant </span><span class="si">{</span><span class="n">variant</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> in </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="si">}</span><span class="s2">."</span>
@@ -1329,24 +1344,24 @@
 <div class="viewcode-block" id="Output.log_path">
 <a class="viewcode-back" href="../../reference/_api/stilt.output.Output.log_path.html#stilt.output.Output.log_path">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">log_path</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span> <span class="n">receptor_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span> <span class="n">release_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Return where the log of a receptor's transport model run is kept, or ``None`` before its folder exists."""</span>
+<span class="w">        </span><span class="sd">"""Return where the log of a release's transport model run is kept, or ``None`` before its folder exists."""</span>
         <span class="n">logs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_found</span><span class="p">(</span><span class="s2">"particles"</span><span class="p">,</span> <span class="s2">"logs"</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
-        <span class="k">return</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">logs</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">_receptor_file</span><span class="p">(</span><span class="n">logs</span><span class="p">,</span> <span class="n">receptor_id</span><span class="p">,</span> <span class="s2">".log"</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">logs</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">_release_file</span><span class="p">(</span><span class="n">logs</span><span class="p">,</span> <span class="n">release_id</span><span class="p">,</span> <span class="s2">".log"</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="Output.kept_workdir">
 <a class="viewcode-back" href="../../reference/_api/stilt.output.Output.kept_workdir.html#stilt.output.Output.kept_workdir">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">kept_workdir</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span> <span class="n">receptor_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span> <span class="n">release_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Return where a receptor's failed run's working directory is kept, or ``None`` before its folder exists."""</span>
+<span class="w">        </span><span class="sd">"""Return where a release's failed run's working directory is kept, or ``None`` before its folder exists."""</span>
         <span class="n">kept</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_found</span><span class="p">(</span><span class="s2">"particles"</span><span class="p">,</span> <span class="s2">"scratch"</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
-        <span class="k">return</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">kept</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">kept</span> <span class="o">/</span> <span class="n">_date_dir</span><span class="p">(</span><span class="n">receptor_id</span><span class="p">)</span> <span class="o">/</span> <span class="n">receptor_id</span></div>
+        <span class="k">return</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">kept</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">kept</span> <span class="o">/</span> <span class="n">_date_dir</span><span class="p">(</span><span class="n">release_id</span><span class="p">)</span> <span class="o">/</span> <span class="n">release_id</span></div>
 
 
-    <span class="c1"># -- many receptors' files ----------------------------------------------</span>
+    <span class="c1"># -- many releases' files ----------------------------------------------</span>
 
 <div class="viewcode-block" id="Output.present">
 <a class="viewcode-back" href="../../reference/_api/stilt.output.Output.present.html#stilt.output.Output.present">[docs]</a>
@@ -1354,20 +1369,20 @@
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">kind</span><span class="p">:</span> <span class="n">Kind</span><span class="p">,</span>
         <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span>
-        <span class="n">receptor_ids</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">release_ids</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Return the receptors that have a file of *kind* for *variant*.</span>
+<span class="sd">        Return the releases that have a file of *kind* for *variant*.</span>
 
-<span class="sd">        Only the date folders of *receptor_ids* are listed; without them,</span>
+<span class="sd">        Only the date folders of *release_ids* are listed; without them,</span>
 <span class="sd">        every date folder is. No file is opened.</span>
 <span class="sd">        """</span>
         <span class="n">folder</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_found</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">kind</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">folder</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="nb">frozenset</span><span class="p">()</span>
         <span class="n">suffix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_suffix</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">variant</span><span class="p">)</span>
-        <span class="k">return</span> <span class="nb">frozenset</span><span class="p">(</span><span class="n">_list_receptor_files</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="n">suffix</span><span class="p">,</span> <span class="n">receptor_ids</span><span class="p">))</span></div>
+        <span class="k">return</span> <span class="nb">frozenset</span><span class="p">(</span><span class="n">_list_release_files</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="n">suffix</span><span class="p">,</span> <span class="n">release_ids</span><span class="p">))</span></div>
 
 
 <div class="viewcode-block" id="Output.complete">
@@ -1375,16 +1390,16 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">complete</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span>
-        <span class="n">receptor_ids</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">release_ids</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Return the receptors whose simulations under *variant* are complete (:func:`completed`).</span>
+<span class="sd">        Return the releases whose simulations under *variant* are complete (:func:`completed`).</span>
 
-<span class="sd">        Only the receptors with particles are looked for in each stage's</span>
+<span class="sd">        Only the releases with particles are looked for in each stage's</span>
 <span class="sd">        folder.</span>
 <span class="sd">        """</span>
-        <span class="n">particles</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">present</span><span class="p">(</span><span class="s2">"particles"</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">receptor_ids</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
+        <span class="n">particles</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">present</span><span class="p">(</span><span class="s2">"particles"</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">release_ids</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
         <span class="n">stages</span> <span class="o">=</span> <span class="p">[</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">present</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">variant</span><span class="o">.</span><span class="n">stage_order</span>
@@ -1398,15 +1413,15 @@
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">kind</span><span class="p">:</span> <span class="n">Kind</span><span class="p">,</span>
         <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span>
-        <span class="n">receptor_ids</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">release_ids</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">columns</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Return the files of many receptors as one table.</span>
+<span class="sd">        Return the files of many releases as one table.</span>
 
-<span class="sd">        Columns are ``receptor``, the stored columns, and ``date`` (the</span>
-<span class="sd">        receptor date, from the folder, as ``date32``).</span>
+<span class="sd">        Columns are ``release``, the stored columns, and ``date`` (the</span>
+<span class="sd">        release date, from the folder, as ``date32``).</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -1415,14 +1430,14 @@
 <span class="sd">            Parquet, as the footprint's are.</span>
 <span class="sd">        variant : Variant</span>
 <span class="sd">            Whose results.</span>
-<span class="sd">        receptor_ids : iterable of str, optional</span>
-<span class="sd">            The receptors to read, each of which must have a file</span>
+<span class="sd">        release_ids : iterable of str, optional</span>
+<span class="sd">            The releases to read, each of which must have a file</span>
 <span class="sd">            (:meth:`present`), in the order the rows come. Without it, every</span>
 <span class="sd">            file in the folder is read, in date order.</span>
 <span class="sd">        realization : int, optional</span>
 <span class="sd">            Which realization of an ensemble.</span>
 <span class="sd">        columns : list of str, optional</span>
-<span class="sd">            Only these stored columns, after ``receptor``. Every column by</span>
+<span class="sd">            Only these stored columns, after ``release``. Every column by</span>
 <span class="sd">            default.</span>
 
 <span class="sd">        Raises</span>
@@ -1436,11 +1451,11 @@
         <span class="k">if</span> <span class="n">folder</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">nothing</span>
         <span class="n">suffix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_suffix</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">variant</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">receptor_ids</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">paths</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">_list_receptor_files</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="n">suffix</span><span class="p">)</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+        <span class="k">if</span> <span class="n">release_ids</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">paths</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">_list_release_files</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="n">suffix</span><span class="p">)</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">paths</span> <span class="o">=</span> <span class="p">[</span>
-                <span class="n">_receptor_file</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">suffix</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">receptor_ids</span><span class="p">)</span>
+                <span class="n">_release_file</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">suffix</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">release_ids</span><span class="p">)</span>
             <span class="p">]</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">paths</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">nothing</span>
@@ -1459,16 +1474,24 @@
                 <span class="n">partitioning</span><span class="o">=</span><span class="n">_DATE_PARTITIONING</span><span class="p">,</span>
                 <span class="n">partition_base_dir</span><span class="o">=</span><span class="n">folder</span><span class="o">.</span><span class="n">path</span><span class="p">,</span>
             <span class="p">)</span>
+        <span class="k">if</span> <span class="s2">"release"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">dataset</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">names</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">_old_files_message</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">folder</span><span class="p">,</span> <span class="n">paths</span><span class="p">))</span>
         <span class="k">if</span> <span class="n">columns</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">dataset</span><span class="o">.</span><span class="n">to_table</span><span class="p">()</span>
-        <span class="n">wanted</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"receptor"</span><span class="p">,</span> <span class="o">*</span><span class="p">(</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">columns</span> <span class="k">if</span> <span class="n">c</span> <span class="o">!=</span> <span class="s2">"receptor"</span><span class="p">)]</span>
-        <span class="n">unknown</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">wanted</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">dataset</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">names</span><span class="p">]</span>
-        <span class="k">if</span> <span class="n">unknown</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"No column </span><span class="si">{</span><span class="n">unknown</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">!r}</span><span class="s2"> in the </span><span class="si">{</span><span class="n">kind</span><span class="si">}</span><span class="s2"> files; they hold "</span>
-                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">dataset</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">names</span><span class="si">}</span><span class="s2">."</span>
-            <span class="p">)</span>
-        <span class="k">return</span> <span class="n">dataset</span><span class="o">.</span><span class="n">to_table</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">wanted</span><span class="p">)</span></div>
+            <span class="n">table</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">to_table</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">wanted</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"release"</span><span class="p">,</span> <span class="o">*</span><span class="p">(</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">columns</span> <span class="k">if</span> <span class="n">c</span> <span class="o">!=</span> <span class="s2">"release"</span><span class="p">)]</span>
+            <span class="n">unknown</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">wanted</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">dataset</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">names</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">unknown</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"No column </span><span class="si">{</span><span class="n">unknown</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">!r}</span><span class="s2"> in the </span><span class="si">{</span><span class="n">kind</span><span class="si">}</span><span class="s2"> files; they hold "</span>
+                    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">dataset</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">names</span><span class="si">}</span><span class="s2">."</span>
+                <span class="p">)</span>
+            <span class="n">table</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">to_table</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">wanted</span><span class="p">)</span>
+        <span class="c1"># A dataset takes its columns from the first file, so a file written</span>
+        <span class="c1"># before the rename after a new one reads as rows with no release.</span>
+        <span class="k">if</span> <span class="n">table</span><span class="p">[</span><span class="s2">"release"</span><span class="p">]</span><span class="o">.</span><span class="n">null_count</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">_old_files_message</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">folder</span><span class="p">,</span> <span class="n">paths</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">table</span></div>
 
 
     <span class="c1"># -- failure records ---------------------------------------------------</span>
@@ -1479,11 +1502,11 @@
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">kind</span><span class="p">:</span> <span class="n">Kind</span><span class="p">,</span>
         <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span>
-        <span class="n">receptor_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">release_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Return why a receptor's result of *kind* failed, as the worker recorded it, or ``None``.</span>
+<span class="sd">        Return why a release's result of *kind* failed, as the worker recorded it, or ``None``.</span>
 
 <span class="sd">        A record holds ``stage`` (``particles``, or the stage that failed),</span>
 <span class="sd">        ``reason``, ``message``, and ``time``, and a ``traceback`` for an</span>
@@ -1492,7 +1515,7 @@
         <span class="n">logs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_found</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="s2">"logs"</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">logs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">None</span>
-        <span class="n">path</span> <span class="o">=</span> <span class="n">_receptor_file</span><span class="p">(</span><span class="n">logs</span><span class="p">,</span> <span class="n">receptor_id</span><span class="p">,</span> <span class="n">FAILURE_SUFFIX</span><span class="p">)</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">_release_file</span><span class="p">(</span><span class="n">logs</span><span class="p">,</span> <span class="n">release_id</span><span class="p">,</span> <span class="n">FAILURE_SUFFIX</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">_read_yaml</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="k">else</span> <span class="kc">None</span></div>
 
 
@@ -1502,19 +1525,19 @@
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">kind</span><span class="p">:</span> <span class="n">Kind</span><span class="p">,</span>
         <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span>
-        <span class="n">receptor_ids</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">release_ids</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
 <span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Return ``{receptor_id: record}`` for the receptors with a failure record of *kind*.</span>
+<span class="sd">        Return ``{release_id: record}`` for the releases with a failure record of *kind*.</span>
 
-<span class="sd">        With *receptor_ids*, only their date folders are listed. The records</span>
+<span class="sd">        With *release_ids*, only their date folders are listed. The records</span>
 <span class="sd">        found are read in a few threads.</span>
 <span class="sd">        """</span>
         <span class="n">logs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_found</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="s2">"logs"</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">logs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="p">{}</span>
-        <span class="n">paths</span> <span class="o">=</span> <span class="n">_list_receptor_files</span><span class="p">(</span><span class="n">logs</span><span class="p">,</span> <span class="n">FAILURE_SUFFIX</span><span class="p">,</span> <span class="n">receptor_ids</span><span class="p">)</span>
+        <span class="n">paths</span> <span class="o">=</span> <span class="n">_list_release_files</span><span class="p">(</span><span class="n">logs</span><span class="p">,</span> <span class="n">FAILURE_SUFFIX</span><span class="p">,</span> <span class="n">release_ids</span><span class="p">)</span>
         <span class="k">with</span> <span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span> <span class="k">as</span> <span class="n">pool</span><span class="p">:</span>
             <span class="n">records</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">_read_yaml</span><span class="p">,</span> <span class="n">paths</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>
         <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">paths</span><span class="p">,</span> <span class="n">records</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span></div>
@@ -1526,19 +1549,19 @@
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">kind</span><span class="p">:</span> <span class="n">Kind</span><span class="p">,</span>
         <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span>
-        <span class="n">receptor_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">release_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">record</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
         <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Write why a receptor's result of *kind* failed, replacing an earlier record.</span>
+<span class="sd">        Write why a release's result of *kind* failed, replacing an earlier record.</span>
 
 <span class="sd">        It goes in the logs of the folder whose result failed: a particles</span>
 <span class="sd">        failure covers every variant on those particles, a stage's failure</span>
 <span class="sd">        every variant with that stage's settings on them.</span>
 <span class="sd">        """</span>
         <span class="n">logs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_made</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="s2">"logs"</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
-        <span class="n">_write_yaml</span><span class="p">(</span><span class="n">_receptor_file</span><span class="p">(</span><span class="n">logs</span><span class="p">,</span> <span class="n">receptor_id</span><span class="p">,</span> <span class="n">FAILURE_SUFFIX</span><span class="p">),</span> <span class="n">record</span><span class="p">)</span></div>
+        <span class="n">_write_yaml</span><span class="p">(</span><span class="n">_release_file</span><span class="p">(</span><span class="n">logs</span><span class="p">,</span> <span class="n">release_id</span><span class="p">,</span> <span class="n">FAILURE_SUFFIX</span><span class="p">),</span> <span class="n">record</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="Output.clear_failure">
@@ -1547,13 +1570,13 @@
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">kind</span><span class="p">:</span> <span class="n">Kind</span><span class="p">,</span>
         <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span>
-        <span class="n">receptor_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">release_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Remove a receptor's failure record of *kind*, once its result is written."""</span>
+<span class="w">        </span><span class="sd">"""Remove a release's failure record of *kind*, once its result is written."""</span>
         <span class="n">logs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_found</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="s2">"logs"</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">logs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">_receptor_file</span><span class="p">(</span><span class="n">logs</span><span class="p">,</span> <span class="n">receptor_id</span><span class="p">,</span> <span class="n">FAILURE_SUFFIX</span><span class="p">)</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="n">missing_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+            <span class="n">_release_file</span><span class="p">(</span><span class="n">logs</span><span class="p">,</span> <span class="n">release_id</span><span class="p">,</span> <span class="n">FAILURE_SUFFIX</span><span class="p">)</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="n">missing_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
 
 
     <span class="c1"># -- writing -----------------------------------------------------------</span>
@@ -1563,13 +1586,13 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">write_particles</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span>
-        <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">,</span>
+        <span class="n">release</span><span class="p">:</span> <span class="n">Release</span><span class="p">,</span>
         <span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
         <span class="n">met_files</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">],</span>
         <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Write a receptor's particles (:func:`stilt.particles.write_particles`).</span>
+<span class="sd">        Write a release's particles (:func:`stilt.particles.write_particles`).</span>
 
 <span class="sd">        The file records the run's settings, so it reads alone, and the</span>
 <span class="sd">        folder's settings hash, the PYSTILT version, and the realization.</span>
@@ -1583,14 +1606,14 @@
 <span class="sd">        """</span>
         <span class="k">if</span> <span class="n">particles</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"No particles to write for </span><span class="si">{</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">: a particle file "</span>
+                <span class="sa">f</span><span class="s2">"No particles to write for </span><span class="si">{</span><span class="n">release</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">: a particle file "</span>
                 <span class="s2">"would make the simulation complete."</span>
             <span class="p">)</span>
         <span class="n">folder</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_made</span><span class="p">(</span><span class="s2">"particles"</span><span class="p">,</span> <span class="s2">"particles"</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">write_particles</span><span class="p">(</span>
-            <span class="n">_receptor_file</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">)),</span>
+            <span class="n">_release_file</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">release</span><span class="o">.</span><span class="n">id</span><span class="p">)),</span>
             <span class="n">particles</span><span class="p">,</span>
-            <span class="n">receptor</span><span class="p">,</span>
+            <span class="n">release</span><span class="p">,</span>
             <span class="n">variant</span><span class="o">.</span><span class="n">run_settings</span><span class="p">,</span>
             <span class="n">met_files</span><span class="p">,</span>
             <span class="n">metadata</span><span class="o">=</span><span class="n">file_stamp</span><span class="p">(</span><span class="n">variant</span><span class="o">.</span><span class="n">particles_hash</span><span class="p">,</span> <span class="n">realization</span><span class="p">),</span>
@@ -1602,20 +1625,20 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">logged</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span>
-        <span class="n">receptor_ids</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">release_ids</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Return the receptors that have a transport model log for *variant*.</span>
+<span class="sd">        Return the releases that have a transport model log for *variant*.</span>
 
-<span class="sd">        Only the date folders of *receptor_ids* are listed. A log with no</span>
+<span class="sd">        Only the date folders of *release_ids* are listed. A log with no</span>
 <span class="sd">        particles and no failure record is a run that started and did not</span>
 <span class="sd">        finish (``interrupted`` in :meth:`stilt.Project.status`).</span>
 <span class="sd">        """</span>
         <span class="n">logs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_found</span><span class="p">(</span><span class="s2">"particles"</span><span class="p">,</span> <span class="s2">"logs"</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">logs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="nb">frozenset</span><span class="p">()</span>
-        <span class="k">return</span> <span class="nb">frozenset</span><span class="p">(</span><span class="n">_list_receptor_files</span><span class="p">(</span><span class="n">logs</span><span class="p">,</span> <span class="s2">".log"</span><span class="p">,</span> <span class="n">receptor_ids</span><span class="p">))</span></div>
+        <span class="k">return</span> <span class="nb">frozenset</span><span class="p">(</span><span class="n">_list_release_files</span><span class="p">(</span><span class="n">logs</span><span class="p">,</span> <span class="s2">".log"</span><span class="p">,</span> <span class="n">release_ids</span><span class="p">))</span></div>
 
 
 <div class="viewcode-block" id="Output.write_log">
@@ -1623,13 +1646,13 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">write_log</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span>
-        <span class="n">receptor_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">release_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Write the log of a receptor's transport model run."""</span>
+<span class="w">        </span><span class="sd">"""Write the log of a release's transport model run."""</span>
         <span class="n">logs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_made</span><span class="p">(</span><span class="s2">"particles"</span><span class="p">,</span> <span class="s2">"logs"</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
-        <span class="n">path</span> <span class="o">=</span> <span class="n">_receptor_file</span><span class="p">(</span><span class="n">logs</span><span class="p">,</span> <span class="n">receptor_id</span><span class="p">,</span> <span class="s2">".log"</span><span class="p">)</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">_release_file</span><span class="p">(</span><span class="n">logs</span><span class="p">,</span> <span class="n">release_id</span><span class="p">,</span> <span class="s2">".log"</span><span class="p">)</span>
         <span class="n">path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="n">path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">path</span></div>
@@ -1640,7 +1663,7 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">keep_workdir</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span>
-        <span class="n">receptor_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">release_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">workdir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
         <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span><span class="p">:</span>
@@ -1651,7 +1674,7 @@
 <span class="sd">        output can be read after the job ends.</span>
 <span class="sd">        """</span>
         <span class="n">scratch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_made</span><span class="p">(</span><span class="s2">"particles"</span><span class="p">,</span> <span class="s2">"scratch"</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
-        <span class="n">kept</span> <span class="o">=</span> <span class="n">scratch</span> <span class="o">/</span> <span class="n">_date_dir</span><span class="p">(</span><span class="n">receptor_id</span><span class="p">)</span> <span class="o">/</span> <span class="n">receptor_id</span>
+        <span class="n">kept</span> <span class="o">=</span> <span class="n">scratch</span> <span class="o">/</span> <span class="n">_date_dir</span><span class="p">(</span><span class="n">release_id</span><span class="p">)</span> <span class="o">/</span> <span class="n">release_id</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">kept</span><span class="p">,</span> <span class="n">Path</span><span class="p">):</span>
             <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">kept</span><span class="p">,</span> <span class="n">ignore_errors</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
             <span class="n">kept</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>

@@ -1,8 +1,8 @@
 Tutorial: A Satellite Column, Start To Finish
 =============================================
 
-A tower measurement becomes a receptor directly. A satellite sounding
-takes a few more steps: choose which soundings to run, make a receptor for
+A tower measurement becomes a release directly. A satellite sounding
+takes a few more steps: choose which soundings to run, make a release for
 each, and weight each one's particles with its own averaging kernel. This
 tutorial goes from a TROPOMI methane orbit over Salt Lake City to modeled
 and observed XCH4 enhancements. The same steps work for OCO-2, TCCON, and
@@ -12,7 +12,7 @@ What you'll learn
 -----------------
 
 - how to read a product and choose the soundings to run
-- how to make a receptor and a kernel table for each sounding
+- how to make a release and a kernel table for each sounding
 - how to weight the particles with the kernel and the pressure weights
 - how to compare modeled and observed enhancements
 
@@ -36,8 +36,8 @@ tutorial:
        grid: {xmin: -114.0, xmax: -110.0, ymin: 39.0, ymax: 42.0, xres: 0.01, yres: 0.01}
 
 The grid must hold the soundings' longitudes and latitudes below, or
-``stilt check`` reports each receptor outside it. The ``varsiwant`` line is
-the starter ``config.yaml``'s with ``zsfc`` added. The receptors in Step 3 are
+``stilt check`` reports each release outside it. The ``varsiwant`` line is
+the starter ``config.yaml``'s with ``zsfc`` added. The releases in Step 3 are
 heights above sea level, so PYSTILT needs the terrain height to find each
 particle's release height and to weight it by pressure (Step 4). Without
 ``zsfc`` the particles are made, and then every footprint fails.
@@ -97,10 +97,10 @@ thins each one:
        chosen.append(scene.iloc[keep])
    df = pd.concat(chosen)
 
-Step 3: Make a receptor and a kernel for each sounding
+Step 3: Make a release and a kernel for each sounding
 ------------------------------------------------------
 
-:func:`~stilt.observations.receptors_from_soundings` makes one receptor per
+:func:`~stilt.observations.releases_from_soundings` makes one release per
 row and the table of their averaging kernels. ``"slant"`` releases the
 particles along the satellite's line of sight, at the retrieval's own
 levels up to 3 km above the surface (:doc:`../guides/slant_columns`).
@@ -108,15 +108,15 @@ levels up to 3 km above the surface (:doc:`../guides/slant_columns`).
 
 .. code-block:: python
 
-   from stilt.observations import receptors_from_soundings
+   from stilt.observations import releases_from_soundings
 
-   receptors, kernels = receptors_from_soundings(df, "slant", top=3000)
-   project.add_receptors(receptors)
+   releases, kernels = releases_from_soundings(df, "slant", top=3000)
+   project.add_releases(releases)
    project.add_table("kernels", kernels)    # tables/kernels.parquet
 
-Each receptor keeps its ``sounding_id`` as a column of ``receptors.csv``,
+Each release keeps its ``sounding_id`` as a column of ``releases.csv``,
 so the results join back to the soundings. The kernel table is an input
-like ``receptors.csv``: a ``receptor`` column, and one row per kernel
+like ``releases.csv``: a ``release`` column, and one row per kernel
 level with its ``level`` and ``value``. Adding it again leaves the kernels
 already there as they were.
 
@@ -127,7 +127,7 @@ Two transforms go in the footprint's block of ``config.yaml``
 (:doc:`../guides/transforms`). The
 averaging kernel differs per sounding, so it reads the kernel table by
 name. Pressure weighting is worked out from the particles, so every
-receptor uses the same setting:
+release uses the same setting:
 
 .. code-block:: yaml
 
@@ -143,7 +143,7 @@ convert to height. TROPOMI's kernels are layer averages, and the reader's
 ``ak_pressure`` holds the layer midpoints. OCO-2 kernels are values at
 levels, and GGG kernels are on a fixed pressure grid per site. A PROFFAST
 EM27/SUN kernel is on a fixed altitude grid: give the altitudes in the
-receptor's vertical reference and leave ``coordinate`` at its default,
+release's vertical reference and leave ``coordinate`` at its default,
 the release height.
 
 Step 5: Run
@@ -153,7 +153,7 @@ Step 5: Run
 
    stilt run ./xch4          # or stilt submit ./xch4 on a cluster
 
-Every way of running, Slurm included, applies each receptor's own kernel,
+Every way of running, Slurm included, applies each release's own kernel,
 because the table is part of the project.
 
 Step 6: Compare enhancements
@@ -180,8 +180,8 @@ the soundings outside the plume of a forward run
 
    soundings = df.set_index("sounding_id")
    rows = []
-   for rec in project.receptors.itertuples():
-       foot = project.simulation(rec.receptor, "hrrr").footprint
+   for rec in project.releases.itertuples():
+       foot = project.simulation(rec.release, "hrrr").footprint
        if foot is None:      # no particle reached the grid
            continue
        rows.append({
@@ -210,13 +210,13 @@ field, add the prior the retrieval carries where it is not sensitive.
    cams = xr.open_dataarray("cams_ch4.nc").rename(level="pres")   # (time, pres, lat, lon), ppb
 
    sounding_id = compare.index[0]              # any sounding with a footprint
-   rec = project.receptors.set_index("sounding_id").loc[sounding_id]
-   sim = project.simulation(rec.receptor, "hrrr")
+   rec = project.releases.set_index("sounding_id").loc[sounding_id]
+   sim = project.simulation(rec.release, "hrrr")
    row = soundings.loc[sounding_id]
 
    p = row.pressure_levels                     # layer boundaries, hPa, surface first
    w = -np.diff(p) / (p[0] - p[-1])            # each layer's share of the column
-   up = row.altitude_levels[:-1] >= row.surface_altitude + 3000   # layers above the receptor's top
+   up = row.altitude_levels[:-1] >= row.surface_altitude + 3000   # layers above the release's top
    profile = cams.sel(time=row.time, lat=row.latitude, lon=row.longitude, method="nearest")
    above = float(np.sum((w * row.ak * profile.interp(pres=row.ak_pressure).values)[up]))
 
@@ -226,9 +226,9 @@ field, add the prior the retrieval carries where it is not sensitive.
        ak=row.ak, prior=row.apriori, pressure_weight=w,
    )
 
-``sim.background(cams)`` covers the receptor's levels only, up to 3 km.
+``sim.background(cams)`` covers the release's levels only, up to 3 km.
 ``above`` is the rest of the column: the field on the retrieval's layers
-above the receptor's top, weighted by the kernel and the pressure weights.
+above the release's top, weighted by the kernel and the pressure weights.
 That air saw no fluxes in the domain, so the field alone gives it
 (:doc:`../guides/background`).
 

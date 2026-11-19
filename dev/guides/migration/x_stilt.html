@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=5ff965c5"></script>
+    <script src="../../_static/documentation_options.js?v=000a6a7f"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev25+g739e87834" />
+  <meta name="docsearch:version" content="0.1.0a30.dev30+g0d6d55b99" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -417,7 +417,7 @@
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Setting up a project</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../receptors.html">Receptors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../releases.html">Releases (receptors)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../tracks.html">Mobile Measurements</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../meteorology.html">Meteorology</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../projects.html">Projects And Variants</a></li>
@@ -520,7 +520,7 @@
   <section id="coming-from-x-stilt">
 <h1>Coming From X-STILT<a class="headerlink" href="#coming-from-x-stilt" title="Link to this heading">#</a></h1>
 <p>PYSTILT has the main pieces of X-STILT’s column and satellite workflow:
-column and slant receptors, sounding selection, averaging kernels, and
+column and slant releases, sounding selection, averaging kernels, and
 pressure weighting. In X-STILT you configure one large script. In PYSTILT
 these pieces are Python functions and objects that you combine in your own
 script. PYSTILT does not try to copy every X-STILT feature. The table shows
@@ -540,11 +540,11 @@ the ones that have an equivalent.</p>
 <tbody>
 <tr class="row-even"><td><p>Column receptor (<code class="docutils literal notranslate"><span class="pre">minagl</span></code> / <code class="docutils literal notranslate"><span class="pre">maxagl</span></code>, <code class="docutils literal notranslate"><span class="pre">agl</span></code> levels)</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">get.recp.sensorv2.r</span></code></p></td>
-<td><p><a class="reference internal" href="../../reference/_api/stilt.ColumnReceptor.html#stilt.ColumnReceptor" title="stilt.ColumnReceptor"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.ColumnReceptor</span></code></a> from the sounding’s coordinates</p></td>
+<td><p><a class="reference internal" href="../../reference/_api/stilt.ColumnRelease.html#stilt.ColumnRelease" title="stilt.ColumnRelease"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.ColumnRelease</span></code></a> from the sounding’s coordinates</p></td>
 </tr>
 <tr class="row-odd"><td><p>Slant column (<code class="docutils literal notranslate"><span class="pre">run_slant</span></code>)</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">get.recp.sensorv2.r</span></code></p></td>
-<td><p><a class="reference internal" href="../../reference/_api/stilt.observations.slant_points.html#stilt.observations.slant_points" title="stilt.observations.slant_points"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.observations.slant_points()</span></code></a> + <a class="reference internal" href="../../reference/_api/stilt.Receptor.from_points.html#stilt.Receptor.from_points" title="stilt.Receptor.from_points"><code class="xref py py-meth docutils literal notranslate"><span class="pre">stilt.Receptor.from_points()</span></code></a></p></td>
+<td><p><a class="reference internal" href="../../reference/_api/stilt.observations.slant_points.html#stilt.observations.slant_points" title="stilt.observations.slant_points"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.observations.slant_points()</span></code></a> + <a class="reference internal" href="../../reference/_api/stilt.Release.from_points.html#stilt.Release.from_points" title="stilt.Release.from_points"><code class="xref py py-meth docutils literal notranslate"><span class="pre">stilt.Release.from_points()</span></code></a></p></td>
 </tr>
 <tr class="row-even"><td><p>Sounding selection (near-field + background)</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">sel.obs4recpv2</span></code></p></td>
@@ -572,7 +572,7 @@ the ones that have an equivalent.</p>
 </tr>
 <tr class="row-even"><td><p>Column footprint outputs</p></td>
 <td><p>X-STILT column products</p></td>
-<td><p>standard PYSTILT footprints from column or slant receptors</p></td>
+<td><p>standard PYSTILT footprints from column or slant releases</p></td>
 </tr>
 <tr class="row-odd"><td><p>Product readers (OCO-2/3, TROPOMI, TCCON)</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">column_obs/*</span></code></p></td>
@@ -661,7 +661,7 @@ variance through the levels where the variance rose, and scales every
 level’s variance with that line.</p></td>
 <td><p>Uses each level’s variance difference as it is, with its sign (Lin
 and Gerbig’s equation 4), so the noise in it averages out over many
-receptors. <code class="docutils literal notranslate"><span class="pre">noise</span></code> says how large it is
+releases. <code class="docutils literal notranslate"><span class="pre">noise</span></code> says how large it is
 (<a class="reference internal" href="../transport_error.html"><span class="doc">Transport Error</span></a>).</p></td>
 </tr>
 <tr class="row-odd"><td><p>Sum of the levels into the column (<code class="docutils literal notranslate"><span class="pre">cal.var.cov</span></code>)</p></td>
@@ -669,7 +669,7 @@ receptors. <code class="docutils literal notranslate"><span class="pre">noise</s
 deviations, times the correlation between them.</p></td>
 <td><p>Counts a pair with the mean of their two variance differences, times
 the correlation between them. The sum is then linear in the variance
-differences, so their noise averages out over receptors too. The two
+differences, so their noise averages out over releases too. The two
 agree when both levels have the same error.</p></td>
 </tr>
 <tr class="row-even"><td><p>Particles kept in each level (<code class="docutils literal notranslate"><span class="pre">pct</span></code>)</p></td>
@@ -710,7 +710,7 @@ A particle’s slab is half a slab higher than in X-STILT
 sounding (see <em>Your own instrument</em> in <a class="reference internal" href="../../tutorials/satellite_column.html"><span class="doc">Tutorial: A Satellite Column, Start To Finish</span></a>).</p></li>
 <li><p>Group the soundings by overpass and select the ones to run with the
 helpers above.</p></li>
-<li><p>Build one receptor per row. For slant columns, use <code class="docutils literal notranslate"><span class="pre">slant_points</span></code>.</p></li>
+<li><p>Build one release per row. For slant columns, use <code class="docutils literal notranslate"><span class="pre">slant_points</span></code>.</p></li>
 <li><p>Build the averaging-kernel table with <code class="docutils literal notranslate"><span class="pre">averaging_kernel_table</span></code> and save
 it in the project. Then list <code class="docutils literal notranslate"><span class="pre">averaging_kernel</span></code> (with <code class="docutils literal notranslate"><span class="pre">table:</span></code>) and
 <code class="docutils literal notranslate"><span class="pre">pressure_weighting</span></code> under <code class="docutils literal notranslate"><span class="pre">transforms</span></code> in <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>.</p></li>

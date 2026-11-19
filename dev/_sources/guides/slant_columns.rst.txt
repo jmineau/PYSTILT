@@ -4,7 +4,7 @@ Slant Columns
 A column instrument that does not look straight up measures the air along
 a tilted path. A ground-based solar tracker (EM27/SUN, TCCON) looks at the
 sun. An off-nadir satellite sounding looks toward the satellite. PYSTILT
-models the path as a :class:`~stilt.MultiPointReceptor` whose points step up
+models the path as a :class:`~stilt.MultiPointRelease` whose points step up
 the line of sight. All the points run in one simulation, and the particles
 are weighted afterwards.
 
@@ -36,7 +36,7 @@ the location. It is the first altitude unless you pass ``anchor=``.
    check the product's definition.
 
 Altitudes
-   Give the altitudes above mean sea level and build the receptor with
+   Give the altitudes above mean sea level and build the release with
    ``altitude_ref="msl"``. The path is a straight line in height above sea
    level, and heights above ground would bend it with the terrain. Start at
    the station or surface altitude. End at the top of the air you want to
@@ -55,7 +55,7 @@ EM27/SUN example
 An EM27/SUN retrieval gives one column value per spectrum, with the solar
 zenith and azimuth angles at that time. :func:`~stilt.observations.read_ggg_oof`
 reads a day of these (see :doc:`readers`). The sun moves about 15° per
-hour, so build one receptor per averaging window, not one per day:
+hour, so build one release per averaging window, not one per day:
 
 .. code-block:: python
 
@@ -73,8 +73,8 @@ hour, so build one receptor per averaging window, not one per day:
        .resample("10min").mean().dropna()
    )
 
-   receptors = [
-       stilt.Receptor.from_points(
+   releases = [
+       stilt.Release.from_points(
            t,
            slant_points(
                w.longitude, w.latitude,
@@ -85,7 +85,7 @@ hour, so build one receptor per averaging window, not one per day:
        )
        for t, w in windows.iterrows()
    ]
-   project.add_receptors(receptors)
+   project.add_releases(releases)
    project.run()
 
 Twenty points over 3 km is a typical spacing. HYSPLIT splits ``numpar``
@@ -99,8 +99,8 @@ says so.
 ``stilt check`` lists a missing ``zsfc`` before the run, with this line
 to add (:doc:`checking`).
 
-Before running, check the geometry. Plot ``receptor.longitudes`` and
-``receptor.latitudes`` against ``receptor.altitudes`` for a morning window
+Before running, check the geometry. Plot ``release.longitudes`` and
+``release.latitudes`` against ``release.altitudes`` for a morning window
 and an afternoon window. The path should lean east in the morning and west
 in the afternoon.
 
@@ -108,7 +108,7 @@ Weighting
 ---------
 
 A column instrument averages over air mass and applies its own averaging
-kernel. The particles of a slant receptor start evenly spaced in height, so
+kernel. The particles of a slant release start evenly spaced in height, so
 weight them before they become a footprint, with the footprint's
 ``transforms`` (in its block under ``stages:``; see :doc:`transforms`):
 
@@ -120,8 +120,8 @@ weight them before they become a footprint, with the footprint's
 ``pressure_weighting`` works everything out from the particles, so you give
 it no inputs. Each point of the slant stands for its share of the air
 mass, split evenly among the particles released there. The weights add up
-to the fraction of the atmosphere's mass that the receptor covers. The air
-above the receptor top is part of the background. For an MSL receptor the
+to the fraction of the atmosphere's mass that the release covers. The air
+above the release top is part of the background. For an MSL release the
 transform needs ``zsfc`` in ``varsiwant``, as the release-height matching
 does.
 
@@ -133,7 +133,7 @@ table for each spectrum. You can also use a site table keyed by solar
 zenith angle, as PROFFAST provides. Make the table with
 :func:`~stilt.transforms.averaging_kernel_table` and add it to the project
 with ``project.add_table``. The ``averaging_kernel`` transform then looks
-up each receptor's kernel:
+up each release's kernel:
 
 .. code-block:: python
 
@@ -144,7 +144,7 @@ up each receptor's kernel:
    # one kernel per window: the spectrum nearest the window's midpoint
    nearest = ak.index.get_indexer(windows.index + pd.Timedelta("5min"), method="nearest")
    kernels = [ak.ak.iloc[i] for i in nearest]
-   table = averaging_kernel_table(receptors, levels=ak.ak_pressure.iloc[0], values=kernels)
+   table = averaging_kernel_table(releases, levels=ak.ak_pressure.iloc[0], values=kernels)
    project.add_table("kernels", table)
 
 .. code-block:: yaml
@@ -155,7 +155,7 @@ up each receptor's kernel:
        coordinate: pres
      - kind: pressure_weighting
 
-By default the kernel's ``levels`` are release heights in the receptor's
+By default the kernel's ``levels`` are release heights in the release's
 vertical reference, which is meters above sea level for a slant. The GGG
 kernel is given on pressures, so set ``coordinate: pres``. If one kernel is
 close enough for a whole campaign, give it inline as ``levels`` and
@@ -166,7 +166,7 @@ Satellite soundings
 
 A satellite overpass gives many soundings. Each has its own location,
 surface altitude, viewing angles, and averaging kernel. Build one slant
-receptor per row of the product table, starting at each sounding's surface
+release per row of the product table, starting at each sounding's surface
 altitude:
 
 .. code-block:: python
@@ -175,8 +175,8 @@ altitude:
    import stilt
    from stilt.observations import slant_points
 
-   receptors = [
-       stilt.Receptor.from_points(
+   releases = [
+       stilt.Release.from_points(
            row.time,
            slant_points(
                row.longitude, row.latitude,
@@ -187,10 +187,10 @@ altitude:
        )
        for row in df.itertuples()
    ]
-   project.add_receptors(receptors)
+   project.add_releases(releases)
 
 Many satellite workflows ignore the slant and use a
-:class:`~stilt.ColumnReceptor` instead. At a 20° viewing angle the top of a
+:class:`~stilt.ColumnRelease` instead. At a 20° viewing angle the top of a
 3 km column is only about 1 km from the nadir point, which is within one
 cell of a coarse footprint grid.
 
@@ -243,11 +243,11 @@ first row HYSPLIT writes for the particle, by matching its height to the
 nearest point. This works because the points of a slant are at different
 altitudes.
 
-For an MSL receptor the match uses ``zagl + zsfc``, so ``zsfc`` must be in
+For an MSL release the match uses ``zagl + zsfc``, so ``zsfc`` must be in
 ``varsiwant``. It is not there by default. Without it, PYSTILT falls back to
 matching on horizontal position. That is unreliable for points closer than
 1 km, and PYSTILT warns when it happens.
 
-The section on release heights in :doc:`receptors` has the details. It
+The section on release heights in :doc:`releases` has the details. It
 also shows how to run a HYSPLIT build that writes rows at the release time,
 which makes the match exact.

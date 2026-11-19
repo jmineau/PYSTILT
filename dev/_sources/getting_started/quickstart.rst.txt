@@ -45,7 +45,7 @@ into a folder you choose. This needs ``pip install "pystilt[download]"``.
 Step 1: Describe your measurement
 ---------------------------------
 
-A receptor is where and when you measured. This one is a sensor 10 m above
+A release (receptor) is where and when you measured. This one is a sensor 10 m above
 the ground on the University of Utah campus, at noon local time (19:00 UTC) on
 14 January 2021:
 
@@ -53,7 +53,7 @@ the ground on the University of Utah campus, at noon local time (19:00 UTC) on
 
    import stilt
 
-   receptor = stilt.PointReceptor(
+   release = stilt.PointRelease(
        time="2021-01-14 19:00",   # UTC
        longitude=-111.848,
        latitude=40.766,
@@ -78,13 +78,13 @@ the ground on the University of Utah campus, at noon local time (19:00 UTC) on
 Step 2: Follow the particles
 ----------------------------
 
-:func:`stilt.run_trajectories` releases particles at the receptor and
+:func:`stilt.run_trajectories` releases particles at the release and
 follows them back in time through the meteorology:
 
 .. ipython:: python
 
    particles = stilt.run_trajectories(
-       receptor,
+       release,
        met,
        n_hours=-12,     # follow the air 12 hours back in time
        numpar=200,      # number of particles to release
@@ -101,7 +101,7 @@ follows them back in time through the meteorology:
    How many particles to release. More particles give a smoother footprint
    but take longer. 200 is enough to see the shape. For results you will
    publish we use 1000, STILT-R's default, because a footprint from fewer
-   particles is noisy far from the receptor.
+   particles is noisy far from the release.
 
 ``krand`` and ``seed``
    HYSPLIT draws random numbers for the turbulence that moves each particle.
@@ -125,7 +125,7 @@ time step:
    @savefig quickstart_particles.png width=6in
    particles.stilt.plot.map();
 
-The particles start at the receptor and spread out. The met files here cover
+The particles start at the release and spread out. The met files here cover
 only a small region around Salt Lake, and a particle that leaves the met stops
 there. This is how many hours they went (``age`` is in minutes):
 
@@ -149,12 +149,12 @@ areas upwind of your site. Here the cells are 0.01°, about 1 km:
        ymin=40.0,   ymax=42.0,     # latitude range
        xres=0.01,   yres=0.01,     # grid cell size in degrees
    )
-   foot = stilt.calc_footprint(particles, receptor, grid)
+   foot = stilt.calc_footprint(particles, release, grid)
 
    @savefig quickstart_footprint.png width=6in
    foot.stilt.plot.map();
 
-The footprint starts at the receptor and stretches in the direction the air
+The footprint starts at the release and stretches in the direction the air
 came from, here to the north-northwest and then curving west. The map shows the
 footprint summed over time, on a log scale. Cells with more color influenced the
 measurement more.
@@ -175,9 +175,9 @@ PYSTILT's own methods on the particles and the footprint are under
 Step 4: Run it as a project
 ---------------------------
 
-Two calls are enough for one receptor. For many receptors, make a
-:class:`~stilt.Project`: a folder that holds your receptors and settings,
-runs every receptor, and keeps the results. :meth:`Project.init
+Two calls are enough for one release. For many releases, make a
+:class:`~stilt.Project`: a folder that holds your releases and settings,
+runs every release, and keeps the results. :meth:`Project.init
 <stilt.Project.init>` creates the folder and writes both to it. The
 settings are the ones above, each in the block of what it belongs to: the
 transport model's under ``models``, and the footprint's under ``stages``,
@@ -187,7 +187,7 @@ in a block that names the footprint stage as its ``class``:
 
    project = stilt.Project.init(
        "./my_first_project",
-       receptors=[receptor],
+       releases=[release],
        mets={"hrrr": met},          # "hrrr" is a name you choose
        models={
            "hysplit": {"n_hours": -12, "numpar": 200, "krand": 2, "seed": 42}
@@ -199,8 +199,8 @@ in a block that names the footprint stage as its ``class``:
    )
 
 Before running, check the project. ``project.check()`` looks for what would
-stop a run before it starts: met files missing for a receptor's hours, a
-receptor outside the grid, and a met folder that does not exist. It returns a
+stop a run before it starts: met files missing for a release's hours, a
+release outside the grid, and a met folder that does not exist. It returns a
 table with a row for each thing found, so an empty table means nothing is in
 the way:
 
@@ -216,17 +216,17 @@ to tell.
 
    project.run();
 
-``run()`` runs the particles and the footprint of every receptor, and
+``run()`` runs the particles and the footprint of every release, and
 returns when they are done.
 
-PYSTILT runs each receptor once per :term:`variant`. With the settings above
-there is one variant, named ``hrrr`` after the met. One receptor under
-one variant is a :term:`simulation`. Look yours up by the receptor's id and
+PYSTILT runs each release once per :term:`variant`. With the settings above
+there is one variant, named ``hrrr`` after the met. One release under
+one variant is a :term:`simulation`. Look yours up by the release's id and
 the variant name:
 
 .. ipython:: python
 
-   sim = project.simulation(receptor.id, "hrrr")
+   sim = project.simulation(release.id, "hrrr")
    sim.particles.head()
 
    @savefig quickstart_sim_footprint.png width=6in
@@ -248,7 +248,7 @@ folder:
 
    my_first_project/
      config.yaml        # your settings
-     receptors.csv      # your receptors
+     releases.csv       # your releases
      output/
        particles/       # where each particle went, one file per simulation
        footprint/       # the footprints, one file per simulation
@@ -258,7 +258,7 @@ Each result is kept under the settings it was made with. Change a setting and
 the next run writes new files beside the old ones, so nothing is
 overwritten. :doc:`../reference/layout` has the full layout.
 
-Your settings and receptors are saved in the folder, so you can open the
+Your settings and releases are saved in the folder, so you can open the
 project again later without repeating them:
 
 .. code-block:: python
@@ -270,13 +270,13 @@ project again later without repeating them:
 setting later, edit ``config.yaml``.
 
 If you call ``project.run()`` again, nothing happens. PYSTILT sees that the
-outputs already exist and skips them. If you add receptors with
-``project.add_receptors(...)``, only the new ones run.
+outputs already exist and skips them. If you add releases with
+``project.add_releases(...)``, only the new ones run.
 
 The same run from the command line
 ----------------------------------
 
-Create a project folder with a starter ``config.yaml`` and ``receptors.csv``:
+Create a project folder with a starter ``config.yaml`` and ``releases.csv``:
 
 .. code-block:: bash
 
@@ -312,7 +312,7 @@ above:
    variants:
      hrrr: {}
 
-Add your receptor to ``my_first_project/receptors.csv`` below the header
+Add your release to ``my_first_project/releases.csv`` below the header
 line, so the file reads:
 
 .. code-block:: text
@@ -340,7 +340,7 @@ prints ``No problems found.`` and exits with 0.
 Next steps
 ----------
 
-- Run many receptors: :doc:`../tutorials/wbb_stationary`
-- Understand the different receptor types: :doc:`../guides/receptors`
+- Run many releases: :doc:`../tutorials/wbb_stationary`
+- Understand the different release types: :doc:`../guides/releases`
 - More plotting and analysis: :doc:`../guides/outputs`
 - Run thousands of simulations on a cluster: :doc:`../guides/slurm`

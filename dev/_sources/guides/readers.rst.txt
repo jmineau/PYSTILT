@@ -202,28 +202,28 @@ Other columns keep the product's own names, for example ``qa_value``,
 adds ``ak_extrapolated``. It is true where the spectrum's slant xgas fell
 outside GGG's kernel table.
 
-From a file to receptors
+From a file to releases
 ------------------------
 
-:func:`~stilt.observations.receptors_from_soundings` makes a receptor for
+:func:`~stilt.observations.releases_from_soundings` makes a release for
 each sounding and the table of their averaging kernels. Here each TROPOMI
-sounding becomes a slant receptor on the retrieval's own levels, up to
+sounding becomes a slant release on the retrieval's own levels, up to
 3 km above the surface:
 
 .. code-block:: python
 
    import stilt
-   from stilt.observations import read_tropomi_ch4, receptors_from_soundings
+   from stilt.observations import read_tropomi_ch4, releases_from_soundings
 
    project = stilt.Project("./xch4")      # made with stilt init or Project.init
 
    df = read_tropomi_ch4(path, lon_range=(-113.5, -110.5), lat_range=(39.5, 42.0))
-   receptors, kernels = receptors_from_soundings(df[df.good], "slant", top=3000)
-   project.add_receptors(receptors)
+   releases, kernels = releases_from_soundings(df[df.good], "slant", top=3000)
+   project.add_releases(releases)
    project.add_table("kernels", kernels)    # tables/kernels.parquet
    project.run()
 
-Each receptor keeps its ``sounding_id`` as a column of ``receptors.csv``,
+Each release keeps its ``sounding_id`` as a column of ``releases.csv``,
 so the results join back to the soundings. The footprint's block under
 ``stages:`` lists two transforms, the first reading the kernels by the
 table's name:
@@ -238,10 +238,10 @@ table's name:
 
 A few products need a change to this recipe:
 
-- For a nadir column, pass ``"column"``: a :class:`~stilt.ColumnReceptor`
+- For a nadir column, pass ``"column"``: a :class:`~stilt.ColumnRelease`
   from the ground up to ``top``.
 - OCO-2 files give pressures but no heights. Add ``altitude_levels`` from
-  :func:`~stilt.observations.pressure_altitudes` before a slant receptor.
+  :func:`~stilt.observations.pressure_altitudes` before a slant release.
 - A TCCON prior grid starts at sea level, below the station. Drop the
   levels below ``surface_altitude`` and put ``surface_altitude`` first, so
   the path starts at the instrument.

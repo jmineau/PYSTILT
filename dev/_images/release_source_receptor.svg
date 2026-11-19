@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 340" font-family="Helvetica, Arial, sans-serif" font-size="14">
+  <title>A release is where the particles start, in a backward run and in a forward run</title>
+  <desc>A factory, the source, sits upwind on the left and a measurement tower, the receptor, downwind on the right. A backward run releases particles at the top of the tower and follows them back in time toward the factory (filled dots). A forward run releases particles at the factory chimney and follows them forward in time toward the tower (hollow dots).</desc>
+  <defs>
+    <marker id="arrow-wind" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#6b7785"/>
+    </marker>
+    <marker id="arrow-backward" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#d85a30"/>
+    </marker>
+    <marker id="arrow-forward" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#6a61d1"/>
+    </marker>
+    <style>
+      .head { font-weight: bold; fill: #1f2d3a; }
+      .sub { fill: #3d4b58; font-size: 12px; }
+      .ground { stroke: #6b7785; stroke-width: 1; }
+      .backward { fill: #d85a30; }
+      .forward { fill: none; stroke: #6a61d1; stroke-width: 1.5; }
+      .factory { fill: #b4b2a9; stroke: #5f5e5a; stroke-width: 0.5; }
+      .tower { stroke: #6b7785; stroke-width: 1.5; fill: none; stroke-linecap: round; }
+    </style>
+  </defs>
+
+  <!-- the wind, from the source to the receptor -->
+  <text class="sub" x="318" y="44" text-anchor="end">Wind</text>
+  <line x1="326" y1="40" x2="400" y2="40" stroke="#6b7785" stroke-width="1.5" marker-end="url(#arrow-wind)"/>
+
+  <!-- where each run's particles go -->
+  <polygon points="520,170 149,120 149,260" fill="#f0997b" opacity="0.2"/>
+  <polygon points="149,198 520,130 520,260" fill="#afa9ec" opacity="0.22"/>
+
+  <!-- the backward run's particles, released at the receptor -->
+  <g class="backward">
+    <circle cx="470" cy="172" r="3"/><circle cx="422" cy="164" r="3"/><circle cx="415" cy="184" r="3"/>
+    <circle cx="362" cy="156" r="3"/><circle cx="352" cy="178" r="3"/><circle cx="360" cy="198" r="3"/>
+    <circle cx="302" cy="150" r="3"/><circle cx="295" cy="182" r="3"/><circle cx="288" cy="208" r="3"/>
+    <circle cx="242" cy="142" r="3"/><circle cx="235" cy="172" r="3"/><circle cx="245" cy="204" r="3"/>
+    <circle cx="232" cy="230" r="3"/><circle cx="190" cy="134" r="3"/><circle cx="182" cy="168" r="3"/>
+    <circle cx="192" cy="212" r="3"/><circle cx="184" cy="244" r="3"/>
+  </g>
+
+  <!-- the forward run's particles, released at the source -->
+  <g class="forward">
+    <circle cx="200" cy="197" r="3"/><circle cx="252" cy="188" r="3"/><circle cx="258" cy="208" r="3"/>
+    <circle cx="312" cy="176" r="3"/><circle cx="304" cy="198" r="3"/><circle cx="318" cy="216" r="3"/>
+    <circle cx="374" cy="166" r="3"/><circle cx="380" cy="196" r="3"/><circle cx="368" cy="224" r="3"/>
+    <circle cx="432" cy="154" r="3"/><circle cx="426" cy="180" r="3"/><circle cx="438" cy="208" r="3"/>
+    <circle cx="428" cy="234" r="3"/><circle cx="488" cy="146" r="3"/><circle cx="480" cy="192" r="3"/>
+    <circle cx="492" cy="222" r="3"/><circle cx="484" cy="246" r="3"/>
+  </g>
+
+  <line x1="470" y1="96" x2="200" y2="96" stroke="#d85a30" stroke-width="1.5" marker-end="url(#arrow-backward)"/>
+  <text class="sub" x="335" y="84" text-anchor="middle">Backward run: followed back in time</text>
+
+  <line class="ground" x1="40" y1="260" x2="640" y2="260"/>
+
+  <!-- the source: a factory -->
+  <g class="factory">
+    <rect x="100" y="232" width="42" height="28"/>
+    <polygon points="100,232 114,222 114,232"/>
+    <polygon points="114,232 128,222 128,232"/>
+    <polygon points="128,232 142,222 142,232"/>
+    <rect x="142" y="206" width="14" height="54"/>
+  </g>
+
+  <!-- the receptor: a tower -->
+  <g class="tower">
+    <line x1="508" y1="260" x2="520" y2="177"/>
+    <line x1="532" y1="260" x2="520" y2="177"/>
+    <line x1="511" y1="240" x2="529" y2="240"/>
+    <line x1="514" y1="220" x2="526" y2="220"/>
+    <line x1="517" y1="200" x2="523" y2="200"/>
+  </g>
+
+  <!-- the two releases -->
+  <circle cx="520" cy="170" r="7" fill="#faece7" stroke="#993c1d" stroke-width="1.5"/>
+  <text class="head" x="534" y="166">Release</text>
+  <text class="sub" x="534" y="182">backward run</text>
+
+  <circle cx="149" cy="198" r="7" fill="#eeedfe" stroke="#534ab7" stroke-width="1.5"/>
+  <text class="head" x="134" y="192" text-anchor="end">Release</text>
+  <text class="sub" x="134" y="208" text-anchor="end">forward run</text>
+
+  <text class="sub" x="128" y="284" text-anchor="middle">Source</text>
+  <text class="sub" x="520" y="284" text-anchor="middle">Receptor</text>
+  <line x1="200" y1="292" x2="470" y2="292" stroke="#6a61d1" stroke-width="1.5" marker-end="url(#arrow-forward)"/>
+  <text class="sub" x="335" y="314" text-anchor="middle">Forward run: followed forward in time</text>
+</svg>

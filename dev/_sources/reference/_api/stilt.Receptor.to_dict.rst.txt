@@ -1,5 +1,0 @@
-stilt.Receptor.to\_dict
-=======================
-
-.. currentmodule:: stilt
-.. automethod:: Receptor.to_dict

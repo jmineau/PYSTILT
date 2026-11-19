@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=5ff965c5"></script>
+    <script src="../../../_static/documentation_options.js?v=000a6a7f"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev25+g739e87834" />
+  <meta name="docsearch:version" content="0.1.0a30.dev30+g0d6d55b99" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -459,7 +459,7 @@
 <span class="sd">Points spread over a pixel (:func:`jitter_points`), points along a slant</span>
 <span class="sd">line of sight (:func:`slant_points`), and the altitudes of a retrieval's</span>
 <span class="sd">pressure levels to place them at (:func:`pressure_altitudes`).</span>
-<span class="sd">:func:`receptors_from_soundings` makes a receptor for each row of a</span>
+<span class="sd">:func:`releases_from_soundings` makes a release for each row of a</span>
 <span class="sd">reader's table, and their averaging-kernel table.</span>
 <span class="sd">"""</span>
 
@@ -475,7 +475,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">numpy.typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">ArrayLike</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">shapely.geometry</span><span class="w"> </span><span class="kn">import</span> <span class="n">Point</span><span class="p">,</span> <span class="n">Polygon</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.receptors</span><span class="w"> </span><span class="kn">import</span> <span class="n">ColumnReceptor</span><span class="p">,</span> <span class="n">Receptor</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.releases</span><span class="w"> </span><span class="kn">import</span> <span class="n">ColumnRelease</span><span class="p">,</span> <span class="n">Release</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">averaging_kernel_table</span>
 
 <span class="n">JitterMethod</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"regular"</span><span class="p">,</span> <span class="s2">"random"</span><span class="p">]</span>
@@ -504,7 +504,7 @@
 
 <span class="sd">    Each point is ``(altitude - anchor) * tan(zenith)`` meters from</span>
 <span class="sd">    ``(longitude, latitude)`` along the ``azimuth`` bearing, on a flat local</span>
-<span class="sd">    tangent plane. Pass the result to :meth:`stilt.Receptor.from_points`.</span>
+<span class="sd">    tangent plane. Pass the result to :meth:`stilt.Release.from_points`.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -692,8 +692,8 @@
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return ``(longitude, latitude)`` points spread over one pixel.</span>
 
-<span class="sd">    Running several receptors across a large pixel and averaging their</span>
-<span class="sd">    footprints represents the pixel better than one receptor at its center.</span>
+<span class="sd">    Running several releases across a large pixel and averaging their</span>
+<span class="sd">    footprints represents the pixel better than one release at its center.</span>
 <span class="sd">    This is X-STILT's ``jitterTF``.</span>
 
 <span class="sd">    Parameters</span>
@@ -723,16 +723,16 @@
 
 
 
-<span class="c1"># -- receptors from a table of soundings ----------------------------------------</span>
+<span class="c1"># -- releases from a table of soundings ----------------------------------------</span>
 
 
-<div class="viewcode-block" id="receptors_from_soundings">
-<a class="viewcode-back" href="../../../reference/_api/stilt.observations.receptors_from_soundings.html#stilt.observations.receptors_from_soundings">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">receptors_from_soundings</span><span class="p">(</span>
+<div class="viewcode-block" id="releases_from_soundings">
+<a class="viewcode-back" href="../../../reference/_api/stilt.observations.releases_from_soundings.html#stilt.observations.releases_from_soundings">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">releases_from_soundings</span><span class="p">(</span>
     <span class="n">soundings</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">kind</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"column"</span><span class="p">,</span> <span class="s2">"slant"</span><span class="p">],</span> <span class="o">*</span><span class="p">,</span> <span class="n">top</span><span class="p">:</span> <span class="nb">float</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Receptor</span><span class="p">],</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Release</span><span class="p">],</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Return a receptor for each sounding, and their averaging-kernel table.</span>
+<span class="sd">    Return a release for each sounding, and their averaging-kernel table.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -742,20 +742,20 @@
 <span class="sd">    kind : {"column", "slant"}</span>
 <span class="sd">        ``column`` releases particles along the vertical from the ground to</span>
 <span class="sd">        ``top`` meters above it, at the sounding's location</span>
-<span class="sd">        (:class:`~stilt.ColumnReceptor`). ``slant`` releases them at the</span>
+<span class="sd">        (:class:`~stilt.ColumnRelease`). ``slant`` releases them at the</span>
 <span class="sd">        retrieval's ``altitude_levels`` below ``surface_altitude + top``,</span>
 <span class="sd">        along the line of sight given by ``zenith`` and ``azimuth``</span>
 <span class="sd">        (:func:`slant_points`), above sea level.</span>
 <span class="sd">    top : float</span>
-<span class="sd">        Height of the receptor's top above the surface, in meters.</span>
+<span class="sd">        Height of the release's top above the surface, in meters.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    receptors : list of Receptor</span>
+<span class="sd">    releases : list of Release</span>
 <span class="sd">        One per sounding, in table order, each with the ``sounding_id`` as</span>
-<span class="sd">        an attribute (a column of ``receptors.csv``).</span>
+<span class="sd">        an attribute (a column of ``releases.csv``).</span>
 <span class="sd">    kernels : pandas.DataFrame or None</span>
-<span class="sd">        The averaging kernels by receptor</span>
+<span class="sd">        The averaging kernels by release</span>
 <span class="sd">        (:func:`~stilt.transforms.averaging_kernel_table`), for</span>
 <span class="sd">        ``project.add_table("kernels", kernels)``. ``None`` when the</span>
 <span class="sd">        soundings have no kernel (GGG ``.oof`` files).</span>
@@ -763,7 +763,7 @@
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
 <span class="sd">    ValueError</span>
-<span class="sd">        If a slant receptor's columns (``altitude_levels``, ``zenith``,</span>
+<span class="sd">        If a slant release's columns (``altitude_levels``, ``zenith``,</span>
 <span class="sd">        ``azimuth``) are missing. For OCO-2, which gives pressures only,</span>
 <span class="sd">        add ``altitude_levels`` from :func:`pressure_altitudes` first.</span>
 
@@ -772,10 +772,10 @@
 <span class="sd">    &gt;&gt;&gt; df = read_tropomi_ch4(</span>
 <span class="sd">    ...     path, lon_range=(-113.5, -110.5), lat_range=(39.5, 42)</span>
 <span class="sd">    ... )  # doctest: +SKIP</span>
-<span class="sd">    &gt;&gt;&gt; receptors, kernels = receptors_from_soundings(</span>
+<span class="sd">    &gt;&gt;&gt; releases, kernels = releases_from_soundings(</span>
 <span class="sd">    ...     df[df.good], "slant", top=3000</span>
 <span class="sd">    ... )  # doctest: +SKIP</span>
-<span class="sd">    &gt;&gt;&gt; project.add_receptors(receptors)  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; project.add_releases(releases)  # doctest: +SKIP</span>
 <span class="sd">    &gt;&gt;&gt; project.add_table("kernels", kernels)  # doctest: +SKIP</span>
 <span class="sd">    """</span>
     <span class="k">if</span> <span class="n">kind</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"column"</span><span class="p">,</span> <span class="s2">"slant"</span><span class="p">):</span>
@@ -785,16 +785,16 @@
         <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">needed</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">soundings</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"A slant receptor needs the columns </span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2">. For a product "</span>
+                <span class="sa">f</span><span class="s2">"A slant release needs the columns </span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2">. For a product "</span>
                 <span class="s2">"with pressures only (OCO-2), add altitude_levels from "</span>
                 <span class="s2">"pressure_altitudes."</span>
             <span class="p">)</span>
-    <span class="n">receptors</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Receptor</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">releases</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Release</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">soundings</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(</span><span class="s2">"records"</span><span class="p">):</span>
         <span class="n">attrs</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"sounding_id"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">"sounding_id"</span><span class="p">])}</span>
         <span class="k">if</span> <span class="n">kind</span> <span class="o">==</span> <span class="s2">"column"</span><span class="p">:</span>
-            <span class="n">receptors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-                <span class="n">ColumnReceptor</span><span class="p">(</span>
+            <span class="n">releases</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="n">ColumnRelease</span><span class="p">(</span>
                     <span class="n">time</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s2">"time"</span><span class="p">],</span>
                     <span class="n">longitude</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">"longitude"</span><span class="p">]),</span>
                     <span class="n">latitude</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">"latitude"</span><span class="p">]),</span>
@@ -813,24 +813,24 @@
             <span class="n">zenith</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">"zenith"</span><span class="p">]),</span>
             <span class="n">azimuth</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">"azimuth"</span><span class="p">]),</span>
         <span class="p">)</span>
-        <span class="n">receptors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-            <span class="n">Receptor</span><span class="o">.</span><span class="n">from_points</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">"time"</span><span class="p">],</span> <span class="n">points</span><span class="p">,</span> <span class="n">altitude_ref</span><span class="o">=</span><span class="s2">"msl"</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="n">attrs</span><span class="p">)</span>
+        <span class="n">releases</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="n">Release</span><span class="o">.</span><span class="n">from_points</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">"time"</span><span class="p">],</span> <span class="n">points</span><span class="p">,</span> <span class="n">altitude_ref</span><span class="o">=</span><span class="s2">"msl"</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="n">attrs</span><span class="p">)</span>
         <span class="p">)</span>
     <span class="n">kernels</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="k">if</span> <span class="s2">"ak"</span> <span class="ow">in</span> <span class="n">soundings</span><span class="o">.</span><span class="n">columns</span> <span class="ow">and</span> <span class="s2">"ak_pressure"</span> <span class="ow">in</span> <span class="n">soundings</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
         <span class="n">kernels</span> <span class="o">=</span> <span class="n">averaging_kernel_table</span><span class="p">(</span>
-            <span class="n">receptors</span><span class="p">,</span>
+            <span class="n">releases</span><span class="p">,</span>
             <span class="n">levels</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">soundings</span><span class="p">[</span><span class="s2">"ak_pressure"</span><span class="p">]),</span>
             <span class="n">values</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">soundings</span><span class="p">[</span><span class="s2">"ak"</span><span class="p">]),</span>
         <span class="p">)</span>
-    <span class="k">return</span> <span class="n">receptors</span><span class="p">,</span> <span class="n">kernels</span></div>
+    <span class="k">return</span> <span class="n">releases</span><span class="p">,</span> <span class="n">kernels</span></div>
 
 
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
     <span class="s2">"jitter_points"</span><span class="p">,</span>
     <span class="s2">"pressure_altitudes"</span><span class="p">,</span>
-    <span class="s2">"receptors_from_soundings"</span><span class="p">,</span>
+    <span class="s2">"releases_from_soundings"</span><span class="p">,</span>
     <span class="s2">"slant_points"</span><span class="p">,</span>
 <span class="p">]</span>
 </pre></div>

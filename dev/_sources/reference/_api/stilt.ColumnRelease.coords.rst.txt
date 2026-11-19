@@ -1,0 +1,5 @@
+stilt.ColumnRelease.coords
+==========================
+
+.. currentmodule:: stilt
+.. automethod:: ColumnRelease.coords

@@ -5,7 +5,7 @@ Every public class and function, grouped by what it is for. To find out how
 to do something, start with the :doc:`../guides/index` instead.
 
 :doc:`core`
-   ``Project``, receptors, simulations, particles, footprints, the
+   ``Project``, releases, simulations, particles, footprints, the
    background and transport error, spatial geometries, and sampling.
 
 :doc:`particles`
@@ -29,7 +29,7 @@ to do something, start with the :doc:`../guides/index` instead.
 
 :doc:`observations`
    Column, satellite and mobile measurements: product readers and their
-   columns, sounding selection, receptors from soundings and from tracks,
+   columns, sounding selection, releases from soundings and from tracks,
    slant geometry, the modeled column, and plume backgrounds.
 
 :doc:`project`

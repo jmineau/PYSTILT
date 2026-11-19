@@ -1,0 +1,6 @@
+﻿stilt.releases.write\_releases
+==============================
+
+.. currentmodule:: stilt.releases
+
+.. autofunction:: write_releases

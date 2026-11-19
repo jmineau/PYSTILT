@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=5ff965c5"></script>
+    <script src="../_static/documentation_options.js?v=000a6a7f"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev25+g739e87834" />
+  <meta name="docsearch:version" content="0.1.0a30.dev30+g0d6d55b99" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -490,12 +490,12 @@ site and compare the afternoon with the night.</p>
 <p>The site is WBB, a long-running greenhouse gas site on the roof of the
 William Browning Building at the University of Utah in Salt Lake City. The
 same steps work for any fixed site, with its own coordinates.</p>
-<p>You need ARL meteorology for the hours of your receptors and the hours the
+<p>You need ARL meteorology for the hours of your releases and the hours the
 runs go back into. Here that is 06:00 UTC on 14 January 2021 to 11:00 UTC on
 15 January (<a class="reference internal" href="../guides/meteorology.html"><span class="doc">Meteorology</span></a>).</p>
-<section id="step-1-one-receptor-per-hour">
-<h2>Step 1: One receptor per hour<a class="headerlink" href="#step-1-one-receptor-per-hour" title="Link to this heading">#</a></h2>
-<p>Each measurement is a receptor. We make one for every hour from 18:00 UTC on
+<section id="step-1-one-release-per-hour">
+<h2>Step 1: One release per hour<a class="headerlink" href="#step-1-one-release-per-hour" title="Link to this heading">#</a></h2>
+<p>Each measurement is a release. We make one for every hour from 18:00 UTC on
 14 January (11:00 in Salt Lake City) to 11:00 UTC the next morning (04:00):</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [1]: </span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 
@@ -503,8 +503,8 @@ runs go back into. Here that is 06:00 UTC on 14 January 2021 to 11:00 UTC on
 
 <span class="gp">In [3]: </span><span class="n">times</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">date_range</span><span class="p">(</span><span class="s2">"2021-01-14 18:00"</span><span class="p">,</span> <span class="s2">"2021-01-15 11:00"</span><span class="p">,</span> <span class="n">freq</span><span class="o">=</span><span class="s2">"1h"</span><span class="p">)</span>
 
-<span class="gp">In [4]: </span><span class="n">receptors</span> <span class="o">=</span> <span class="p">[</span>
-<span class="gp">   ...: </span>    <span class="n">stilt</span><span class="o">.</span><span class="n">PointReceptor</span><span class="p">(</span>
+<span class="gp">In [4]: </span><span class="n">releases</span> <span class="o">=</span> <span class="p">[</span>
+<span class="gp">   ...: </span>    <span class="n">stilt</span><span class="o">.</span><span class="n">PointRelease</span><span class="p">(</span>
 <span class="gp">   ...: </span>        <span class="n">time</span><span class="o">=</span><span class="n">t</span><span class="p">,</span>
 <span class="gp">   ...: </span>        <span class="n">latitude</span><span class="o">=</span><span class="mf">40.7665</span><span class="p">,</span>
 <span class="gp">   ...: </span>        <span class="n">longitude</span><span class="o">=-</span><span class="mf">111.8472</span><span class="p">,</span>
@@ -514,25 +514,25 @@ runs go back into. Here that is 06:00 UTC on 14 January 2021 to 11:00 UTC on
 <span class="gp">   ...: </span><span class="p">]</span>
 <span class="gp">   ...: </span>
 
-<span class="gp">In [5]: </span><span class="nb">len</span><span class="p">(</span><span class="n">receptors</span><span class="p">)</span>
+<span class="gp">In [5]: </span><span class="nb">len</span><span class="p">(</span><span class="n">releases</span><span class="p">)</span>
 <span class="gh">Out[5]: </span><span class="go">18</span>
 </pre></div>
 </div>
 <p>If your measurement times are in a spreadsheet, save them as a CSV and read
-them with <a class="reference internal" href="../reference/_api/stilt.read_receptors.html#stilt.read_receptors" title="stilt.read_receptors"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.read_receptors()</span></code></a> (<a class="reference internal" href="../guides/receptors.html"><span class="doc">Receptors</span></a>).</p>
+them with <a class="reference internal" href="../reference/_api/stilt.read_releases.html#stilt.read_releases" title="stilt.read_releases"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.read_releases()</span></code></a> (<a class="reference internal" href="../guides/releases.html"><span class="doc">Releases (receptors)</span></a>).</p>
 </section>
 <section id="step-2-make-the-project">
 <h2>Step 2: Make the project<a class="headerlink" href="#step-2-make-the-project" title="Link to this heading">#</a></h2>
-<p>A project keeps the receptors, the settings and the results together, so
+<p>A project keeps the releases, the settings and the results together, so
 you can stop and pick up where you left off:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [6]: </span><span class="n">project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="o">.</span><span class="n">init</span><span class="p">(</span>
 <span class="gp">   ...: </span>    <span class="s2">"./wbb_project"</span><span class="p">,</span>
-<span class="gp">   ...: </span>    <span class="n">receptors</span><span class="o">=</span><span class="n">receptors</span><span class="p">,</span>
+<span class="gp">   ...: </span>    <span class="n">releases</span><span class="o">=</span><span class="n">releases</span><span class="p">,</span>
 <span class="gp">   ...: </span>    <span class="n">mets</span><span class="o">=</span><span class="p">{</span><span class="s2">"hrrr"</span><span class="p">:</span> <span class="n">met</span><span class="p">},</span>
 <span class="gp">   ...: </span>    <span class="n">models</span><span class="o">=</span><span class="p">{</span>
 <span class="gp">   ...: </span>        <span class="s2">"hysplit"</span><span class="p">:</span> <span class="p">{</span>
 <span class="gp">   ...: </span>            <span class="s2">"n_hours"</span><span class="p">:</span> <span class="o">-</span><span class="mi">12</span><span class="p">,</span>   <span class="c1"># follow the air 12 hours back</span>
-<span class="gp">   ...: </span>            <span class="s2">"numpar"</span><span class="p">:</span> <span class="mi">100</span><span class="p">,</span>    <span class="c1"># particles per receptor</span>
+<span class="gp">   ...: </span>            <span class="s2">"numpar"</span><span class="p">:</span> <span class="mi">100</span><span class="p">,</span>    <span class="c1"># particles per release</span>
 <span class="gp">   ...: </span>            <span class="s2">"krand"</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
 <span class="gp">   ...: </span>            <span class="s2">"seed"</span><span class="p">:</span> <span class="mi">42</span><span class="p">,</span>       <span class="c1"># the same particles on every run</span>
 <span class="gp">   ...: </span>        <span class="p">}</span>
@@ -548,7 +548,7 @@ you can stop and pick up where you left off:</p>
 <span class="gp">   ...: </span>        <span class="p">}</span>
 <span class="gp">   ...: </span>    <span class="p">},</span>
 <span class="gp">   ...: </span>    <span class="n">variants</span><span class="o">=</span><span class="p">{</span><span class="s2">"hrrr"</span><span class="p">:</span> <span class="p">{}},</span>
-<span class="gp">   ...: </span>    <span class="n">execution</span><span class="o">=</span><span class="p">{</span><span class="s2">"backend"</span><span class="p">:</span> <span class="s2">"local"</span><span class="p">,</span> <span class="s2">"local"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"cpus"</span><span class="p">:</span> <span class="mi">4</span><span class="p">}},</span>   <span class="c1"># 4 receptors at a time</span>
+<span class="gp">   ...: </span>    <span class="n">execution</span><span class="o">=</span><span class="p">{</span><span class="s2">"backend"</span><span class="p">:</span> <span class="s2">"local"</span><span class="p">,</span> <span class="s2">"local"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"cpus"</span><span class="p">:</span> <span class="mi">4</span><span class="p">}},</span>   <span class="c1"># 4 releases at a time</span>
 <span class="gp">   ...: </span><span class="p">)</span>
 <span class="gp">   ...: </span>
 </pre></div>
@@ -566,7 +566,7 @@ anything starts. An empty table means nothing is in the way:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [7]: </span><span class="n">project</span><span class="o">.</span><span class="n">check</span><span class="p">()</span>
 <span class="gh">Out[7]: </span>
 <span class="go">Empty DataFrame</span>
-<span class="go">Columns: [check, variant, receptor, message]</span>
+<span class="go">Columns: [check, variant, release, message]</span>
 <span class="go">Index: []</span>
 
 <span class="gp">In [8]: </span><span class="n">project</span><span class="o">.</span><span class="n">run</span><span class="p">();</span>
@@ -586,20 +586,20 @@ run <code class="docutils literal notranslate"><span class="pre">Project.init</s
 <section id="step-4-afternoon-against-night">
 <h2>Step 4: Afternoon against night<a class="headerlink" href="#step-4-afternoon-against-night" title="Link to this heading">#</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">project.footprints()</span></code> loads every footprint into one dataset, with a
-<code class="docutils literal notranslate"><span class="pre">receptor</span></code> axis. We sum each footprint over its hours, then split the
-receptors into the afternoon (11:00 to 16:00 local time) and the night
+<code class="docutils literal notranslate"><span class="pre">release</span></code> axis. We sum each footprint over its hours, then split the
+releases into the afternoon (11:00 to 16:00 local time) and the night
 (22:00 to 04:00):</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [9]: </span><span class="n">footprints</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">footprints</span><span class="p">()</span>
 
 <span class="gp">In [10]: </span><span class="n">total</span> <span class="o">=</span> <span class="n">footprints</span><span class="o">.</span><span class="n">foot</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="s2">"hour"</span><span class="p">)</span><span class="o">.</span><span class="n">compute</span><span class="p">()</span>
 
-<span class="gp">In [11]: </span><span class="n">utc</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulations</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">"receptor"</span><span class="p">)[</span><span class="s2">"time"</span><span class="p">]</span>
+<span class="gp">In [11]: </span><span class="n">utc</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulations</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">"release"</span><span class="p">)[</span><span class="s2">"time"</span><span class="p">]</span>
 
-<span class="gp">In [12]: </span><span class="n">local</span> <span class="o">=</span> <span class="p">(</span><span class="n">utc</span> <span class="o">-</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">(</span><span class="s2">"7h"</span><span class="p">))</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">hour</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">total</span><span class="o">.</span><span class="n">receptor</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+<span class="gp">In [12]: </span><span class="n">local</span> <span class="o">=</span> <span class="p">(</span><span class="n">utc</span> <span class="o">-</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">(</span><span class="s2">"7h"</span><span class="p">))</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">hour</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">total</span><span class="o">.</span><span class="n">release</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
 
-<span class="gp">In [13]: </span><span class="n">afternoon</span> <span class="o">=</span> <span class="n">total</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">receptor</span><span class="o">=</span><span class="n">local</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="n">local</span><span class="o">.</span><span class="n">between</span><span class="p">(</span><span class="mi">11</span><span class="p">,</span> <span class="mi">16</span><span class="p">)])</span>
+<span class="gp">In [13]: </span><span class="n">afternoon</span> <span class="o">=</span> <span class="n">total</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">release</span><span class="o">=</span><span class="n">local</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="n">local</span><span class="o">.</span><span class="n">between</span><span class="p">(</span><span class="mi">11</span><span class="p">,</span> <span class="mi">16</span><span class="p">)])</span>
 
-<span class="gp">In [14]: </span><span class="n">night</span> <span class="o">=</span> <span class="n">total</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">receptor</span><span class="o">=</span><span class="n">local</span><span class="o">.</span><span class="n">index</span><span class="p">[(</span><span class="n">local</span> <span class="o">&gt;=</span> <span class="mi">22</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">local</span> <span class="o">&lt;=</span> <span class="mi">4</span><span class="p">)])</span>
+<span class="gp">In [14]: </span><span class="n">night</span> <span class="o">=</span> <span class="n">total</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">release</span><span class="o">=</span><span class="n">local</span><span class="o">.</span><span class="n">index</span><span class="p">[(</span><span class="n">local</span> <span class="o">&gt;=</span> <span class="mi">22</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">local</span> <span class="o">&lt;=</span> <span class="mi">4</span><span class="p">)])</span>
 </pre></div>
 </div>
 <p>Then we map the mean of each group:</p>
@@ -612,10 +612,10 @@ receptors into the afternoon (11:00 to 16:00 local time) and the night
 <span class="gp">In [18]: </span><span class="n">norm</span> <span class="o">=</span> <span class="n">mcolors</span><span class="o">.</span><span class="n">LogNorm</span><span class="p">(</span><span class="n">vmin</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="mf">1e-1</span><span class="p">)</span>
 
 <span class="gp">In [19]: </span><span class="k">for</span> <span class="n">ax</span><span class="p">,</span> <span class="n">group</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">axes</span><span class="p">,</span> <span class="p">[</span><span class="n">afternoon</span><span class="p">,</span> <span class="n">night</span><span class="p">],</span> <span class="p">[</span><span class="s2">"Afternoon"</span><span class="p">,</span> <span class="s2">"Night"</span><span class="p">]):</span>
-<span class="gp">   ....: </span>    <span class="n">mean</span> <span class="o">=</span> <span class="n">group</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="s2">"receptor"</span><span class="p">)</span>
+<span class="gp">   ....: </span>    <span class="n">mean</span> <span class="o">=</span> <span class="n">group</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="s2">"release"</span><span class="p">)</span>
 <span class="gp">   ....: </span>    <span class="n">mesh</span> <span class="o">=</span> <span class="n">mean</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">mean</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="n">norm</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s2">"YlOrRd"</span><span class="p">,</span> <span class="n">add_colorbar</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 <span class="gp">   ....: </span>    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="o">-</span><span class="mf">111.8472</span><span class="p">,</span> <span class="mf">40.7665</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="s2">"*"</span><span class="p">,</span> <span class="n">markersize</span><span class="o">=</span><span class="mi">14</span><span class="p">,</span> <span class="n">markerfacecolor</span><span class="o">=</span><span class="s2">"none"</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"k"</span><span class="p">)</span>
-<span class="gp">   ....: </span>    <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">group</span><span class="o">.</span><span class="n">sizes</span><span class="p">[</span><span class="s1">'receptor'</span><span class="p">]</span><span class="si">}</span><span class="s2"> hours"</span><span class="p">)</span>
+<span class="gp">   ....: </span>    <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">group</span><span class="o">.</span><span class="n">sizes</span><span class="p">[</span><span class="s1">'release'</span><span class="p">]</span><span class="si">}</span><span class="s2"> hours"</span><span class="p">)</span>
 <span class="gp">   ....: </span>
 
 <span class="gp">In [20]: </span><span class="n">fig</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"footprint (ppm per µmol m⁻² s⁻¹)"</span><span class="p">);</span>
@@ -639,8 +639,8 @@ surface fluxes enter it.</p>
 
 <span class="gp">In [23]: </span><span class="n">share</span> <span class="o">=</span> <span class="n">total</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">near</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">([</span><span class="s2">"lat"</span><span class="p">,</span> <span class="s2">"lon"</span><span class="p">])</span> <span class="o">/</span> <span class="n">total</span><span class="o">.</span><span class="n">sum</span><span class="p">([</span><span class="s2">"lat"</span><span class="p">,</span> <span class="s2">"lon"</span><span class="p">])</span>
 
-<span class="gp">In [24]: </span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"afternoon </span><span class="si">{</span><span class="n">share</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">receptor</span><span class="o">=</span><span class="n">afternoon</span><span class="o">.</span><span class="n">receptor</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">:</span><span class="s2">.0%</span><span class="si">}</span><span class="s2">, "</span>
-<span class="gp">   ....: </span>      <span class="sa">f</span><span class="s2">"night </span><span class="si">{</span><span class="n">share</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">receptor</span><span class="o">=</span><span class="n">night</span><span class="o">.</span><span class="n">receptor</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">:</span><span class="s2">.0%</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="gp">In [24]: </span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"afternoon </span><span class="si">{</span><span class="n">share</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">release</span><span class="o">=</span><span class="n">afternoon</span><span class="o">.</span><span class="n">release</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">:</span><span class="s2">.0%</span><span class="si">}</span><span class="s2">, "</span>
+<span class="gp">   ....: </span>      <span class="sa">f</span><span class="s2">"night </span><span class="si">{</span><span class="n">share</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">release</span><span class="o">=</span><span class="n">night</span><span class="o">.</span><span class="n">release</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">:</span><span class="s2">.0%</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 <span class="gp">   ....: </span>
 <span class="go">afternoon 29%, night 77%</span>
 </pre></div>
@@ -708,7 +708,7 @@ details of the night-time boundary layer.</p>
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-1-one-receptor-per-hour">Step 1: One receptor per hour</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-1-one-release-per-hour">Step 1: One release per hour</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-2-make-the-project">Step 2: Make the project</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-3-check-and-run">Step 3: Check and run</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-4-afternoon-against-night">Step 4: Afternoon against night</a></li>

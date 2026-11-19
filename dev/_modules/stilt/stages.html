@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=5ff965c5"></script>
+    <script src="../../_static/documentation_options.js?v=000a6a7f"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev25+g739e87834" />
+  <meta name="docsearch:version" content="0.1.0a30.dev30+g0d6d55b99" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -456,7 +456,7 @@
 <span></span><span class="sd">"""</span>
 <span class="sd">The stage interface: what is made from each simulation's results after the transport model runs.</span>
 
-<span class="sd">A stage makes one file per receptor from the particles, from the files of</span>
+<span class="sd">A stage makes one file per release from the particles, from the files of</span>
 <span class="sd">other stages, or both, and writes that file itself. The footprint is one</span>
 <span class="sd">(:class:`stilt.footprint.FootprintStage`). A project lists its stages under</span>
 <span class="sd">``stages:`` in ``config.yaml``, each block naming the stage's class by its</span>
@@ -505,7 +505,7 @@
         <span class="s2">"particles"</span><span class="p">,</span>
         <span class="s2">"logs"</span><span class="p">,</span>
         <span class="s2">"scratch"</span><span class="p">,</span>
-        <span class="s2">"receptor"</span><span class="p">,</span>
+        <span class="s2">"release"</span><span class="p">,</span>
         <span class="s2">"variant"</span><span class="p">,</span>
         <span class="s2">"realization"</span><span class="p">,</span>
         <span class="s2">"model"</span><span class="p">,</span>
@@ -521,7 +521,7 @@
 <a class="viewcode-back" href="../../reference/_api/stilt.stages.Stage.html#stilt.stages.Stage">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">Stage</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    What is made from each simulation's results: one file per receptor.</span>
+<span class="sd">    What is made from each simulation's results: one file per release.</span>
 
 <span class="sd">    A class with these members is a stage; it subclasses nothing. It is made</span>
 <span class="sd">    with no arguments, and holds no state: everything a stage needs is in</span>
@@ -545,12 +545,12 @@
 <span class="sd">        settings from the block's, as the class dumps them, and the</span>
 <span class="sd">        variant's own, as written; without it the variant's keys replace the</span>
 <span class="sd">        block's. A property ``zsfc_reasons`` lists what goes wrong for</span>
-<span class="sd">        receptors above sea level whose particles lack the terrain height</span>
+<span class="sd">        releases above sea level whose particles lack the terrain height</span>
 <span class="sd">        ``zsfc``, a clause each, for ``stilt check`` to report when the</span>
 <span class="sd">        transport model is not asked for it.</span>
 <span class="sd">    suffix : str</span>
 <span class="sd">        The extension of the stage's files, such as ``.parquet``, with its</span>
-<span class="sd">        dot. The file of a receptor is ``&lt;receptor id&gt;&lt;suffix&gt;``, and</span>
+<span class="sd">        dot. The file of a release is ``&lt;release id&gt;&lt;suffix&gt;``, and</span>
 <span class="sd">        completion looks for it in a listing.</span>
 <span class="sd">    reads : tuple of str, optional</span>
 <span class="sd">        The names of the stages whose files this one reads, none when the</span>
@@ -615,16 +615,16 @@
 <div class="viewcode-block" id="Stage.check">
 <a class="viewcode-back" href="../../reference/_api/stilt.stages.Stage.check.html#stilt.stages.Stage.check">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">check</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">receptors</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">directory</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">releases</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">directory</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
 <span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Return what would stop this stage for the project's receptors, found without running anything.</span>
+<span class="sd">        Return what would stop this stage for the project's releases, found without running anything.</span>
 
-<span class="sd">        ``project.check()`` and ``stilt check`` call it. *receptors* has one</span>
-<span class="sd">        row per release point (``receptor``, ``time``, ``longitude``,</span>
+<span class="sd">        ``project.check()`` and ``stilt check`` call it. *releases* has one</span>
+<span class="sd">        row per release point (``release``, ``time``, ``longitude``,</span>
 <span class="sd">        ``latitude``, ``altitude``, ``altitude_ref``, ``kind``). Each thing</span>
-<span class="sd">        found is a tuple of a short name for the check, the receptor id (or</span>
-<span class="sd">        ``None`` when it is not about one receptor), and a message.</span>
+<span class="sd">        found is a tuple of a short name for the check, the release id (or</span>
+<span class="sd">        ``None`` when it is not about one release), and a message.</span>
 <span class="sd">        """</span>
         <span class="o">...</span></div>
 
@@ -656,7 +656,7 @@
 <span class="sd">            The variant's settings of this stage, as :meth:`resolve`</span>
 <span class="sd">            returned them.</span>
 <span class="sd">        sim : Simulation</span>
-<span class="sd">            The simulation: its receptor, its variant, its particles, and</span>
+<span class="sd">            The simulation: its release, its variant, its particles, and</span>
 <span class="sd">            the project directory (``sim.directory``), where a relative file</span>
 <span class="sd">            name in the settings starts.</span>
 <span class="sd">        path : Path or UPath</span>

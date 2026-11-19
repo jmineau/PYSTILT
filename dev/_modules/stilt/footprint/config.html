@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=5ff965c5"></script>
+    <script src="../../../_static/documentation_options.js?v=000a6a7f"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev25+g739e87834" />
+  <meta name="docsearch:version" content="0.1.0a30.dev30+g0d6d55b99" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -658,20 +658,20 @@
         <span class="s2">"1h"</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="p">(</span>
             <span class="s2">"Length of each time layer of the footprint, counted from the "</span>
-            <span class="s2">"receptor time, as a duration in whole minutes: ``1h`` for hourly "</span>
+            <span class="s2">"release time, as a duration in whole minutes: ``1h`` for hourly "</span>
             <span class="s2">"layers, ``15min`` for 15-minute data, ``1D`` for days."</span>
         <span class="p">),</span>
     <span class="p">)</span>
     <span class="n">hnf_plume</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="kc">True</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="p">(</span>
-            <span class="s2">"Correct ``foot`` near the receptor with a vertical Gaussian plume "</span>
+            <span class="s2">"Correct ``foot`` near the release with a vertical Gaussian plume "</span>
             <span class="s2">"model before the footprint is computed "</span>
             <span class="s2">"(:func:`stilt.footprint.correct_near_field`). Close to the "</span>
-            <span class="s2">"receptor the plume is thinner than the layer surface fluxes are "</span>
+            <span class="s2">"release the plume is thinner than the layer surface fluxes are "</span>
             <span class="s2">"mixed through, so this raises the influence of nearby fluxes. "</span>
             <span class="s2">"Needs the particle columns ``dens``, ``tlgr``, ``sigw``, ``foot``, "</span>
-            <span class="s2">"``mlht``, and ``samt``, and ``zsfc`` for a receptor above sea "</span>
+            <span class="s2">"``mlht``, and ``samt``, and ``zsfc`` for a release above sea "</span>
             <span class="s2">"level; particles without them get no correction."</span>
         <span class="p">),</span>
     <span class="p">)</span>
@@ -735,11 +735,11 @@
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">zsfc_reasons</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        What goes wrong for receptors above sea level whose particles lack ``zsfc``, a clause each.</span>
+<span class="sd">        What goes wrong for releases above sea level whose particles lack ``zsfc``, a clause each.</span>
 
 <span class="sd">        ``stilt check`` lists them when the transport model is not asked for</span>
 <span class="sd">        ``zsfc`` (HYSPLIT's ``varsiwant``): the near-field correction is</span>
-<span class="sd">        skipped for such a receptor, and a transform that reads the terrain</span>
+<span class="sd">        skipped for such a release, and a transform that reads the terrain</span>
 <span class="sd">        height fails.</span>
 <span class="sd">        """</span>
         <span class="n">reasons</span> <span class="o">=</span> <span class="p">[]</span>

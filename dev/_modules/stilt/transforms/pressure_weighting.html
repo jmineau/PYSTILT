@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=5ff965c5"></script>
+    <script src="../../../_static/documentation_options.js?v=000a6a7f"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev25+g739e87834" />
+  <meta name="docsearch:version" content="0.1.0a30.dev30+g0d6d55b99" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -473,7 +473,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">ConfigDict</span><span class="p">,</span> <span class="n">Field</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.receptors</span><span class="w"> </span><span class="kn">import</span> <span class="n">Receptor</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.releases</span><span class="w"> </span><span class="kn">import</span> <span class="n">Release</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transforms._common</span><span class="w"> </span><span class="kn">import</span> <span class="n">release_coordinate</span>
 
@@ -502,7 +502,7 @@
 <span class="sd">    neighboring release pressures, the ground closes the bottom slab, and the</span>
 <span class="sd">    top slab extends above its release height as far as it does below.</span>
 
-<span class="sd">    A multipoint receptor releases several particles from each point. Those</span>
+<span class="sd">    A multipoint release releases several particles from each point. Those</span>
 <span class="sd">    particles share one release height, so the point's slab is split evenly</span>
 <span class="sd">    among them.</span>
 
@@ -511,12 +511,12 @@
 <span class="sd">    particles : pandas.DataFrame</span>
 <span class="sd">        Particle table with ``particle``, ``pres`` (hPa), and ``zagl`` (m), and</span>
 <span class="sd">        optionally ``release_height``, the release height (m). Without ``release_height`` the</span>
-<span class="sd">        first-step height is used. An MSL receptor also needs ``zsfc``, the</span>
+<span class="sd">        first-step height is used. An MSL release also needs ``zsfc``, the</span>
 <span class="sd">        terrain height (m above sea level).</span>
 <span class="sd">    surface_pressure : float, optional</span>
 <span class="sd">        Surface pressure in hPa. Defaults to the fitted curve at the ground.</span>
 <span class="sd">    altitude_ref : {"agl", "msl"}, default "agl"</span>
-<span class="sd">        Vertical reference of the release heights, ``receptor.altitude_ref``.</span>
+<span class="sd">        Vertical reference of the release heights, ``release.altitude_ref``.</span>
 <span class="sd">        With ``"msl"`` the fit is made against ``zagl + zsfc`` so that it can</span>
 <span class="sd">        be evaluated at the release heights, and the ground closing the</span>
 <span class="sd">        bottom slab is the terrain under the lowest release height.</span>
@@ -529,7 +529,7 @@
 <span class="sd">        Pressure weight of each particle, indexed by ``particle``. The weights</span>
 <span class="sd">        sum to the fraction of the atmosphere's mass inside the column,</span>
 <span class="sd">        ``(p_sfc - p_top) / p_sfc``. The rest lies above the column top,</span>
-<span class="sd">        where surface fluxes do not reach the receptor.</span>
+<span class="sd">        where surface fluxes do not reach the release.</span>
 <span class="sd">    """</span>
     <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"pres"</span><span class="p">,</span> <span class="s2">"zagl"</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">particles</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
@@ -540,12 +540,12 @@
     <span class="n">pres</span> <span class="o">=</span> <span class="n">release_coordinate</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="s2">"pres"</span><span class="p">)</span>
     <span class="n">zagl</span> <span class="o">=</span> <span class="n">release_coordinate</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="s2">"zagl"</span><span class="p">)</span>
 
-    <span class="c1"># Particle heights in the receptor's own vertical reference, so the fit</span>
+    <span class="c1"># Particle heights in the release's own vertical reference, so the fit</span>
     <span class="c1"># can be evaluated at the release heights.</span>
     <span class="k">if</span> <span class="n">altitude_ref</span> <span class="o">==</span> <span class="s2">"msl"</span><span class="p">:</span>
         <span class="k">if</span> <span class="s2">"zsfc"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">particles</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s2">"Pressure weighting for a receptor with altitude_ref='msl' "</span>
+                <span class="s2">"Pressure weighting for a release with altitude_ref='msl' "</span>
                 <span class="s2">"requires the 'zsfc' particle variable; include it in "</span>
                 <span class="s2">"varsiwant."</span>
             <span class="p">)</span>
@@ -564,7 +564,7 @@
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">heights</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span> <span class="ow">or</span> <span class="n">z_fit</span><span class="o">.</span><span class="n">nunique</span><span class="p">()</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
             <span class="s2">"Pressure weighting needs particles released over a range of heights "</span>
-            <span class="s2">"(a ColumnReceptor); all particles share one release height."</span>
+            <span class="s2">"(a ColumnRelease); all particles share one release height."</span>
         <span class="p">)</span>
     <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">polyfit</span><span class="p">(</span><span class="n">z_fit</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">pres</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()),</span> <span class="mi">1</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">a</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
@@ -613,15 +613,15 @@
 <span class="sd">    pressures (see :func:`particle_pwf`). :func:`stilt.calc_footprint`</span>
 <span class="sd">    divides by the particle count, so the weights are multiplied by the</span>
 <span class="sd">    number of particles and the weighted footprint does not change with</span>
-<span class="sd">    ``numpar``. The particles of a multipoint receptor share their point's</span>
+<span class="sd">    ``numpar``. The particles of a multipoint release share their point's</span>
 <span class="sd">    weight evenly. Adds ``xpres`` (release pressure, hPa) and ``pwf``</span>
 <span class="sd">    columns. Requires ``pres`` and ``zagl`` in ``varsiwant``, which are both</span>
-<span class="sd">    in the default, and ``zsfc`` for a receptor with ``altitude_ref="msl"``.</span>
+<span class="sd">    in the default, and ``zsfc`` for a release with ``altitude_ref="msl"``.</span>
 <span class="sd">    """</span>
 
     <span class="n">model_config</span> <span class="o">=</span> <span class="n">ConfigDict</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-    <span class="c1">#: It reads ``zsfc`` for a receptor above sea level, so ``stilt check``</span>
+    <span class="c1">#: It reads ``zsfc`` for a release above sea level, so ``stilt check``</span>
     <span class="c1">#: says when ``varsiwant`` lacks it.</span>
     <span class="n">reads_zsfc</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
 
@@ -640,16 +640,16 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">apply</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
-        <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">release</span><span class="p">:</span> <span class="n">Release</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">directory</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Return the particles with ``foot`` weighted by pressure.</span>
 
-<span class="sd">        The release heights are in the receptor's ``altitude_ref``, and</span>
-<span class="sd">        taken to be above ground without a receptor.</span>
+<span class="sd">        The release heights are in the release's ``altitude_ref``, and</span>
+<span class="sd">        taken to be above ground without a release.</span>
 <span class="sd">        """</span>
-        <span class="n">altitude_ref</span> <span class="o">=</span> <span class="n">receptor</span><span class="o">.</span><span class="n">altitude_ref</span> <span class="k">if</span> <span class="n">receptor</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">"agl"</span>
+        <span class="n">altitude_ref</span> <span class="o">=</span> <span class="n">release</span><span class="o">.</span><span class="n">altitude_ref</span> <span class="k">if</span> <span class="n">release</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">"agl"</span>
         <span class="n">xpres</span><span class="p">,</span> <span class="n">pwf</span> <span class="o">=</span> <span class="n">particle_pwf</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">surface_pressure</span><span class="p">,</span> <span class="n">altitude_ref</span><span class="p">)</span>
         <span class="n">out</span> <span class="o">=</span> <span class="n">particles</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="n">ids</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>

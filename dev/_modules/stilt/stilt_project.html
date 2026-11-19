@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=5ff965c5"></script>
+    <script src="../../_static/documentation_options.js?v=000a6a7f"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev25+g739e87834" />
+  <meta name="docsearch:version" content="0.1.0a30.dev30+g0d6d55b99" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -485,7 +485,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.stage</span><span class="w"> </span><span class="kn">import</span> <span class="n">stored_particles</span><span class="p">,</span> <span class="n">variant_footprint</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.particles</span><span class="w"> </span><span class="kn">import</span> <span class="n">read_particles</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.project</span><span class="w"> </span><span class="kn">import</span> <span class="n">_one_group</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.receptors</span><span class="w"> </span><span class="kn">import</span> <span class="n">Receptor</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.releases</span><span class="w"> </span><span class="kn">import</span> <span class="n">Release</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.stilt_simulation</span><span class="w"> </span><span class="kn">import</span> <span class="n">Simulation</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transport_error</span><span class="w"> </span><span class="kn">import</span> <span class="n">_transport_errors</span>
 
@@ -561,12 +561,12 @@
 <span class="s2">      ymax: 42.0</span>
 <span class="s2">      xres: 0.01</span>
 <span class="s2">      yres: 0.01</span>
-<span class="s2">    hnf_plume: true  # correct foot for the thin plume near the receptor before gridding</span>
+<span class="s2">    hnf_plume: true  # correct foot for the thin plume near the release before gridding</span>
 
 
-<span class="s2"># Variants. Every receptor runs once per variant, with the blocks above as</span>
+<span class="s2"># Variants. Every release runs once per variant, with the blocks above as</span>
 <span class="s2"># the defaults. An entry with no overrides runs the defaults as they are; add</span>
-<span class="s2"># others to run the same receptors under other settings, e.g. a mixed-layer</span>
+<span class="s2"># others to run the same releases under other settings, e.g. a mixed-layer</span>
 <span class="s2"># bracket or a wind-error ensemble (see the docs). A variant changes a</span>
 <span class="s2"># footprint setting under its own stages: key. Only the variants listed here</span>
 <span class="s2"># run.</span>
@@ -586,10 +586,10 @@
 <span class="s2"># execution:</span>
 <span class="s2">#   backend: local    # or "slurm"</span>
 <span class="s2">#   local:</span>
-<span class="s2">#     cpus: 1         # receptors at once</span>
+<span class="s2">#     cpus: 1         # releases at once</span>
 <span class="s2">#   slurm:</span>
 <span class="s2">#     n_workers: 1    # array tasks</span>
-<span class="s2">#     cpus: 1         # receptors at once in each task</span>
+<span class="s2">#     cpus: 1         # releases at once in each task</span>
 <span class="s2">#     time: "02:00:00"</span>
 <span class="s2">"""</span>
 
@@ -616,10 +616,10 @@
 <a class="viewcode-back" href="../../reference/_api/stilt.Project.html#stilt.Project">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">Project</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">Project</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    A STILT project: receptors, settings, the simulations they define, and their footprints.</span>
+<span class="sd">    A STILT project: releases, settings, the simulations they define, and their footprints.</span>
 
 <span class="sd">    ``Project(path)`` opens a project directory and reads it. It is every</span>
-<span class="sd">    receptor under every variant, and a view of their results: list the</span>
+<span class="sd">    release under every variant, and a view of their results: list the</span>
 <span class="sd">    simulations, see which have finished, load particles and footprints.</span>
 <span class="sd">    The results are in the output directory ``config.yaml`` names</span>
 <span class="sd">    (``./output`` by default), which several projects can share.</span>
@@ -649,7 +649,7 @@
 <span class="sd">    ------</span>
 <span class="sd">    FileNotFoundError</span>
 <span class="sd">        If the directory has no ``config.yaml``, so it is not a project: a</span>
-<span class="sd">        mistyped path is not read as a project with no receptors.</span>
+<span class="sd">        mistyped path is not read as a project with no releases.</span>
 
 <span class="sd">    Attributes</span>
 <span class="sd">    ----------</span>
@@ -661,12 +661,12 @@
 <span class="sd">    Make a project, run it, and load a footprint:</span>
 
 <span class="sd">    &gt;&gt;&gt; import stilt  # doctest: +SKIP</span>
-<span class="sd">    &gt;&gt;&gt; receptor = stilt.PointReceptor(  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; release = stilt.PointRelease(  # doctest: +SKIP</span>
 <span class="sd">    ...     time="2023-07-15 18:00", longitude=-111.848, latitude=40.766, altitude=10</span>
 <span class="sd">    ... )</span>
 <span class="sd">    &gt;&gt;&gt; project = stilt.Project.init(  # doctest: +SKIP</span>
 <span class="sd">    ...     "./my_project",</span>
-<span class="sd">    ...     receptors=[receptor],</span>
+<span class="sd">    ...     releases=[release],</span>
 <span class="sd">    ...     mets={"hrrr": "/data/hrrr"},</span>
 <span class="sd">    ...     models={"hysplit": {"n_hours": -24}},</span>
 <span class="sd">    ...     stages={</span>
@@ -685,7 +685,7 @@
 <span class="sd">    ...     variants={"hrrr": {}},</span>
 <span class="sd">    ... )</span>
 <span class="sd">    &gt;&gt;&gt; project.run()  # doctest: +SKIP</span>
-<span class="sd">    &gt;&gt;&gt; foot = project.simulation(receptor.id, "hrrr").footprint  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; foot = project.simulation(release.id, "hrrr").footprint  # doctest: +SKIP</span>
 
 <span class="sd">    Open it again later and check a selection of simulations:</span>
 
@@ -697,31 +697,31 @@
 <div class="viewcode-block" id="Project.simulation">
 <a class="viewcode-back" href="../../reference/_api/stilt.Project.simulation.html#stilt.Project.simulation">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">simulation</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">receptor_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">variant</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">release_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">variant</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Simulation</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Return one simulation, with STILT's reads: a :class:`stilt.Simulation`.</span>
 
 <span class="sd">        It is :meth:`stilt.project.Project.simulation`, which finds the</span>
-<span class="sd">        receptor and the variant, as the subclass that reads the footprint,</span>
+<span class="sd">        release and the variant, as the subclass that reads the footprint,</span>
 <span class="sd">        the background, and the transport error. The two compare equal.</span>
 
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
 <span class="sd">        KeyError</span>
-<span class="sd">            If the project has no such receptor or variant.</span>
+<span class="sd">            If the project has no such release or variant.</span>
 <span class="sd">        ValueError</span>
 <span class="sd">            If *realization* is not one the variant runs as: ``0`` to</span>
 <span class="sd">            ``N - 1`` for ``realizations: N``, ``None`` otherwise.</span>
 
 <span class="sd">        Examples</span>
 <span class="sd">        --------</span>
-<span class="sd">        &gt;&gt;&gt; sim = project.simulation(receptor_id, "hrrr")  # doctest: +SKIP</span>
+<span class="sd">        &gt;&gt;&gt; sim = project.simulation(release_id, "hrrr")  # doctest: +SKIP</span>
 <span class="sd">        &gt;&gt;&gt; sim.footprint  # doctest: +SKIP</span>
 <span class="sd">        """</span>
-        <span class="n">sim</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">receptor_id</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
+        <span class="n">sim</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">release_id</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">Simulation</span><span class="p">(</span>
-            <span class="n">sim</span><span class="o">.</span><span class="n">receptor</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">variant</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">output</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">directory</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">realization</span>
+            <span class="n">sim</span><span class="o">.</span><span class="n">release</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">variant</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">output</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">directory</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">realization</span>
         <span class="p">)</span></div>
 
 
@@ -731,7 +731,7 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">init</span><span class="p">(</span>
         <span class="bp">cls</span><span class="p">,</span>
         <span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span>
-        <span class="n">receptors</span><span class="p">:</span> <span class="n">Receptor</span> <span class="o">|</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Receptor</span><span class="p">]</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">releases</span><span class="p">:</span> <span class="n">Release</span> <span class="o">|</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Release</span><span class="p">]</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="o">*</span><span class="p">,</span>
         <span class="n">config</span><span class="p">:</span> <span class="n">ProjectConfig</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">starter</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
@@ -741,7 +741,7 @@
 <span class="sd">        Make a new project and return it.</span>
 
 <span class="sd">        Writes ``config.yaml``, with the settings given, and</span>
-<span class="sd">        ``receptors.csv`` when receptors are given. With ``starter=True`` it</span>
+<span class="sd">        ``releases.csv`` when releases are given. With ``starter=True`` it</span>
 <span class="sd">        writes the commented starter config instead, to edit by hand, as</span>
 <span class="sd">        ``stilt init`` does.</span>
 
@@ -755,14 +755,14 @@
 <span class="sd">        ----------</span>
 <span class="sd">        path : str or Path</span>
 <span class="sd">            Project directory. It is created if needed.</span>
-<span class="sd">        receptors : Receptor, iterable of Receptor, str or Path, optional</span>
-<span class="sd">            Receptors, or the path of a receptors CSV to copy them from.</span>
+<span class="sd">        releases : Release, iterable of Release, str or Path, optional</span>
+<span class="sd">            Releases, or the path of a releases CSV to copy them from.</span>
 <span class="sd">        config : ProjectConfig, optional</span>
 <span class="sd">            The settings. Or give them as keywords instead.</span>
 <span class="sd">        starter : bool, default False</span>
 <span class="sd">            Write the commented starter ``config.yaml``</span>
 <span class="sd">            (:data:`STARTER_CONFIG`) in place of a config. Without</span>
-<span class="sd">            receptors, ``receptors.csv`` gets only its header.</span>
+<span class="sd">            releases, ``releases.csv`` gets only its header.</span>
 <span class="sd">        **settings</span>
 <span class="sd">            The blocks of :class:`~stilt.ProjectConfig`: ``mets``, ``models``,</span>
 <span class="sd">            ``stages`` and ``variants``, and ``execution`` and ``output``.</span>
@@ -776,7 +776,7 @@
 <span class="sd">            If both *config* and keyword settings are given, or either is</span>
 <span class="sd">            given with ``starter=True``.</span>
 <span class="sd">        ValueError</span>
-<span class="sd">            If a variant's settings are invalid, or *receptors* is given but</span>
+<span class="sd">            If a variant's settings are invalid, or *releases* is given but</span>
 <span class="sd">            holds none (an empty list, or a CSV file with only its header).</span>
 <span class="sd">            Nothing is written.</span>
 <span class="sd">        """</span>
@@ -784,18 +784,18 @@
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">"Give a ProjectConfig or keyword settings, not both."</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">starter</span><span class="p">:</span>
             <span class="n">config</span> <span class="o">=</span> <span class="n">_with_stilt_r_values</span><span class="p">(</span><span class="n">config</span> <span class="ow">or</span> <span class="n">ProjectConfig</span><span class="p">(</span><span class="o">**</span><span class="n">settings</span><span class="p">))</span>
-            <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">receptors</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
+            <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">releases</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">config</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">settings</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
                 <span class="s2">"A starter config takes no settings; edit its config.yaml instead."</span>
             <span class="p">)</span>
         <span class="n">starting</span> <span class="o">=</span> <span class="n">ProjectConfig</span><span class="o">.</span><span class="n">model_validate</span><span class="p">(</span><span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">STARTER_CONFIG</span><span class="p">))</span>
-        <span class="n">new</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">receptors</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">starting</span><span class="p">)</span>
+        <span class="n">new</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">releases</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">starting</span><span class="p">)</span>
         <span class="c1"># The same settings, with the comments that explain them.</span>
         <span class="n">new</span><span class="o">.</span><span class="n">config_path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">STARTER_CONFIG</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">receptors</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="c1"># Header only: every other line of a receptors file is a receptor.</span>
-            <span class="n">new</span><span class="o">.</span><span class="n">receptors_path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="s2">"time,longitude,latitude,altitude</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">releases</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Header only: every other line of a releases file is a release.</span>
+            <span class="n">new</span><span class="o">.</span><span class="n">releases_path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="s2">"time,longitude,latitude,altitude</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">new</span></div>
 
 
@@ -805,13 +805,13 @@
 <span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Open the footprints of the selected simulations as one dataset.</span>
 
-<span class="sd">        Footprints are stacked by their layer from the receptor time, so</span>
-<span class="sd">        receptors at any time share one layer axis, named for the unit</span>
+<span class="sd">        Footprints are stacked by their layer from the release time, so</span>
+<span class="sd">        releases at any time share one layer axis, named for the unit</span>
 <span class="sd">        ``tres`` is written in and counted in it: ``hour`` with the default</span>
 <span class="sd">        ``tres`` of ``1h``, ``day`` for ``1D``, ``minute`` for ``15min``. The</span>
 <span class="sd">        ``time`` coordinate says when each layer starts. Only the files' metadata is</span>
 <span class="sd">        read here. The values load with dask when they are used, in blocks</span>
-<span class="sd">        of receptors from one date folder. The selection must hold one</span>
+<span class="sd">        of releases from one date folder. The selection must hold one</span>
 <span class="sd">        variant, as for :meth:`jacobian`.</span>
 
 <span class="sd">        Parameters</span>
@@ -823,10 +823,10 @@
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        xarray.Dataset</span>
-<span class="sd">            ``foot`` with dims ``(receptor, hour, lat, lon)`` (``y`` and</span>
+<span class="sd">            ``foot`` with dims ``(release, hour, lat, lon)`` (``y`` and</span>
 <span class="sd">            ``x`` on a projected grid, and ``day`` or ``minute`` in place</span>
 <span class="sd">            of ``hour`` when ``tres`` is written in them), in selection</span>
-<span class="sd">            order. A receptor with</span>
+<span class="sd">            order. A release with</span>
 <span class="sd">            an empty footprint has no row and is listed in</span>
 <span class="sd">            ``attrs["empty"]``; one not run yet is listed in</span>
 <span class="sd">            ``attrs["missing"]``.</span>
@@ -841,21 +841,21 @@
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
 <span class="sd">        A footprint is about 35 MB of values on a 350,000-cell grid over 24</span>
-<span class="sd">        hours, so a computation that loads every receptor at once suits a</span>
+<span class="sd">        hours, so a computation that loads every release at once suits a</span>
 <span class="sd">        selection of hundreds. Sums over ``hour`` or the grid run block by</span>
 <span class="sd">        block. :meth:`jacobian` sums any number of footprints onto a target.</span>
 
 <span class="sd">        Examples</span>
 <span class="sd">        --------</span>
 <span class="sd">        &gt;&gt;&gt; ds = project.footprints(sims[sims.variant == "hrrr"])  # doctest: +SKIP</span>
-<span class="sd">        &gt;&gt;&gt; ds.foot.sum("hour").mean("receptor").plot()  # doctest: +SKIP</span>
+<span class="sd">        &gt;&gt;&gt; ds.foot.sum("hour").mean("release").plot()  # doctest: +SKIP</span>
 <span class="sd">        """</span>
         <span class="n">frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_selected</span><span class="p">(</span><span class="n">sel</span><span class="p">)</span>
         <span class="n">name</span><span class="p">,</span> <span class="n">k</span> <span class="o">=</span> <span class="n">_one_group</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="s2">"A footprint dataset"</span><span class="p">)</span>
         <span class="n">variant</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">variants</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
         <span class="k">if</span> <span class="s2">"footprint"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">variant</span><span class="o">.</span><span class="n">stages</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Variant </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> makes no footprints (no grid)."</span><span class="p">)</span>
-        <span class="n">requested</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">frame</span><span class="p">[</span><span class="s2">"receptor"</span><span class="p">]))</span>
+        <span class="n">requested</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">frame</span><span class="p">[</span><span class="s2">"release"</span><span class="p">]))</span>
         <span class="n">found</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">present</span><span class="p">(</span><span class="s2">"footprint"</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">requested</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
         <span class="n">paths</span> <span class="o">=</span> <span class="p">[</span>
             <span class="n">path</span>
@@ -893,7 +893,7 @@
 <span class="sd">        or the bins are dropped. The selection must hold one variant, and</span>
 <span class="sd">        one realization of an ensemble: ``ens[ens.realization == k]``.</span>
 
-<span class="sd">        Footprints are read and summed one receptor at a time, in *workers*</span>
+<span class="sd">        Footprints are read and summed one release at a time, in *workers*</span>
 <span class="sd">        threads. Each thread holds one footprint, so memory stays at a few</span>
 <span class="sd">        footprints whatever the selection's size; the result itself is</span>
 <span class="sd">        sparse.</span>
@@ -929,9 +929,9 @@
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        Jacobian</span>
-<span class="sd">            Rows are the selected receptors with a non-empty footprint, in</span>
+<span class="sd">            Rows are the selected releases with a non-empty footprint, in</span>
 <span class="sd">            selection order; columns are ``(time bin, target cell)``.</span>
-<span class="sd">            Receptors with an empty footprint are listed in ``empty``, and</span>
+<span class="sd">            Releases with an empty footprint are listed in ``empty``, and</span>
 <span class="sd">            those not run yet in ``missing``.</span>
 
 <span class="sd">        Raises</span>
@@ -952,7 +952,7 @@
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Variant </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> makes no footprints (no grid)."</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">folder</span><span class="p">(</span><span class="s2">"footprint"</span><span class="p">,</span> <span class="n">variant</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Variant </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> has no footprints yet."</span><span class="p">)</span>
-        <span class="n">requested</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">frame</span><span class="p">[</span><span class="s2">"receptor"</span><span class="p">]))</span>
+        <span class="n">requested</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">frame</span><span class="p">[</span><span class="s2">"release"</span><span class="p">]))</span>
         <span class="n">found</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">present</span><span class="p">(</span><span class="s2">"footprint"</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">requested</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">_jacobian</span><span class="p">(</span>
             <span class="k">lambda</span> <span class="n">r</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">read</span><span class="p">(</span>
@@ -982,14 +982,14 @@
 <span class="sd">        Return the transport error of each selected simulation's modeled enhancement.</span>
 
 <span class="sd">        The same estimate as ``sim.transport_error``, for every selected</span>
-<span class="sd">        receptor at once (Lin and Gerbig, 2005; the *Transport Error* guide).</span>
+<span class="sd">        release at once (Lin and Gerbig, 2005; the *Transport Error* guide).</span>
 <span class="sd">        *sel* is the unperturbed run, and *error* names the wind-error</span>
-<span class="sd">        variant of the same receptors. Every realization of *error* that has</span>
-<span class="sd">        run is averaged, so a receptor whose ensemble is still running gets</span>
+<span class="sd">        variant of the same releases. Every realization of *error* that has</span>
+<span class="sd">        run is averaged, so a release whose ensemble is still running gets</span>
 <span class="sd">        an estimate from the realizations it has.</span>
 
-<span class="sd">        Receptors are read and estimated one at a time, in *workers*</span>
-<span class="sd">        threads. Each thread holds one receptor's particle tables: the</span>
+<span class="sd">        Releases are read and estimated one at a time, in *workers*</span>
+<span class="sd">        threads. Each thread holds one release's particle tables: the</span>
 <span class="sd">        unperturbed one and one per realization.</span>
 
 <span class="sd">        Parameters</span>
@@ -1000,9 +1000,9 @@
 <span class="sd">        error : str</span>
 <span class="sd">            The wind-error variant, such as ``"hrrr-err"``.</span>
 <span class="sd">        flux : xarray.DataArray</span>
-<span class="sd">            Surface flux field, in µmol m⁻² s⁻¹, the same for every receptor.</span>
+<span class="sd">            Surface flux field, in µmol m⁻² s⁻¹, the same for every release.</span>
 <span class="sd">        workers : int, optional</span>
-<span class="sd">            Threads that read and estimate receptors. Defaults to the CPUs</span>
+<span class="sd">            Threads that read and estimate releases. Defaults to the CPUs</span>
 <span class="sd">            this process may use (in a Slurm job, the job's), at most 8.</span>
 <span class="sd">        **options</span>
 <span class="sd">            Passed to :func:`stilt.transport_error`: ``levels``,</span>
@@ -1015,7 +1015,7 @@
 <span class="sd">            :class:`~stilt.particles.TransportError`: ``enhancement``,</span>
 <span class="sd">            ``enhancement_perturbed``, ``background``, ``variance``,</span>
 <span class="sd">            ``noise``, and ``realizations`` (how many realizations of</span>
-<span class="sd">            *error* were averaged). A receptor without particles in the</span>
+<span class="sd">            *error* were averaged). A release without particles in the</span>
 <span class="sd">            selected variant or in any realization of *error* gets NaN and</span>
 <span class="sd">            ``realizations`` 0.</span>
 
@@ -1029,11 +1029,11 @@
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
-<span class="sd">        Each receptor's particles are read whole. A table of 1.4 million</span>
+<span class="sd">        Each release's particles are read whole. A table of 1.4 million</span>
 <span class="sd">        rows takes about a second to read, so a selection of hundreds of</span>
-<span class="sd">        receptors takes minutes. The per-level tables of</span>
+<span class="sd">        releases takes minutes. The per-level tables of</span>
 <span class="sd">        :class:`~stilt.particles.TransportError` are not kept; get them for</span>
-<span class="sd">        one receptor with ``sim.transport_error``.</span>
+<span class="sd">        one release with ``sim.transport_error``.</span>
 
 <span class="sd">        Examples</span>
 <span class="sd">        --------</span>
@@ -1062,13 +1062,13 @@
                 <span class="sa">f</span><span class="s2">"The selection is of </span><span class="si">{</span><span class="n">error</span><span class="si">!r}</span><span class="s2"> itself; select the unperturbed variant."</span>
             <span class="p">)</span>
         <span class="n">perturbed</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">variants</span><span class="p">[</span><span class="n">error</span><span class="p">]</span>
-        <span class="n">requested</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">frame</span><span class="p">[</span><span class="s2">"receptor"</span><span class="p">]))</span>
+        <span class="n">requested</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">frame</span><span class="p">[</span><span class="s2">"release"</span><span class="p">]))</span>
         <span class="n">have</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">present</span><span class="p">(</span><span class="s2">"particles"</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">requested</span><span class="p">)</span>
         <span class="n">ran</span> <span class="o">=</span> <span class="p">{</span>
             <span class="n">k</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">present</span><span class="p">(</span><span class="s2">"particles"</span><span class="p">,</span> <span class="n">perturbed</span><span class="p">,</span> <span class="n">requested</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">perturbed</span><span class="o">.</span><span class="n">realization_numbers</span>
         <span class="p">}</span>
-        <span class="c1"># Each receptor with both sides, and the realizations of *error* it has.</span>
+        <span class="c1"># Each release with both sides, and the realizations of *error* it has.</span>
         <span class="n">runs</span> <span class="o">=</span> <span class="p">{</span>
             <span class="n">r</span><span class="p">:</span> <span class="n">ks</span>
             <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">requested</span>
@@ -1095,7 +1095,7 @@
 
         <span class="n">found</span> <span class="o">=</span> <span class="n">_transport_errors</span><span class="p">(</span>
             <span class="n">read</span><span class="p">,</span>
-            <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_receptors</span><span class="p">(</span><span class="n">runs</span><span class="p">)</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span>
+            <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_releases</span><span class="p">(</span><span class="n">runs</span><span class="p">)</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span>
             <span class="n">flux</span><span class="p">,</span>
             <span class="n">transforms</span><span class="o">=</span><span class="n">footprint</span><span class="o">.</span><span class="n">transforms</span><span class="p">,</span>
             <span class="n">directory</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="p">,</span>
@@ -1106,7 +1106,7 @@
                 <span class="o">**</span><span class="n">options</span><span class="p">,</span>
             <span class="p">},</span>
         <span class="p">)</span>
-        <span class="n">result</span> <span class="o">=</span> <span class="n">found</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">frame</span><span class="p">[</span><span class="s2">"receptor"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">found</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">frame</span><span class="p">[</span><span class="s2">"release"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())</span>
         <span class="n">result</span><span class="p">[</span><span class="s2">"realizations"</span><span class="p">]</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="s2">"realizations"</span><span class="p">]</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">"int64"</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">frame</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="o">**</span><span class="p">{</span><span class="n">c</span><span class="p">:</span> <span class="n">result</span><span class="p">[</span><span class="n">c</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">columns</span><span class="p">})</span></div>
 </div>

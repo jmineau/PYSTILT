@@ -27,7 +27,7 @@ Attributes
    ~FootprintAccessor.grid
    ~FootprintAccessor.name
    ~FootprintAccessor.plot
-   ~FootprintAccessor.receptor
+   ~FootprintAccessor.release
 
 
 

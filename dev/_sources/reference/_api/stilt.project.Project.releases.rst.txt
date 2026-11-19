@@ -1,0 +1,6 @@
+stilt.project.Project.releases
+==============================
+
+.. currentmodule:: stilt.project
+
+.. autoproperty:: Project.releases

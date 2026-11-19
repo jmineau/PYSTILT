@@ -1,0 +1,6 @@
+stilt.PointRelease.location\_id
+===============================
+
+.. currentmodule:: stilt
+
+.. autoproperty:: PointRelease.location_id

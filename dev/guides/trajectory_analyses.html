@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=5ff965c5"></script>
+    <script src="../_static/documentation_options.js?v=000a6a7f"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev25+g739e87834" />
+  <meta name="docsearch:version" content="0.1.0a30.dev30+g0d6d55b99" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -417,7 +417,7 @@
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Setting up a project</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="receptors.html">Receptors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="releases.html">Releases (receptors)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tracks.html">Mobile Measurements</a></li>
 <li class="toctree-l1"><a class="reference internal" href="meteorology.html">Meteorology</a></li>
 <li class="toctree-l1"><a class="reference internal" href="projects.html">Projects And Variants</a></li>
@@ -523,17 +523,17 @@
 measurement: residence time, potential source contribution (PSCF),
 concentration-weighted trajectories (CWT), a mean path, the time the
 air took from a source. PYSTILT’s results do all of these, and most get
-simpler, because a run gives hundreds of particles per receptor and a
+simpler, because a run gives hundreds of particles per release and a
 footprint that already weights them by their time near the ground.</p>
-<p>The examples use a month of receptors at one site, and a table of your
-measurements with a <code class="docutils literal notranslate"><span class="pre">receptor</span></code> column, such as <code class="docutils literal notranslate"><span class="pre">project.simulations</span></code>
+<p>The examples use a month of releases at one site, and a table of your
+measurements with a <code class="docutils literal notranslate"><span class="pre">release</span></code> column, such as <code class="docutils literal notranslate"><span class="pre">project.simulations</span></code>
 merged with your data:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 
 <span class="n">sims</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulations</span>
 <span class="n">july</span> <span class="o">=</span> <span class="n">sims</span><span class="p">[(</span><span class="n">sims</span><span class="o">.</span><span class="n">variant</span> <span class="o">==</span> <span class="s2">"hrrr"</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">sims</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">between</span><span class="p">(</span><span class="s2">"2023-07-01"</span><span class="p">,</span> <span class="s2">"2023-07-31 23:00"</span><span class="p">)]</span>
-<span class="n">obs</span> <span class="o">=</span> <span class="n">july</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">measurements</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="s2">"receptor"</span><span class="p">)</span>   <span class="c1"># one row per receptor, with "ch4"</span>
+<span class="n">obs</span> <span class="o">=</span> <span class="n">july</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">measurements</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="s2">"release"</span><span class="p">)</span>   <span class="c1"># one row per release, with "ch4"</span>
 </pre></div>
 </div>
 <section id="residence-time">
@@ -541,10 +541,10 @@ merged with your data:</p>
 <p>The footprint is STILT’s residence time. It counts the time each particle
 spends in the lower half of the mixed layer, divides by the air density
 and the depth the flux mixes through, and sums over the particles. Summed
-over the hours of the run and averaged over the receptors, it says where
+over the hours of the run and averaged over the releases, it says where
 the air came from near the ground:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">footprints</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">footprints</span><span class="p">(</span><span class="n">july</span><span class="p">)</span>
-<span class="n">residence</span> <span class="o">=</span> <span class="n">footprints</span><span class="o">.</span><span class="n">foot</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="s2">"hour"</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="s2">"receptor"</span><span class="p">)</span>
+<span class="n">residence</span> <span class="o">=</span> <span class="n">footprints</span><span class="o">.</span><span class="n">foot</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="s2">"hour"</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="s2">"release"</span><span class="p">)</span>
 <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">residence</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">residence</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">))</span><span class="o">.</span><span class="n">plot</span><span class="p">()</span>
 </pre></div>
 </div>
@@ -563,11 +563,11 @@ particle positions per cell. <code class="docutils literal notranslate"><span cl
 <section id="potential-source-contribution-pscf">
 <h2>Potential source contribution (PSCF)<a class="headerlink" href="#potential-source-contribution-pscf" title="Link to this heading">#</a></h2>
 <p>PSCF is, for each cell, the fraction of the visits that came from
-receptors with a high value. With particles, each particle position is
+releases with a high value. With particles, each particle position is
 one visit:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">high</span> <span class="o">=</span> <span class="n">obs</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">obs</span><span class="p">[</span><span class="s2">"ch4"</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">obs</span><span class="p">[</span><span class="s2">"ch4"</span><span class="p">]</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="mf">0.75</span><span class="p">),</span> <span class="s2">"receptor"</span><span class="p">]</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">high</span> <span class="o">=</span> <span class="n">obs</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">obs</span><span class="p">[</span><span class="s2">"ch4"</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">obs</span><span class="p">[</span><span class="s2">"ch4"</span><span class="p">]</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="mf">0.75</span><span class="p">),</span> <span class="s2">"release"</span><span class="p">]</span>
 <span class="n">visits</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">histogram2d</span><span class="p">(</span><span class="n">particles</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">],</span> <span class="n">particles</span><span class="p">[</span><span class="s2">"lat"</span><span class="p">],</span> <span class="n">bins</span><span class="o">=</span><span class="p">[</span><span class="n">x_edges</span><span class="p">,</span> <span class="n">y_edges</span><span class="p">])</span>
-<span class="n">high_rows</span> <span class="o">=</span> <span class="n">particles</span><span class="p">[</span><span class="s2">"receptor"</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">high</span><span class="p">)</span>
+<span class="n">high_rows</span> <span class="o">=</span> <span class="n">particles</span><span class="p">[</span><span class="s2">"release"</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">high</span><span class="p">)</span>
 <span class="n">high_visits</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">histogram2d</span><span class="p">(</span>
     <span class="n">particles</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">high_rows</span><span class="p">,</span> <span class="s2">"lon"</span><span class="p">],</span> <span class="n">particles</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">high_rows</span><span class="p">,</span> <span class="s2">"lat"</span><span class="p">],</span> <span class="n">bins</span><span class="o">=</span><span class="p">[</span><span class="n">x_edges</span><span class="p">,</span> <span class="n">y_edges</span><span class="p">]</span>
 <span class="p">)</span>
@@ -582,22 +582,22 @@ down-weight cells with fewer visits than a few times the mean.</p>
 <h2>Concentration-weighted trajectories (CWT)<a class="headerlink" href="#concentration-weighted-trajectories-cwt" title="Link to this heading">#</a></h2>
 <p>CWT gives each cell the mean of the measured values, weighted by the
 time the air spent over the cell. With footprints the weight is each
-receptor’s footprint, which counts only the time near the ground:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">weight</span> <span class="o">=</span> <span class="n">footprints</span><span class="o">.</span><span class="n">foot</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="s2">"hour"</span><span class="p">)</span>   <span class="c1"># (receptor, lat, lon)</span>
-<span class="n">value</span> <span class="o">=</span> <span class="n">obs</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">"receptor"</span><span class="p">)[</span><span class="s2">"ch4"</span><span class="p">]</span><span class="o">.</span><span class="n">to_xarray</span><span class="p">()</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">receptor</span><span class="o">=</span><span class="n">weight</span><span class="o">.</span><span class="n">receptor</span><span class="p">)</span>
-<span class="n">cwt</span> <span class="o">=</span> <span class="p">(</span><span class="n">weight</span> <span class="o">*</span> <span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="s2">"receptor"</span><span class="p">)</span> <span class="o">/</span> <span class="n">weight</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="s2">"receptor"</span><span class="p">)</span>   <span class="c1"># NaN where no footprint reached</span>
+release’s footprint, which counts only the time near the ground:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">weight</span> <span class="o">=</span> <span class="n">footprints</span><span class="o">.</span><span class="n">foot</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="s2">"hour"</span><span class="p">)</span>   <span class="c1"># (release, lat, lon)</span>
+<span class="n">value</span> <span class="o">=</span> <span class="n">obs</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">"release"</span><span class="p">)[</span><span class="s2">"ch4"</span><span class="p">]</span><span class="o">.</span><span class="n">to_xarray</span><span class="p">()</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">release</span><span class="o">=</span><span class="n">weight</span><span class="o">.</span><span class="n">release</span><span class="p">)</span>
+<span class="n">cwt</span> <span class="o">=</span> <span class="p">(</span><span class="n">weight</span> <span class="o">*</span> <span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="s2">"release"</span><span class="p">)</span> <span class="o">/</span> <span class="n">weight</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="s2">"release"</span><span class="p">)</span>   <span class="c1"># NaN where no footprint reached</span>
 <span class="n">cwt</span><span class="o">.</span><span class="n">plot</span><span class="p">()</span>
 </pre></div>
 </div>
-<p>A receptor whose footprint is empty has no row in <code class="docutils literal notranslate"><span class="pre">footprints</span></code>
+<p>A release whose footprint is empty has no row in <code class="docutils literal notranslate"><span class="pre">footprints</span></code>
 (<a class="reference internal" href="checking.html"><span class="doc">Checking A Run</span></a>), so it does not count.</p>
 </section>
 <section id="a-mean-path">
 <h2>A mean path<a class="headerlink" href="#a-mean-path" title="Link to this heading">#</a></h2>
-<p>The mean path of a receptor’s particles is their mean position at each
+<p>The mean path of a release’s particles is their mean position at each
 output step, the center of the cloud as it spreads:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">particles</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">particles</span><span class="p">(</span><span class="n">july</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"age"</span><span class="p">,</span> <span class="s2">"lon"</span><span class="p">,</span> <span class="s2">"lat"</span><span class="p">,</span> <span class="s2">"zagl"</span><span class="p">])</span>
-<span class="n">path</span> <span class="o">=</span> <span class="n">particles</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s2">"receptor"</span><span class="p">,</span> <span class="s2">"age"</span><span class="p">])[[</span><span class="s2">"lon"</span><span class="p">,</span> <span class="s2">"lat"</span><span class="p">,</span> <span class="s2">"zagl"</span><span class="p">]]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+<span class="n">path</span> <span class="o">=</span> <span class="n">particles</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s2">"release"</span><span class="p">,</span> <span class="s2">"age"</span><span class="p">])[[</span><span class="s2">"lon"</span><span class="p">,</span> <span class="s2">"lat"</span><span class="p">,</span> <span class="s2">"zagl"</span><span class="p">]]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
 <span class="n">one</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">rid</span><span class="p">]</span><span class="o">.</span><span class="n">sort_index</span><span class="p">(</span><span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>   <span class="c1"># from the release backwards</span>
 </pre></div>
 </div>
@@ -615,7 +615,7 @@ of those hours were in sunlight? For smoke at a mountain site, these say
 more about the ozone the smoke made on the way than the time it arrived.
 A backward run answers both for each particle. Its <em>transit time</em> is the
 smallest <code class="docutils literal notranslate"><span class="pre">|age|</span></code> among its rows inside the region: the time since it
-last left the region before it reached the receptor. A particle that
+last left the region before it reached the release. A particle that
 never enters the region did not come from it.</p>
 <p>Draw the region as a shapely polygon in longitude and latitude, around a
 fire, a city, or a basin. <code class="docutils literal notranslate"><span class="pre">top</span></code> limits it to the air below a height
@@ -635,7 +635,7 @@ surface source:</p>
 <span class="k">if</span> <span class="n">top</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
     <span class="n">inside</span> <span class="o">&amp;=</span> <span class="n">particles</span><span class="p">[</span><span class="s2">"zagl"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="o">&lt;=</span> <span class="n">top</span>
 <span class="n">transit</span> <span class="o">=</span> <span class="p">(</span>
-    <span class="n">particles</span><span class="p">[</span><span class="n">inside</span><span class="p">]</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s2">"receptor"</span><span class="p">,</span> <span class="s2">"particle"</span><span class="p">])[</span><span class="s2">"hours"</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="s2">"transit"</span><span class="p">)</span>
+    <span class="n">particles</span><span class="p">[</span><span class="n">inside</span><span class="p">]</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s2">"release"</span><span class="p">,</span> <span class="s2">"particle"</span><span class="p">])[</span><span class="s2">"hours"</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="s2">"transit"</span><span class="p">)</span>
 <span class="p">)</span>
 </pre></div>
 </div>
@@ -645,7 +645,7 @@ leaving the region and arriving count, and each counts for one output
 step:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pvlib</span>
 
-<span class="n">route</span> <span class="o">=</span> <span class="n">particles</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">transit</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="p">[</span><span class="s2">"receptor"</span><span class="p">,</span> <span class="s2">"particle"</span><span class="p">],</span> <span class="n">how</span><span class="o">=</span><span class="s2">"inner"</span><span class="p">)</span>
+<span class="n">route</span> <span class="o">=</span> <span class="n">particles</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">transit</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="p">[</span><span class="s2">"release"</span><span class="p">,</span> <span class="s2">"particle"</span><span class="p">],</span> <span class="n">how</span><span class="o">=</span><span class="s2">"inner"</span><span class="p">)</span>
 <span class="n">route</span> <span class="o">=</span> <span class="n">route</span><span class="p">[</span><span class="n">route</span><span class="p">[</span><span class="s2">"hours"</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">route</span><span class="p">[</span><span class="s2">"transit"</span><span class="p">]]</span>
 <span class="n">sun</span> <span class="o">=</span> <span class="n">pvlib</span><span class="o">.</span><span class="n">solarposition</span><span class="o">.</span><span class="n">spa_python</span><span class="p">(</span>
     <span class="n">pd</span><span class="o">.</span><span class="n">DatetimeIndex</span><span class="p">(</span><span class="n">route</span><span class="p">[</span><span class="s2">"time"</span><span class="p">])</span><span class="o">.</span><span class="n">tz_localize</span><span class="p">(</span><span class="s2">"UTC"</span><span class="p">),</span>
@@ -654,33 +654,33 @@ step:</p>
 <span class="p">)</span>
 <span class="n">route</span><span class="p">[</span><span class="s2">"sunlit"</span><span class="p">]</span> <span class="o">=</span> <span class="n">sun</span><span class="p">[</span><span class="s2">"elevation"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span>
 <span class="n">step</span> <span class="o">=</span> <span class="n">particles</span><span class="p">[</span><span class="s2">"age"</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">()</span><span class="o">.</span><span class="n">sort_values</span><span class="p">()</span><span class="o">.</span><span class="n">diff</span><span class="p">()</span><span class="o">.</span><span class="n">median</span><span class="p">()</span> <span class="o">/</span> <span class="mi">60</span>   <span class="c1"># hours per row</span>
-<span class="n">sunlit</span> <span class="o">=</span> <span class="n">route</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s2">"receptor"</span><span class="p">,</span> <span class="s2">"particle"</span><span class="p">])[</span><span class="s2">"sunlit"</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="o">.</span><span class="n">mul</span><span class="p">(</span><span class="n">step</span><span class="p">)</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="s2">"sunlit"</span><span class="p">)</span>
+<span class="n">sunlit</span> <span class="o">=</span> <span class="n">route</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s2">"release"</span><span class="p">,</span> <span class="s2">"particle"</span><span class="p">])[</span><span class="s2">"sunlit"</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="o">.</span><span class="n">mul</span><span class="p">(</span><span class="n">step</span><span class="p">)</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="s2">"sunlit"</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Then, for each receptor, the fraction of particles that came from the
+<p>Then, for each release, the fraction of particles that came from the
 region, their mean transit time and its spread, and their mean hours in
 sunlight:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">per_particle</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">transit</span><span class="p">,</span> <span class="n">sunlit</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">fillna</span><span class="p">({</span><span class="s2">"sunlit"</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">})</span>
-<span class="n">numpar</span> <span class="o">=</span> <span class="n">particles</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"receptor"</span><span class="p">)[</span><span class="s2">"particle"</span><span class="p">]</span><span class="o">.</span><span class="n">nunique</span><span class="p">()</span>
-<span class="n">summary</span> <span class="o">=</span> <span class="n">per_particle</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"receptor"</span><span class="p">)</span><span class="o">.</span><span class="n">agg</span><span class="p">(</span>
+<span class="n">numpar</span> <span class="o">=</span> <span class="n">particles</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"release"</span><span class="p">)[</span><span class="s2">"particle"</span><span class="p">]</span><span class="o">.</span><span class="n">nunique</span><span class="p">()</span>
+<span class="n">summary</span> <span class="o">=</span> <span class="n">per_particle</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"release"</span><span class="p">)</span><span class="o">.</span><span class="n">agg</span><span class="p">(</span>
     <span class="n">transit_mean</span><span class="o">=</span><span class="p">(</span><span class="s2">"transit"</span><span class="p">,</span> <span class="s2">"mean"</span><span class="p">),</span>
     <span class="n">transit_sd</span><span class="o">=</span><span class="p">(</span><span class="s2">"transit"</span><span class="p">,</span> <span class="s2">"std"</span><span class="p">),</span>
     <span class="n">sunlit_mean</span><span class="o">=</span><span class="p">(</span><span class="s2">"sunlit"</span><span class="p">,</span> <span class="s2">"mean"</span><span class="p">),</span>
 <span class="p">)</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">numpar</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
 <span class="n">summary</span><span class="p">[</span><span class="s2">"from_source"</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
-    <span class="n">per_particle</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"receptor"</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="p">()</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">numpar</span><span class="o">.</span><span class="n">index</span><span class="p">)</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">/</span> <span class="n">numpar</span>
+    <span class="n">per_particle</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"release"</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="p">()</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">numpar</span><span class="o">.</span><span class="n">index</span><span class="p">)</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">/</span> <span class="n">numpar</span>
 <span class="p">)</span>
 <span class="n">summary</span><span class="p">[</span><span class="s2">"sunlit_fraction"</span><span class="p">]</span> <span class="o">=</span> <span class="n">summary</span><span class="p">[</span><span class="s2">"sunlit_mean"</span><span class="p">]</span> <span class="o">/</span> <span class="n">summary</span><span class="p">[</span><span class="s2">"transit_mean"</span><span class="p">]</span>
 
-<span class="n">both</span> <span class="o">=</span> <span class="n">obs</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">summary</span><span class="p">,</span> <span class="n">left_on</span><span class="o">=</span><span class="s2">"receptor"</span><span class="p">,</span> <span class="n">right_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">both</span> <span class="o">=</span> <span class="n">obs</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">summary</span><span class="p">,</span> <span class="n">left_on</span><span class="o">=</span><span class="s2">"release"</span><span class="p">,</span> <span class="n">right_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>A receptor whose particles never reached the region has <code class="docutils literal notranslate"><span class="pre">from_source</span></code>
+<p>A release whose particles never reached the region has <code class="docutils literal notranslate"><span class="pre">from_source</span></code>
 0 and NaN for the rest. <code class="docutils literal notranslate"><span class="pre">from_source</span></code> is itself a marker of the
 source’s air that needs no inventory. With a ratio of enhancements in
 <code class="docutils literal notranslate"><span class="pre">obs</span></code>, such as ozone to CO for smoke, plot it against
 <code class="docutils literal notranslate"><span class="pre">transit_mean</span></code> and color it by <code class="docutils literal notranslate"><span class="pre">sunlit_fraction</span></code>. The transit times
-of one receptor’s particles, <code class="docutils literal notranslate"><span class="pre">per_particle.loc[rid,</span> <span class="pre">&quot;transit&quot;]</span></code>, give
+of one release’s particles, <code class="docutils literal notranslate"><span class="pre">per_particle.loc[rid,</span> <span class="pre">&quot;transit&quot;]</span></code>, give
 the whole distribution.</p>
 <p>A few things to know:</p>
 <ul class="simple">
@@ -689,7 +689,7 @@ reach the region only after <code class="docutils literal notranslate"><span cla
 <code class="docutils literal notranslate"><span class="pre">from_source</span></code> comes out low and <code class="docutils literal notranslate"><span class="pre">transit_mean</span></code> short. If the
 distribution runs up to <code class="docutils literal notranslate"><span class="pre">n_hours</span></code>, run longer.</p></li>
 <li><p><strong>Memory.</strong> A 24-hour run of 1,000 particles is 1.4 million rows, so a
-day of hourly receptors is about 35 million, and this recipe peaked near
+day of hourly releases is about 35 million, and this recipe peaked near
 10 GB on one. For more, run it a day at a time and concatenate the
 summaries.</p></li>
 <li><p><strong>The horizon.</strong> <code class="docutils literal notranslate"><span class="pre">elevation</span> <span class="pre">&gt;</span> <span class="pre">0</span></code> counts the hours the sun is up.
@@ -716,18 +716,18 @@ row’s <code class="docutils literal notranslate"><span class="pre">age</span><
 </section>
 <section id="comparing-variants">
 <h2>Comparing variants<a class="headerlink" href="#comparing-variants" title="Link to this heading">#</a></h2>
-<p>Variants with different meteorology or settings run the same receptors,
-so their results line up by receptor. The difference of two variants’
+<p>Variants with different meteorology or settings run the same releases,
+so their results line up by release. The difference of two variants’
 mean footprints shows where they disagree:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">hrrr</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">footprints</span><span class="p">(</span><span class="n">sims</span><span class="p">[</span><span class="n">sims</span><span class="o">.</span><span class="n">variant</span> <span class="o">==</span> <span class="s2">"hrrr"</span><span class="p">])</span><span class="o">.</span><span class="n">foot</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="s2">"hour"</span><span class="p">)</span>
 <span class="n">nam</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">footprints</span><span class="p">(</span><span class="n">sims</span><span class="p">[</span><span class="n">sims</span><span class="o">.</span><span class="n">variant</span> <span class="o">==</span> <span class="s2">"nam"</span><span class="p">])</span><span class="o">.</span><span class="n">foot</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="s2">"hour"</span><span class="p">)</span>
-<span class="n">both</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">intersect1d</span><span class="p">(</span><span class="n">hrrr</span><span class="o">.</span><span class="n">receptor</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">nam</span><span class="o">.</span><span class="n">receptor</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
-<span class="n">diff</span> <span class="o">=</span> <span class="p">(</span><span class="n">hrrr</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">receptor</span><span class="o">=</span><span class="n">both</span><span class="p">)</span> <span class="o">-</span> <span class="n">nam</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">receptor</span><span class="o">=</span><span class="n">both</span><span class="p">))</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="s2">"receptor"</span><span class="p">)</span>
+<span class="n">both</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">intersect1d</span><span class="p">(</span><span class="n">hrrr</span><span class="o">.</span><span class="n">release</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">nam</span><span class="o">.</span><span class="n">release</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+<span class="n">diff</span> <span class="o">=</span> <span class="p">(</span><span class="n">hrrr</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">release</span><span class="o">=</span><span class="n">both</span><span class="p">)</span> <span class="o">-</span> <span class="n">nam</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">release</span><span class="o">=</span><span class="n">both</span><span class="p">))</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="s2">"release"</span><span class="p">)</span>
 <span class="n">diff</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">cmap</span><span class="o">=</span><span class="s2">"RdBu_r"</span><span class="p">,</span> <span class="n">center</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Both variants need the same grid for this. For particles, compare the
-endpoints of each receptor: <code class="docutils literal notranslate"><span class="pre">sim.particles.stilt.endpoints()</span></code> gives
+endpoints of each release: <code class="docutils literal notranslate"><span class="pre">sim.particles.stilt.endpoints()</span></code> gives
 each particle’s last position.</p>
 </section>
 </section>

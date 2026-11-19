@@ -1,5 +1,0 @@
-stilt.Receptor.coords
-=====================
-
-.. currentmodule:: stilt
-.. automethod:: Receptor.coords

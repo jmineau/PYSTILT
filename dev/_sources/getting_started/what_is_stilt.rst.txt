@@ -17,12 +17,12 @@ version of STILT.
 How STILT works, in three steps
 -------------------------------
 
-1. **Say where and when you measured.** STILT calls this location and time a
-   :term:`receptor`. It can be a single point (a tower inlet), a vertical
+1. **Say where and when you measured.** This location and time is a
+   :term:`release` (STILT-R calls it a :term:`receptor`). It can be a single point (a tower inlet), a vertical
    column (a ground-based spectrometer), or a set of points along a slanted
    line of sight (a satellite sounding).
 2. **Release particles and run them backward.** STILT releases a cloud of
-   imaginary air parcels, called :term:`particles <particle>`, at the receptor
+   imaginary air parcels, called :term:`particles <particle>`, at the release
    and moves them backward in time using gridded wind fields from a weather
    model (the :term:`meteorology`). Each particle also gets random turbulent
    motion, so the cloud spreads out the way real air mixes. The particle
@@ -42,14 +42,14 @@ How STILT works, in three steps
    import stilt
 
    docs_cwd = docs_examples.temp_workdir()
-   receptor = stilt.PointReceptor(
+   release = stilt.PointRelease(
        time="2021-01-14 19:00", longitude=-111.848, latitude=40.766, altitude=10
    )
    particles = stilt.run_trajectories(
-       receptor, docs_examples.met(), n_hours=-12, numpar=200, krand=2, seed=42
+       release, docs_examples.met(), n_hours=-12, numpar=200, krand=2, seed=42
    )
    grid = stilt.Grid(xmin=-113.0, xmax=-110.5, ymin=40.0, ymax=42.0, xres=0.01, yres=0.01)
-   foot = stilt.calc_footprint(particles, receptor, grid)
+   foot = stilt.calc_footprint(particles, release, grid)
 
    @savefig what_is_stilt_footprint.png width=5in
    foot.stilt.plot.map();
@@ -115,7 +115,7 @@ that differ). It also makes a few things easier.
   outputs are missing.
 * The same project runs on your computer or on a Slurm cluster. Switching
   takes a few lines of configuration.
-* Column and slanted receptors, averaging kernels, and pressure weighting are
+* Column and slanted releases, averaging kernels, and pressure weighting are
   built in for column and satellite measurements.
 * Particles and footprints are saved as Parquet files, which pandas, R, and
   DuckDB can read. A footprint can also be written as NetCDF.

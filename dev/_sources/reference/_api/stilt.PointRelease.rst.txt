@@ -1,0 +1,49 @@
+﻿stilt.PointRelease
+==================
+
+.. currentmodule:: stilt
+
+
+
+
+
+
+.. class-signature:: stilt.PointRelease
+
+
+Parameters
+----------
+
+.. config-model:: stilt.PointRelease
+
+
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+   :nosignatures:
+
+   ~PointRelease.location_id
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~PointRelease.coords
+
+
+
+
+Inherited
+---------
+
+
+From :class:`~.Release`: :py:obj:`~.Release.from_dict`, :py:obj:`~.Release.from_json`, :py:obj:`~.Release.from_points`, :py:obj:`~.Release.geometry`, :py:obj:`~.Release.id`, :py:obj:`~.Release.plot`, :py:obj:`~.Release.points`, :py:obj:`~.Release.to_dict`, :py:obj:`~.Release.to_json`
+
+

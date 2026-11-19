@@ -1,6 +1,0 @@
-﻿stilt.observations.receptors\_from\_soundings
-=============================================
-
-.. currentmodule:: stilt.observations
-
-.. autofunction:: receptors_from_soundings

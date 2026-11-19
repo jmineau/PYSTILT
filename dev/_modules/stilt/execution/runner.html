@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=5ff965c5"></script>
+    <script src="../../../_static/documentation_options.js?v=000a6a7f"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev25+g739e87834" />
+  <meta name="docsearch:version" content="0.1.0a30.dev30+g0d6d55b99" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -454,7 +454,7 @@
                   
   <h1>Source code for stilt.execution.runner</h1><div class="highlight"><pre>
 <span></span><span class="sd">"""</span>
-<span class="sd">Running a project: finding the receptors with missing results and handing them to workers.</span>
+<span class="sd">Running a project: finding the releases with missing results and handing them to workers.</span>
 
 <span class="sd">With ``backend: slurm``, :func:`submit` writes a job array script into</span>
 <span class="sd">``_slurm/&lt;stamp&gt;/`` in the project and submits it with ``sbatch``. Each task</span>
@@ -529,17 +529,17 @@
 
 
 <span class="c1"># ---------------------------------------------------------------------------</span>
-<span class="c1"># Shares of the receptors</span>
+<span class="c1"># Shares of the releases</span>
 <span class="c1"># ---------------------------------------------------------------------------</span>
 
 
 <div class="viewcode-block" id="task_share">
 <a class="viewcode-back" href="../../../reference/_api/stilt.execution.task_share.html#stilt.execution.task_share">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">task_share</span><span class="p">(</span><span class="n">receptor_ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">task</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">n_tasks</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">task_share</span><span class="p">(</span><span class="n">release_ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">task</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">n_tasks</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Return task *task*'s share of *receptor_ids*, split *n_tasks* ways.</span>
+<span class="sd">    Return task *task*'s share of *release_ids*, split *n_tasks* ways.</span>
 
-<span class="sd">    The share is every *n_tasks*-th receptor, starting at *task*, which runs</span>
+<span class="sd">    The share is every *n_tasks*-th release, starting at *task*, which runs</span>
 <span class="sd">    from 0 to ``n_tasks - 1`` as the index of a job array does.</span>
 
 <span class="sd">    Raises</span>
@@ -551,7 +551,7 @@
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
             <span class="sa">f</span><span class="s2">"A task runs from 0 to n_tasks - 1; got task </span><span class="si">{</span><span class="n">task</span><span class="si">}</span><span class="s2"> of </span><span class="si">{</span><span class="n">n_tasks</span><span class="si">}</span><span class="s2">."</span>
         <span class="p">)</span>
-    <span class="k">return</span> <span class="n">receptor_ids</span><span class="p">[</span><span class="n">task</span><span class="p">::</span><span class="n">n_tasks</span><span class="p">]</span></div>
+    <span class="k">return</span> <span class="n">release_ids</span><span class="p">[</span><span class="n">task</span><span class="p">::</span><span class="n">n_tasks</span><span class="p">]</span></div>
 
 
 
@@ -595,52 +595,52 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">pending</span><span class="p">(</span>
     <span class="n">project</span><span class="p">:</span> <span class="n">Project</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
-    <span class="n">receptors</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">releases</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">task</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">skip_existing</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Return the ids of the receptors a run would run, each once, in project order.</span>
+<span class="sd">    Return the ids of the releases a run would run, each once, in project order.</span>
 
-<span class="sd">    A driver that starts tasks itself writes these to the ``receptors.txt``</span>
-<span class="sd">    each task reads (``stilt run --receptors``).</span>
+<span class="sd">    A driver that starts tasks itself writes these to the ``releases.txt``</span>
+<span class="sd">    each task reads (``stilt run --releases``).</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    project : Project</span>
 <span class="sd">        The project.</span>
-<span class="sd">    receptors : iterable of str, optional</span>
-<span class="sd">        Only these receptors, in this order.</span>
+<span class="sd">    releases : iterable of str, optional</span>
+<span class="sd">        Only these releases, in this order.</span>
 <span class="sd">    task : tuple of (int, int), optional</span>
 <span class="sd">        ``(i, n)``: share ``i`` of ``n`` (:func:`task_share`), taken from</span>
-<span class="sd">        all the receptors (or all of *receptors*) before the complete ones</span>
-<span class="sd">        are dropped, so the tasks of a job array split the receptors the</span>
+<span class="sd">        all the releases (or all of *releases*) before the complete ones</span>
+<span class="sd">        are dropped, so the tasks of a job array split the releases the</span>
 <span class="sd">        same way whenever each starts.</span>
 <span class="sd">    skip_existing : bool, default True</span>
-<span class="sd">        Leave out receptors whose simulations are all complete.</span>
+<span class="sd">        Leave out releases whose simulations are all complete.</span>
 
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
 <span class="sd">    ValueError</span>
-<span class="sd">        If a receptor in *receptors* is not in the project.</span>
+<span class="sd">        If a release in *releases* is not in the project.</span>
 <span class="sd">    """</span>
     <span class="n">sims</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulations</span>
-    <span class="n">every</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">sims</span><span class="p">[</span><span class="s2">"receptor"</span><span class="p">]))</span>
-    <span class="k">if</span> <span class="n">receptors</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">every</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">sims</span><span class="p">[</span><span class="s2">"release"</span><span class="p">]))</span>
+    <span class="k">if</span> <span class="n">releases</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">chosen</span> <span class="o">=</span> <span class="n">every</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">chosen</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">receptors</span><span class="p">))</span>
+        <span class="n">chosen</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">releases</span><span class="p">))</span>
         <span class="n">known</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">every</span><span class="p">)</span>
         <span class="n">unknown</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">chosen</span> <span class="k">if</span> <span class="n">r</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">known</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">unknown</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">unknown</span><span class="p">)</span><span class="si">}</span><span class="s2"> receptor ids are not in this project, such as "</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">unknown</span><span class="p">)</span><span class="si">}</span><span class="s2"> release ids are not in this project, such as "</span>
                 <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">unknown</span><span class="p">[:</span><span class="mi">3</span><span class="p">]</span><span class="si">}</span><span class="s2">."</span>
             <span class="p">)</span>
     <span class="k">if</span> <span class="n">task</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">chosen</span> <span class="o">=</span> <span class="n">task_share</span><span class="p">(</span><span class="n">chosen</span><span class="p">,</span> <span class="o">*</span><span class="n">task</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">skip_existing</span> <span class="ow">and</span> <span class="n">chosen</span><span class="p">:</span>
-        <span class="n">left</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">incomplete</span><span class="p">(</span><span class="n">sims</span><span class="p">[</span><span class="n">sims</span><span class="p">[</span><span class="s2">"receptor"</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">chosen</span><span class="p">)])[</span><span class="s2">"receptor"</span><span class="p">])</span>
+        <span class="n">left</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">incomplete</span><span class="p">(</span><span class="n">sims</span><span class="p">[</span><span class="n">sims</span><span class="p">[</span><span class="s2">"release"</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">chosen</span><span class="p">)])[</span><span class="s2">"release"</span><span class="p">])</span>
         <span class="n">chosen</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">chosen</span> <span class="k">if</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">left</span><span class="p">]</span>
     <span class="k">return</span> <span class="n">chosen</span></div>
 
@@ -648,12 +648,12 @@
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_to_fetch</span><span class="p">(</span>
     <span class="n">project</span><span class="p">:</span> <span class="n">Project</span><span class="p">,</span>
-    <span class="n">receptor_ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">release_ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
     <span class="n">execution</span><span class="p">:</span> <span class="n">ExecutionConfig</span><span class="p">,</span>
     <span class="n">skip_existing</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Return the simulations of *receptor_ids* whose met files are got once before they run, or ``None``.</span>
+<span class="sd">    Return the simulations of *release_ids* whose met files are got once before they run, or ``None``.</span>
 
 <span class="sd">    ``None`` when the backend's ``fetch`` is off, when no met of theirs</span>
 <span class="sd">    downloads (:func:`stilt.fetch.downloads`), or when none of them runs</span>
@@ -664,7 +664,7 @@
     <span class="k">if</span> <span class="n">execution</span><span class="o">.</span><span class="n">fetch</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">None</span>
     <span class="n">sims</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulations</span>
-    <span class="n">chosen</span> <span class="o">=</span> <span class="n">sims</span><span class="p">[</span><span class="n">sims</span><span class="p">[</span><span class="s2">"receptor"</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">receptor_ids</span><span class="p">)]</span>
+    <span class="n">chosen</span> <span class="o">=</span> <span class="n">sims</span><span class="p">[</span><span class="n">sims</span><span class="p">[</span><span class="s2">"release"</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">release_ids</span><span class="p">)]</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">downloads</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">chosen</span><span class="p">[</span><span class="s2">"variant"</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">()):</span>
         <span class="k">return</span> <span class="kc">None</span>
     <span class="n">unrun</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">_unrun</span><span class="p">(</span><span class="n">chosen</span><span class="p">,</span> <span class="n">skip_existing</span><span class="o">=</span><span class="n">skip_existing</span><span class="p">)</span>
@@ -697,10 +697,10 @@
         <span class="p">)</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_status</span><span class="p">(</span><span class="n">project</span><span class="p">:</span> <span class="n">Project</span><span class="p">,</span> <span class="n">receptor_ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Return the status table of the simulations of *receptor_ids*."""</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_status</span><span class="p">(</span><span class="n">project</span><span class="p">:</span> <span class="n">Project</span><span class="p">,</span> <span class="n">release_ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the status table of the simulations of *release_ids*."""</span>
     <span class="n">sims</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulations</span>
-    <span class="k">return</span> <span class="n">project</span><span class="o">.</span><span class="n">status</span><span class="p">(</span><span class="n">sims</span><span class="p">[</span><span class="n">sims</span><span class="p">[</span><span class="s2">"receptor"</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">receptor_ids</span><span class="p">)])</span>
+    <span class="k">return</span> <span class="n">project</span><span class="o">.</span><span class="n">status</span><span class="p">(</span><span class="n">sims</span><span class="p">[</span><span class="n">sims</span><span class="p">[</span><span class="s2">"release"</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">release_ids</span><span class="p">)])</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_unfinished</span><span class="p">(</span><span class="n">table</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
@@ -713,7 +713,7 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span>
     <span class="n">project</span><span class="p">:</span> <span class="n">Project</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
-    <span class="n">receptors</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">releases</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">task</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">execution</span><span class="p">:</span> <span class="n">ExecutionConfig</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">skip_existing</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
@@ -722,10 +722,10 @@
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Run every simulation of a project that has not finished, and wait for it.</span>
 
-<span class="sd">    Each receptor with missing results runs once: the transport model once for each</span>
+<span class="sd">    Each release with missing results runs once: the transport model once for each</span>
 <span class="sd">    distinct set of transport settings whose particles are missing, then the</span>
 <span class="sd">    footprint of every variant that has one. With ``backend: local`` the</span>
-<span class="sd">    receptors run in this process (``cpus`` at a time); with ``cpus`` above</span>
+<span class="sd">    releases run in this process (``cpus`` at a time); with ``cpus`` above</span>
 <span class="sd">    1 and a met that downloads, the met files are got first</span>
 <span class="sd">    (:meth:`stilt.Project.fetch`, unless ``execution.local.fetch`` is ``false``),</span>
 <span class="sd">    so the workers do not download the same file at once. With</span>
@@ -738,16 +738,16 @@
 <span class="sd">    ----------</span>
 <span class="sd">    project : Project</span>
 <span class="sd">        Project to run.</span>
-<span class="sd">    receptors : iterable of str, optional</span>
-<span class="sd">        Run only these receptors (their ids), in this order.</span>
+<span class="sd">    releases : iterable of str, optional</span>
+<span class="sd">        Run only these releases (their ids), in this order.</span>
 <span class="sd">    task : tuple of (int, int), optional</span>
-<span class="sd">        ``(i, n)``: run share ``i`` of ``n`` of the receptors here, in this</span>
+<span class="sd">        ``(i, n)``: run share ``i`` of ``n`` of the releases here, in this</span>
 <span class="sd">        process, whatever the backend. The share is every ``n``-th</span>
-<span class="sd">        receptor in project order (or in *receptors* order), starting at</span>
+<span class="sd">        release in project order (or in *releases* order), starting at</span>
 <span class="sd">        ``i`` (:func:`task_share`), whether it is complete or not, and the</span>
 <span class="sd">        complete ones are then skipped. Each task of a job array or a</span>
 <span class="sd">        Kubernetes indexed Job runs one share, and every task splits the</span>
-<span class="sd">        receptors the same way whenever it starts.</span>
+<span class="sd">        releases the same way whenever it starts.</span>
 <span class="sd">    execution : ExecutionConfig, optional</span>
 <span class="sd">        Where to run and with what resources. Defaults to the ``execution``</span>
 <span class="sd">        settings of the project's config.</span>
@@ -769,7 +769,7 @@
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
 <span class="sd">    ValueError</span>
-<span class="sd">        If a receptor id is not in the project, or *task* is not from 0 to</span>
+<span class="sd">        If a release id is not in the project, or *task* is not from 0 to</span>
 <span class="sd">        ``n - 1``.</span>
 
 <span class="sd">    Notes</span>
@@ -782,7 +782,7 @@
 <span class="sd">    stopped by ``scancel`` is not requeued.</span>
 <span class="sd">    """</span>
     <span class="n">execution</span> <span class="o">=</span> <span class="n">execution</span> <span class="k">if</span> <span class="n">execution</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">project</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">execution</span>
-    <span class="n">todo</span> <span class="o">=</span> <span class="n">pending</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">receptors</span><span class="o">=</span><span class="n">receptors</span><span class="p">,</span> <span class="n">task</span><span class="o">=</span><span class="n">task</span><span class="p">,</span> <span class="n">skip_existing</span><span class="o">=</span><span class="n">skip_existing</span><span class="p">)</span>
+    <span class="n">todo</span> <span class="o">=</span> <span class="n">pending</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">releases</span><span class="o">=</span><span class="n">releases</span><span class="p">,</span> <span class="n">task</span><span class="o">=</span><span class="n">task</span><span class="p">,</span> <span class="n">skip_existing</span><span class="o">=</span><span class="n">skip_existing</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">todo</span><span class="p">:</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"run: every simulation is complete; nothing to do"</span><span class="p">)</span>
     <span class="k">elif</span> <span class="n">execution</span><span class="o">.</span><span class="n">backend</span> <span class="o">==</span> <span class="s2">"slurm"</span> <span class="ow">and</span> <span class="n">task</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -799,13 +799,13 @@
             <span class="n">table</span> <span class="o">=</span> <span class="n">_status</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">todo</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">table</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"run(</span><span class="si">%s</span><span class="s2">): </span><span class="si">%d</span><span class="s2"> receptors"</span><span class="p">,</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">variants</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">todo</span><span class="p">))</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"run(</span><span class="si">%s</span><span class="s2">): </span><span class="si">%d</span><span class="s2"> releases"</span><span class="p">,</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">variants</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">todo</span><span class="p">))</span>
         <span class="c1"># In this process, so Ctrl-C and SIGTERM stop the workers cleanly</span>
         <span class="c1"># and progress prints as it happens.</span>
-        <span class="kn">from</span><span class="w"> </span><span class="nn">.worker</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_receptors</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">.worker</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_releases</span>
 
         <span class="k">def</span><span class="w"> </span><span class="nf">work</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">run_receptors</span><span class="p">(</span>
+            <span class="n">run_releases</span><span class="p">(</span>
                 <span class="n">project</span><span class="p">,</span>
                 <span class="n">todo</span><span class="p">,</span>
                 <span class="n">compute_root</span><span class="o">=</span><span class="n">resolve_compute_root</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">compute_root</span><span class="p">),</span>
@@ -833,7 +833,7 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">submit</span><span class="p">(</span>
     <span class="n">project</span><span class="p">:</span> <span class="n">Project</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
-    <span class="n">receptors</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">releases</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">execution</span><span class="p">:</span> <span class="n">ExecutionConfig</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">skip_existing</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="n">compute_root</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -841,21 +841,21 @@
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Submit every simulation of a project that has not finished to Slurm.</span>
 
-<span class="sd">    The receptors with missing results are split among up to ``n_workers``</span>
+<span class="sd">    The releases with missing results are split among up to ``n_workers``</span>
 <span class="sd">    tasks of one job array, and this returns once it is submitted. The</span>
 <span class="sd">    submission is a folder ``_slurm/&lt;date_time&gt;_&lt;id&gt;/`` in the project:</span>
-<span class="sd">    ``receptors.txt`` lists the receptors to run, ``receptors.parquet``</span>
-<span class="sd">    holds their checked rows from ``receptors.csv``, ``execution.yaml``</span>
+<span class="sd">    ``releases.txt`` lists the releases to run, ``releases.parquet``</span>
+<span class="sd">    holds their checked rows from ``releases.csv``, ``execution.yaml``</span>
 <span class="sd">    holds the execution settings, ``job.sh`` is the script given to</span>
 <span class="sd">    ``sbatch``, and ``&lt;task&gt;.log`` is each task's log. Task ``i`` runs</span>
-<span class="sd">    ``stilt run &lt;project&gt; --receptors receptors.parquet --task i/N``, so it</span>
-<span class="sd">    does not read and check all of ``receptors.csv`` again. A task</span>
+<span class="sd">    ``stilt run &lt;project&gt; --releases releases.parquet --task i/N``, so it</span>
+<span class="sd">    does not read and check all of ``releases.csv`` again. A task</span>
 <span class="sd">    that is preempted or nears its time limit requeues itself and skips</span>
 <span class="sd">    what it finished (see :func:`run`).</span>
 
 <span class="sd">    When a met the unfinished simulations use downloads its files, a</span>
 <span class="sd">    fetch job goes first: one task that runs ``stilt fetch &lt;project&gt;</span>
-<span class="sd">    --receptors receptors.parquet`` (:func:`fetch_script`), written to</span>
+<span class="sd">    --releases releases.parquet`` (:func:`fetch_script`), written to</span>
 <span class="sd">    ``fetch.sh`` with its log in ``fetch.log``, with the resources of</span>
 <span class="sd">    ``execution.slurm.fetch``. The array waits for it to end</span>
 <span class="sd">    (``--dependency=afterany``), however it ended, so the runs whose met it</span>
@@ -866,7 +866,7 @@
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    project, receptors, execution, skip_existing, compute_root</span>
+<span class="sd">    project, releases, execution, skip_existing, compute_root</span>
 <span class="sd">        As for :func:`run`.</span>
 
 <span class="sd">    Returns</span>
@@ -888,7 +888,7 @@
             <span class="sa">f</span><span class="s2">"submit sends work to Slurm, and this run's backend is "</span>
             <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">execution</span><span class="o">.</span><span class="n">backend</span><span class="si">!r}</span><span class="s2">. Use run(), or set execution.backend to slurm."</span>
         <span class="p">)</span>
-    <span class="n">todo</span> <span class="o">=</span> <span class="n">pending</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">receptors</span><span class="o">=</span><span class="n">receptors</span><span class="p">,</span> <span class="n">skip_existing</span><span class="o">=</span><span class="n">skip_existing</span><span class="p">)</span>
+    <span class="n">todo</span> <span class="o">=</span> <span class="n">pending</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">releases</span><span class="o">=</span><span class="n">releases</span><span class="p">,</span> <span class="n">skip_existing</span><span class="o">=</span><span class="n">skip_existing</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">todo</span><span class="p">:</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"submit: every simulation is complete; nothing to do"</span><span class="p">)</span>
         <span class="k">return</span> <span class="kc">None</span>
@@ -935,12 +935,12 @@
     <span class="n">compute_root</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Return the ``sbatch`` script of a job array whose tasks each run a share of the receptors.</span>
+<span class="sd">    Return the ``sbatch`` script of a job array whose tasks each run a share of the releases.</span>
 
-<span class="sd">    Task ``i`` runs ``stilt run &lt;project&gt; --receptors &lt;folder&gt;/receptors.parquet</span>
+<span class="sd">    Task ``i`` runs ``stilt run &lt;project&gt; --releases &lt;folder&gt;/releases.parquet</span>
 <span class="sd">    --task i/n_tasks --execution &lt;folder&gt;/execution.yaml --cpus &lt;cpus&gt;`` with</span>
 <span class="sd">    the Python that called this: a task runs its share here, ``cpus``</span>
-<span class="sd">    receptors at once. The ``#SBATCH`` lines come from *execution*'s</span>
+<span class="sd">    releases at once. The ``#SBATCH`` lines come from *execution*'s</span>
 <span class="sd">    ``slurm`` block: its resources, ``--requeue``, ``--signal=B:USR1@120``</span>
 <span class="sd">    (see :func:`run`), and its other ``sbatch`` options, which can replace</span>
 <span class="sd">    any of them. Its ``setup`` commands run before the task, after the</span>
@@ -975,8 +975,8 @@
         <span class="s2">"stilt"</span><span class="p">,</span>
         <span class="s2">"run"</span><span class="p">,</span>
         <span class="nb">str</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">directory</span><span class="p">),</span>
-        <span class="s2">"--receptors"</span><span class="p">,</span>
-        <span class="nb">str</span><span class="p">(</span><span class="n">folder</span> <span class="o">/</span> <span class="s2">"receptors.parquet"</span><span class="p">),</span>
+        <span class="s2">"--releases"</span><span class="p">,</span>
+        <span class="nb">str</span><span class="p">(</span><span class="n">folder</span> <span class="o">/</span> <span class="s2">"releases.parquet"</span><span class="p">),</span>
         <span class="s2">"--task"</span><span class="p">,</span>
         <span class="sa">f</span><span class="s2">"$SLURM_ARRAY_TASK_ID/</span><span class="si">{</span><span class="n">n_tasks</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
         <span class="s2">"--execution"</span><span class="p">,</span>
@@ -1035,7 +1035,7 @@
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the ``sbatch`` script of the job that gets the met files before a job array.</span>
 
-<span class="sd">    It runs ``stilt fetch &lt;project&gt; --receptors &lt;folder&gt;/receptors.parquet``</span>
+<span class="sd">    It runs ``stilt fetch &lt;project&gt; --releases &lt;folder&gt;/releases.parquet``</span>
 <span class="sd">    (with ``--no-skip`` when not *skip_existing*) with the Python that</span>
 <span class="sd">    called this, as one task, after the ``setup`` commands. Its</span>
 <span class="sd">    ``partition``, ``account``, ``qos``, ``time`` and ``mem`` are those of</span>
@@ -1062,8 +1062,8 @@
         <span class="s2">"stilt"</span><span class="p">,</span>
         <span class="s2">"fetch"</span><span class="p">,</span>
         <span class="nb">str</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">directory</span><span class="p">),</span>
-        <span class="s2">"--receptors"</span><span class="p">,</span>
-        <span class="nb">str</span><span class="p">(</span><span class="n">folder</span> <span class="o">/</span> <span class="s2">"receptors.parquet"</span><span class="p">),</span>
+        <span class="s2">"--releases"</span><span class="p">,</span>
+        <span class="nb">str</span><span class="p">(</span><span class="n">folder</span> <span class="o">/</span> <span class="s2">"releases.parquet"</span><span class="p">),</span>
         <span class="s2">"--output"</span><span class="p">,</span>
         <span class="nb">str</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">directory</span><span class="p">),</span>
     <span class="p">]</span>
@@ -1107,7 +1107,7 @@
     <span class="n">compute_root</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Write a submission folder for *pending* receptors, submit its job array, and return its job id and cluster.</span>
+<span class="sd">    Write a submission folder for *pending* releases, submit its job array, and return its job id and cluster.</span>
 
 <span class="sd">    The cluster is the one ``sbatch`` sent the job to when it is not the</span>
 <span class="sd">    default (``clusters`` in the Slurm options), else ``None``. When the</span>
@@ -1119,11 +1119,11 @@
     <span class="n">stamp</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="si">:</span><span class="s2">%Y%m%d_%H%M%S</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">uuid4</span><span class="p">()</span><span class="o">.</span><span class="n">hex</span><span class="p">[:</span><span class="mi">6</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span>
     <span class="n">folder</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">directory</span> <span class="o">/</span> <span class="s2">"_slurm"</span> <span class="o">/</span> <span class="n">stamp</span>
     <span class="n">folder</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="p">(</span><span class="n">folder</span> <span class="o">/</span> <span class="s2">"receptors.txt"</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">pending</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
+    <span class="p">(</span><span class="n">folder</span> <span class="o">/</span> <span class="s2">"releases.txt"</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">pending</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
     <span class="c1"># The checked rows, in the order the tasks split them (task_share).</span>
     <span class="n">rows</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">_rows_of</span><span class="p">(</span><span class="n">pending</span><span class="p">)</span>
     <span class="n">write_parquet</span><span class="p">(</span>
-        <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="o">.</span><span class="n">from_pandas</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">preserve_index</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span> <span class="n">folder</span> <span class="o">/</span> <span class="s2">"receptors.parquet"</span>
+        <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="o">.</span><span class="n">from_pandas</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">preserve_index</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span> <span class="n">folder</span> <span class="o">/</span> <span class="s2">"releases.parquet"</span>
     <span class="p">)</span>
     <span class="p">(</span><span class="n">folder</span> <span class="o">/</span> <span class="s2">"execution.yaml"</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span>
         <span class="n">yaml</span><span class="o">.</span><span class="n">safe_dump</span><span class="p">(</span><span class="n">execution</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span><span class="n">exclude_unset</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
@@ -1314,7 +1314,7 @@
     <span class="n">project</span><span class="p">:</span> <span class="n">Project</span><span class="p">,</span> <span class="n">pending</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">work</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="kc">None</span><span class="p">]</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Run a task's receptors and return their status table; requeue the task when Slurm stopped it.</span>
+<span class="sd">    Run a task's releases and return their status table; requeue the task when Slurm stopped it.</span>
 
 <span class="sd">    A task that stops with simulations left is requeued when it got</span>
 <span class="sd">    SIGUSR1 (the time limit is near) or was preempted.</span>

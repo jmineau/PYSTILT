@@ -1,0 +1,5 @@
+stilt.transport.hysplit.Met.check\_releases
+===========================================
+
+.. currentmodule:: stilt.transport.hysplit
+.. automethod:: Met.check_releases

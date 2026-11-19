@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=5ff965c5"></script>
+    <script src="../_static/documentation_options.js?v=000a6a7f"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev25+g739e87834" />
+  <meta name="docsearch:version" content="0.1.0a30.dev30+g0d6d55b99" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -417,7 +417,7 @@
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Setting up a project</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="receptors.html">Receptors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="releases.html">Releases (receptors)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tracks.html">Mobile Measurements</a></li>
 <li class="toctree-l1"><a class="reference internal" href="meteorology.html">Meteorology</a></li>
 <li class="toctree-l1"><a class="reference internal" href="projects.html">Projects And Variants</a></li>
@@ -599,7 +599,7 @@ overwrite the stored file.</p>
 <section id="many-footprints-the-jacobian">
 <h2>Many footprints: the Jacobian<a class="headerlink" href="#many-footprints-the-jacobian" title="Link to this heading">#</a></h2>
 <p>An inversion needs every footprint summed onto the flux cells, one row
-per receptor: the Jacobian. <a class="reference internal" href="../reference/_api/stilt.Project.jacobian.html#stilt.Project.jacobian" title="stilt.Project.jacobian"><code class="xref py py-meth docutils literal notranslate"><span class="pre">jacobian()</span></code></a> does this for
+per release: the Jacobian. <a class="reference internal" href="../reference/_api/stilt.Project.jacobian.html#stilt.Project.jacobian" title="stilt.Project.jacobian"><code class="xref py py-meth docutils literal notranslate"><span class="pre">jacobian()</span></code></a> does this for
 a selection of simulations (<a class="reference internal" href="outputs.html"><span class="doc">Footprints And Particles</span></a>), all of one variant:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sims</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulations</span>
 <span class="n">july</span> <span class="o">=</span> <span class="n">sims</span><span class="p">[(</span><span class="n">sims</span><span class="o">.</span><span class="n">variant</span> <span class="o">==</span> <span class="s2">"hrrr"</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">sims</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">month</span> <span class="o">==</span> <span class="mi">7</span><span class="p">)]</span>
@@ -608,22 +608,22 @@ a selection of simulations (<a class="reference internal" href="outputs.html"><s
 <span class="p">)</span>
 
 <span class="n">H</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">jacobian</span><span class="p">(</span><span class="n">july</span><span class="p">,</span> <span class="n">counties</span><span class="p">,</span> <span class="n">bins</span><span class="p">)</span>
-<span class="n">H</span><span class="o">.</span><span class="n">to_xarray</span><span class="p">()</span>             <span class="c1"># receptor, time, cell</span>
-<span class="n">H</span><span class="o">.</span><span class="n">to_frame</span><span class="p">(</span><span class="n">sparse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>   <span class="c1"># receptors by (time, cell), pandas sparse columns</span>
+<span class="n">H</span><span class="o">.</span><span class="n">to_xarray</span><span class="p">()</span>             <span class="c1"># release, time, cell</span>
+<span class="n">H</span><span class="o">.</span><span class="n">to_frame</span><span class="p">(</span><span class="n">sparse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>   <span class="c1"># releases by (time, cell), pandas sparse columns</span>
 </pre></div>
 </div>
-<p>It reads the footprints one receptor at a time, in several threads, and
+<p>It reads the footprints one release at a time, in several threads, and
 returns a sparse matrix, so its size does not depend on the grid and
 memory stays at a few footprints whatever the selection’s size.
 <code class="docutils literal notranslate"><span class="pre">H.to_xarray()</span></code> holds a sparse array from the optional <code class="docutils literal notranslate"><span class="pre">sparse</span></code> package
-(<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">&quot;pystilt[sparse]&quot;</span></code>), or a NumPy array with <code class="docutils literal notranslate"><span class="pre">dense=True</span></code>. Receptors whose footprint is empty are
+(<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">&quot;pystilt[sparse]&quot;</span></code>), or a NumPy array with <code class="docutils literal notranslate"><span class="pre">dense=True</span></code>. Releases whose footprint is empty are
 in <code class="docutils literal notranslate"><span class="pre">H.empty</span></code>, and those not run yet in <code class="docutils literal notranslate"><span class="pre">H.missing</span></code>.</p>
-<p id="jacobian-rows"><code class="docutils literal notranslate"><span class="pre">H</span></code> has a row only for each selected receptor with a non-empty footprint,
+<p id="jacobian-rows"><code class="docutils literal notranslate"><span class="pre">H</span></code> has a row only for each selected release with a non-empty footprint,
 so it can have fewer rows than the selection. Build the observations <code class="docutils literal notranslate"><span class="pre">y</span></code>,
 and their errors, in the rows of <code class="docutils literal notranslate"><span class="pre">H</span></code>, not of the selection: with
-<code class="docutils literal notranslate"><span class="pre">observed</span></code> a Series of observations indexed by receptor id,
-<code class="docutils literal notranslate"><span class="pre">y</span> <span class="pre">=</span> <span class="pre">observed.loc[H.receptors]</span></code>. Matching them by position instead
-shifts every observation after the first dropped receptor onto the wrong
+<code class="docutils literal notranslate"><span class="pre">observed</span></code> a Series of observations indexed by release id,
+<code class="docutils literal notranslate"><span class="pre">y</span> <span class="pre">=</span> <span class="pre">observed.loc[H.releases]</span></code>. Matching them by position instead
+shifts every observation after the first dropped release onto the wrong
 row of <code class="docutils literal notranslate"><span class="pre">H</span></code>.</p>
 <p>The columns are the time bin and then the target’s cells, as named levels:
 <code class="docutils literal notranslate"><span class="pre">time,</span> <span class="pre">cell</span></code> for zones or a mesh, and <code class="docutils literal notranslate"><span class="pre">time,</span> <span class="pre">lon,</span> <span class="pre">lat</span></code> for a grid
@@ -632,7 +632,7 @@ row of <code class="docutils literal notranslate"><span class="pre">H</span></co
 <section id="one-jacobian-per-realization">
 <span id="jacobian-per-realization"></span><h3>One Jacobian per realization<a class="headerlink" href="#one-jacobian-per-realization" title="Link to this heading">#</a></h3>
 <p>A variant with a grid and <code class="docutils literal notranslate"><span class="pre">realizations</span></code> makes a footprint for each
-receptor and each realization, <code class="docutils literal notranslate"><span class="pre">0</span></code> to <code class="docutils literal notranslate"><span class="pre">N</span> <span class="pre">-</span> <span class="pre">1</span></code>
+release and each realization, <code class="docutils literal notranslate"><span class="pre">0</span></code> to <code class="docutils literal notranslate"><span class="pre">N</span> <span class="pre">-</span> <span class="pre">1</span></code>
 (<a class="reference internal" href="transport_error.html"><span class="doc">Transport Error</span></a>). <a class="reference internal" href="../reference/_api/stilt.Project.jacobian.html#stilt.Project.jacobian" title="stilt.Project.jacobian"><code class="xref py py-meth docutils literal notranslate"><span class="pre">jacobian()</span></code></a> makes a Jacobian
 from one realization, so select each realization by the <code class="docutils literal notranslate"><span class="pre">realization</span></code>
 column of <code class="docutils literal notranslate"><span class="pre">project.simulations</span></code> and loop:</p>
@@ -644,7 +644,7 @@ column of <code class="docutils literal notranslate"><span class="pre">project.s
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">H[k]</span></code> is the Jacobian of realization <code class="docutils literal notranslate"><span class="pre">k</span></code>, as above, with its own
-<code class="docutils literal notranslate"><span class="pre">receptors</span></code>, <code class="docutils literal notranslate"><span class="pre">empty</span></code> and <code class="docutils literal notranslate"><span class="pre">missing</span></code>: a receptor that has not run for
+<code class="docutils literal notranslate"><span class="pre">releases</span></code>, <code class="docutils literal notranslate"><span class="pre">empty</span></code> and <code class="docutils literal notranslate"><span class="pre">missing</span></code>: a release that has not run for
 one realization is missing from that matrix alone. The dict holds every
 matrix at once. When each is large, loop with <code class="docutils literal notranslate"><span class="pre">for</span></code> instead and keep
 only what you compute from each one, such as a posterior.</p>
@@ -653,9 +653,9 @@ only what you compute from each one, such as a posterior.</p>
 <section id="footprints-times-a-flux">
 <h2>Footprints times a flux<a class="headerlink" href="#footprints-times-a-flux" title="Link to this heading">#</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">foot.stilt.enhancement(flux)</span></code> multiplies a footprint by a flux and
-gives the enhancement, the rise in concentration at the receptor that the
+gives the enhancement, the rise in concentration at the release that the
 flux explains, for each hour of the footprint. Sum it over the hours for
-the receptor’s total. The flux is an <a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.DataArray.html#xarray.DataArray" title="(in xarray v2026.9.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">xarray.DataArray</span></code></a> in
+the release’s total. The flux is an <a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.DataArray.html#xarray.DataArray" title="(in xarray v2026.9.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">xarray.DataArray</span></code></a> in
 µmol m⁻² s⁻¹ with <code class="docutils literal notranslate"><span class="pre">lat</span></code> and <code class="docutils literal notranslate"><span class="pre">lon</span></code> dimensions.
 <a class="reference internal" href="../tutorials/flux_inversion.html"><span class="doc">Tutorial: From Footprints To Concentrations</span></a> uses it step by step. Two things decide
 whether the numbers are right: which flux step each footprint hour takes,
@@ -683,9 +683,9 @@ first.</p></li>
 <li><p><strong>Layers as long as the steps or shorter pass</strong>, and so does a static
 flux with one time. A layer that crosses a step boundary still takes only
 the step where it starts.</p></li>
-<li><p><strong>Layers are counted back from the receptor time</strong>, not from the clock.
-Receptors on the hour line up with hourly or longer flux steps. A
-receptor at 18:30 does not: its hourly layers run from :30 to :30, so
+<li><p><strong>Layers are counted back from the release time</strong>, not from the clock.
+Releases on the hour line up with hourly or longer flux steps. A
+release at 18:30 does not: its hourly layers run from :30 to :30, so
 each takes the flux of the step that starts half an hour before it.</p></li>
 </ul>
 <p>The steps of a flux with CF time bounds are the bounds; without them, the

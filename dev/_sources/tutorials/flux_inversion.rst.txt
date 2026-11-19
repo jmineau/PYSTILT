@@ -3,7 +3,7 @@ Tutorial: From Footprints To Concentrations
 
 A footprint says how much each grid cell influences a measurement.
 Multiply it by how much each cell emits, add it all up, and you have the
-enhancement, the rise in concentration at the receptor that those
+enhancement, the rise in concentration at the release that those
 emissions explain. Comparing modeled enhancements with measured ones is how
 an inventory is tested, and an inversion is built on the same link. In this
 tutorial we make an emissions map and a few point sources, and model the
@@ -14,7 +14,7 @@ flux in µmol m⁻² s⁻¹ times a footprint, summed over cells and hours, give
 ppm.
 
 .. This page runs when the docs are built, on the docs' sample project: four
-   receptors an hour apart on the morning of 15 January 2021 at the
+   releases an hour apart on the morning of 15 January 2021 at the
    University of Utah, run on the met files the tests cache
    (docs/_ext/docs_examples.py).
 
@@ -30,7 +30,7 @@ ppm.
 The footprints
 --------------
 
-We use a small project of four hourly receptors at the University of Utah
+We use a small project of four hourly releases at the University of Utah
 on 15 January 2021, from 06:00 to 09:00 UTC. The project from
 :doc:`wbb_stationary`, or any project with footprints, works the same way.
 
@@ -44,7 +44,7 @@ on 15 January 2021, from 06:00 to 09:00 UTC. The project from
 
    project = stilt.Project("./my_project")
    sims = project.simulations
-   feet = [project.simulation(rid, "hrrr").footprint for rid in sims.receptor]
+   feet = [project.simulation(rid, "hrrr").footprint for rid in sims.release]
    feet = [foot for foot in feet if foot is not None]   # an empty footprint is None
    len(feet)
 
@@ -81,12 +81,12 @@ on the footprint's own grid. A real inventory you would open with
 
 ``foot.stilt.enhancement`` multiplies a footprint by the inventory, cell by
 cell, for each hour of the footprint. Summed over the hours, it is the
-receptor's enhancement:
+release's enhancement:
 
 .. ipython:: python
 
    modeled = pd.Series(
-       {foot.stilt.receptor.time: float(foot.stilt.enhancement(inventory).sum()) for foot in feet},
+       {foot.stilt.release.time: float(foot.stilt.enhancement(inventory).sum()) for foot in feet},
        name="city",
    )
    modeled
@@ -133,7 +133,7 @@ inside one cell and the footprint cannot say how much of the cell it covers.
            [(hours.min(), hours.max() + pd.Timedelta("1h"))], closed="left"
        )
        in_window = foot.stilt.aggregate(windows, whole_run).iloc[:, 0]   # one sum per source
-       rows[foot.stilt.receptor.time] = in_window * flux
+       rows[foot.stilt.release.time] = in_window * flux
 
    by_source = pd.DataFrame(rows).T
    by_source
@@ -156,7 +156,7 @@ The modeled enhancement at each hour is the sum of the parts:
 
    fig, ax = plt.subplots(layout="constrained")
    total.plot.bar(ax=ax, stacked=True, rot=0)
-   ax.set_xlabel("receptor time (UTC), 15 January 2021")
+   ax.set_xlabel("release time (UTC), 15 January 2021")
 
    @savefig flux_enhancements.png width=5in
    ax.set_ylabel("modeled CH₄ enhancement (ppm)");

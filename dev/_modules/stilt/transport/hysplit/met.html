@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../../_static/documentation_options.js?v=5ff965c5"></script>
+    <script src="../../../../_static/documentation_options.js?v=000a6a7f"></script>
     <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev25+g739e87834" />
+  <meta name="docsearch:version" content="0.1.0a30.dev30+g0d6d55b99" />
   
     
     <script src="../../../../_static/searchtools.js"></script>
@@ -939,16 +939,16 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cover</span><span class="p">(</span><span class="n">earlier</span><span class="p">,</span> <span class="n">later</span><span class="p">)</span><span class="o">.</span><span class="n">gaps</span></div>
 
 
-<div class="viewcode-block" id="Met.check_receptors">
-<a class="viewcode-back" href="../../../../reference/_api/stilt.transport.hysplit.Met.check_receptors.html#stilt.transport.hysplit.Met.check_receptors">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">check_receptors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">receptors</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">n_hours</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<div class="viewcode-block" id="Met.check_releases">
+<a class="viewcode-back" href="../../../../reference/_api/stilt.transport.hysplit.Met.check_releases.html#stilt.transport.hysplit.Met.check_releases">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">check_releases</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">releases</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">n_hours</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Return what would stop runs of *receptors* before HYSPLIT starts, found without running.</span>
+<span class="sd">        Return what would stop runs of *releases* before HYSPLIT starts, found without running.</span>
 
 <span class="sd">        The file check that :meth:`files_for` makes for each run, made for</span>
-<span class="sd">        every receptor at once: the met's ``directory`` exists and holds an</span>
+<span class="sd">        every release at once: the met's ``directory`` exists and holds an</span>
 <span class="sd">        ARL file, and every file a run needs is there, holds at least two</span>
-<span class="sd">        time periods, and ends on a whole time step. A receptor outside the</span>
+<span class="sd">        time periods, and ends on a whole time step. A release outside the</span>
 <span class="sd">        files is listed too, since HYSPLIT cannot start a particle there:</span>
 <span class="sd">        outside ``subgrid_bounds`` with the crop on, else outside the grid of</span>
 <span class="sd">        the first file its run reads. A met with ``download``</span>
@@ -963,8 +963,8 @@
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        receptors : pandas.DataFrame</span>
-<span class="sd">            One row per release point, with ``receptor`` (the id), ``time``,</span>
+<span class="sd">        releases : pandas.DataFrame</span>
+<span class="sd">            One row per release point, with ``release`` (the id), ``time``,</span>
 <span class="sd">            ``longitude``, and ``latitude`` columns.</span>
 <span class="sd">        n_hours : int</span>
 <span class="sd">            The length of the runs, negative for backward.</span>
@@ -973,7 +973,7 @@
 <span class="sd">        -------</span>
 <span class="sd">        pandas.DataFrame</span>
 <span class="sd">            One row for each thing found, with ``check`` (``met_directory``,</span>
-<span class="sd">            ``met_files``, ``met_periods``, ``met_cut``, ``met_domain``, or ``met_crop``), ``receptor`` (``NA`` when the</span>
+<span class="sd">            ``met_files``, ``met_periods``, ``met_cut``, ``met_domain``, or ``met_crop``), ``release`` (``NA`` when the</span>
 <span class="sd">            finding is about the met), and ``message`` columns. Empty when</span>
 <span class="sd">            nothing would stop a run.</span>
 <span class="sd">        """</span>
@@ -986,9 +986,9 @@
                 <span class="bp">self</span><span class="o">.</span><span class="n">catalog</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
                 <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">crops</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">crops</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
-                <span class="n">found</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_file_problems</span><span class="p">(</span><span class="n">receptors</span><span class="p">,</span> <span class="n">n_hours</span><span class="p">)</span>
-        <span class="n">found</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_outside_crop</span><span class="p">(</span><span class="n">receptors</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">found</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"check"</span><span class="p">,</span> <span class="s2">"receptor"</span><span class="p">,</span> <span class="s2">"message"</span><span class="p">])</span></div>
+                <span class="n">found</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_file_problems</span><span class="p">(</span><span class="n">releases</span><span class="p">,</span> <span class="n">n_hours</span><span class="p">)</span>
+        <span class="n">found</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_outside_crop</span><span class="p">(</span><span class="n">releases</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">found</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"check"</span><span class="p">,</span> <span class="s2">"release"</span><span class="p">,</span> <span class="s2">"message"</span><span class="p">])</span></div>
 
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_directory_problem</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
@@ -1002,10 +1002,10 @@
         <span class="k">return</span> <span class="kc">None</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_file_problems</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">receptors</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">n_hours</span><span class="p">:</span> <span class="nb">int</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">releases</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">n_hours</span><span class="p">:</span> <span class="nb">int</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
-<span class="w">        </span><span class="sd">"""List the receptors that lack a file their run needs, and the files they need that cannot be read to the end."""</span>
-        <span class="n">first</span> <span class="o">=</span> <span class="n">receptors</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="s2">"receptor"</span><span class="p">)</span>
+<span class="w">        </span><span class="sd">"""List the releases that lack a file their run needs, and the files they need that cannot be read to the end."""</span>
+        <span class="n">first</span> <span class="o">=</span> <span class="n">releases</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="s2">"release"</span><span class="p">)</span>
         <span class="n">messages</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="n">single</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">Path</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="n">cut</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">Path</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
@@ -1022,7 +1022,7 @@
                 <span class="n">starts</span><span class="p">[</span><span class="n">time</span><span class="p">]</span> <span class="o">=</span> <span class="n">cover</span><span class="o">.</span><span class="n">files</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="n">found</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span>
             <span class="p">(</span><span class="s2">"met_files"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">rid</span><span class="p">),</span> <span class="n">message</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">rid</span><span class="p">,</span> <span class="n">time</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">first</span><span class="p">[</span><span class="s2">"receptor"</span><span class="p">],</span> <span class="n">first</span><span class="p">[</span><span class="s2">"time"</span><span class="p">],</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">rid</span><span class="p">,</span> <span class="n">time</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">first</span><span class="p">[</span><span class="s2">"release"</span><span class="p">],</span> <span class="n">first</span><span class="p">[</span><span class="s2">"time"</span><span class="p">],</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
             <span class="k">if</span> <span class="p">(</span><span class="n">message</span> <span class="o">:=</span> <span class="n">messages</span><span class="p">[</span><span class="n">time</span><span class="p">])</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
         <span class="p">]</span>
         <span class="k">if</span> <span class="n">single</span><span class="p">:</span>
@@ -1039,13 +1039,13 @@
             <span class="p">)</span>
             <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">cut</span>
         <span class="p">]</span>
-        <span class="k">return</span> <span class="n">found</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_outside_domain</span><span class="p">(</span><span class="n">receptors</span><span class="p">,</span> <span class="n">starts</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">found</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_outside_domain</span><span class="p">(</span><span class="n">releases</span><span class="p">,</span> <span class="n">starts</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_outside_domain</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">receptors</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">starts</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Path</span><span class="p">]</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">releases</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">starts</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Path</span><span class="p">]</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
 <span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        List the receptors with a release point outside the grid of the met files their run starts in.</span>
+<span class="sd">        List the releases with a release point outside the grid of the met files their run starts in.</span>
 
 <span class="sd">        *starts* is the first file of each release time's run. The grid is</span>
 <span class="sd">        read from one file's header for each grid the catalog lists among</span>
@@ -1064,42 +1064,42 @@
             <span class="n">time</span><span class="p">:</span> <span class="n">file_of_grid</span><span class="p">[</span><span class="n">grid_of</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">))]</span>
             <span class="k">for</span> <span class="n">time</span><span class="p">,</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">starts</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
         <span class="p">}</span>
-        <span class="n">rows</span> <span class="o">=</span> <span class="n">receptors</span><span class="p">[</span><span class="n">receptors</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">file_of_time</span><span class="p">))]</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="n">releases</span><span class="p">[</span><span class="n">releases</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">file_of_time</span><span class="p">))]</span>
         <span class="n">found</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">path</span><span class="p">,</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">rows</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">rows</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">file_of_time</span><span class="p">),</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
             <span class="n">outside</span> <span class="o">=</span> <span class="n">group</span><span class="p">[</span><span class="o">~</span><span class="n">_on_grid</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">)),</span> <span class="n">group</span><span class="p">)]</span>
             <span class="n">found</span> <span class="o">+=</span> <span class="p">[</span>
                 <span class="p">(</span>
                     <span class="s2">"met_domain"</span><span class="p">,</span>
-                    <span class="nb">str</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">receptor</span><span class="p">),</span>
+                    <span class="nb">str</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">release</span><span class="p">),</span>
                     <span class="sa">f</span><span class="s2">"longitude </span><span class="si">{</span><span class="n">row</span><span class="o">.</span><span class="n">longitude</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> and latitude </span><span class="si">{</span><span class="n">row</span><span class="o">.</span><span class="n">latitude</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> are "</span>
                     <span class="sa">f</span><span class="s2">"outside the met's domain, the grid of </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">: HYSPLIT "</span>
                     <span class="s2">"cannot start particles there."</span><span class="p">,</span>
                 <span class="p">)</span>
-                <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">outside</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="s2">"receptor"</span><span class="p">)</span><span class="o">.</span><span class="n">itertuples</span><span class="p">()</span>
+                <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">outside</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="s2">"release"</span><span class="p">)</span><span class="o">.</span><span class="n">itertuples</span><span class="p">()</span>
             <span class="p">]</span>
         <span class="k">return</span> <span class="n">found</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_outside_crop</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">receptors</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">releases</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
-<span class="w">        </span><span class="sd">"""List the receptors with a release point outside the crop box, when the met is cropped."""</span>
+<span class="w">        </span><span class="sd">"""List the releases with a release point outside the crop box, when the met is cropped."""</span>
         <span class="n">bounds</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">subgrid_bounds</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">subgrid_enable</span> <span class="ow">or</span> <span class="n">bounds</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="p">[]</span>
         <span class="n">west</span><span class="p">,</span> <span class="n">south</span><span class="p">,</span> <span class="n">east</span><span class="p">,</span> <span class="n">north</span> <span class="o">=</span> <span class="n">bounds</span><span class="o">.</span><span class="n">xmin</span><span class="p">,</span> <span class="n">bounds</span><span class="o">.</span><span class="n">ymin</span><span class="p">,</span> <span class="n">bounds</span><span class="o">.</span><span class="n">xmax</span><span class="p">,</span> <span class="n">bounds</span><span class="o">.</span><span class="n">ymax</span>
-        <span class="n">outside</span> <span class="o">=</span> <span class="n">receptors</span><span class="p">[</span>
-            <span class="o">~</span><span class="n">bounds</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="n">receptors</span><span class="p">[</span><span class="s2">"longitude"</span><span class="p">],</span> <span class="n">receptors</span><span class="p">[</span><span class="s2">"latitude"</span><span class="p">])</span>
+        <span class="n">outside</span> <span class="o">=</span> <span class="n">releases</span><span class="p">[</span>
+            <span class="o">~</span><span class="n">bounds</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="n">releases</span><span class="p">[</span><span class="s2">"longitude"</span><span class="p">],</span> <span class="n">releases</span><span class="p">[</span><span class="s2">"latitude"</span><span class="p">])</span>
         <span class="p">]</span>
         <span class="n">box</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">west</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">east</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> longitude, </span><span class="si">{</span><span class="n">south</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">north</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> latitude"</span>
         <span class="k">return</span> <span class="p">[</span>
             <span class="p">(</span>
                 <span class="s2">"met_crop"</span><span class="p">,</span>
-                <span class="nb">str</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">receptor</span><span class="p">),</span>
+                <span class="nb">str</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">release</span><span class="p">),</span>
                 <span class="sa">f</span><span class="s2">"longitude </span><span class="si">{</span><span class="n">row</span><span class="o">.</span><span class="n">longitude</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> and latitude </span><span class="si">{</span><span class="n">row</span><span class="o">.</span><span class="n">latitude</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> are "</span>
                 <span class="sa">f</span><span class="s2">"outside subgrid_bounds (</span><span class="si">{</span><span class="n">box</span><span class="si">}</span><span class="s2">)"</span><span class="p">,</span>
             <span class="p">)</span>
-            <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">outside</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="s2">"receptor"</span><span class="p">)</span><span class="o">.</span><span class="n">itertuples</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">outside</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="s2">"release"</span><span class="p">)</span><span class="o">.</span><span class="n">itertuples</span><span class="p">()</span>
         <span class="p">]</span>
 
 <div class="viewcode-block" id="Met.check">

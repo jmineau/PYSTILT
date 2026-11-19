@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=5ff965c5"></script>
+    <script src="../../_static/documentation_options.js?v=000a6a7f"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30.dev25+g739e87834" />
+  <meta name="docsearch:version" content="0.1.0a30.dev30+g0d6d55b99" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -467,11 +467,11 @@
 
 <span class="sd">    var_transport = var(enhancement | perturbed) − var(enhancement | unperturbed)</span>
 
-<span class="sd">For a column receptor the difference is taken per release level, and the</span>
+<span class="sd">For a column release the difference is taken per release level, and the</span>
 <span class="sd">levels are added with the column weighting and X-STILT's vertical error</span>
 <span class="sd">correlation (Wu et al., 2018, GMD). The difference of two sample variances</span>
 <span class="sd">is noisy and can be negative. It is returned with its sign and with its</span>
-<span class="sd">standard error, so many receptors can be combined with a mean and a single</span>
+<span class="sd">standard error, so many releases can be combined with a mean and a single</span>
 <span class="sd">value can be compared with its noise.</span>
 <span class="sd">"""</span>
 
@@ -489,13 +489,13 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.background</span><span class="w"> </span><span class="kn">import</span> <span class="n">_background</span><span class="p">,</span> <span class="n">_fill_missing</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.foot</span><span class="w"> </span><span class="kn">import</span> <span class="n">_near_field</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.receptors</span><span class="w"> </span><span class="kn">import</span> <span class="n">Receptor</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.releases</span><span class="w"> </span><span class="kn">import</span> <span class="n">Release</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">apply_transforms</span><span class="p">,</span> <span class="n">release_coordinate</span>
 
 <span class="c1">#: X-STILT's empirical mean vertical correlation length of transport errors, m.</span>
 <span class="n">DEFAULT_LENGTH_SCALE</span> <span class="o">=</span> <span class="mf">356.0</span>
 
-<span class="c1">#: The results :func:`_transport_errors` keeps for each receptor, in column order.</span>
+<span class="c1">#: The results :func:`_transport_errors` keeps for each release, in column order.</span>
 <span class="n">_RESULT_COLUMNS</span> <span class="o">=</span> <span class="p">(</span>
     <span class="s2">"enhancement"</span><span class="p">,</span>
     <span class="s2">"enhancement_perturbed"</span><span class="p">,</span>
@@ -751,7 +751,7 @@
     <span class="n">flux</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
     <span class="n">transforms</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">(),</span>
-    <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">release</span><span class="p">:</span> <span class="n">Release</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">directory</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">hnf_plume</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="n">footprint_depth</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
@@ -766,19 +766,19 @@
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    particles : pandas.DataFrame</span>
-<span class="sd">        Unperturbed particle table of a receptor (``sim.particles``).</span>
+<span class="sd">        Unperturbed particle table of a release (``sim.particles``).</span>
 <span class="sd">    error_particles : pandas.DataFrame or sequence of pandas.DataFrame</span>
-<span class="sd">        Particle table of a wind-error variant of the same receptor, or one</span>
+<span class="sd">        Particle table of a wind-error variant of the same release, or one</span>
 <span class="sd">        table per realization for a variant with ``realizations: N`` (see</span>
-<span class="sd">        Examples). A table is one simulation's particles: one receptor and</span>
+<span class="sd">        Examples). A table is one simulation's particles: one release and</span>
 <span class="sd">        one realization.</span>
 <span class="sd">    flux : xarray.DataArray</span>
 <span class="sd">        Surface flux field (see ``particles.stilt.enhancement``).</span>
 <span class="sd">    transforms : sequence, optional</span>
 <span class="sd">        The footprint's particle transforms (``sim.variant.stages["footprint"].transforms``),</span>
 <span class="sd">        applied to both tables so the error is weighted like the footprint.</span>
-<span class="sd">    receptor : Receptor, optional</span>
-<span class="sd">        The receptor (``sim.receptor``), for the near-field correction and</span>
+<span class="sd">    release : Release, optional</span>
+<span class="sd">        The release (``sim.release``), for the near-field correction and</span>
 <span class="sd">        the transforms. Needed when *hnf_plume* is set.</span>
 <span class="sd">    directory : str or Path, optional</span>
 <span class="sd">        Where a kernel table's relative path starts (``project.directory``).</span>
@@ -797,12 +797,12 @@
 <span class="sd">        Release-height levels to compute statistics on: a number of</span>
 <span class="sd">        equal-width bins between the lowest and highest release height, or</span>
 <span class="sd">        bin edges in meters. When the particles have no more distinct</span>
-<span class="sd">        release heights than ``levels`` (a multipoint receptor), each height</span>
-<span class="sd">        is a level. A point receptor is one level.</span>
+<span class="sd">        release heights than ``levels`` (a multipoint release), each height</span>
+<span class="sd">        is a level. A point release is one level.</span>
 <span class="sd">    length_scale : float or None, default 356.0</span>
 <span class="sd">        Vertical e-folding length of the error correlation between levels,</span>
 <span class="sd">        in meters (X-STILT's value). ``None`` treats the levels as</span>
-<span class="sd">        independent. It has no effect for a point receptor.</span>
+<span class="sd">        independent. It has no effect for a point release.</span>
 <span class="sd">    percentile : float, default 1.0</span>
 <span class="sd">        In each level, drop particles above this quantile of the enhancement</span>
 <span class="sd">        before taking the variance. 1.0 keeps every particle, as Lin and</span>
@@ -836,7 +836,7 @@
 <span class="sd">    weights are particle counts.</span>
 
 <span class="sd">    The sum is linear in ``dvar``, so the sampling noise in each level's</span>
-<span class="sd">    ``dvar`` averages out over many receptors. Where the error changes</span>
+<span class="sd">    ``dvar`` averages out over many releases. Where the error changes</span>
 <span class="sd">    sharply with height within a correlation length, the mean of two levels'</span>
 <span class="sd">    ``dvar`` is above the product of their standard deviations, and the</span>
 <span class="sd">    column variance is high by up to about 20 %.</span>
@@ -859,30 +859,30 @@
 <span class="sd">    the wind error decorrelates quickly (HYSPLIT decorrelates it with the</span>
 <span class="sd">    distance a particle travels as well as with time), and when turbulence</span>
 <span class="sd">    already spreads the particles widely, as on a convective afternoon.</span>
-<span class="sd">    Compare a single value with ``noise``. Over many receptors, combine the</span>
+<span class="sd">    Compare a single value with ``noise``. Over many releases, combine the</span>
 <span class="sd">    signed ``variance`` values with a mean instead of clipping each at</span>
 <span class="sd">    zero.</span>
 
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
 <span class="sd">    For the variant ``hrrr-err`` with ``realizations: 4``, select one</span>
-<span class="sd">    receptor's simulations and group their particles by realization. Grouping</span>
+<span class="sd">    release's simulations and group their particles by realization. Grouping</span>
 <span class="sd">    by ``variant`` gives one table, which counts as one realization and gives</span>
-<span class="sd">    a wrong variance. Without the receptor, each realization's table holds</span>
-<span class="sd">    every receptor's particles.</span>
+<span class="sd">    a wrong variance. Without the release, each realization's table holds</span>
+<span class="sd">    every release's particles.</span>
 
 <span class="sd">    &gt;&gt;&gt; from stilt import transport_error  # doctest: +SKIP</span>
 <span class="sd">    &gt;&gt;&gt; sim = project.simulation(rid, "hrrr")  # doctest: +SKIP</span>
 <span class="sd">    &gt;&gt;&gt; sims = project.simulations  # doctest: +SKIP</span>
 <span class="sd">    &gt;&gt;&gt; ensemble = sims[</span>
-<span class="sd">    ...     (sims.variant == "hrrr-err") &amp; (sims.receptor == rid)</span>
+<span class="sd">    ...     (sims.variant == "hrrr-err") &amp; (sims.release == rid)</span>
 <span class="sd">    ... ]  # doctest: +SKIP</span>
 <span class="sd">    &gt;&gt;&gt; by_realization = project.particles(ensemble).groupby(</span>
 <span class="sd">    ...     "realization"</span>
 <span class="sd">    ... )  # doctest: +SKIP</span>
 <span class="sd">    &gt;&gt;&gt; error_particles = [rows for _, rows in by_realization]  # doctest: +SKIP</span>
 <span class="sd">    &gt;&gt;&gt; result = transport_error(</span>
-<span class="sd">    ...     sim.particles, error_particles, flux, receptor=sim.receptor</span>
+<span class="sd">    ...     sim.particles, error_particles, flux, release=sim.release</span>
 <span class="sd">    ... )  # doctest: +SKIP</span>
 <span class="sd">    &gt;&gt;&gt; result.realizations  # doctest: +SKIP</span>
 <span class="sd">    4</span>
@@ -892,10 +892,10 @@
 <span class="sd">    ``directory``, and the variant's ``hnf_plume`` and</span>
 <span class="sd">    ``footprint_depth``, which this call leaves at their defaults.</span>
 <span class="sd">    """</span>
-    <span class="k">if</span> <span class="n">hnf_plume</span> <span class="ow">and</span> <span class="n">receptor</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">hnf_plume</span> <span class="ow">and</span> <span class="n">release</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="s2">"The near-field correction (hnf_plume) needs the receptor: give "</span>
-            <span class="s2">"receptor=sim.receptor, or hnf_plume=False."</span>
+            <span class="s2">"The near-field correction (hnf_plume) needs the release: give "</span>
+            <span class="s2">"release=sim.release, or hnf_plume=False."</span>
         <span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="n">percentile</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"percentile must be in (0, 1]."</span><span class="p">)</span>
@@ -915,10 +915,10 @@
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">"""Return the modeled value and release height per particle, and the background."""</span>
         <span class="k">if</span> <span class="n">hnf_plume</span><span class="p">:</span>
-            <span class="k">assert</span> <span class="n">receptor</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>  <span class="c1"># checked above</span>
-            <span class="n">table</span> <span class="o">=</span> <span class="n">_near_field</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">footprint_depth</span><span class="p">)</span>
+            <span class="k">assert</span> <span class="n">release</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>  <span class="c1"># checked above</span>
+            <span class="n">table</span> <span class="o">=</span> <span class="n">_near_field</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">footprint_depth</span><span class="p">)</span>
         <span class="n">weighted</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">apply_transforms</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">transforms</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">directory</span><span class="p">)</span>
+            <span class="n">apply_transforms</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">transforms</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">directory</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">transforms</span>
             <span class="k">else</span> <span class="n">table</span>
         <span class="p">)</span>
@@ -929,7 +929,7 @@
             <span class="n">table</span><span class="p">,</span>
             <span class="n">background</span><span class="p">,</span>
             <span class="n">transforms</span><span class="o">=</span><span class="n">transforms</span><span class="p">,</span>
-            <span class="n">receptor</span><span class="o">=</span><span class="n">receptor</span><span class="p">,</span>
+            <span class="n">release</span><span class="o">=</span><span class="n">release</span><span class="p">,</span>
             <span class="n">directory</span><span class="o">=</span><span class="n">directory</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="c1"># Each particle's background, weighted like its enhancement. A</span>
@@ -976,7 +976,7 @@
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_transport_errors</span><span class="p">(</span>
     <span class="n">read</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]]],</span>
-    <span class="n">receptors</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Receptor</span><span class="p">],</span>
+    <span class="n">releases</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Release</span><span class="p">],</span>
     <span class="n">flux</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
     <span class="n">transforms</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">(),</span>
@@ -985,28 +985,28 @@
     <span class="o">**</span><span class="n">options</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Return the transport error of many receptors, one receptor at a time.</span>
+<span class="sd">    Return the transport error of many releases, one release at a time.</span>
 
-<span class="sd">    ``read(receptor_id)`` returns that receptor's unperturbed particle table</span>
+<span class="sd">    ``read(release_id)`` returns that release's unperturbed particle table</span>
 <span class="sd">    and one table per error realization, as :func:`transport_error` takes</span>
-<span class="sd">    them; every receptor must have both. Each receptor is read and estimated</span>
-<span class="sd">    in one of *workers* threads, which holds only that receptor's tables.</span>
+<span class="sd">    them; every release must have both. Each release is read and estimated</span>
+<span class="sd">    in one of *workers* threads, which holds only that release's tables.</span>
 <span class="sd">    *transforms* are the unperturbed variant's footprint transforms, as</span>
 <span class="sd">    ``sim.transport_error`` passes them, and *options* go to</span>
 <span class="sd">    :func:`transport_error` unchanged.</span>
 
-<span class="sd">    Returns one row per receptor, indexed by receptor id in *receptors*</span>
+<span class="sd">    Returns one row per release, indexed by release id in *releases*</span>
 <span class="sd">    order, with the columns in :data:`_RESULT_COLUMNS`.</span>
 <span class="sd">    """</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">one</span><span class="p">(</span><span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-        <span class="n">particles</span><span class="p">,</span> <span class="n">error_particles</span> <span class="o">=</span> <span class="n">read</span><span class="p">(</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">one</span><span class="p">(</span><span class="n">release</span><span class="p">:</span> <span class="n">Release</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+        <span class="n">particles</span><span class="p">,</span> <span class="n">error_particles</span> <span class="o">=</span> <span class="n">read</span><span class="p">(</span><span class="n">release</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
         <span class="n">result</span> <span class="o">=</span> <span class="n">transport_error</span><span class="p">(</span>
             <span class="n">particles</span><span class="p">,</span>
             <span class="n">error_particles</span><span class="p">,</span>
             <span class="n">flux</span><span class="p">,</span>
             <span class="n">transforms</span><span class="o">=</span><span class="n">transforms</span><span class="p">,</span>
-            <span class="n">receptor</span><span class="o">=</span><span class="n">receptor</span><span class="p">,</span>
+            <span class="n">release</span><span class="o">=</span><span class="n">release</span><span class="p">,</span>
             <span class="n">directory</span><span class="o">=</span><span class="n">directory</span><span class="p">,</span>
             <span class="o">**</span><span class="n">options</span><span class="p">,</span>
         <span class="p">)</span>
@@ -1019,14 +1019,14 @@
             <span class="n">result</span><span class="o">.</span><span class="n">realizations</span><span class="p">,</span>
         <span class="p">)</span>
 
-    <span class="k">if</span> <span class="n">workers</span> <span class="o">&lt;=</span> <span class="mi">1</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">receptors</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
-        <span class="n">rows</span> <span class="o">=</span> <span class="p">[</span><span class="n">one</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">receptors</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">workers</span> <span class="o">&lt;=</span> <span class="mi">1</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">releases</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="p">[</span><span class="n">one</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">releases</span><span class="p">]</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">with</span> <span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="n">workers</span><span class="p">)</span> <span class="k">as</span> <span class="n">pool</span><span class="p">:</span>
-            <span class="n">rows</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">one</span><span class="p">,</span> <span class="n">receptors</span><span class="p">))</span>
+            <span class="n">rows</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">one</span><span class="p">,</span> <span class="n">releases</span><span class="p">))</span>
     <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
         <span class="n">rows</span><span class="p">,</span>
-        <span class="n">index</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">([</span><span class="n">r</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">receptors</span><span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="s2">"receptor"</span><span class="p">),</span>
+        <span class="n">index</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">([</span><span class="n">r</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">releases</span><span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="s2">"release"</span><span class="p">),</span>
         <span class="n">columns</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">(</span><span class="n">_RESULT_COLUMNS</span><span class="p">),</span>
     <span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">({</span><span class="s2">"realizations"</span><span class="p">:</span> <span class="s2">"int64"</span><span class="p">})</span>
 
