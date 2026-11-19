@@ -9,10 +9,11 @@ import pandas as pd
 import pytest
 import xarray as xr
 from runtraj.models.hysplit import HysplitConfig
-from runtraj.spatial import Grid, horizontal_dims
+from runtraj.spatial import horizontal_dims
 
 from stilt import sampling
 from stilt.footprint.config import FootprintConfig
+from stilt.footprint.grid import Grid
 from stilt.sampling import sample_met
 
 from .fixtures.footprints import as_footprint

@@ -14,9 +14,10 @@ import pandas as pd
 import xarray as xr
 from runtraj._paths import atomic_path
 from runtraj.releases import Release
-from runtraj.spatial import Grid, horizontal_dims
+from runtraj.spatial import horizontal_dims
 
 from stilt.footprint.config import FootprintConfig, read_footprint_settings
+from stilt.footprint.grid import Grid
 
 from ._paris import to_paris
 from .aggregation import _check_steps_hold_layers, aggregate

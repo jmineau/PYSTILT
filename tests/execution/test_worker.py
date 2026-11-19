@@ -18,10 +18,10 @@ from runtraj.models.hysplit import FailureReason, HysplitConfig, Met, MetConfig
 from runtraj.output import Output
 from runtraj.releases import PointRelease, Release
 from runtraj.simulation import Simulation
-from runtraj.spatial import Grid
 from typer.testing import CliRunner
 
 from stilt import Project
+from stilt.footprint.grid import Grid
 from stilt.footprint.stage import store_empty_footprint
 
 from ..fixtures.factories import make_met_config, make_project_config, make_variant

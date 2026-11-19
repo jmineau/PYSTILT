@@ -8,8 +8,8 @@ from pathlib import Path
 import pytest
 from runtraj.config import ProjectConfig
 from runtraj.releases import ColumnRelease, MultiPointRelease, PointRelease
-from runtraj.spatial import Grid
 
+from stilt.footprint.grid import Grid
 from tests.fixtures.factories import blocks
 
 from .fixtures.factories import make_hysplit_dir, make_met_config

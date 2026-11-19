@@ -8,10 +8,10 @@ import json
 import pandas as pd
 import pytest
 from runtraj.identity import stage_hash
-from runtraj.spatial import Grid
 from runtraj.stages import check_stage, get_stage, reads
 
 from stilt.footprint import FootprintConfig, FootprintStage
+from stilt.footprint.grid import Grid
 from stilt.footprint.targets import Mesh
 
 from ..fixtures.factories import make_variant

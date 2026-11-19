@@ -8,7 +8,6 @@ import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError
 from runtraj.config import ProjectConfig
 from runtraj.exceptions import MissingClass
-from runtraj.spatial import Grid
 from runtraj.transforms import (
     AveragingKernel,
     FirstOrderLifetime,
@@ -22,6 +21,7 @@ from stilt.footprint.config import (
     footprint_settings,
     read_footprint_settings,
 )
+from stilt.footprint.grid import Grid
 from stilt.footprint.targets import Mesh
 from tests.fixtures.factories import blocks
 

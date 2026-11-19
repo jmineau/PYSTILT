@@ -10,12 +10,12 @@ import yaml
 from runtraj.config import ProjectConfig
 from runtraj.execution.config import ExecutionConfig
 from runtraj.project import Project
-from runtraj.spatial import Grid
 from typer.testing import CliRunner
 
 import stilt.__main__
 import stilt.cli
 from stilt.cli import app
+from stilt.footprint.grid import Grid
 from stilt.project import STILT_R_HYSPLIT
 from tests.fixtures.factories import blocks
 

@@ -3912,7 +3912,7 @@ requires-dist = [
     { name = "pystilt", extras = ["visualization"], marker = "extra == 'complete'" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "rdata", marker = "extra == 'stilt-r'", specifier = ">=1.0" },
-    { name = "runtraj", git = "https://github.com/jmineau/runtraj?rev=b975b480af5942fd277a991b108776f060dcfcab" },
+    { name = "runtraj", git = "https://github.com/jmineau/runtraj?rev=5ff3c672e8e6c2fbe29d46fd3b5ef7df8a1a67b3" },
     { name = "scipy", specifier = ">=1.10" },
     { name = "shapely", specifier = ">=2.0" },
     { name = "sparse", marker = "extra == 'sparse'", specifier = ">=0.15" },
@@ -4237,8 +4237,8 @@ wheels = [
 
 [[package]]
 name = "runtraj"
-version = "0.0.1.dev711+gb975b480a"
-source = { git = "https://github.com/jmineau/runtraj?rev=b975b480af5942fd277a991b108776f060dcfcab#b975b480af5942fd277a991b108776f060dcfcab" }
+version = "0.0.1.dev719+g5ff3c672e"
+source = { git = "https://github.com/jmineau/runtraj?rev=5ff3c672e8e6c2fbe29d46fd3b5ef7df8a1a67b3#5ff3c672e8e6c2fbe29d46fd3b5ef7df8a1a67b3" }
 dependencies = [
     { name = "arlmet" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },

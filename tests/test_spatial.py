@@ -12,8 +12,9 @@ from stilt import Grid
 
 def test_one_longlat_test_for_grids_and_meshes():
     """EPSG:4326 is longitude/latitude for a grid as it is for a mesh."""
-    from runtraj.spatial import Grid, is_longlat
+    from runtraj.spatial import is_longlat
 
+    from stilt.footprint.grid import Grid
     from stilt.footprint.targets import Mesh
 
     grid = Grid(

@@ -7,9 +7,9 @@ import pandas as pd
 import pytest
 import xarray as xr
 from runtraj.releases import PointRelease
-from runtraj.spatial import Grid
 
 from stilt.footprint.config import FootprintConfig
+from stilt.footprint.grid import Grid
 from stilt.footprint.targets import Mesh, Zones
 
 from ..fixtures.footprints import as_footprint, geometry_footprint, make_footprint

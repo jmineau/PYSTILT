@@ -8,11 +8,11 @@ import pandas as pd
 import pytest
 import xarray as xr
 from runtraj.releases import MultiPointRelease, PointRelease
-from runtraj.spatial import Grid
 
 from stilt.exceptions import EmptyFootprint
 from stilt.footprint import calc_footprint, correct_near_field, gridding
 from stilt.footprint.config import FootprintConfig
+from stilt.footprint.grid import Grid
 from stilt.footprint.gridding import (
     _compute_kernel_bandwidths,
     _fold_padding_around_the_globe,

@@ -257,7 +257,7 @@ where = ["src"]
 fallback_version = "0.0.0"  # no git metadata at all (e.g. a bare source copy)
 
 [tool.uv.sources]
-runtraj = { git = "https://github.com/jmineau/runtraj", rev = "b975b480af5942fd277a991b108776f060dcfcab" }
+runtraj = { git = "https://github.com/jmineau/runtraj", rev = "5ff3c672e8e6c2fbe29d46fd3b5ef7df8a1a67b3" }
 
 [tool.uv]
 required-version = ">=0.12"

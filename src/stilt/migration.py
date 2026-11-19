@@ -50,10 +50,10 @@ from runtraj.models.hysplit.namelist import read_namelist
 from runtraj.output import Output
 from runtraj.particles import check_particles
 from runtraj.releases import Release
-from runtraj.spatial import Grid
 
 from stilt.footprint import FOOTPRINT_STAGE
 from stilt.footprint.config import FootprintConfig, footprint_settings
+from stilt.footprint.grid import Grid
 from stilt.footprint.io import _footprint_array
 from stilt.footprint.stage import store_empty_footprint, store_footprint
 
@@ -539,8 +539,7 @@ def _release(stored: Any, control: ControlFile, path: Path) -> Release:
     if "run_time" not in stored:
         raise ValueError(f"{path}: the release has no run_time.")
     time = pd.DatetimeIndex(stored["run_time"])[0]
-    points = [(lon, lat, alt) for lat, lon, alt in control.locations]
-    return Release.from_points(time, points)
+    return Release.from_points(time, control.locations)
 
 
 def _particles(stored: pd.DataFrame, release: Release, path: Path) -> pd.DataFrame:

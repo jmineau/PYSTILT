@@ -25,16 +25,16 @@ import xarray as xr
 from runtraj._paths import location, readable, write_parquet
 from runtraj.particles.table import stored_release
 from runtraj.releases import Release
-from runtraj.spatial import Grid, _with_cf_grid, horizontal_dims
+from runtraj.spatial import horizontal_dims
 
 from stilt.footprint.config import (
     FootprintConfig,
     footprint_settings,
     read_footprint_settings,
 )
+from stilt.footprint.grid import Grid, _with_cf_grid
 
 if TYPE_CHECKING:
-    from runtraj._paths import Location
     from upath import UPath
 
 
@@ -252,7 +252,7 @@ def _threads(workers: int | None) -> int:
     return min(cpus, MAX_THREADS)
 
 
-def _footer(path: Location) -> dict[bytes, bytes]:
+def _footer(path: Path | UPath) -> dict[bytes, bytes]:
     """Return the metadata of a stored footprint, reading only its footer."""
     import pyarrow.parquet as pq
 
@@ -261,7 +261,7 @@ def _footer(path: Location) -> dict[bytes, bytes]:
 
 
 def _dense_block(
-    paths: list[Location], hours: np.ndarray, ny: int, nx: int
+    paths: list[Path | UPath], hours: np.ndarray, ny: int, nx: int
 ) -> np.ndarray:
     """Read stored footprints into one ``(release, hour, y, x)`` block of ``float32``."""
     import pyarrow.parquet as pq
@@ -476,7 +476,7 @@ def write_footprint(
     foot: xr.DataArray,
     config: FootprintConfig | None = None,
     metadata: dict[bytes, bytes] | None = None,
-) -> Location:
+) -> Path | UPath:
     """
     Write a footprint to a Parquet file that :func:`read_footprint` reads alone.
 
@@ -574,7 +574,7 @@ def write_empty_footprint(
     config: FootprintConfig,
     name: str = "",
     metadata: dict[bytes, bytes] | None = None,
-) -> Location:
+) -> Path | UPath:
     """
     Record in a footprint file that a release's footprint is empty: no particle reached the grid.
 

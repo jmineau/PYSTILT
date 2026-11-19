@@ -28,17 +28,12 @@ import pandas as pd
 import xarray as xr
 from runtraj.particles import check_particles
 from runtraj.releases import Release
-from runtraj.spatial import (
-    Grid,
-    _east_edge,
-    _grid_cell_starts,
-    haversine_km,
-    is_longlat,
-)
+from runtraj.spatial import haversine_km, is_longlat
 
 from stilt.exceptions import EmptyFootprint
 from stilt.footprint.config import FootprintConfig
 from stilt.footprint.foot import _near_field, _weighted
+from stilt.footprint.grid import Grid, _east_edge, _grid_cell_starts
 from stilt.particles import _need_foot
 
 from .io import _footprint_array
@@ -158,8 +153,8 @@ def _check_release_point(p: pd.DataFrame, release: Release) -> None:
     distance = haversine_km(
         first["lon"].to_numpy(dtype=float)[:, None],
         first["lat"].to_numpy(dtype=float)[:, None],
-        points[None, :, 1],
         points[None, :, 0],
+        points[None, :, 1],
     ).min(axis=1)
     median = float(np.median(distance))
     minutes = float(np.median(first["_age"]))
