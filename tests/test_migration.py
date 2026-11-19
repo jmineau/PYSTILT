@@ -533,8 +533,9 @@ def test_the_settings_are_what_the_files_record(tmp_path, capsys):
     assert run["numpar"] == 10
     assert run["kmix0"] == 150
     assert run["hscale"] == 10800
-    # SETUP.CFG entries that cannot change the particles are no settings.
-    assert "frvs" not in run
+    # Every SETUP.CFG entry is a setting but ICHEM and IDSP, which every run writes.
+    assert (run["frvs"], run["conage"], run["delt"]) == (0.01, 48, 1)
+    assert "ichem" not in run and "idsp" not in run
     # CONTROL
     assert run["n_hours"] == -2
     assert run["emisshrs"] == 0.01

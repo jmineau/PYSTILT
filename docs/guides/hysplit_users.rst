@@ -173,7 +173,7 @@ For an ensemble of the same run with different turbulence, give a variant
 Where each ``CONTROL`` and ``SETUP.CFG`` line comes from
 --------------------------------------------------------
 
-Every ``SETUP.CFG`` entry that can change the particles is a setting of the
+Every ``SETUP.CFG`` entry but ``ICHEM`` and ``IDSP`` is a setting of the
 same name in lowercase, such as ``numpar``, ``kmixd`` or ``tlfrac``
 (:doc:`../reference/configuration` lists them). Each defaults to HYSPLIT's
 own value in STILT mode. A setting HYSPLIT decides only after reading the
@@ -211,9 +211,8 @@ writes the rest itself:
      - ``seed``, written as ``-(abs(seed) + 1)``
    * - ``SETUP.CFG`` ``WINDERRTF``, ``ZICONTROLTF``
      - The wind and mixed-layer error settings, and ``ziscale``
-   * - ``SETUP.CFG`` ``DELT``, ``ICHEM``, ``KAGL``, ``CMASS`` and 37 more
-     - Fixed: STILT mode overrides them, or only concentration grids, puffs,
-       dump files or other HYSPLIT programs read them
+   * - ``SETUP.CFG`` ``ICHEM``, ``IDSP``
+     - Fixed at 8 and 2, the only values with which HYSPLIT writes particles
        (:data:`~runtraj.models.hysplit.config.FIXED_SETUP`)
 
 To read the files of one run, pass ``workdir="run"`` to

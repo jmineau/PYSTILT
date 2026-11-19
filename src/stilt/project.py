@@ -39,8 +39,12 @@ from stilt.transport_error import _transport_errors
 #: ``models: hysplit:`` block, so it runs HYSPLIT as STILT-R does. The values
 #: are those of STILT-R's ``run_stilt.r``. ``kblt``, ``kmixd`` and ``vscales``
 #: are what HYSPLIT chooses itself in STILT mode, and are written so that
-#: ``SETUP.CFG`` matches STILT-R's line for line. ``varsiwant`` is STILT-R's
-#: list with ``pres`` added, for pressure weighting.
+#: ``SETUP.CFG`` matches STILT-R's line for line, as are ``conage``,
+#: ``cpack``, ``delt``, ``kagl``, ``mhrs``, ``pinbc``, ``pinpf`` and
+#: ``poutf``, which change nothing in the particles: HYSPLIT steps 1 minute
+#: whatever ``delt`` is, and the others are read only for puffs, the
+#: concentration grid, the trajectory model, or files a run has none of.
+#: ``varsiwant`` is STILT-R's list with ``pres`` added, for pressure weighting.
 STILT_R_HYSPLIT: dict[str, Any] = {
     "numpar": 1000,
     "capemin": -1.0,
@@ -49,6 +53,14 @@ STILT_R_HYSPLIT: dict[str, Any] = {
     "krand": 4,
     "vscales": -1.0,
     "wvert": False,
+    "conage": 48,
+    "cpack": 1,
+    "delt": 1.0,
+    "kagl": 1,
+    "mhrs": 9999,
+    "pinbc": "",
+    "pinpf": "",
+    "poutf": "",
     "varsiwant": [
         "time",
         "indx",
@@ -91,6 +103,15 @@ models:
     krand: 4        # random numbers seeded from the clock
     vscales: -1     # Hanna timescale in a stable boundary layer
     wvert: false
+    # These change nothing in the particles; they make SETUP.CFG match STILT-R's.
+    conage: 48
+    cpack: 1
+    delt: 1.0
+    kagl: 1
+    mhrs: 9999
+    pinbc: ""
+    pinpf: ""
+    poutf: ""
     varsiwant: [time, indx, long, lati, zagl, foot, mlht, pres, dens, samt, sigw, tlgr]
 
 

@@ -361,7 +361,7 @@ there is refused with a message naming its block.
   has no defaults, and ``n_hours`` has none in any model). Without
   ``models``, the project runs ``hysplit``.
 - ``HysplitConfig`` has HYSPLIT's own defaults, in the STILT mode that
-  ``FIXED_SETUP`` sets. The settings HYSPLIT decides after reading
+  ``FIXED_SETUP`` (``ICHEM=8``, ``IDSP=2``) sets. The settings HYSPLIT decides after reading
   ``SETUP.CFG`` (``capemin``, ``kblt``, ``kmixd``, ``krand``, ``vscales``)
   default to unset and are then not written. STILT-R's values are PYSTILT's
   side: ``stilt.project.STILT_R_HYSPLIT``, which ``stilt init`` (the starter
