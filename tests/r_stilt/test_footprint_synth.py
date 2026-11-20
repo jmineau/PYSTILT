@@ -13,6 +13,8 @@ tests cannot reliably target:
   test_hnf_dilution_inactive        plume >> mixing-depth → foot unchanged.
   test_early_time_multi_timestep    Multiple timesteps in the 100-min window.
   test_latitude_kernel_scaling      cos(lat) bandwidth scaling agrees between tools.
+  test_committed_reference_matches_stilt_r
+                                    The unit suite's saved STILT-R footprint is current.
 
 Each test:
   1. Constructs a minimal synthetic particle DataFrame.
@@ -49,6 +51,8 @@ from stilt.footprint.gridding import (
     _project_particles_to_crs,
 )
 
+from ..fixtures.footprint_reference.make_reference import GRID as REFERENCE_GRID
+from ..fixtures.footprint_reference.make_reference import HERE as REFERENCE_DIR
 from ..fixtures.particles import point_at
 
 # The fast half of fidelity: hand-built particles, no met and no HYSPLIT, so
@@ -1777,3 +1781,17 @@ def test_grid_across_180_matches_stilt_r(rscript, r_stilt_dir, tmp_path, xmax):
 
     np.testing.assert_allclose(py.lon[[0, -1]], [170.025, 189.975], atol=1e-9)
     _assert_footprint_close(py, r, label="across_180")
+
+
+def test_committed_reference_matches_stilt_r(rscript, r_stilt_dir, tmp_path):
+    """
+    The saved STILT-R footprint the unit suite compares against is still STILT-R's.
+
+    ``tests/footprint/test_stilt_r_reference.py`` compares PYSTILT with
+    ``tests/fixtures/footprint_reference/stilt_r_foot.nc``; when this fails
+    after a ``STILT_R_SHA`` bump, rerun ``make_reference.py`` there.
+    """
+    p = pd.read_csv(REFERENCE_DIR / "particles.csv")
+    r_ds = _r_footprint(tmp_path, rscript, r_stilt_dir, p, grid=Grid(**REFERENCE_GRID))
+    with xr.open_dataset(REFERENCE_DIR / "stilt_r_foot.nc") as saved:
+        _assert_footprint_close(saved.load(), r_ds, label="committed reference")
