@@ -3912,7 +3912,7 @@ requires-dist = [
     { name = "pystilt", extras = ["visualization"], marker = "extra == 'complete'" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "rdata", marker = "extra == 'stilt-r'", specifier = ">=1.0" },
-    { name = "runtraj", git = "https://github.com/jmineau/runtraj?rev=9eeb6f4b0a9cd590d9c55a7f9210614cc0b131d2" },
+    { name = "runtraj", specifier = ">=0.1.0a1,<0.2" },
     { name = "scipy", specifier = ">=1.10" },
     { name = "shapely", specifier = ">=2.0" },
     { name = "sparse", marker = "extra == 'sparse'", specifier = ">=0.15" },
@@ -4237,8 +4237,8 @@ wheels = [
 
 [[package]]
 name = "runtraj"
-version = "0.0.1.dev720+g9eeb6f4b0"
-source = { git = "https://github.com/jmineau/runtraj?rev=9eeb6f4b0a9cd590d9c55a7f9210614cc0b131d2#9eeb6f4b0a9cd590d9c55a7f9210614cc0b131d2" }
+version = "0.1.0a1"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "arlmet" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
@@ -4255,6 +4255,10 @@ dependencies = [
     { name = "typer" },
     { name = "universal-pathlib" },
     { name = "xarray" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/3b/84/a77492b8428e7ee3e9c57599829051317419075f206805c781809b3da290/runtraj-0.1.0a1.tar.gz", hash = "sha256:5f350f6ead9a8345fc1e305cc167f2687f5511b690fd088ea6840ded09b2055a", size = 1030422, upload-time = "2026-11-20T01:46:40.179Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6a/3a/6ee2fe99bd3ec9d5f5130a1e2c281602a7378e7ab0bb9765deac4513db0a/runtraj-0.1.0a1-py3-none-any.whl", hash = "sha256:8803f2f6549fcf8848ee2226dbe48784b92f8a791476c7237ff2be77c1305e72", size = 222779, upload-time = "2026-11-20T01:46:38.861Z" },
 ]
 
 [[package]]

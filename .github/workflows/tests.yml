@@ -166,14 +166,13 @@ jobs:
       - name: Build and check the sdist and wheel
         run: uv run just dist
 
-      # runtraj has no release on PyPI yet, so the wheel's requirement is met
-      # from the commit pyproject.toml takes it from ([tool.uv.sources]).
+      # runtraj comes from PyPI, unless pyproject.toml takes it from a commit
+      # ([tool.uv.sources]) while a change there waits for a release.
       - name: Install the wheel in a clean environment
         run: |
           runtraj="$(sed -nE 's/^runtraj = \{ git = "([^"]+)", rev = "([0-9a-f]{40})" \}$/git+\1@\2/p' pyproject.toml)"
-          test -n "$runtraj"
           uv venv .pkgtest
-          uv pip install --python .pkgtest dist/*.whl "runtraj @ $runtraj"
+          uv pip install --python .pkgtest dist/*.whl ${runtraj:+"runtraj @ $runtraj"}
 
       - name: Smoke test the installed package
         run: |
