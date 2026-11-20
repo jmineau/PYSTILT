@@ -7,6 +7,35 @@ file alone: the entries are written at release (`just changelog` drafts them).
 
 ## [Unreleased]
 
+## [0.1.0a30] - 2026-11-20
+
+PYSTILT now runs its particles with [runtraj](https://github.com/jmineau/runtraj), a package of its own that PYSTILT requires (0.1.0a1 or newer, below 0.2). runtraj has the projects, releases, met files, transport models, Slurm submission and particle transforms; PYSTILT keeps STILT's footprint, background, transport error and the STILT-R import. STILT's science is unchanged and PYSTILT still matches STILT-R, but a project needs changes: `config.yaml` is written in blocks, `receptors.csv` is `releases.csv`, and HYSPLIT is no longer included. Every particles and footprint folder moves to a new settings folder, so a project's stored runs are made again; keep a project on 0.1.0a29 until you can run it again.
+
+### Changed
+
+- **Breaking:** the particle runs come from runtraj. Import a module of them from `runtraj` (`runtraj.models.hysplit.HysplitConfig`, `runtraj.config.Variant`, `runtraj.output.Output`); `stilt` still exports `ProjectConfig`, the release classes, `Grid`, `run_trajectories` and `read_particles`. `stilt.Project` and `stilt.Simulation` are runtraj's with STILT's reads added. `StiltError` is `runtraj.RuntrajError`, the compute root is `RUNTRAJ_COMPUTE_ROOT`, and Slurm array tasks run `python -m runtraj run`. (#451, #453, #457, #462)
+- **Breaking:** `config.yaml` holds `mets`, `models`, `stages` and `variants`, each a name mapped to a block, beside `execution` and `output`; a setting at the top level is refused. HYSPLIT's settings go under `models: hysplit:`, and the footprint's under `stages: footprint:`, with `class: stilt.footprint.FootprintStage`. (#444)
+- **Breaking:** every setting of where a project runs is in that backend's block: `execution: local: {cpus: 4}` and `execution: slurm: {n_workers: 40, cpus: 4, ...}`, with `backend` naming the one used. (#444)
+- **Breaking:** the inputs file is `releases.csv`, and tables, stored files, the command line (`--releases`) and the Python API say release where they said receptor. The CSV's `r_idx` column is `group`. A `receptors.csv` or an `r_idx` column is refused with a message that says to rename it. The classes are `Release`, `PointRelease`, `ColumnRelease` and `MultiPointRelease`. (#452)
+- **Breaking:** PYSTILT includes no HYSPLIT. `models: hysplit: directory:` is the HYSPLIT folder as NOAA's download unpacks it; without it the first `hycs_std` on `PATH` runs. `exe_dir` and `data_dir` are gone. The SHA-256 of `hycs_std` is part of the particles' settings, so two builds never share a settings folder, and the version it prints is recorded as `model_version`. The installation guide says where to get HYSPLIT. (#443, #448)
+- **Breaking:** `HysplitConfig`'s defaults are HYSPLIT's own, and `n_hours` has none. `stilt init` and `Project.init` write STILT-R's values where they differ into the new project's `models: hysplit:` block, so a new project runs HYSPLIT as STILT-R does. A config without them runs HYSPLIT's defaults. (#446, #462)
+- **Breaking:** a stage is named by the import path of its class in a `stages` block, and each variant has its stages: `variant.stages["footprint"]` was `variant.footprint`. Footprints are in `footprint/` (it was `footprints/`), and footprints stored by an earlier version are not found. (#449)
+- **Breaking:** `veght` is HYSPLIT's setting again, under `models: hysplit:`. `footprint_depth`, `pbl_height` and `pbl_height_min` are the footprint stage's, used when it computes a `foot` of its own. Variants that differ only in how `foot` is computed share one run. (#450)
+- **Breaking:** the transforms are runtraj's (`runtraj.transforms`), and they multiply the particles' `weight` column instead of `foot`; `stilt.transforms` is gone. The footprint is gridded from `foot` times `weight`, so the built-in transforms give the same footprints. A transform of your own should multiply `weight` with `runtraj.transforms.weigh`. (#457)
+- **Breaking:** the model of imported STILT-R runs is `stilt.migration.StiltRModel`, named in a `models:` block by its import path. Import stored STILT-R runs again. `add_foot` and `correct_near_field` are in `stilt.footprint`. (#451, #461)
+- **Breaking:** `Grid` is `stilt.Grid` (`stilt.footprint.grid.Grid`); runtraj has none. (#462)
+- PYSTILT no longer imports private names from runtraj, so a newer runtraj in the allowed range does not break it. (#463)
+- runtraj is taken from PyPI, and pydantic 2.5.3 or newer is required. (#454, #465)
+
+### Fixed
+
+- A stored particles folder recorded with `footprint_depth` or `pbl_height` among its run settings is no longer matched to a variant with another depth. (#450)
+- `footprint_depth` written under `models: hysplit:` or as a variant's own key gets a message saying to write `veght` there, and where the footprint's `footprint_depth` goes. (#450)
+- A positions-only model's particles have no `foot`; `enhancement`, `calc_footprint` and `plot.map(color_by='foot')` now name `stilt.footprint.footprint_particles`, which gives it. (#450)
+- A stage's earlier file is removed before the stage runs, on an object store too, so a failed run leaves no file that passes as complete. A `stages` block under a name other than its stage's (`footprint`) is refused. (#449)
+- A particle or footprint file written before the rename, or a table with a `receptor` column, is refused with a message that names the file and says what to do. (#452)
+- One simulation compares equal whichever class holds it. (#451)
+
 ## [0.1.0a29] - 2026-11-17
 
 Several settings left a run's settings or changed name, so stored runs are found under new settings folders after this release. A project's runs made with 0.1.0a28 are not found by 0.1.0a29; keep such a project on 0.1.0a28 until its runs are moved or made again.
