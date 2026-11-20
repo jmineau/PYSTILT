@@ -1,5 +1,5 @@
-In Containers (Kubernetes)
-==========================
+In Containers (Docker, Kubernetes)
+==================================
 
 A project can run in many containers at once, such as the pods of a
 Kubernetes Job, without Slurm. Each container runs one share of the
@@ -38,6 +38,55 @@ What every container needs
 - A compute root, where each run gets its workdir. Set
   ``RUNTRAJ_COMPUTE_ROOT`` to a folder on fast local disk, such as an
   ``emptyDir``.
+
+The image
+---------
+
+PYSTILT's repository has a ``Dockerfile`` for an image with PYSTILT, every
+extra, and the libraries for ``s3://`` and ``gs://`` buckets. Use the same
+image to run a project on your own machine and in the pods of a Kubernetes
+Job. Build it from a clone of the repository:
+
+.. code-block:: bash
+
+   git clone https://github.com/jmineau/PYSTILT
+   cd PYSTILT
+   docker build -t pystilt .
+
+The image has no HYSPLIT, as PYSTILT includes none. Download
+HYSPLIT from NOAA's Air Resources Laboratory
+(:doc:`../getting_started/installation`) and mount its folder at
+``/opt/hysplit``, whose ``exec/`` is on the image's ``PATH``. Mount the
+met files and the project folder too, and run ``stilt`` as you would
+outside the container:
+
+.. code-block:: bash
+
+   docker run --rm \
+     -v /path/to/hysplit:/opt/hysplit:ro \
+     -v /path/to/met:/met:ro \
+     -v "$PWD/my_project:/project" \
+     pystilt stilt run /project
+
+The met folder in ``config.yaml`` is the path inside the container
+(``hrrr: /met``). The output directory is ``output/`` in the project unless
+``config.yaml`` names another. The container runs as user 10001, so that
+user must be able to read the HYSPLIT and met folders and write to the
+project folder (``chmod 777``), or run it as yourself with
+``docker run --user "$(id -u)"``. ``stilt check`` says "No hycs_std on
+PATH" when the HYSPLIT folder cannot be read.
+
+For pods, where mounting a HYSPLIT folder into each is awkward, build an
+image of your own with your HYSPLIT inside it, and keep it in a private
+registry:
+
+.. code-block:: docker
+
+   FROM pystilt
+   COPY --chown=10001 hysplit /opt/hysplit
+
+The image runs ``tini`` as its first process, which passes ``docker stop``
+and Kubernetes' stop signal on to ``stilt``.
 
 .. _fetch-once:
 
@@ -115,7 +164,7 @@ is the task number:
          restartPolicy: Never
          containers:
            - name: stilt
-             image: my-registry/pystilt:latest   # any image with PYSTILT
+             image: my-registry/pystilt-hysplit:latest   # the image above, with your HYSPLIT
              command: ["sh", "-c"]
              args: ["exec stilt run /project --task $JOB_COMPLETION_INDEX/20 --cpus 4"]
              env:

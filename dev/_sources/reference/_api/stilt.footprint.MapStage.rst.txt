@@ -1,0 +1,32 @@
+﻿stilt.footprint.MapStage
+========================
+
+.. currentmodule:: stilt.footprint
+
+
+
+
+
+
+.. class-signature:: stilt.footprint.MapStage
+
+
+.. class-parameters:: stilt.footprint.MapStage
+
+
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~MapStage.check
+   ~MapStage.resolve
+   ~MapStage.run
+   ~MapStage.settings
+
+
+

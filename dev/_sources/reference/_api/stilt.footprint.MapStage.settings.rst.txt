@@ -1,0 +1,5 @@
+stilt.footprint.MapStage.settings
+=================================
+
+.. currentmodule:: stilt.footprint
+.. automethod:: MapStage.settings
