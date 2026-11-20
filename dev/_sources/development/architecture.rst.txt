@@ -496,11 +496,11 @@ answer (``footprints``, ``jacobian``, ``transport_error``), and builds releases 
 (``Project._releases``) when it needs them.
 
 ``Output.directory`` is a ``Path`` on a filesystem and a universal path
-(``UPath``) for a URL (``runtraj._paths.location``). Code that touches the
+(``UPath``) for a URL (``stilt._paths.location``). Code that touches the
 output checks ``isinstance(path, Path)`` for the local fast path
 (``os.scandir``, a temporary file and rename, pyarrow on the path) and
 otherwise uses the store's fsspec filesystem (``path.fs``), putting a file
-directly. Parquet is read through ``runtraj._paths.readable``.
+directly. Parquet is read through ``stilt._paths.readable``.
 
 Empty footprints
 ^^^^^^^^^^^^^^^^
