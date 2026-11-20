@@ -544,6 +544,52 @@ def test_hysplits_met_files_reach_foot_as_the_paths_they_are(add_foot, tmp_path)
     assert add_foot["met_files"] == [met]
 
 
+@pytest.mark.parametrize(
+    ("lons", "lats", "box"),
+    [
+        ([-111.9, -112.0], [40.7, 40.6], (-112.0, -111.9, 40.6, 40.7)),
+        ([179.5, -179.5, 179.9], [10.0, 11.0, 10.5], (179.5, -179.5, 10.0, 11.0)),
+        ([-112.0, -112.0], [40.6, 40.6], (-112.01, -111.99, 40.59, 40.61)),
+        ([-112.0, float("nan")], [40.6, 41.0], (-112.01, -111.99, 40.59, 40.61)),
+    ],
+    ids=["a box", "across 180", "one point", "nan rows left out"],
+)
+def test_the_met_is_opened_in_the_smallest_box_around_the_particles(lons, lats, box):
+    from stilt.footprint.stage import _particle_bounds
+
+    bounds = _particle_bounds(pd.DataFrame({"lon": lons, "lat": lats}))
+
+    assert (bounds.xmin, bounds.xmax, bounds.ymin, bounds.ymax) == pytest.approx(box)
+
+
+def test_particles_with_no_position_open_the_whole_met():
+    from stilt.footprint.stage import _particle_bounds
+
+    nowhere = pd.DataFrame({"lon": [float("nan")], "lat": [40.0]})
+    assert _particle_bounds(nowhere) is None
+
+
+def test_stored_particles_of_a_model_with_its_own_met_need_the_variant(
+    add_foot, tmp_path, monkeypatch
+):
+    from types import SimpleNamespace
+
+    from stilt.footprint import stage
+
+    met = tmp_path / "met"
+    met.touch()
+    meta = SimpleNamespace(met_files=[met], settings={"model": {"name": "gribmodel"}})
+    monkeypatch.setattr(stage, "particles_metadata", lambda path: meta)
+    monkeypatch.setattr(
+        stage, "get_model", lambda name: SimpleNamespace(open_met=lambda *a: None)
+    )
+    particles = _particles(time=pd.Timestamp("2023-01-01 11:59"))
+
+    with pytest.raises(ValueError, match="gribmodel.*variant=sim.variant"):
+        stage.stored_particles(particles, FootprintConfig(), tmp_path / "p.parquet")
+    assert "met_files" not in add_foot
+
+
 def test_pbl_height_replaces_the_models_foot(add_foot, tmp_path, caplog):
     from stilt.footprint import footprint_particles
 
