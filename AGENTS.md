@@ -198,7 +198,8 @@ format's quirks. Never commit met files.
   `# pyrefly: ignore[<code>]` on the line above, after a comment saying why.
 - An exception a run raises on purpose is a `runtraj.RuntrajError`
   (`runtraj.exceptions`); PYSTILT's own is `EmptyFootprint`, in
-  `stilt/exceptions.py`. Plain input checks raise builtins such as `ValueError`.
+  `stilt/exceptions.py`, exported as `stilt.EmptyFootprint`. Plain input
+  checks raise builtins such as `ValueError`.
 - Extras: `geometry`, `visualization`, `download`, `sparse`, `stilt-r`, and
   `complete`, which the `dev` group installs.
 
