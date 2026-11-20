@@ -25,7 +25,7 @@ import xarray as xr
 from pydantic import TypeAdapter
 from runtraj import Bounds
 from runtraj.identity import file_stamp
-from runtraj.models import open_met
+from runtraj.models import get_model, open_met
 from runtraj.particles import particles_metadata
 from runtraj.releases import Release
 
@@ -282,10 +282,11 @@ def footprint_particles(
         The top of the run's domain, HYSPLIT's ``z_top``, which
         ``pbl_height: richardson`` reads.
     variant : runtraj.config.Variant, optional
-        The variant that made the particles. Its transport model opens the
-        met files in the format it reads (:func:`runtraj.models.open_met`),
-        around the particles. Without it the files are read as ARL files, as
-        HYSPLIT's are.
+        The variant that made the particles, such as ``sim.variant``. Its
+        transport model opens the met files in the format it reads
+        (:func:`runtraj.models.open_met`), around the particles. Without it
+        the files are read as ARL files, as HYSPLIT's are, so pass it for a
+        transport model whose met is in another format.
 
     Returns
     -------
@@ -307,7 +308,7 @@ def footprint_particles(
     ...     grid=grid, pbl_height="richardson"
     ... )  # doctest: +SKIP
     >>> particles = stilt.footprint.footprint_particles(
-    ...     sim.particles, config, meta.met_files
+    ...     sim.particles, config, meta.met_files, variant=sim.variant
     ... )  # doctest: +SKIP
     """
     if not _computes_foot(particles, config):
@@ -353,21 +354,37 @@ def footprint_particles(
 
 
 def _particle_bounds(particles: pd.DataFrame) -> Bounds | None:
-    """Return the box around the particles' longitudes and latitudes, or ``None`` when none is finite."""
+    """
+    Return the smallest box around the particles' longitudes and latitudes, or ``None`` when none is finite.
+
+    Longitudes count modulo 360, so particles on both sides of 180 degrees
+    get a box across it (``xmin > xmax``), not one around the globe. A box
+    needs a width and a height: particles at one longitude or latitude get
+    0.01 degrees on each side; the model adds its own margin.
+    """
     lon = particles["lon"].to_numpy(dtype=float)
     lat = particles["lat"].to_numpy(dtype=float)
     keep = np.isfinite(lon) & np.isfinite(lat)
     if not keep.any():
         return None
     ymin, ymax = float(lat[keep].min()), float(lat[keep].max())
-    if ymin == ymax:  # a box needs a height; the model adds its own margin
+    if ymin == ymax:
         ymin, ymax = max(ymin - 0.01, -90.0), min(ymax + 0.01, 90.0)
-    return Bounds(
-        xmin=float(lon[keep].min()),
-        xmax=float(lon[keep].max()),
-        ymin=ymin,
-        ymax=ymax,
-    )
+    # The box starts after the widest gap between the sorted longitudes;
+    # when that gap is the one across 180 degrees, it is the plain box.
+    lon = np.unique(_to_180(lon[keep]))
+    gaps = np.diff(lon, append=lon[0] + 360.0)
+    widest = int(np.argmax(gaps))
+    xmin, xmax = float(lon[(widest + 1) % lon.size]), float(lon[widest])
+    if xmin == xmax:
+        xmin, xmax = xmin - 0.01, xmax + 0.01
+    return Bounds(xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+
+
+def _to_180(lon: np.ndarray) -> np.ndarray:
+    """Return longitudes in degrees from -180 up to 180, those already there as they are."""
+    inside = (lon >= -180.0) & (lon < 180.0)
+    return np.where(inside, lon, (lon + 180.0) % 360.0 - 180.0)
 
 
 def _mixed_layer(particles: pd.DataFrame, config: FootprintConfig) -> str:
@@ -401,11 +418,24 @@ def stored_particles(
     The met files are read from the particle file's metadata only when
     ``foot`` is computed. For that, particles without ``time`` (the run's
     own, in memory) get it from *start*, the release time, and lose it
-    again.
+    again. *variant*, the variant that made the particles, says how its
+    transport model opens the met files (:func:`footprint_particles`).
+
+    Raises
+    ------
+    ValueError
+        If ``foot`` is computed, *variant* is not given, and the particle
+        file's transport model reads met that is not in ARL files.
     """
     if not _computes_foot(particles, config):
         return particles
-    met_files = [] if path is None else particles_metadata(path).met_files
+    met_files = []
+    if path is not None:
+        meta = particles_metadata(path)
+        met_files = meta.met_files
+        model = meta.settings.get("model", {}).get("name")
+        if variant is None and model is not None:
+            _refuse_own_met(model, path)
     added_time = "time" not in particles.columns and start is not None
     if added_time:
         particles = particles.assign(
@@ -416,6 +446,20 @@ def stored_particles(
         particles, config, met_files, z_top=z_top, variant=variant
     )
     return out.drop(columns="time") if added_time else out
+
+
+def _refuse_own_met(model: str, path: Path | UPath) -> None:
+    """Refuse to read the met of *model* as ARL files when the model opens its own (``open_met``)."""
+    try:
+        found = get_model(model)
+    except (ImportError, ValueError):  # not installed here: nothing to ask it
+        return
+    if getattr(found, "open_met", None) is not None:
+        raise ValueError(
+            f"The particles in {path} were made by the transport model "
+            f"{model!r}, whose met files are not ARL files. Pass the variant "
+            "that made them (variant=sim.variant), so the model opens its met."
+        )
 
 
 def simulation_particles(sim: Simulation, config: FootprintConfig) -> pd.DataFrame:

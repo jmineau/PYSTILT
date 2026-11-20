@@ -35,7 +35,8 @@ def _need_foot(particles: pd.DataFrame) -> None:
         "stilt.footprint.footprint_particles(particles, config, met_files) adds "
         "the one the footprint uses, from the met files the run read "
         "(runtraj.particles.particles_metadata(path).met_files), with the "
-        "variant's footprint settings (sim.variant.stages['footprint'])."
+        "variant's footprint settings (sim.variant.stages['footprint']) and "
+        "variant=sim.variant, which says how its transport model opens the met."
     )
 
 
@@ -102,7 +103,8 @@ class ParticlesAccessor(accessor.ParticlesAccessor):
         stage computes its own ``foot``, so this enhancement differs from
         ``sim.footprint``'s. For the same one, pass the particles through
         :func:`stilt.footprint.footprint_particles` first, with the met files
-        the run read; they must still be where the run read them.
+        the run read and the variant that made the particles; the files must
+        still be where the run read them.
         """
         p = self._particles
         _need_foot(p)
