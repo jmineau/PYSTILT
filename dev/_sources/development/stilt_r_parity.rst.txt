@@ -91,6 +91,15 @@ no meteorology or HYSPLIT, so they run anywhere R is installed:
 
    STILT_R_DIR=$PWD/stilt-r-src uv run pytest tests/r_stilt -m r_only
 
+One STILT-R footprint is saved in the repository, so the unit suite checks
+the gridding without R: ``tests/footprint/test_stilt_r_reference.py`` grids
+30 synthetic particles over six hours
+(``tests/fixtures/footprint_reference/particles.csv``) and compares every
+cell with STILT-R's footprint of them (``stilt_r_foot.nc`` beside it) at
+``rtol=1e-7``. A wrong kernel width fails it. The ``r_only`` test
+``test_committed_reference_matches_stilt_r`` checks that the saved file is
+still what STILT-R makes.
+
 The same marker holds the settings test in
 `tests/r_stilt/test_config_parity.py <https://github.com/jmineau/PYSTILT/blob/main/tests/r_stilt/test_config_parity.py>`_.
 PYSTILT's HYSPLIT block has HYSPLIT's own defaults, and a new project's
@@ -281,7 +290,10 @@ To move the pin by hand:
         uv run pytest tests/r_stilt/ -v -m fidelity
 
 #. If every scenario passes at the current tolerances, commit the change and
-   update "Last verified" above.
+   update "Last verified" above. If only ``test_committed_reference_matches_stilt_r``
+   fails, STILT-R's footprint changed: rerun
+   ``tests/fixtures/footprint_reference/make_reference.py`` with ``STILT_R_DIR``
+   set and commit the new ``stilt_r_foot.nc`` with the pin.
 #. If a scenario fails, diff ``calc_footprint.r``, ``permute.f90``, and
    ``calc_trajectory.r`` between the two commits to find the upstream change.
    Then do one of the following:
