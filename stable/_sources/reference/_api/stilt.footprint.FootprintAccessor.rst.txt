@@ -6,6 +6,8 @@
 
 
 
+
+
 .. class-signature:: stilt.footprint.FootprintAccessor
 
 
@@ -18,13 +20,14 @@ Attributes
 
 .. autosummary::
    :toctree:
+   :nosignatures:
 
    ~FootprintAccessor.config
    ~FootprintAccessor.geometry_hash
    ~FootprintAccessor.grid
    ~FootprintAccessor.name
    ~FootprintAccessor.plot
-   ~FootprintAccessor.receptor
+   ~FootprintAccessor.release
 
 
 

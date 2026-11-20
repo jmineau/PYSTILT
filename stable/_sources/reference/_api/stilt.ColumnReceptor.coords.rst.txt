@@ -1,6 +1,0 @@
-stilt.ColumnReceptor.coords
-===========================
-
-.. currentmodule:: stilt
-
-.. automethod:: ColumnReceptor.coords

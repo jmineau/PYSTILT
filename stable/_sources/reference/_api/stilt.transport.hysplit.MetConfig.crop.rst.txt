@@ -1,6 +1,0 @@
-stilt.transport.hysplit.MetConfig.crop
-======================================
-
-.. currentmodule:: stilt.transport.hysplit
-
-.. automethod:: MetConfig.crop

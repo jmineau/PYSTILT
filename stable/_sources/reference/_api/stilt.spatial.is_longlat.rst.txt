@@ -1,6 +1,0 @@
-﻿stilt.spatial.is\_longlat
-=========================
-
-.. currentmodule:: stilt.spatial
-
-.. autofunction:: is_longlat

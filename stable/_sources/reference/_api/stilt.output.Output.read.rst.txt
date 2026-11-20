@@ -1,6 +1,0 @@
-stilt.output.Output.read
-========================
-
-.. currentmodule:: stilt.output
-
-.. automethod:: Output.read

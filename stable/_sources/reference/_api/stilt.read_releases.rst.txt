@@ -1,0 +1,6 @@
+﻿stilt.read\_releases
+====================
+
+.. currentmodule:: stilt
+
+.. autofunction:: read_releases

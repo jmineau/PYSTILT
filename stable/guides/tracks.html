@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Mobile Measurements &#8212; PYSTILT 0.1.0a29</title>
+    <title>Mobile Measurements &#8212; PYSTILT 0.1.0a30</title>
   
   
   
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=947601de"></script>
+    <script src="../_static/documentation_options.js?v=7752668c"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a29';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a30';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -60,17 +60,23 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Meteorology" href="meteorology.html" />
-    <link rel="prev" title="Receptors" href="receptors.html" />
+    <link rel="prev" title="Releases (receptors)" href="releases.html" />
+  
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29" />
+  <meta name="docsearch:version" content="0.1.0a30" />
   
     
     <script src="../_static/searchtools.js"></script>
     <script src="../_static/language_data.js"></script>
     <script src="../searchindex.js"></script>
   
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="PYSTILT">
+  <meta property="og:title" content="Mobile Measurements">
+  <meta property="og:description" content="A Python implementation of the STILT Lagrangian atmospheric transport model.">
+
   </head>
   <body data-default-mode="">
   
@@ -135,7 +141,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a29</p>
+    <p class="title logo__title">PYSTILT</p>
   
 </a></div>
     
@@ -411,7 +417,7 @@
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Setting up a project</span></p>
 <ul class="current nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="receptors.html">Receptors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="releases.html">Releases (receptors)</a></li>
 <li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">Mobile Measurements</a></li>
 <li class="toctree-l1"><a class="reference internal" href="meteorology.html">Meteorology</a></li>
 <li class="toctree-l1"><a class="reference internal" href="projects.html">Projects And Variants</a></li>
@@ -516,12 +522,12 @@
 <p>An analyzer on a car, a train, an aircraft, or a ship measures every second
 or so as it moves. Measurements a few seconds apart see nearly the same air,
 so a simulation for each one would cost thousands of transport model runs
-for little gain. <a class="reference internal" href="../reference/_api/stilt.observations.receptors_from_track.html#stilt.observations.receptors_from_track" title="stilt.observations.receptors_from_track"><code class="xref py py-func docutils literal notranslate"><span class="pre">receptors_from_track()</span></code></a> groups the
-measurements along the track and makes one <a class="reference internal" href="../reference/_api/stilt.PointReceptor.html#stilt.PointReceptor" title="stilt.PointReceptor"><code class="xref py py-class docutils literal notranslate"><span class="pre">PointReceptor</span></code></a> for
-each group. It also returns the track with each measurement’s receptor id,
+for little gain. <a class="reference internal" href="../reference/_api/stilt.observations.releases_from_track.html#stilt.observations.releases_from_track" title="stilt.observations.releases_from_track"><code class="xref py py-func docutils literal notranslate"><span class="pre">releases_from_track()</span></code></a> groups the
+measurements along the track and makes one <a class="reference internal" href="../reference/_api/stilt.PointRelease.html#stilt.PointRelease" title="stilt.PointRelease"><code class="xref py py-class docutils literal notranslate"><span class="pre">PointRelease</span></code></a> for
+each group. It also returns the track with each measurement’s release id,
 so after the run you can put the modeled value next to every measurement.</p>
-<section id="from-a-track-to-receptors">
-<h2>From a track to receptors<a class="headerlink" href="#from-a-track-to-receptors" title="Link to this heading">#</a></h2>
+<section id="from-a-track-to-releases">
+<h2>From a track to releases<a class="headerlink" href="#from-a-track-to-releases" title="Link to this heading">#</a></h2>
 <p>A track is a table with one row per measurement and the columns <code class="docutils literal notranslate"><span class="pre">time</span></code>,
 <code class="docutils literal notranslate"><span class="pre">longitude</span></code>, <code class="docutils literal notranslate"><span class="pre">latitude</span></code>, and <code class="docutils literal notranslate"><span class="pre">altitude</span></code>
 (<a class="reference internal" href="../reference/observations.html#stilt.observations.TRACK_SCHEMA" title="stilt.observations.TRACK_SCHEMA"><code class="xref py py-data docutils literal notranslate"><span class="pre">TRACK_SCHEMA</span></code></a>). Other columns, such as the
@@ -531,7 +537,7 @@ east and then north, measured every second:</p>
 
 <span class="gp">In [2]: </span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 
-<span class="gp">In [3]: </span><span class="kn">from</span><span class="w"> </span><span class="nn">stilt.observations</span><span class="w"> </span><span class="kn">import</span> <span class="n">receptors_from_track</span>
+<span class="gp">In [3]: </span><span class="kn">from</span><span class="w"> </span><span class="nn">stilt.observations</span><span class="w"> </span><span class="kn">import</span> <span class="n">releases_from_track</span>
 
 <span class="gp">In [4]: </span><span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span>
 
@@ -546,21 +552,21 @@ east and then north, measured every second:</p>
 <span class="gp">   ...: </span><span class="p">})</span>
 <span class="gp">   ...: </span>
 
-<span class="gp">In [7]: </span><span class="n">receptors</span><span class="p">,</span> <span class="n">table</span> <span class="o">=</span> <span class="n">receptors_from_track</span><span class="p">(</span><span class="n">track</span><span class="p">,</span> <span class="n">every</span><span class="o">=</span><span class="s2">"5min"</span><span class="p">)</span>
+<span class="gp">In [7]: </span><span class="n">releases</span><span class="p">,</span> <span class="n">table</span> <span class="o">=</span> <span class="n">releases_from_track</span><span class="p">(</span><span class="n">track</span><span class="p">,</span> <span class="n">every</span><span class="o">=</span><span class="s2">"5min"</span><span class="p">)</span>
 
-<span class="gp">In [8]: </span><span class="nb">len</span><span class="p">(</span><span class="n">receptors</span><span class="p">)</span>
+<span class="gp">In [8]: </span><span class="nb">len</span><span class="p">(</span><span class="n">releases</span><span class="p">)</span>
 <span class="gh">Out[8]: </span><span class="go">6</span>
 
-<span class="gp">In [9]: </span><span class="n">receptors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-<span class="gh">Out[9]: </span><span class="go">PointReceptor(id='202407011802_-111.91505_40.76_3', lon=-111.91505, lat=40.76000, alt=3 agl)</span>
+<span class="gp">In [9]: </span><span class="n">releases</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="gh">Out[9]: </span><span class="go">PointRelease(id='202407011802_-111.91505_40.76_3', lon=-111.91505, lat=40.76000, alt=3 agl)</span>
 </pre></div>
 </div>
-<p>Each receptor sits at the mean time and position of its group, so the six
-five-minute groups give six receptors. <code class="docutils literal notranslate"><span class="pre">table</span></code> is the track with a
-<code class="docutils literal notranslate"><span class="pre">receptor</span></code> column:</p>
+<p>Each release sits at the mean time and position of its group, so the six
+five-minute groups give six releases. <code class="docutils literal notranslate"><span class="pre">table</span></code> is the track with a
+<code class="docutils literal notranslate"><span class="pre">release</span></code> column:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [10]: </span><span class="n">table</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 <span class="gh">Out[10]: </span>
-<span class="go">                 time  ...                         receptor</span>
+<span class="go">                 time  ...                          release</span>
 <span class="go">0 2024-07-01 18:00:00  ...  202407011802_-111.91505_40.76_3</span>
 <span class="go">1 2024-07-01 18:00:01  ...  202407011802_-111.91505_40.76_3</span>
 <span class="go">2 2024-07-01 18:00:02  ...  202407011802_-111.91505_40.76_3</span>
@@ -570,17 +576,17 @@ five-minute groups give six receptors. <code class="docutils literal notranslate
 <span class="go">[5 rows x 6 columns]</span>
 </pre></div>
 </div>
-<p>The receptors follow the track. Each color below is one group, and each
-cross is its receptor:</p>
+<p>The releases follow the track. Each color below is one group, and each
+cross is its release:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [11]: </span><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
 
 <span class="gp">In [12]: </span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">layout</span><span class="o">=</span><span class="s2">"constrained"</span><span class="p">)</span>
 
 <span class="gp">In [13]: </span><span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">table</span><span class="o">.</span><span class="n">longitude</span><span class="p">,</span> <span class="n">table</span><span class="o">.</span><span class="n">latitude</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
-<span class="gp">   ....: </span>           <span class="n">c</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">factorize</span><span class="p">(</span><span class="n">table</span><span class="o">.</span><span class="n">receptor</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span> <span class="n">cmap</span><span class="o">=</span><span class="s2">"tab10"</span><span class="p">);</span>
+<span class="gp">   ....: </span>           <span class="n">c</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">factorize</span><span class="p">(</span><span class="n">table</span><span class="o">.</span><span class="n">release</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span> <span class="n">cmap</span><span class="o">=</span><span class="s2">"tab10"</span><span class="p">);</span>
 <span class="gp">   ....: </span>
 
-<span class="gp">In [14]: </span><span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="n">r</span><span class="o">.</span><span class="n">longitude</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">receptors</span><span class="p">],</span> <span class="p">[</span><span class="n">r</span><span class="o">.</span><span class="n">latitude</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">receptors</span><span class="p">],</span>
+<span class="gp">In [14]: </span><span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="n">r</span><span class="o">.</span><span class="n">longitude</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">releases</span><span class="p">],</span> <span class="p">[</span><span class="n">r</span><span class="o">.</span><span class="n">latitude</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">releases</span><span class="p">],</span>
 <span class="gp">   ....: </span>        <span class="s2">"kx"</span><span class="p">,</span> <span class="n">markersize</span><span class="o">=</span><span class="mi">10</span><span class="p">);</span>
 <span class="gp">   ....: </span>
 
@@ -601,18 +607,18 @@ kilometers in that time, about one cell of a 3 km meteorology grid. Groups
 start on the clock (18:00, 18:05, …), whatever time the track starts.</p>
 <p>An aircraft covers 30 km or more in five minutes, so give it <code class="docutils literal notranslate"><span class="pre">spacing</span></code>
 instead, about the size of a meteorology cell:</p>
-<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [17]: </span><span class="n">receptors_1km</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">receptors_from_track</span><span class="p">(</span><span class="n">track</span><span class="p">,</span> <span class="n">spacing</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [17]: </span><span class="n">releases_1km</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">releases_from_track</span><span class="p">(</span><span class="n">track</span><span class="p">,</span> <span class="n">spacing</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
 
-<span class="gp">In [18]: </span><span class="nb">len</span><span class="p">(</span><span class="n">receptors_1km</span><span class="p">)</span>
+<span class="gp">In [18]: </span><span class="nb">len</span><span class="p">(</span><span class="n">releases_1km</span><span class="p">)</span>
 <span class="gh">Out[18]: </span><span class="go">17</span>
 </pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">spacing</span></code> gives the same number of receptors for each kilometer however
+<p><code class="docutils literal notranslate"><span class="pre">spacing</span></code> gives the same number of releases for each kilometer however
 fast the platform moves. A vehicle that stops and keeps measuring stays in
 one group until it moves on, so for a track with long stops, use <code class="docutils literal notranslate"><span class="pre">every</span></code>
 or drop the stopped rows first.</p>
 <p>A pause in the track longer than <code class="docutils literal notranslate"><span class="pre">gap</span></code>, 10 minutes by default, ends a
-group, so no receptor stands for measurements from both sides of a break
+group, so no release stands for measurements from both sides of a break
 in the data.</p>
 </section>
 <section id="altitudes">
@@ -624,33 +630,33 @@ usually records its GPS altitude above sea level, so pass
 </section>
 <section id="in-a-project">
 <h2>In a project<a class="headerlink" href="#in-a-project" title="Link to this heading">#</a></h2>
-<p>Add the receptors, and keep the table with the project’s inputs as
+<p>Add the releases, and keep the table with the project’s inputs as
 <code class="docutils literal notranslate"><span class="pre">tables/track.parquet</span></code>:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
 
 <span class="n">project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">"./mobile"</span><span class="p">)</span>      <span class="c1"># made with stilt init or Project.init</span>
-<span class="n">project</span><span class="o">.</span><span class="n">add_receptors</span><span class="p">(</span><span class="n">receptors</span><span class="p">)</span>
+<span class="n">project</span><span class="o">.</span><span class="n">add_releases</span><span class="p">(</span><span class="n">releases</span><span class="p">)</span>
 <span class="n">project</span><span class="o">.</span><span class="n">add_table</span><span class="p">(</span><span class="s2">"track"</span><span class="p">,</span> <span class="n">table</span><span class="p">)</span>
 <span class="n">project</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 </pre></div>
 </div>
 <p>After the run, average the measurements in each group and set them beside
-the modeled enhancement of its receptor
+the modeled enhancement of its release
 (<code class="docutils literal notranslate"><span class="pre">foot.stilt.enhancement</span></code>, <a class="reference internal" href="aggregation.html"><span class="doc">Summing Footprints: Areas And The Jacobian</span></a>):</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
 
 <span class="n">flux</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataarray</span><span class="p">(</span><span class="s2">"ch4_flux.nc"</span><span class="p">)</span>   <span class="c1"># µmol m⁻² s⁻¹</span>
 <span class="n">track</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_parquet</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">table_path</span><span class="p">(</span><span class="s2">"track"</span><span class="p">))</span>
 
-<span class="n">compare</span> <span class="o">=</span> <span class="n">track</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"receptor"</span><span class="p">)[[</span><span class="s2">"ch4"</span><span class="p">]]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+<span class="n">compare</span> <span class="o">=</span> <span class="n">track</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"release"</span><span class="p">)[[</span><span class="s2">"ch4"</span><span class="p">]]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
 <span class="k">for</span> <span class="n">rid</span> <span class="ow">in</span> <span class="n">compare</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
     <span class="n">foot</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">rid</span><span class="p">,</span> <span class="s2">"hrrr"</span><span class="p">)</span><span class="o">.</span><span class="n">footprint</span>
     <span class="k">if</span> <span class="n">foot</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>               <span class="c1"># None when no particle reached the grid</span>
         <span class="n">compare</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">rid</span><span class="p">,</span> <span class="s2">"modeled"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">enhancement</span><span class="p">(</span><span class="n">flux</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
 </pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">track.merge(compare[&quot;modeled&quot;],</span> <span class="pre">on=&quot;receptor&quot;)</span></code> instead gives each
-measurement the modeled value of its receptor. When a simulation fails or a
+<p><code class="docutils literal notranslate"><span class="pre">track.merge(compare[&quot;modeled&quot;],</span> <span class="pre">on=&quot;release&quot;)</span></code> instead gives each
+measurement the modeled value of its release. When a simulation fails or a
 footprint looks wrong, see <a class="reference internal" href="checking.html"><span class="doc">Checking A Run</span></a>.</p>
 </section>
 </section>
@@ -666,12 +672,12 @@ footprint looks wrong, see <a class="reference internal" href="checking.html"><s
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="receptors.html"
+       href="releases.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Receptors</p>
+        <p class="prev-next-title">Releases (receptors)</p>
       </div>
     </a>
     <a class="right-next"
@@ -702,7 +708,7 @@ footprint looks wrong, see <a class="reference internal" href="checking.html"><s
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#from-a-track-to-receptors">From a track to receptors</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#from-a-track-to-releases">From a track to releases</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#choosing-the-groups">Choosing the groups</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#altitudes">Altitudes</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#in-a-project">In a project</a></li>

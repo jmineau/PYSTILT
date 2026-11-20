@@ -1,0 +1,5 @@
+runtraj.output.Output.keep\_workdir
+===================================
+
+.. currentmodule:: runtraj.output
+.. automethod:: Output.keep_workdir

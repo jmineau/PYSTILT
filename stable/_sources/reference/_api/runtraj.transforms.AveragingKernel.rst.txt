@@ -1,0 +1,32 @@
+﻿runtraj.transforms.AveragingKernel
+==================================
+
+.. currentmodule:: runtraj.transforms
+
+
+
+
+
+
+.. class-signature:: runtraj.transforms.AveragingKernel
+
+
+.. class-parameters:: runtraj.transforms.AveragingKernel
+
+
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~AveragingKernel.apply
+   ~AveragingKernel.check
+   ~AveragingKernel.kernel
+   ~AveragingKernel.table_releases
+
+
+

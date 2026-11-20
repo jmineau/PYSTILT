@@ -1,0 +1,46 @@
+﻿stilt.footprint.FootprintAccessor
+=================================
+
+.. currentmodule:: stilt.footprint
+
+
+
+
+
+
+.. class-signature:: stilt.footprint.FootprintAccessor
+
+
+.. class-parameters:: stilt.footprint.FootprintAccessor
+
+
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+   :nosignatures:
+
+   ~FootprintAccessor.config
+   ~FootprintAccessor.geometry_hash
+   ~FootprintAccessor.grid
+   ~FootprintAccessor.name
+   ~FootprintAccessor.plot
+   ~FootprintAccessor.release
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~FootprintAccessor.aggregate
+   ~FootprintAccessor.enhancement
+   ~FootprintAccessor.to_netcdf
+   ~FootprintAccessor.to_paris
+
+
+

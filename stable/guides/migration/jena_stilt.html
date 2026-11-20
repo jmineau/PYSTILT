@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Coming From Jena STILT &#8212; PYSTILT 0.1.0a29</title>
+    <title>Coming From Jena STILT &#8212; PYSTILT 0.1.0a30</title>
   
   
   
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=947601de"></script>
+    <script src="../../_static/documentation_options.js?v=7752668c"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a29';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a30';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -61,16 +61,22 @@
     <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="API Reference" href="../../reference/index.html" />
     <link rel="prev" title="Coming From stiltctl" href="stiltctl.html" />
+  
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29" />
+  <meta name="docsearch:version" content="0.1.0a30" />
   
     
     <script src="../../_static/searchtools.js"></script>
     <script src="../../_static/language_data.js"></script>
     <script src="../../searchindex.js"></script>
   
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="PYSTILT">
+  <meta property="og:title" content="Coming From Jena STILT">
+  <meta property="og:description" content="A Python implementation of the STILT Lagrangian atmospheric transport model.">
+
   </head>
   <body data-default-mode="">
   
@@ -135,7 +141,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a29</p>
+    <p class="title logo__title">PYSTILT</p>
   
 </a></div>
     
@@ -411,7 +417,7 @@
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Setting up a project</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../receptors.html">Receptors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../releases.html">Releases (receptors)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../tracks.html">Mobile Measurements</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../meteorology.html">Meteorology</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../projects.html">Projects And Variants</a></li>
@@ -545,7 +551,7 @@ cells it covers.</p></td>
 whose width grows with the spread of the particles, as in STILT-R
 (<code class="docutils literal notranslate"><span class="pre">smooth_factor</span></code>).</p></td>
 </tr>
-<tr class="row-odd"><td><p>Near the receptor</p></td>
+<tr class="row-odd"><td><p>Near the release</p></td>
 <td><p>No correction.</p></td>
 <td><p>The near-field correction of <code class="docutils literal notranslate"><span class="pre">foot</span></code> (<code class="docutils literal notranslate"><span class="pre">hnf_plume</span></code>), as in
 STILT-R.</p></td>
@@ -576,7 +582,8 @@ check.</p></td>
 </tr>
 <tr class="row-even"><td><p>Defaults</p></td>
 <td><p>240 hours and 250 particles.</p></td>
-<td><p>24 hours and 200 particles.</p></td>
+<td><p>None for the hours: a config must give <code class="docutils literal notranslate"><span class="pre">n_hours</span></code>. 1000 particles in
+a new project’s config (STILT-R’s value), 2500 left out (HYSPLIT’s).</p></td>
 </tr>
 <tr class="row-odd"><td><p>Meteorology</p></td>
 <td><p>ECMWF short-term forecasts every 3 hours at about 35 km, in ARL
@@ -592,21 +599,27 @@ format.</p></td>
 <h2>The settings that come closest<a class="headerlink" href="#the-settings-that-come-closest" title="Link to this heading">#</a></h2>
 <p>Give the run length and particle count of your Jena runs, turn off the
 near-field correction, and use the same grid:</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">n_hours</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">-240</span>
-<span class="nt">numpar</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">250</span>
-<span class="nt">hnf_plume</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
-<span class="nt">grid</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">xmin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">-15.0</span><span class="w">      </span><span class="c1"># lon_ll</span>
-<span class="w">  </span><span class="nt">xmax</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">35.0</span><span class="w">       </span><span class="c1"># lon_ll + numpix_x * lon_res</span>
-<span class="w">  </span><span class="nt">ymin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">33.0</span><span class="w">       </span><span class="c1"># lat_ll</span>
-<span class="w">  </span><span class="nt">ymax</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">72.0</span><span class="w">       </span><span class="c1"># lat_ll + numpix_y * lat_res</span>
-<span class="w">  </span><span class="nt">xres</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.2</span><span class="w">        </span><span class="c1"># lon_res</span>
-<span class="w">  </span><span class="nt">yres</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.1</span><span class="w">        </span><span class="c1"># lat_res</span>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">models</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">hysplit</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">n_hours</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">-240</span>
+<span class="w">    </span><span class="nt">numpar</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">250</span>
+
+<span class="nt">stages</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">footprint</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">class</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">stilt.footprint.FootprintStage</span>
+<span class="w">    </span><span class="nt">hnf_plume</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+<span class="w">    </span><span class="nt">grid</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">xmin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">-15.0</span><span class="w">      </span><span class="c1"># lon_ll</span>
+<span class="w">      </span><span class="nt">xmax</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">35.0</span><span class="w">       </span><span class="c1"># lon_ll + numpix_x * lon_res</span>
+<span class="w">      </span><span class="nt">ymin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">33.0</span><span class="w">       </span><span class="c1"># lat_ll</span>
+<span class="w">      </span><span class="nt">ymax</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">72.0</span><span class="w">       </span><span class="c1"># lat_ll + numpix_y * lat_res</span>
+<span class="w">      </span><span class="nt">xres</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.2</span><span class="w">        </span><span class="c1"># lon_res</span>
+<span class="w">      </span><span class="nt">yres</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.1</span><span class="w">        </span><span class="c1"># lat_res</span>
 </pre></div>
 </div>
 <p>The coarsening grids, the <code class="docutils literal notranslate"><span class="pre">dmass</span></code> weighting, and the western-edge rule
 have no PYSTILT setting. Footprints from the two will not match cell by
-cell, most of all far from the receptor, where Jena STILT’s grids are
+cell, most of all far from the release, where Jena STILT’s grids are
 coarsest. Compare totals over regions (<a class="reference internal" href="../aggregation.html"><span class="doc">Summing Footprints: Areas And The Jacobian</span></a>), or
 the modeled mole fractions, rather than single cells.</p>
 </section>

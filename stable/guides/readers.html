@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Reading Retrieval Products &#8212; PYSTILT 0.1.0a29</title>
+    <title>Reading Retrieval Products &#8212; PYSTILT 0.1.0a30</title>
   
   
   
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=947601de"></script>
+    <script src="../_static/documentation_options.js?v=7752668c"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a29';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a30';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -61,16 +61,22 @@
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Slant Columns" href="slant_columns.html" />
     <link rel="prev" title="Trajectory-Style Analyses" href="trajectory_analyses.html" />
+  
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29" />
+  <meta name="docsearch:version" content="0.1.0a30" />
   
     
     <script src="../_static/searchtools.js"></script>
     <script src="../_static/language_data.js"></script>
     <script src="../searchindex.js"></script>
   
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="PYSTILT">
+  <meta property="og:title" content="Reading Retrieval Products">
+  <meta property="og:description" content="A Python implementation of the STILT Lagrangian atmospheric transport model.">
+
   </head>
   <body data-default-mode="">
   
@@ -135,7 +141,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a29</p>
+    <p class="title logo__title">PYSTILT</p>
   
 </a></div>
     
@@ -411,7 +417,7 @@
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Setting up a project</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="receptors.html">Receptors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="releases.html">Releases (receptors)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tracks.html">Mobile Measurements</a></li>
 <li class="toctree-l1"><a class="reference internal" href="meteorology.html">Meteorology</a></li>
 <li class="toctree-l1"><a class="reference internal" href="projects.html">Projects And Variants</a></li>
@@ -698,7 +704,7 @@ is the convention <a class="reference internal" href="../reference/_api/stilt.ob
 <td><p>The averaging kernel and the pressures it is given at, one array per
 row. For a layer product (TROPOMI) the pressures are the layer
 midpoints. Pass both to
-<a class="reference internal" href="../reference/_api/stilt.transforms.averaging_kernel_table.html#stilt.transforms.averaging_kernel_table" title="stilt.transforms.averaging_kernel_table"><code class="xref py py-func docutils literal notranslate"><span class="pre">averaging_kernel_table()</span></code></a> and set
+<a class="reference internal" href="../reference/_api/runtraj.transforms.averaging_kernel_table.html#runtraj.transforms.averaging_kernel_table" title="runtraj.transforms.averaging_kernel_table"><code class="xref py py-func docutils literal notranslate"><span class="pre">averaging_kernel_table()</span></code></a> and set
 <code class="docutils literal notranslate"><span class="pre">coordinate:</span> <span class="pre">pres</span></code> on the <code class="docutils literal notranslate"><span class="pre">averaging_kernel</span></code> transform.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">pressure_levels</span></code></p></td>
@@ -755,27 +761,28 @@ give it on the kernel’s levels, GGG on <code class="docutils literal notransla
 adds <code class="docutils literal notranslate"><span class="pre">ak_extrapolated</span></code>. It is true where the spectrum’s slant xgas fell
 outside GGG’s kernel table.</p>
 </section>
-<section id="from-a-file-to-receptors">
-<h2>From a file to receptors<a class="headerlink" href="#from-a-file-to-receptors" title="Link to this heading">#</a></h2>
-<p><a class="reference internal" href="../reference/_api/stilt.observations.receptors_from_soundings.html#stilt.observations.receptors_from_soundings" title="stilt.observations.receptors_from_soundings"><code class="xref py py-func docutils literal notranslate"><span class="pre">receptors_from_soundings()</span></code></a> makes a receptor for
+<section id="from-a-file-to-releases">
+<h2>From a file to releases<a class="headerlink" href="#from-a-file-to-releases" title="Link to this heading">#</a></h2>
+<p><a class="reference internal" href="../reference/_api/stilt.observations.releases_from_soundings.html#stilt.observations.releases_from_soundings" title="stilt.observations.releases_from_soundings"><code class="xref py py-func docutils literal notranslate"><span class="pre">releases_from_soundings()</span></code></a> makes a release for
 each sounding and the table of their averaging kernels. Here each TROPOMI
-sounding becomes a slant receptor on the retrieval’s own levels, up to
+sounding becomes a slant release on the retrieval’s own levels, up to
 3 km above the surface:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.observations</span><span class="w"> </span><span class="kn">import</span> <span class="n">read_tropomi_ch4</span><span class="p">,</span> <span class="n">receptors_from_soundings</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.observations</span><span class="w"> </span><span class="kn">import</span> <span class="n">read_tropomi_ch4</span><span class="p">,</span> <span class="n">releases_from_soundings</span>
 
 <span class="n">project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">"./xch4"</span><span class="p">)</span>      <span class="c1"># made with stilt init or Project.init</span>
 
 <span class="n">df</span> <span class="o">=</span> <span class="n">read_tropomi_ch4</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">lon_range</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mf">113.5</span><span class="p">,</span> <span class="o">-</span><span class="mf">110.5</span><span class="p">),</span> <span class="n">lat_range</span><span class="o">=</span><span class="p">(</span><span class="mf">39.5</span><span class="p">,</span> <span class="mf">42.0</span><span class="p">))</span>
-<span class="n">receptors</span><span class="p">,</span> <span class="n">kernels</span> <span class="o">=</span> <span class="n">receptors_from_soundings</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">good</span><span class="p">],</span> <span class="s2">"slant"</span><span class="p">,</span> <span class="n">top</span><span class="o">=</span><span class="mi">3000</span><span class="p">)</span>
-<span class="n">project</span><span class="o">.</span><span class="n">add_receptors</span><span class="p">(</span><span class="n">receptors</span><span class="p">)</span>
+<span class="n">releases</span><span class="p">,</span> <span class="n">kernels</span> <span class="o">=</span> <span class="n">releases_from_soundings</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">good</span><span class="p">],</span> <span class="s2">"slant"</span><span class="p">,</span> <span class="n">top</span><span class="o">=</span><span class="mi">3000</span><span class="p">)</span>
+<span class="n">project</span><span class="o">.</span><span class="n">add_releases</span><span class="p">(</span><span class="n">releases</span><span class="p">)</span>
 <span class="n">project</span><span class="o">.</span><span class="n">add_table</span><span class="p">(</span><span class="s2">"kernels"</span><span class="p">,</span> <span class="n">kernels</span><span class="p">)</span>    <span class="c1"># tables/kernels.parquet</span>
 <span class="n">project</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 </pre></div>
 </div>
-<p>Each receptor keeps its <code class="docutils literal notranslate"><span class="pre">sounding_id</span></code> as a column of <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>,
-so the results join back to the soundings. The footprint config lists two
-transforms, the first reading the kernels by the table’s name:</p>
+<p>Each release keeps its <code class="docutils literal notranslate"><span class="pre">sounding_id</span></code> as a column of <code class="docutils literal notranslate"><span class="pre">releases.csv</span></code>,
+so the results join back to the soundings. The footprint’s block under
+<code class="docutils literal notranslate"><span class="pre">stages:</span></code> lists two transforms, the first reading the kernels by the
+table’s name:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">transforms</span><span class="p">:</span>
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">averaging_kernel</span>
 <span class="w">    </span><span class="nt">table</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">kernels</span>
@@ -785,10 +792,10 @@ transforms, the first reading the kernels by the table’s name:</p>
 </div>
 <p>A few products need a change to this recipe:</p>
 <ul class="simple">
-<li><p>For a nadir column, pass <code class="docutils literal notranslate"><span class="pre">&quot;column&quot;</span></code>: a <a class="reference internal" href="../reference/_api/stilt.ColumnReceptor.html#stilt.ColumnReceptor" title="stilt.ColumnReceptor"><code class="xref py py-class docutils literal notranslate"><span class="pre">ColumnReceptor</span></code></a>
+<li><p>For a nadir column, pass <code class="docutils literal notranslate"><span class="pre">&quot;column&quot;</span></code>: a <a class="reference internal" href="../reference/_api/stilt.ColumnRelease.html#stilt.ColumnRelease" title="stilt.ColumnRelease"><code class="xref py py-class docutils literal notranslate"><span class="pre">ColumnRelease</span></code></a>
 from the ground up to <code class="docutils literal notranslate"><span class="pre">top</span></code>.</p></li>
 <li><p>OCO-2 files give pressures but no heights. Add <code class="docutils literal notranslate"><span class="pre">altitude_levels</span></code> from
-<a class="reference internal" href="../reference/_api/stilt.observations.pressure_altitudes.html#stilt.observations.pressure_altitudes" title="stilt.observations.pressure_altitudes"><code class="xref py py-func docutils literal notranslate"><span class="pre">pressure_altitudes()</span></code></a> before a slant receptor.</p></li>
+<a class="reference internal" href="../reference/_api/stilt.observations.pressure_altitudes.html#stilt.observations.pressure_altitudes" title="stilt.observations.pressure_altitudes"><code class="xref py py-func docutils literal notranslate"><span class="pre">pressure_altitudes()</span></code></a> before a slant release.</p></li>
 <li><p>A TCCON prior grid starts at sea level, below the station. Drop the
 levels below <code class="docutils literal notranslate"><span class="pre">surface_altitude</span></code> and put <code class="docutils literal notranslate"><span class="pre">surface_altitude</span></code> first, so
 the path starts at the instrument.</p></li>
@@ -864,7 +871,7 @@ against.</p>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-columns">The columns</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#from-a-file-to-receptors">From a file to receptors</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#from-a-file-to-releases">From a file to releases</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#adding-an-instrument">Adding an instrument</a></li>
 </ul>
   </nav></div>

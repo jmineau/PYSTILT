@@ -1,0 +1,5 @@
+runtraj.output.Output.hashes
+============================
+
+.. currentmodule:: runtraj.output
+.. automethod:: Output.hashes

@@ -1,0 +1,6 @@
+runtraj.models.hysplit.HysplitConfig.UNRECORDED
+===============================================
+
+.. currentmodule:: runtraj.models.hysplit
+
+.. autoattribute:: HysplitConfig.UNRECORDED

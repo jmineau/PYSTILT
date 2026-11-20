@@ -1,0 +1,6 @@
+﻿runtraj.sampling.nearest\_cell
+==============================
+
+.. currentmodule:: runtraj.sampling
+
+.. autofunction:: nearest_cell

@@ -1,0 +1,6 @@
+﻿runtraj.models.run\_model\_many
+===============================
+
+.. currentmodule:: runtraj.models
+
+.. autofunction:: run_model_many

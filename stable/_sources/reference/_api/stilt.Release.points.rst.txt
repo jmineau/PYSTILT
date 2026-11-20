@@ -1,0 +1,6 @@
+stilt.Release.points
+====================
+
+.. currentmodule:: stilt
+
+.. autoproperty:: Release.points

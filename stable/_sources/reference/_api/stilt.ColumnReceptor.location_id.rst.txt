@@ -1,6 +1,0 @@
-stilt.ColumnReceptor.location\_id
-=================================
-
-.. currentmodule:: stilt
-
-.. autoproperty:: ColumnReceptor.location_id

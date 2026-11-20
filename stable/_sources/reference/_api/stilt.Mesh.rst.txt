@@ -6,6 +6,8 @@
 
 
 
+
+
 .. class-signature:: stilt.Mesh
 
 
@@ -21,6 +23,7 @@ Attributes
 
 .. autosummary::
    :toctree:
+   :nosignatures:
 
    ~Mesh.bounds
    ~Mesh.hash

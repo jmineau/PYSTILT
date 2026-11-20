@@ -92,7 +92,7 @@ Many footprints: the Jacobian
 -----------------------------
 
 An inversion needs every footprint summed onto the flux cells, one row
-per receptor: the Jacobian. :meth:`~stilt.Project.jacobian` does this for
+per release: the Jacobian. :meth:`~stilt.Project.jacobian` does this for
 a selection of simulations (:doc:`outputs`), all of one variant:
 
 .. code-block:: python
@@ -104,24 +104,24 @@ a selection of simulations (:doc:`outputs`), all of one variant:
    )
 
    H = project.jacobian(july, counties, bins)
-   H.to_xarray()             # receptor, time, cell
-   H.to_frame(sparse=True)   # receptors by (time, cell), pandas sparse columns
+   H.to_xarray()             # release, time, cell
+   H.to_frame(sparse=True)   # releases by (time, cell), pandas sparse columns
 
-It reads the footprints one receptor at a time, in several threads, and
+It reads the footprints one release at a time, in several threads, and
 returns a sparse matrix, so its size does not depend on the grid and
 memory stays at a few footprints whatever the selection's size.
 ``H.to_xarray()`` holds a sparse array from the optional ``sparse`` package
-(``pip install "pystilt[sparse]"``), or a NumPy array with ``dense=True``. Receptors whose footprint is empty are
+(``pip install "pystilt[sparse]"``), or a NumPy array with ``dense=True``. Releases whose footprint is empty are
 in ``H.empty``, and those not run yet in ``H.missing``.
 
 .. _jacobian-rows:
 
-``H`` has a row only for each selected receptor with a non-empty footprint,
+``H`` has a row only for each selected release with a non-empty footprint,
 so it can have fewer rows than the selection. Build the observations ``y``,
 and their errors, in the rows of ``H``, not of the selection: with
-``observed`` a Series of observations indexed by receptor id,
-``y = observed.loc[H.receptors]``. Matching them by position instead
-shifts every observation after the first dropped receptor onto the wrong
+``observed`` a Series of observations indexed by release id,
+``y = observed.loc[H.releases]``. Matching them by position instead
+shifts every observation after the first dropped release onto the wrong
 row of ``H``.
 
 The columns are the time bin and then the target's cells, as named levels:
@@ -135,7 +135,7 @@ One Jacobian per realization
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 A variant with a grid and ``realizations`` makes a footprint for each
-receptor and each realization, ``0`` to ``N - 1``
+release and each realization, ``0`` to ``N - 1``
 (:doc:`transport_error`). :meth:`~stilt.Project.jacobian` makes a Jacobian
 from one realization, so select each realization by the ``realization``
 column of ``project.simulations`` and loop:
@@ -149,7 +149,7 @@ column of ``project.simulations`` and loop:
    }
 
 ``H[k]`` is the Jacobian of realization ``k``, as above, with its own
-``receptors``, ``empty`` and ``missing``: a receptor that has not run for
+``releases``, ``empty`` and ``missing``: a release that has not run for
 one realization is missing from that matrix alone. The dict holds every
 matrix at once. When each is large, loop with ``for`` instead and keep
 only what you compute from each one, such as a posterior.
@@ -158,9 +158,9 @@ Footprints times a flux
 -----------------------
 
 ``foot.stilt.enhancement(flux)`` multiplies a footprint by a flux and
-gives the enhancement, the rise in concentration at the receptor that the
+gives the enhancement, the rise in concentration at the release that the
 flux explains, for each hour of the footprint. Sum it over the hours for
-the receptor's total. The flux is an :class:`xarray.DataArray` in
+the release's total. The flux is an :class:`xarray.DataArray` in
 µmol m⁻² s⁻¹ with ``lat`` and ``lon`` dimensions.
 :doc:`../tutorials/flux_inversion` uses it step by step. Two things decide
 whether the numbers are right: which flux step each footprint hour takes,
@@ -191,9 +191,9 @@ the layers (``tres``) no longer than the flux's steps:
 - **Layers as long as the steps or shorter pass**, and so does a static
   flux with one time. A layer that crosses a step boundary still takes only
   the step where it starts.
-- **Layers are counted back from the receptor time**, not from the clock.
-  Receptors on the hour line up with hourly or longer flux steps. A
-  receptor at 18:30 does not: its hourly layers run from :30 to :30, so
+- **Layers are counted back from the release time**, not from the clock.
+  Releases on the hour line up with hourly or longer flux steps. A
+  release at 18:30 does not: its hourly layers run from :30 to :30, so
   each takes the flux of the step that starts half an hour before it.
 
 The steps of a flux with CF time bounds are the bounds; without them, the

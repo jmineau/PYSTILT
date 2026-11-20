@@ -1,6 +1,0 @@
-stilt.config.Variant.footprint\_hash
-====================================
-
-.. currentmodule:: stilt.config
-
-.. autoproperty:: Variant.footprint_hash

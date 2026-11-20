@@ -1,6 +1,0 @@
-stilt.transport.hysplit.HysplitConfig.realizations
-==================================================
-
-.. currentmodule:: stilt.transport.hysplit
-
-.. automethod:: HysplitConfig.realizations

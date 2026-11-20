@@ -6,6 +6,8 @@
 
 
 
+
+
 .. class-signature:: stilt.Simulation
 
 
@@ -18,21 +20,12 @@ Attributes
 
 .. autosummary::
    :toctree:
+   :nosignatures:
 
-   ~Simulation.failure
    ~Simulation.footprint
    ~Simulation.footprint_path
    ~Simulation.has_footprint
-   ~Simulation.has_particles
-   ~Simulation.id
-   ~Simulation.is_complete
-   ~Simulation.kept_workdir
-   ~Simulation.log
-   ~Simulation.log_path
-   ~Simulation.particles
-   ~Simulation.particles_path
    ~Simulation.plot
-   ~Simulation.transport
 
 
 

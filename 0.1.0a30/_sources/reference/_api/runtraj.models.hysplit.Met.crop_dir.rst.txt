@@ -1,0 +1,6 @@
+runtraj.models.hysplit.Met.crop\_dir
+====================================
+
+.. currentmodule:: runtraj.models.hysplit
+
+.. autoproperty:: Met.crop_dir

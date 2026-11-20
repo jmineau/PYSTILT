@@ -1,0 +1,6 @@
+﻿runtraj.models.hysplit.data\_tables
+===================================
+
+.. currentmodule:: runtraj.models.hysplit
+
+.. autofunction:: data_tables

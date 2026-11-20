@@ -2,5 +2,4 @@ stilt.Project.simulation
 ========================
 
 .. currentmodule:: stilt
-
 .. automethod:: Project.simulation

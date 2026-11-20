@@ -28,7 +28,7 @@ Extras add optional features. List them in the brackets, for example
    * - Extra
      - Adds
    * - ``visualization``
-     - Plotting (``.stilt.plot.map()`` on footprints and particles, ``.plot.map()`` on receptors), with coastlines and state borders from cartopy.
+     - Plotting (``.stilt.plot.map()`` on footprints and particles, ``.plot.map()`` on releases), with coastlines and state borders from cartopy.
    * - ``geometry``
      - Adding footprints up over shapefiles, counties, or H3 hexagons, with exactextract for fast overlaps.
    * - ``download``
@@ -44,22 +44,35 @@ An output directory on an object store needs the fsspec package for it,
 such as ``s3fs`` for ``s3://`` or ``gcsfs`` for ``gs://``
 (:doc:`../guides/projects`).
 
-HYSPLIT is included
--------------------
+Get HYSPLIT
+-----------
 
-PYSTILT runs NOAA's HYSPLIT program to move particles. pip installs a copy
-of HYSPLIT with PYSTILT on:
+PYSTILT runs NOAA's HYSPLIT program, ``hycs_std``, but does not include it.
+Download HYSPLIT from
+`NOAA's Air Resources Laboratory <https://www.ready.noaa.gov/HYSPLIT.php>`_,
+which asks you to accept the
+`HYSPLIT terms of use <https://www.ready.noaa.gov/HYSPLIT_agreement.php>`_
+first. Unpack it, and point ``directory`` at the folder it makes, in a
+project's ``config.yaml``:
 
-- Linux (x86_64)
-- macOS 11 or newer (Intel, x86_64)
+.. code-block:: yaml
 
-On any other platform pip installs PYSTILT without HYSPLIT. This includes
-Apple Silicon Macs with an arm64 Python. PYSTILT still imports and reads
-existing results, but a run stops with an error that no bundled HYSPLIT binary
-exists for the machine.
+   models:
+     hysplit:
+       directory: /path/to/hysplit
 
-There, or anywhere you want another HYSPLIT version or your own land-use
-tables, compile ``hycs_std`` and set ``exe_dir`` in ``config.yaml``
-(:doc:`../guides/hysplit_build`).
+PYSTILT runs ``exec/hycs_std`` under that folder and reads HYSPLIT's data
+tables from its ``bdyfiles/``. Without ``directory`` it runs the first
+``hycs_std`` on ``PATH``, which a cluster's HYSPLIT module sets when you
+load it.
+
+.. tip::
+
+   Make sure ``hycs_std`` has permission to run:
+   ``chmod +x exec/hycs_std``.
+
+``stilt check`` says when a project can find no ``hycs_std``, or one that
+cannot run. :doc:`../guides/hysplit_build` has more on choosing a download
+and on using more than one build.
 
 Next: :doc:`quickstart`.

@@ -1,0 +1,6 @@
+﻿runtraj.transforms.averaging\_kernel\_table
+===========================================
+
+.. currentmodule:: runtraj.transforms
+
+.. autofunction:: averaging_kernel_table

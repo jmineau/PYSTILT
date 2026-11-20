@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Glossary &#8212; PYSTILT 0.1.0a29</title>
+    <title>Glossary &#8212; PYSTILT 0.1.0a30</title>
   
   
   
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=947601de"></script>
+    <script src="../_static/documentation_options.js?v=7752668c"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a29';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a30';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -61,16 +61,22 @@
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Tutorials" href="../tutorials/index.html" />
     <link rel="prev" title="Your First Footprint" href="quickstart.html" />
+  
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29" />
+  <meta name="docsearch:version" content="0.1.0a30" />
   
     
     <script src="../_static/searchtools.js"></script>
     <script src="../_static/language_data.js"></script>
     <script src="../searchindex.js"></script>
   
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="PYSTILT">
+  <meta property="og:title" content="Glossary">
+  <meta property="og:description" content="A Python implementation of the STILT Lagrangian atmospheric transport model.">
+
   </head>
   <body data-default-mode="">
   
@@ -135,7 +141,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a29</p>
+    <p class="title logo__title">PYSTILT</p>
   
 </a></div>
     
@@ -477,7 +483,7 @@
   <section id="glossary">
 <h1>Glossary<a class="headerlink" href="#glossary" title="Link to this heading">#</a></h1>
 <dl class="simple glossary">
-<dt id="term-AGL">AGL<a class="headerlink" href="#term-AGL" title="Link to this term">#</a></dt><dd><p>Above ground level. Receptor altitudes are AGL unless you set
+<dt id="term-AGL">AGL<a class="headerlink" href="#term-AGL" title="Link to this term">#</a></dt><dd><p>Above ground level. Release altitudes are AGL unless you set
 <code class="docutils literal notranslate"><span class="pre">altitude_ref=&quot;msl&quot;</span></code>.</p>
 </dd>
 <dt id="term-ARL">ARL<a class="headerlink" href="#term-ARL" title="Link to this term">#</a></dt><dd><p>The file format for meteorology used by HYSPLIT and STILT, named after
@@ -489,14 +495,16 @@ Applying it weights particles released at each height accordingly.</p>
 </dd>
 <dt id="term-backend">backend<a class="headerlink" href="#term-backend" title="Link to this term">#</a></dt><dd><p>Where the simulations run. The choices are <code class="docutils literal notranslate"><span class="pre">local</span></code> (your computer)
 and <code class="docutils literal notranslate"><span class="pre">slurm</span></code> (an HPC cluster). Set it in the <code class="docutils literal notranslate"><span class="pre">execution</span></code> section
-of <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>. See
+of <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>, with that backend’s settings in the block of its
+name. See
 <a class="reference internal" href="../guides/running.html"><span class="doc">Running</span></a>.</p>
 </dd>
 <dt id="term-compute-root">compute root<a class="headerlink" href="#term-compute-root" title="Link to this term">#</a></dt><dd><p>The folder the workdirs are made in, usually fast local disk: the
-<code class="docutils literal notranslate"><span class="pre">--compute-root</span></code> option, else <code class="docutils literal notranslate"><span class="pre">PYSTILT_COMPUTE_ROOT</span></code>, else
+<code class="docutils literal notranslate"><span class="pre">--compute-root</span></code> option, else <code class="docutils literal notranslate"><span class="pre">RUNTRAJ_COMPUTE_ROOT</span></code>, else
 <code class="docutils literal notranslate"><span class="pre">$TMPDIR/pystilt/&lt;project&gt;</span></code>. Projects can share one.</p>
 </dd>
-<dt id="term-defaults">defaults<a class="headerlink" href="#term-defaults" title="Link to this term">#</a></dt><dd><p>The settings written at the top level of <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>. Every
+<dt id="term-defaults">defaults<a class="headerlink" href="#term-defaults" title="Link to this term">#</a></dt><dd><p>The settings written in the blocks of <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>: the transport
+model’s under <code class="docutils literal notranslate"><span class="pre">models</span></code> and the footprint’s under <code class="docutils literal notranslate"><span class="pre">stages</span></code>. Every
 <a class="reference internal" href="#term-variant"><span class="xref std std-term">variant</span></a> starts from them and overrides what it changes. A
 variant with no overrides runs them as they are.</p>
 </dd>
@@ -506,13 +514,13 @@ upwind. PYSTILT writes a footprint file with no cells, marked empty,
 and counts the simulation as complete.</p>
 </dd>
 <dt id="term-footprint">footprint<a class="headerlink" href="#term-footprint" title="Link to this term">#</a></dt><dd><p>A map of how much each surface grid cell influenced a measurement.
-Each value is the concentration change at the receptor per unit of
+Each value is the concentration change at the release (receptor) per unit of
 surface emission in that cell, in ppm per (µmol m⁻² s⁻¹). Multiply by
 an emissions map and sum to get a modeled concentration increase. In
 Python it is an <a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.DataArray.html#xarray.DataArray" title="(in xarray v2026.9.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">xarray.DataArray</span></code></a>; on disk, a Parquet file of
 the cells the particles reached.</p>
 </dd>
-<dt id="term-hyper-near-field">hyper-near field<a class="headerlink" href="#term-hyper-near-field" title="Link to this term">#</a></dt><dd><p>The area right around the receptor, where the particle cloud hasn’t
+<dt id="term-hyper-near-field">hyper-near field<a class="headerlink" href="#term-hyper-near-field" title="Link to this term">#</a></dt><dd><p>The area right around the release, where the particle cloud hasn’t
 yet spread out enough to represent mixing well. The <code class="docutils literal notranslate"><span class="pre">hnf_plume</span></code>
 setting (on by default) corrects the footprint there with a Gaussian
 plume model.</p>
@@ -522,7 +530,7 @@ to move particles and includes a copy for Linux and macOS (Intel).</p>
 </dd>
 <dt id="term-met">met<a class="headerlink" href="#term-met" title="Link to this term">#</a></dt><dd><p>One named set of meteorology files in your settings, such as
 <code class="docutils literal notranslate"><span class="pre">hrrr</span></code>, written under <code class="docutils literal notranslate"><span class="pre">mets</span></code> in <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>. Each
-<a class="reference internal" href="#term-variant"><span class="xref std std-term">variant</span></a> names the met it runs on, so the same receptor can run
+<a class="reference internal" href="#term-variant"><span class="xref std std-term">variant</span></a> names the met it runs on, so the same release can run
 with several mets side by side.</p>
 </dd>
 <dt id="term-meteorology">meteorology<a class="headerlink" href="#term-meteorology" title="Link to this term">#</a></dt><dd><p>Gridded weather-model fields (winds, temperature, turbulence, boundary
@@ -541,11 +549,12 @@ smoother footprints and take longer. 200 to 1000 is typical.</p>
 <dt id="term-output-directory">output directory<a class="headerlink" href="#term-output-directory" title="Link to this term">#</a></dt><dd><p>Where a project’s results go, named by <code class="docutils literal notranslate"><span class="pre">output:</span></code> in <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>
 (<code class="docutils literal notranslate"><span class="pre">./output</span></code> by default, or a URL such as <code class="docutils literal notranslate"><span class="pre">s3://bucket/output</span></code>). It
 holds one <a class="reference internal" href="#term-settings-folder"><span class="xref std std-term">settings folder</span></a> per set of settings under
-<code class="docutils literal notranslate"><span class="pre">particles/</span></code>, <code class="docutils literal notranslate"><span class="pre">footprints/</span></code>, and <code class="docutils literal notranslate"><span class="pre">logs/</span></code>, and several projects
+<code class="docutils literal notranslate"><span class="pre">particles/</span></code>, <code class="docutils literal notranslate"><span class="pre">footprint/</span></code>, and <code class="docutils literal notranslate"><span class="pre">logs/</span></code>, and several projects
 can share it. See <a class="reference internal" href="../guides/projects.html"><span class="doc">Projects And Variants</span></a>.</p>
 </dd>
-<dt id="term-particle">particle<a class="headerlink" href="#term-particle" title="Link to this term">#</a></dt><dd><p>An imaginary parcel of air released at the receptor and moved backward
-in time by the winds, plus random turbulence. STILT releases many
+<dt id="term-particle">particle<a class="headerlink" href="#term-particle" title="Link to this term">#</a></dt><dd><p>An imaginary parcel of air that starts at a release and moves with the
+winds, plus random turbulence: backward in time in a backward run, the
+usual one, and forward in time in a forward run. STILT releases many
 (<a class="reference internal" href="#term-numpar"><span class="xref std std-term">numpar</span></a>) and treats them together as a sample of where the air
 could have come from.</p>
 </dd>
@@ -553,8 +562,8 @@ could have come from.</p>
 represent. HYSPLIT releases particles evenly in height, but air thins
 with height, so a particle high in the column stands for less air.</p>
 </dd>
-<dt id="term-project">project<a class="headerlink" href="#term-project" title="Link to this term">#</a></dt><dd><p>A folder holding your settings (<code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>), your receptors
-(<code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>), and any other inputs (<code class="docutils literal notranslate"><span class="pre">tables/</span></code>, such as
+<dt id="term-project">project<a class="headerlink" href="#term-project" title="Link to this term">#</a></dt><dd><p>A folder holding your settings (<code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>), your releases
+(<code class="docutils literal notranslate"><span class="pre">releases.csv</span></code>), and any other inputs (<code class="docutils literal notranslate"><span class="pre">tables/</span></code>, such as
 averaging kernels). The results go to the <a class="reference internal" href="#term-output-directory"><span class="xref std std-term">output directory</span></a> it
 names. See <a class="reference internal" href="../guides/projects.html"><span class="doc">Projects And Variants</span></a>.</p>
 </dd>
@@ -565,20 +574,23 @@ variant’s folder, a <code class="docutils literal notranslate"><span class="pr
 Realizations are used for transport-error ensembles
 (<a class="reference internal" href="../guides/transport_error.html"><span class="doc">Transport Error</span></a>).</p>
 </dd>
-<dt id="term-receptor">receptor<a class="headerlink" href="#term-receptor" title="Link to this term">#</a></dt><dd><p>Where and when a measurement was made, which is where STILT releases
-particles. A <a class="reference internal" href="../reference/_api/stilt.PointReceptor.html#stilt.PointReceptor" title="stilt.PointReceptor"><code class="xref py py-class docutils literal notranslate"><span class="pre">PointReceptor</span></code></a> is one point (a tower inlet),
-a <a class="reference internal" href="../reference/_api/stilt.ColumnReceptor.html#stilt.ColumnReceptor" title="stilt.ColumnReceptor"><code class="xref py py-class docutils literal notranslate"><span class="pre">ColumnReceptor</span></code></a> is a vertical column, and a
-<a class="reference internal" href="../reference/_api/stilt.MultiPointReceptor.html#stilt.MultiPointReceptor" title="stilt.MultiPointReceptor"><code class="xref py py-class docutils literal notranslate"><span class="pre">MultiPointReceptor</span></code></a> is a set of points, such as a
-slanted line of sight. See <a class="reference internal" href="../guides/receptors.html"><span class="doc">Receptors</span></a> and
+<dt id="term-release">release<a class="headerlink" href="#term-release" title="Link to this term">#</a></dt><dt id="term-receptor">receptor<a class="headerlink" href="#term-receptor" title="Link to this term">#</a></dt><dd><p>Where and when particles start, in either direction: at the receptor
+in a backward run, at the source in a forward run (see the
+<a class="reference internal" href="../guides/releases.html#release-source-receptor"><span class="std std-ref">diagram</span></a>). A release placed at a
+measurement and followed backward in time is what STILT calls a
+receptor, so PYSTILT writes <em>release (receptor)</em>. A
+<a class="reference internal" href="../reference/_api/stilt.PointRelease.html#stilt.PointRelease" title="stilt.PointRelease"><code class="xref py py-class docutils literal notranslate"><span class="pre">PointRelease</span></code></a> is one point (a tower inlet), a <a class="reference internal" href="../reference/_api/stilt.ColumnRelease.html#stilt.ColumnRelease" title="stilt.ColumnRelease"><code class="xref py py-class docutils literal notranslate"><span class="pre">ColumnRelease</span></code></a> is a vertical
+column, and a <a class="reference internal" href="../reference/_api/stilt.MultiPointRelease.html#stilt.MultiPointRelease" title="stilt.MultiPointRelease"><code class="xref py py-class docutils literal notranslate"><span class="pre">MultiPointRelease</span></code></a> is a set of points,
+such as a slanted line of sight. See <a class="reference internal" href="../guides/releases.html"><span class="doc">Releases (receptors)</span></a> and
 <a class="reference internal" href="../guides/slant_columns.html"><span class="doc">Slant Columns</span></a>.</p>
 </dd>
-<dt id="term-receptor-id">receptor id<a class="headerlink" href="#term-receptor-id" title="Link to this term">#</a></dt><dd><p>The name of a receptor and of its result files, such as
-<code class="docutils literal notranslate"><span class="pre">202307151800_-111.848_40.766_10</span></code>: the receptor time as
+<dt id="term-release-id">release id<a class="headerlink" href="#term-release-id" title="Link to this term">#</a></dt><dd><p>The name of a release and of its result files, such as
+<code class="docutils literal notranslate"><span class="pre">202307151800_-111.848_40.766_10</span></code>: the release time as
 <code class="docutils literal notranslate"><span class="pre">YYYYMMDDHHMM</span></code>, then the longitude, latitude, and altitude. Column
-receptors end in <code class="docutils literal notranslate"><span class="pre">X</span></code> and the bottom and top (<code class="docutils literal notranslate"><span class="pre">_X0-3000</span></code>) instead
-of an altitude. Multipoint receptors use <code class="docutils literal notranslate"><span class="pre">multi_</span></code> and a short hash
+releases end in <code class="docutils literal notranslate"><span class="pre">X</span></code> and the bottom and top (<code class="docutils literal notranslate"><span class="pre">_X0-3000</span></code>) instead
+of an altitude. Multipoint releases use <code class="docutils literal notranslate"><span class="pre">multi_</span></code> and a short hash
 instead of coordinates. Heights above mean sea level add <code class="docutils literal notranslate"><span class="pre">msl</span></code> at
-the end. A <a class="reference internal" href="#term-simulation"><span class="xref std std-term">simulation</span></a> is named by its receptor id and
+the end. A <a class="reference internal" href="#term-simulation"><span class="xref std std-term">simulation</span></a> is named by its release id and
 variant, <code class="docutils literal notranslate"><span class="pre">202307151800_-111.848_40.766_10/hrrr</span></code>, and a
 <a class="reference internal" href="#term-realization"><span class="xref std std-term">realization</span></a> adds its number.</p>
 </dd>
@@ -589,8 +601,8 @@ and a short code computed from the settings, such as
 never overwrites one, and projects with the same settings share a
 folder. <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span></code> lists them.</p>
 </dd>
-<dt id="term-simulation">simulation<a class="headerlink" href="#term-simulation" title="Link to this term">#</a></dt><dd><p>One receptor run under one <a class="reference internal" href="#term-variant"><span class="xref std std-term">variant</span></a>: one set of particles and
-at most one footprint. A project with 100 receptors and 3 variants has
+<dt id="term-simulation">simulation<a class="headerlink" href="#term-simulation" title="Link to this term">#</a></dt><dd><p>One release run under one <a class="reference internal" href="#term-variant"><span class="xref std std-term">variant</span></a>: one set of particles and
+at most one footprint. A project with 100 releases and 3 variants has
 300 simulations.</p>
 </dd>
 <dt id="term-trajectory">trajectory<a class="headerlink" href="#term-trajectory" title="Link to this term">#</a></dt><dd><p>The path of one particle through time. PYSTILT keeps every path of a
@@ -602,7 +614,7 @@ is calculated. Used for column measurements (<a class="reference internal" href=
 and <a class="reference internal" href="#term-pressure-weighting"><span class="xref std std-term">pressure weighting</span></a>) and for gases that decay in the
 atmosphere. See <a class="reference internal" href="../guides/transforms.html"><span class="doc">Particle Weighting (Transforms)</span></a>.</p>
 </dd>
-<dt id="term-variant">variant<a class="headerlink" href="#term-variant" title="Link to this term">#</a></dt><dd><p>A named set of settings that every receptor is run under. It is a
+<dt id="term-variant">variant<a class="headerlink" href="#term-variant" title="Link to this term">#</a></dt><dd><p>A named set of settings that every release is run under. It is a
 <a class="reference internal" href="#term-met"><span class="xref std std-term">met</span></a> plus any settings that differ from the <a class="reference internal" href="#term-defaults"><span class="xref std std-term">defaults</span></a> in
 <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>, such as a different <code class="docutils literal notranslate"><span class="pre">ziscale</span></code>, a wind-error run, or
 another footprint grid. See <a class="reference internal" href="../guides/projects.html"><span class="doc">Projects And Variants</span></a>.</p>

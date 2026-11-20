@@ -8,7 +8,9 @@ ARL met files, and returns every particle's position at every time step as
 a pandas table. For many starting times and places, and for the same runs
 under other settings, a project runs them all, on your computer or as a
 Slurm job array, and keeps the particles of each set of settings in a
-folder of its own.
+folder of its own. It runs the ``hycs_std`` you already have: set
+``directory`` to the HYSPLIT folder, or put the folder of ``hycs_std`` on ``PATH``
+(:doc:`../getting_started/installation`).
 
 .. ipython:: python
    :suppress:
@@ -21,8 +23,9 @@ HYSPLIT's words in PYSTILT
 --------------------------
 
 PYSTILT comes from STILT, which follows air backward from a measurement and
-calls the time and place its particles start from a *receptor*. For you, a
-receptor is the starting time and starting locations of ``CONTROL``:
+calls the time and place its particles start from a *receptor*. PYSTILT
+calls it a *release* (receptor), and for you it is the starting time and
+starting locations of ``CONTROL``:
 
 .. list-table::
    :header-rows: 1
@@ -31,13 +34,13 @@ receptor is the starting time and starting locations of ``CONTROL``:
    * - In HYSPLIT
      - In PYSTILT
    * - A starting time and one starting location
-     - A :class:`~stilt.PointReceptor`
+     - A :class:`~stilt.PointRelease`
    * - Several starting locations at one time
-     - A :class:`~stilt.MultiPointReceptor`
+     - A :class:`~stilt.MultiPointRelease`
    * - Two heights at one location, a line source
-     - A :class:`~stilt.ColumnReceptor`
+     - A :class:`~stilt.ColumnRelease`
    * - ``KMSL``, heights above ground or above sea level
-     - The receptor's ``altitude_ref``, ``"agl"`` or ``"msl"``
+     - The release's ``altitude_ref``, ``"agl"`` or ``"msl"``
    * - The settings of one ``CONTROL`` and ``SETUP.CFG``
      - A variant, a named set of settings
    * - The particle positions you read after a run
@@ -54,7 +57,7 @@ hour and are followed 6 hours forward:
 
    import stilt
 
-   start = stilt.PointReceptor(
+   start = stilt.PointRelease(
        time="2021-07-15 01:00", longitude=-111.85, latitude=40.77, altitude=500
    )
    cloud = stilt.run_trajectories(
@@ -119,15 +122,15 @@ So the mean of many particles is the center of a cloud that spreads as it
 goes, which is a different thing from a trajectory. For a trajectory, run one
 particle.
 For several trajectories from one time, use a
-:class:`~stilt.MultiPointReceptor` with ``numpar`` equal to its number of
+:class:`~stilt.MultiPointRelease` with ``numpar`` equal to its number of
 locations: HYSPLIT gives each location one particle.
 
 Many runs: a project
 --------------------
 
 A project runs every starting point under every variant, and runs again
-only what is missing. A ``config.yaml`` with no ``grid`` makes particles
-and no footprints. Here every start runs on HRRR with two vertical motion
+only what is missing. A ``config.yaml`` with no ``stages`` block makes
+particles and no footprints. Here every start runs on HRRR with two vertical motion
 options, each kept in its own folder:
 
 .. code-block:: yaml
@@ -135,15 +138,17 @@ options, each kept in its own folder:
    mets:
      hrrr: /data/arl/hrrr
 
+   models:
+     hysplit:
+       n_hours: 24
+       numpar: 1000
+       emisshrs: 1.0
+
    variants:
-     hrrr: {}                 # the settings below
+     hrrr: {}                 # the settings above
      hrrr-w6: {w_option: 6}   # the same runs with another vertical motion
 
-   n_hours: 24
-   numpar: 1000
-   emisshrs: 1.0
-
-The starting points go in ``receptors.csv``, one row each:
+The starting points go in ``releases.csv``, one row each:
 
 .. code-block:: text
 
@@ -168,10 +173,15 @@ For an ensemble of the same run with different turbulence, give a variant
 Where each ``CONTROL`` and ``SETUP.CFG`` line comes from
 --------------------------------------------------------
 
-Every ``SETUP.CFG`` entry that can change the particles is a setting of the
+Every ``SETUP.CFG`` entry but ``ICHEM`` and ``IDSP`` is a setting of the
 same name in lowercase, such as ``numpar``, ``kmixd`` or ``tlfrac``
-(:doc:`../reference/configuration` lists them). PYSTILT writes the rest
-itself:
+(:doc:`../reference/configuration` lists them). Each defaults to HYSPLIT's
+own value in STILT mode. A setting HYSPLIT decides only after reading the
+file (``capemin``, ``kblt``, ``kmixd``, ``krand``, ``vscales``) is left out
+unless you give it, so HYSPLIT chooses. ``stilt init`` writes STILT-R's
+values for a few of them into a new project's config
+(:doc:`migration/stilt_r`); delete those lines to run HYSPLIT's. PYSTILT
+writes the rest itself:
 
 .. list-table::
    :header-rows: 1
@@ -180,7 +190,7 @@ itself:
    * - Line
      - Comes from
    * - ``CONTROL`` starting time and locations
-     - The receptor, latitude, longitude and height
+     - The release (receptor), latitude, longitude and height
    * - ``CONTROL`` total run time
      - ``n_hours``
    * - ``CONTROL`` vertical motion option, top of model domain
@@ -192,7 +202,7 @@ itself:
    * - ``CONTROL`` pollutant, concentration grid and deposition
      - Fixed: one pollutant, a placeholder grid, no deposition
    * - ``SETUP.CFG`` ``KMSL``
-     - The receptor's ``altitude_ref``
+     - The release's ``altitude_ref``
    * - ``SETUP.CFG`` ``MAXPAR``
      - ``maxpar``, or when unset enough for ``numpar`` shared over the locations
    * - ``SETUP.CFG`` ``IVMAX``
@@ -201,10 +211,9 @@ itself:
      - ``seed``, written as ``-(abs(seed) + 1)``
    * - ``SETUP.CFG`` ``WINDERRTF``, ``ZICONTROLTF``
      - The wind and mixed-layer error settings, and ``ziscale``
-   * - ``SETUP.CFG`` ``DELT``, ``ICHEM``, ``KAGL``, ``CMASS`` and 37 more
-     - Fixed: STILT mode overrides them, or only concentration grids, puffs,
-       dump files or other HYSPLIT programs read them
-       (:data:`~stilt.transport.hysplit.config.FIXED_SETUP`)
+   * - ``SETUP.CFG`` ``ICHEM``, ``IDSP``
+     - Fixed at 8 and 2, the only values with which HYSPLIT writes particles
+       (:data:`~runtraj.models.hysplit.config.FIXED_SETUP`)
 
 To read the files of one run, pass ``workdir="run"`` to
 :func:`~stilt.run_trajectories`: the folder keeps ``CONTROL``,

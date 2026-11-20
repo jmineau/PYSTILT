@@ -1,0 +1,5 @@
+runtraj.output.Output.present
+=============================
+
+.. currentmodule:: runtraj.output
+.. automethod:: Output.present

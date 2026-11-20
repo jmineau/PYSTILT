@@ -6,6 +6,8 @@
 
 
 
+
+
 .. class-signature:: stilt.footprint.config.H3GeometrySpec
 
 

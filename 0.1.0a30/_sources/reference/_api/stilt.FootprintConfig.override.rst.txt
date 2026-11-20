@@ -1,0 +1,5 @@
+stilt.FootprintConfig.override
+==============================
+
+.. currentmodule:: stilt
+.. automethod:: FootprintConfig.override

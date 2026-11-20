@@ -1,0 +1,6 @@
+﻿runtraj.output.completed
+========================
+
+.. currentmodule:: runtraj.output
+
+.. autofunction:: completed

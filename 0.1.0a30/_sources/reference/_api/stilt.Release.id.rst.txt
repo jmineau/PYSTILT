@@ -1,0 +1,6 @@
+stilt.Release.id
+================
+
+.. currentmodule:: stilt
+
+.. autoproperty:: Release.id

@@ -1,0 +1,5 @@
+runtraj.output.Output.logged
+============================
+
+.. currentmodule:: runtraj.output
+.. automethod:: Output.logged

@@ -1,0 +1,5 @@
+runtraj.output.Output.write\_particles
+======================================
+
+.. currentmodule:: runtraj.output
+.. automethod:: Output.write_particles

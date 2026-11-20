@@ -1,0 +1,6 @@
+﻿runtraj.stages.ordered
+======================
+
+.. currentmodule:: runtraj.stages
+
+.. autofunction:: ordered

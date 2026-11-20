@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Your First Footprint &#8212; PYSTILT 0.1.0a29</title>
+    <title>Your First Footprint &#8212; PYSTILT 0.1.0a30</title>
   
   
   
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=947601de"></script>
+    <script src="../_static/documentation_options.js?v=7752668c"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a29';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a30';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -61,16 +61,22 @@
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Glossary" href="glossary.html" />
     <link rel="prev" title="Installation" href="installation.html" />
+  
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29" />
+  <meta name="docsearch:version" content="0.1.0a30" />
   
     
     <script src="../_static/searchtools.js"></script>
     <script src="../_static/language_data.js"></script>
     <script src="../searchindex.js"></script>
   
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="PYSTILT">
+  <meta property="og:title" content="Your First Footprint">
+  <meta property="og:description" content="A Python implementation of the STILT Lagrangian atmospheric transport model.">
+
   </head>
   <body data-default-mode="">
   
@@ -135,7 +141,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a29</p>
+    <p class="title logo__title">PYSTILT</p>
   
 </a></div>
     
@@ -513,12 +519,12 @@ Downloaded files are reused on later runs. See
 </section>
 <section id="step-1-describe-your-measurement">
 <h2>Step 1: Describe your measurement<a class="headerlink" href="#step-1-describe-your-measurement" title="Link to this heading">#</a></h2>
-<p>A receptor is where and when you measured. This one is a sensor 10 m above
+<p>A release (receptor) is where and when you measured. This one is a sensor 10 m above
 the ground on the University of Utah campus, at noon local time (19:00 UTC) on
 14 January 2021:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [1]: </span><span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
 
-<span class="gp">In [2]: </span><span class="n">receptor</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">PointReceptor</span><span class="p">(</span>
+<span class="gp">In [2]: </span><span class="n">release</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">PointRelease</span><span class="p">(</span>
 <span class="gp">   ...: </span>    <span class="n">time</span><span class="o">=</span><span class="s2">"2021-01-14 19:00"</span><span class="p">,</span>   <span class="c1"># UTC</span>
 <span class="gp">   ...: </span>    <span class="n">longitude</span><span class="o">=-</span><span class="mf">111.848</span><span class="p">,</span>
 <span class="gp">   ...: </span>    <span class="n">latitude</span><span class="o">=</span><span class="mf">40.766</span><span class="p">,</span>
@@ -530,10 +536,10 @@ the ground on the University of Utah campus, at noon local time (19:00 UTC) on
 </section>
 <section id="step-2-follow-the-particles">
 <h2>Step 2: Follow the particles<a class="headerlink" href="#step-2-follow-the-particles" title="Link to this heading">#</a></h2>
-<p><a class="reference internal" href="../reference/_api/stilt.run_trajectories.html#stilt.run_trajectories" title="stilt.run_trajectories"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.run_trajectories()</span></code></a> releases particles at the receptor and
+<p><a class="reference internal" href="../reference/_api/stilt.run_trajectories.html#stilt.run_trajectories" title="stilt.run_trajectories"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.run_trajectories()</span></code></a> releases particles at the release and
 follows them back in time through the meteorology:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [3]: </span><span class="n">particles</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">run_trajectories</span><span class="p">(</span>
-<span class="gp">   ...: </span>    <span class="n">receptor</span><span class="p">,</span>
+<span class="gp">   ...: </span>    <span class="n">release</span><span class="p">,</span>
 <span class="gp">   ...: </span>    <span class="n">met</span><span class="p">,</span>
 <span class="gp">   ...: </span>    <span class="n">n_hours</span><span class="o">=-</span><span class="mi">12</span><span class="p">,</span>     <span class="c1"># follow the air 12 hours back in time</span>
 <span class="gp">   ...: </span>    <span class="n">numpar</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span>      <span class="c1"># number of particles to release</span>
@@ -551,35 +557,38 @@ because its met files start 13 hours before the measurement.</p>
 <dt><code class="docutils literal notranslate"><span class="pre">numpar</span></code></dt><dd><p>How many particles to release. More particles give a smoother footprint
 but take longer. 200 is enough to see the shape. For results you will
 publish we use 1000, STILT-R’s default, because a footprint from fewer
-particles is noisy far from the receptor.</p>
+particles is noisy far from the release.</p>
 </dd>
 <dt><code class="docutils literal notranslate"><span class="pre">krand</span></code> and <code class="docutils literal notranslate"><span class="pre">seed</span></code></dt><dd><p>HYSPLIT draws random numbers for the turbulence that moves each particle.
 <code class="docutils literal notranslate"><span class="pre">krand=2</span></code> with a <code class="docutils literal notranslate"><span class="pre">seed</span></code> makes the draws the same on every run, so your
-particles match the ones on this page. Without them (<code class="docutils literal notranslate"><span class="pre">krand=4</span></code>, the
-default) every run draws its own, and the particles and the footprint
-change a little from run to run.</p>
+particles match the ones on this page. A project’s config sets
+<code class="docutils literal notranslate"><span class="pre">krand:</span> <span class="pre">4</span></code>, STILT-R’s value, under which every run draws its own, and the
+particles and the footprint change a little from run to run.</p>
 </dd>
 </dl>
+<p>Every other HYSPLIT setting takes HYSPLIT’s own default here. A few of those
+differ from the values STILT-R runs HYSPLIT with, such as whether particles
+mix by convection. A project, below, writes STILT-R’s values into its config.</p>
 <p>This runs HYSPLIT, the transport model, and usually takes a minute or two.
 The particles are a <a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.1)"><code class="xref py py-class docutils literal notranslate"><span class="pre">pandas.DataFrame</span></code></a>, one row per particle per
 time step:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [4]: </span><span class="n">particles</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 <span class="gh">Out[4]: </span>
-<span class="go">   age  particle       lon  ...   sigw    tlgr                time</span>
-<span class="go">0 -1.0       1.0 -111.8497  ...  0.912  1.9972 2021-01-14 18:59:00</span>
-<span class="go">1 -1.0       2.0 -111.8501  ...  0.912  1.9972 2021-01-14 18:59:00</span>
-<span class="go">2 -1.0       3.0 -111.8497  ...  0.912  1.9972 2021-01-14 18:59:00</span>
-<span class="go">3 -1.0       4.0 -111.8494  ...  0.912  1.9972 2021-01-14 18:59:00</span>
-<span class="go">4 -1.0       5.0 -111.8490  ...  0.912  1.9972 2021-01-14 18:59:00</span>
+<span class="go">   age  particle       lon  ...     mlht    pres                time</span>
+<span class="go">0 -1.0       1.0 -111.8497  ...  1029.05  854.49 2021-01-14 18:59:00</span>
+<span class="go">1 -1.0       2.0 -111.8501  ...  1029.05  857.53 2021-01-14 18:59:00</span>
+<span class="go">2 -1.0       3.0 -111.8497  ...  1029.05  856.78 2021-01-14 18:59:00</span>
+<span class="go">3 -1.0       4.0 -111.8494  ...  1029.05  857.53 2021-01-14 18:59:00</span>
+<span class="go">4 -1.0       5.0 -111.8490  ...  1029.05  857.38 2021-01-14 18:59:00</span>
 
-<span class="go">[5 rows x 13 columns]</span>
+<span class="go">[5 rows x 21 columns]</span>
 
 <span class="gp">In [5]: </span><span class="n">particles</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">map</span><span class="p">();</span>
 </pre></div>
 </div>
 <a class="reference internal image-reference" href="../_images/quickstart_particles.png"><img alt="../_images/quickstart_particles.png" src="../_images/quickstart_particles.png" style="width: 6in;" />
 </a>
-<p>The particles start at the receptor and spread out. The met files here cover
+<p>The particles start at the release and spread out. The met files here cover
 only a small region around Salt Lake, and a particle that leaves the met stops
 there. This is how many hours they went (<code class="docutils literal notranslate"><span class="pre">age</span></code> is in minutes):</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [6]: </span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">particles</span><span class="p">[</span><span class="s1">'age'</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">60</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> hours"</span><span class="p">)</span>
@@ -600,14 +609,14 @@ areas upwind of your site. Here the cells are 0.01°, about 1 km:</p>
 <span class="gp">   ...: </span><span class="p">)</span>
 <span class="gp">   ...: </span>
 
-<span class="gp">In [8]: </span><span class="n">foot</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">calc_footprint</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">grid</span><span class="p">)</span>
+<span class="gp">In [8]: </span><span class="n">foot</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">calc_footprint</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">grid</span><span class="p">)</span>
 
 <span class="gp">In [9]: </span><span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">map</span><span class="p">();</span>
 </pre></div>
 </div>
 <a class="reference internal image-reference" href="../_images/quickstart_footprint.png"><img alt="../_images/quickstart_footprint.png" src="../_images/quickstart_footprint.png" style="width: 6in;" />
 </a>
-<p>The footprint starts at the receptor and stretches in the direction the air
+<p>The footprint starts at the release and stretches in the direction the air
 came from, here to the north-northwest and then curving west. The map shows the
 footprint summed over time, on a log scale. Cells with more color influenced the
 measurement more.</p>
@@ -627,33 +636,36 @@ xarray:</p>
 </section>
 <section id="step-4-run-it-as-a-project">
 <h2>Step 4: Run it as a project<a class="headerlink" href="#step-4-run-it-as-a-project" title="Link to this heading">#</a></h2>
-<p>Two calls are enough for one receptor. For many receptors, make a
-<a class="reference internal" href="../reference/_api/stilt.Project.html#stilt.Project" title="stilt.Project"><code class="xref py py-class docutils literal notranslate"><span class="pre">Project</span></code></a>: a folder that holds your receptors and settings,
-runs every receptor, and keeps the results. <a class="reference internal" href="../reference/_api/stilt.Project.init.html#stilt.Project.init" title="stilt.Project.init"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Project.init</span></code></a> creates the folder and writes both to it. The
-settings are the ones above:</p>
+<p>Two calls are enough for one release. For many releases, make a
+<a class="reference internal" href="../reference/_api/stilt.Project.html#stilt.Project" title="stilt.Project"><code class="xref py py-class docutils literal notranslate"><span class="pre">Project</span></code></a>: a folder that holds your releases and settings,
+runs every release, and keeps the results. <a class="reference internal" href="../reference/_api/stilt.Project.init.html#stilt.Project.init" title="stilt.Project.init"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Project.init</span></code></a> creates the folder and writes both to it. The
+settings are the ones above, each in the block of what it belongs to: the
+transport model’s under <code class="docutils literal notranslate"><span class="pre">models</span></code>, and the footprint’s under <code class="docutils literal notranslate"><span class="pre">stages</span></code>,
+in a block that names the footprint stage as its <code class="docutils literal notranslate"><span class="pre">class</span></code>:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [12]: </span><span class="n">project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="o">.</span><span class="n">init</span><span class="p">(</span>
 <span class="gp">   ....: </span>    <span class="s2">"./my_first_project"</span><span class="p">,</span>
-<span class="gp">   ....: </span>    <span class="n">receptors</span><span class="o">=</span><span class="p">[</span><span class="n">receptor</span><span class="p">],</span>
+<span class="gp">   ....: </span>    <span class="n">releases</span><span class="o">=</span><span class="p">[</span><span class="n">release</span><span class="p">],</span>
 <span class="gp">   ....: </span>    <span class="n">mets</span><span class="o">=</span><span class="p">{</span><span class="s2">"hrrr"</span><span class="p">:</span> <span class="n">met</span><span class="p">},</span>          <span class="c1"># "hrrr" is a name you choose</span>
+<span class="gp">   ....: </span>    <span class="n">models</span><span class="o">=</span><span class="p">{</span>
+<span class="gp">   ....: </span>        <span class="s2">"hysplit"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"n_hours"</span><span class="p">:</span> <span class="o">-</span><span class="mi">12</span><span class="p">,</span> <span class="s2">"numpar"</span><span class="p">:</span> <span class="mi">200</span><span class="p">,</span> <span class="s2">"krand"</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">"seed"</span><span class="p">:</span> <span class="mi">42</span><span class="p">}</span>
+<span class="gp">   ....: </span>    <span class="p">},</span>
+<span class="gp">   ....: </span>    <span class="n">stages</span><span class="o">=</span><span class="p">{</span>
+<span class="gp">   ....: </span>        <span class="s2">"footprint"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"class"</span><span class="p">:</span> <span class="s2">"stilt.footprint.FootprintStage"</span><span class="p">,</span> <span class="s2">"grid"</span><span class="p">:</span> <span class="n">grid</span><span class="p">}</span>
+<span class="gp">   ....: </span>    <span class="p">},</span>
 <span class="gp">   ....: </span>    <span class="n">variants</span><span class="o">=</span><span class="p">{</span><span class="s2">"hrrr"</span><span class="p">:</span> <span class="p">{}},</span>       <span class="c1"># one variant: these settings, met hrrr</span>
-<span class="gp">   ....: </span>    <span class="n">n_hours</span><span class="o">=-</span><span class="mi">12</span><span class="p">,</span>
-<span class="gp">   ....: </span>    <span class="n">numpar</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span>
-<span class="gp">   ....: </span>    <span class="n">krand</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
-<span class="gp">   ....: </span>    <span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span>
-<span class="gp">   ....: </span>    <span class="n">grid</span><span class="o">=</span><span class="n">grid</span><span class="p">,</span>
 <span class="gp">   ....: </span><span class="p">)</span>
 <span class="gp">   ....: </span>
 </pre></div>
 </div>
 <p>Before running, check the project. <code class="docutils literal notranslate"><span class="pre">project.check()</span></code> looks for what would
-stop a run before it starts: met files missing for a receptor’s hours, a
-receptor outside the grid, and a met folder that does not exist. It returns a
+stop a run before it starts: met files missing for a release’s hours, a
+release outside the grid, and a met folder that does not exist. It returns a
 table with a row for each thing found, so an empty table means nothing is in
 the way:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [13]: </span><span class="n">project</span><span class="o">.</span><span class="n">check</span><span class="p">()</span>
 <span class="gh">Out[13]: </span>
 <span class="go">Empty DataFrame</span>
-<span class="go">Columns: [check, variant, receptor, message]</span>
+<span class="go">Columns: [check, variant, release, message]</span>
 <span class="go">Index: []</span>
 </pre></div>
 </div>
@@ -663,13 +675,13 @@ to tell.</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [14]: </span><span class="n">project</span><span class="o">.</span><span class="n">run</span><span class="p">();</span>
 </pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">run()</span></code> runs the particles and the footprint of every receptor, and
+<p><code class="docutils literal notranslate"><span class="pre">run()</span></code> runs the particles and the footprint of every release, and
 returns when they are done.</p>
-<p>PYSTILT runs each receptor once per <a class="reference internal" href="glossary.html#term-variant"><span class="xref std std-term">variant</span></a>. With the settings above
-there is one variant, named <code class="docutils literal notranslate"><span class="pre">hrrr</span></code> after the met. One receptor under
-one variant is a <a class="reference internal" href="glossary.html#term-simulation"><span class="xref std std-term">simulation</span></a>. Look yours up by the receptor’s id and
+<p>PYSTILT runs each release once per <a class="reference internal" href="glossary.html#term-variant"><span class="xref std std-term">variant</span></a>. With the settings above
+there is one variant, named <code class="docutils literal notranslate"><span class="pre">hrrr</span></code> after the met. One release under
+one variant is a <a class="reference internal" href="glossary.html#term-simulation"><span class="xref std std-term">simulation</span></a>. Look yours up by the release’s id and
 the variant name:</p>
-<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [15]: </span><span class="n">sim</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="s2">"hrrr"</span><span class="p">)</span>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [15]: </span><span class="n">sim</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">release</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="s2">"hrrr"</span><span class="p">)</span>
 
 <span class="gp">In [16]: </span><span class="n">sim</span><span class="o">.</span><span class="n">particles</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 <span class="gh">Out[16]: </span>
@@ -687,8 +699,11 @@ the variant name:</p>
 </div>
 <a class="reference internal image-reference" href="../_images/quickstart_sim_footprint.png"><img alt="../_images/quickstart_sim_footprint.png" src="../_images/quickstart_sim_footprint.png" style="width: 6in;" />
 </a>
-<p>This is the same footprint as in Step 3, because the settings and the seed
-are the same.</p>
+<p>This footprint can differ a little from the one in Step 3. The seed is the
+same, but <code class="docutils literal notranslate"><span class="pre">Project.init</span></code> wrote STILT-R’s HYSPLIT values into the project’s
+<code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> where they differ from HYSPLIT’s own defaults, which
+<code class="docutils literal notranslate"><span class="pre">run_trajectories</span></code> used in Step 2. Open the file to see them;
+<a class="reference internal" href="../guides/migration/stilt_r.html"><span class="doc">Coming From STILT-R</span></a> lists them.</p>
 </section>
 <section id="what-pystilt-wrote">
 <h2>What PYSTILT wrote<a class="headerlink" href="#what-pystilt-wrote" title="Link to this heading">#</a></h2>
@@ -696,17 +711,17 @@ are the same.</p>
 folder:</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>my_first_project/
   config.yaml        # your settings
-  receptors.csv      # your receptors
+  releases.csv       # your releases
   output/
     particles/       # where each particle went, one file per simulation
-    footprints/      # the footprints, one file per simulation
+    footprint/       # the footprints, one file per simulation
     logs/            # HYSPLIT's log of each run
 </pre></div>
 </div>
 <p>Each result is kept under the settings it was made with. Change a setting and
 the next run writes new files beside the old ones, so nothing is
 overwritten. <a class="reference internal" href="../reference/layout.html"><span class="doc">Output Layout</span></a> has the full layout.</p>
-<p>Your settings and receptors are saved in the folder, so you can open the
+<p>Your settings and releases are saved in the folder, so you can open the
 project again later without repeating them:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">"./my_first_project"</span><span class="p">)</span>
 </pre></div>
@@ -715,39 +730,44 @@ project again later without repeating them:</p>
 <code class="docutils literal notranslate"><span class="pre">FileExistsError</span></code> if the folder already has a <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>. To change a
 setting later, edit <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>.</p>
 <p>If you call <code class="docutils literal notranslate"><span class="pre">project.run()</span></code> again, nothing happens. PYSTILT sees that the
-outputs already exist and skips them. If you add receptors with
-<code class="docutils literal notranslate"><span class="pre">project.add_receptors(...)</span></code>, only the new ones run.</p>
+outputs already exist and skips them. If you add releases with
+<code class="docutils literal notranslate"><span class="pre">project.add_releases(...)</span></code>, only the new ones run.</p>
 </section>
 <section id="the-same-run-from-the-command-line">
 <h2>The same run from the command line<a class="headerlink" href="#the-same-run-from-the-command-line" title="Link to this heading">#</a></h2>
-<p>Create a project folder with a starter <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> and <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>:</p>
+<p>Create a project folder with a starter <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> and <code class="docutils literal notranslate"><span class="pre">releases.csv</span></code>:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>stilt<span class="w"> </span>init<span class="w"> </span>./my_first_project
 </pre></div>
 </div>
 <p>Open <code class="docutils literal notranslate"><span class="pre">my_first_project/config.yaml</span></code> and set the meteorology folder and the
-footprint grid. The keys are the same as in the Python example
+footprint grid. The blocks are the same as in the Python example
 above:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">mets</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">hrrr</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/path/to/arl/hrrr</span>
 
+<span class="nt">models</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">hysplit</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">n_hours</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">-12</span>
+<span class="w">    </span><span class="nt">numpar</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">200</span>
+<span class="w">    </span><span class="nt">krand</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="w">    </span><span class="nt">seed</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">42</span>
+
+<span class="nt">stages</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">footprint</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">class</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">stilt.footprint.FootprintStage</span>
+<span class="w">    </span><span class="nt">grid</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">xmin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">-113.0</span>
+<span class="w">      </span><span class="nt">xmax</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">-110.5</span>
+<span class="w">      </span><span class="nt">ymin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">40.0</span>
+<span class="w">      </span><span class="nt">ymax</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">42.0</span>
+<span class="w">      </span><span class="nt">xres</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.01</span>
+<span class="w">      </span><span class="nt">yres</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.01</span>
+
 <span class="nt">variants</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">hrrr</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span>
-
-<span class="nt">grid</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">xmin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">-113.0</span>
-<span class="w">  </span><span class="nt">xmax</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">-110.5</span>
-<span class="w">  </span><span class="nt">ymin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">40.0</span>
-<span class="w">  </span><span class="nt">ymax</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">42.0</span>
-<span class="w">  </span><span class="nt">xres</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.01</span>
-<span class="w">  </span><span class="nt">yres</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.01</span>
-
-<span class="nt">n_hours</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">-12</span>
-<span class="nt">numpar</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">200</span>
-<span class="nt">krand</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
-<span class="nt">seed</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">42</span>
 </pre></div>
 </div>
-<p>Add your receptor to <code class="docutils literal notranslate"><span class="pre">my_first_project/receptors.csv</span></code> below the header
+<p>Add your release to <code class="docutils literal notranslate"><span class="pre">my_first_project/releases.csv</span></code> below the header
 line, so the file reads:</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>time,longitude,latitude,altitude
 2021-01-14 19:00:00,-111.848,40.766,10
@@ -766,8 +786,8 @@ prints <code class="docutils literal notranslate"><span class="pre">No</span> <s
 <section id="next-steps">
 <h2>Next steps<a class="headerlink" href="#next-steps" title="Link to this heading">#</a></h2>
 <ul class="simple">
-<li><p>Run many receptors: <a class="reference internal" href="../tutorials/wbb_stationary.html"><span class="doc">Tutorial: A Day Of Tower Footprints</span></a></p></li>
-<li><p>Understand the different receptor types: <a class="reference internal" href="../guides/receptors.html"><span class="doc">Receptors</span></a></p></li>
+<li><p>Run many releases: <a class="reference internal" href="../tutorials/wbb_stationary.html"><span class="doc">Tutorial: A Day Of Tower Footprints</span></a></p></li>
+<li><p>Understand the different release types: <a class="reference internal" href="../guides/releases.html"><span class="doc">Releases (receptors)</span></a></p></li>
 <li><p>More plotting and analysis: <a class="reference internal" href="../guides/outputs.html"><span class="doc">Footprints And Particles</span></a></p></li>
 <li><p>Run thousands of simulations on a cluster: <a class="reference internal" href="../guides/slurm.html"><span class="doc">On An HPC Cluster (Slurm)</span></a></p></li>
 </ul>

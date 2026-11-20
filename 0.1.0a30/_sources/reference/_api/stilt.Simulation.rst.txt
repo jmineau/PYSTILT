@@ -1,0 +1,43 @@
+﻿stilt.Simulation
+================
+
+.. currentmodule:: stilt
+
+
+
+
+
+
+.. class-signature:: stilt.Simulation
+
+
+.. class-parameters:: stilt.Simulation
+
+
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+   :nosignatures:
+
+   ~Simulation.footprint
+   ~Simulation.footprint_path
+   ~Simulation.has_footprint
+   ~Simulation.plot
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~Simulation.background
+   ~Simulation.calc_footprint
+   ~Simulation.transport_error
+
+
+

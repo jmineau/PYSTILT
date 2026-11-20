@@ -1,0 +1,5 @@
+runtraj.output.Output.failures
+==============================
+
+.. currentmodule:: runtraj.output
+.. automethod:: Output.failures

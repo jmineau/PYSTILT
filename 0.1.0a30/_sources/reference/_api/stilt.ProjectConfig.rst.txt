@@ -1,0 +1,36 @@
+﻿stilt.ProjectConfig
+===================
+
+.. currentmodule:: stilt
+
+
+
+
+
+
+.. class-signature:: stilt.ProjectConfig
+
+
+Parameters
+----------
+
+.. config-model:: stilt.ProjectConfig
+
+
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~ProjectConfig.from_yaml
+   ~ProjectConfig.met_config
+   ~ProjectConfig.model_post_init
+   ~ProjectConfig.resolve
+   ~ProjectConfig.to_yaml
+
+
+

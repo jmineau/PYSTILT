@@ -1,0 +1,6 @@
+﻿runtraj.particles.PARTICLE\_SCHEMA
+==================================
+
+.. currentmodule:: runtraj.particles
+
+.. autodata:: PARTICLE_SCHEMA

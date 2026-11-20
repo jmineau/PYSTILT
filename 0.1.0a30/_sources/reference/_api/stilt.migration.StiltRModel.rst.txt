@@ -1,0 +1,41 @@
+﻿stilt.migration.StiltRModel
+===========================
+
+.. currentmodule:: stilt.migration
+
+
+
+
+
+
+.. class-signature:: stilt.migration.StiltRModel
+
+
+.. class-parameters:: stilt.migration.StiltRModel
+
+
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+   :nosignatures:
+
+   ~StiltRModel.needs_workdir
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~StiltRModel.data_files
+   ~StiltRModel.run
+   ~StiltRModel.sha256
+   ~StiltRModel.version
+
+
+

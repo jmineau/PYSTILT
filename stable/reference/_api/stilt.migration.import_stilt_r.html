@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>stilt.migration.import_stilt_r &#8212; PYSTILT 0.1.0a29</title>
+    <title>stilt.migration.import_stilt_r &#8212; PYSTILT 0.1.0a30</title>
   
   
   
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=947601de"></script>
+    <script src="../../_static/documentation_options.js?v=7752668c"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a29';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a30';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -61,16 +61,22 @@
     <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="stilt.background" href="stilt.background.html" />
     <link rel="prev" title="stilt.migration.read_stilt_r" href="stilt.migration.read_stilt_r.html" />
+  
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29" />
+  <meta name="docsearch:version" content="0.1.0a30" />
   
     
     <script src="../../_static/searchtools.js"></script>
     <script src="../../_static/language_data.js"></script>
     <script src="../../searchindex.js"></script>
   
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="PYSTILT">
+  <meta property="og:title" content="stilt.migration.import_stilt_r">
+  <meta property="og:description" content="A Python implementation of the STILT Lagrangian atmospheric transport model.">
+
   </head>
   <body data-default-mode="">
   
@@ -135,7 +141,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a29</p>
+    <p class="title logo__title">PYSTILT</p>
   
 </a></div>
     
@@ -413,120 +419,64 @@
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="../core.html">Core Objects</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="stilt.run_trajectories.html">stilt.run_trajectories</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.calc_footprint.html">stilt.calc_footprint</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.footprint.footprint_particles.html">stilt.footprint.footprint_particles</a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.Project.html">stilt.Project</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Project.config.html">stilt.Project.config</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Project.config_path.html">stilt.Project.config_path</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Project.name.html">stilt.Project.name</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Project.output.html">stilt.Project.output</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Project.plot.html">stilt.Project.plot</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Project.receptors.html">stilt.Project.receptors</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Project.receptors_path.html">stilt.Project.receptors_path</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Project.simulations.html">stilt.Project.simulations</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Project.variants.html">stilt.Project.variants</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Project.add_receptors.html">stilt.Project.add_receptors</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Project.add_table.html">stilt.Project.add_table</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Project.check.html">stilt.Project.check</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Project.fetch.html">stilt.Project.fetch</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Project.folders.html">stilt.Project.folders</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Project.footprints.html">stilt.Project.footprints</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Project.incomplete.html">stilt.Project.incomplete</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Project.init.html">stilt.Project.init</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Project.jacobian.html">stilt.Project.jacobian</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Project.particles.html">stilt.Project.particles</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Project.receptor.html">stilt.Project.receptor</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Project.run.html">stilt.Project.run</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Project.simulation.html">stilt.Project.simulation</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Project.status.html">stilt.Project.status</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Project.submit.html">stilt.Project.submit</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Project.table_path.html">stilt.Project.table_path</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Project.transport_error.html">stilt.Project.transport_error</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.Receptor.html">stilt.Receptor</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Receptor.geometry.html">stilt.Receptor.geometry</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Receptor.id.html">stilt.Receptor.id</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Receptor.location_id.html">stilt.Receptor.location_id</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Receptor.plot.html">stilt.Receptor.plot</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Receptor.points.html">stilt.Receptor.points</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Receptor.coords.html">stilt.Receptor.coords</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Receptor.from_dict.html">stilt.Receptor.from_dict</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Receptor.from_json.html">stilt.Receptor.from_json</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Receptor.from_points.html">stilt.Receptor.from_points</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Receptor.to_dict.html">stilt.Receptor.to_dict</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Receptor.to_json.html">stilt.Receptor.to_json</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.Release.html">stilt.Release</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="stilt.Release.geometry.html">stilt.Release.geometry</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.Release.id.html">stilt.Release.id</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.Release.location_id.html">stilt.Release.location_id</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.Release.plot.html">stilt.Release.plot</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.Release.points.html">stilt.Release.points</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.Release.coords.html">stilt.Release.coords</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.Release.from_dict.html">stilt.Release.from_dict</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.Release.from_json.html">stilt.Release.from_json</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.Release.from_points.html">stilt.Release.from_points</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.Release.to_dict.html">stilt.Release.to_dict</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.Release.to_json.html">stilt.Release.to_json</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.PointReceptor.html">stilt.PointReceptor</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="stilt.PointReceptor.location_id.html">stilt.PointReceptor.location_id</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.PointReceptor.coords.html">stilt.PointReceptor.coords</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.PointRelease.html">stilt.PointRelease</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="stilt.PointRelease.location_id.html">stilt.PointRelease.location_id</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.PointRelease.coords.html">stilt.PointRelease.coords</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.ColumnReceptor.html">stilt.ColumnReceptor</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="stilt.ColumnReceptor.location_id.html">stilt.ColumnReceptor.location_id</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.ColumnReceptor.coords.html">stilt.ColumnReceptor.coords</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.ColumnRelease.html">stilt.ColumnRelease</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="stilt.ColumnRelease.location_id.html">stilt.ColumnRelease.location_id</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.ColumnRelease.coords.html">stilt.ColumnRelease.coords</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.MultiPointReceptor.html">stilt.MultiPointReceptor</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="stilt.MultiPointReceptor.location_id.html">stilt.MultiPointReceptor.location_id</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.MultiPointReceptor.coords.html">stilt.MultiPointReceptor.coords</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.MultiPointRelease.html">stilt.MultiPointRelease</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="stilt.MultiPointRelease.location_id.html">stilt.MultiPointRelease.location_id</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.MultiPointRelease.coords.html">stilt.MultiPointRelease.coords</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.read_receptors.html">stilt.read_receptors</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.receptors.write_receptors.html">stilt.receptors.write_receptors</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.receptors.receptors_to_frame.html">stilt.receptors.receptors_to_frame</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.receptors.receptors_from_frame.html">stilt.receptors.receptors_from_frame</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.receptors.parse_receptor_id.html">stilt.receptors.parse_receptor_id</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.read_releases.html">stilt.read_releases</a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.Simulation.html">stilt.Simulation</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Simulation.failure.html">stilt.Simulation.failure</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Simulation.footprint.html">stilt.Simulation.footprint</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Simulation.footprint_path.html">stilt.Simulation.footprint_path</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Simulation.has_footprint.html">stilt.Simulation.has_footprint</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Simulation.has_particles.html">stilt.Simulation.has_particles</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Simulation.id.html">stilt.Simulation.id</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Simulation.is_complete.html">stilt.Simulation.is_complete</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Simulation.kept_workdir.html">stilt.Simulation.kept_workdir</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Simulation.log.html">stilt.Simulation.log</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Simulation.log_path.html">stilt.Simulation.log_path</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Simulation.particles.html">stilt.Simulation.particles</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Simulation.particles_path.html">stilt.Simulation.particles_path</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Simulation.plot.html">stilt.Simulation.plot</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.Simulation.transport.html">stilt.Simulation.transport</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Simulation.background.html">stilt.Simulation.background</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Simulation.calc_footprint.html">stilt.Simulation.calc_footprint</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Simulation.transport_error.html">stilt.Simulation.transport_error</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.config.Variant.html">stilt.config.Variant</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.footprint_hash.html">stilt.config.Variant.footprint_hash</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.footprint_settings.html">stilt.config.Variant.footprint_settings</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.met_settings.html">stilt.config.Variant.met_settings</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.particles_hash.html">stilt.config.Variant.particles_hash</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.realization_numbers.html">stilt.config.Variant.realization_numbers</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.run_settings.html">stilt.config.Variant.run_settings</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.run_settings_without_met.html">stilt.config.Variant.run_settings_without_met</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.config.Variant.transport_for.html">stilt.config.Variant.transport_for</a></li>
-</ul>
-</details></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.identity.run_settings.html">stilt.identity.run_settings</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.identity.read_run_settings.html">stilt.identity.read_run_settings</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.identity.transport_from_settings.html">stilt.identity.transport_from_settings</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.identity.footprint_settings.html">stilt.identity.footprint_settings</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.identity.read_footprint_settings.html">stilt.identity.read_footprint_settings</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.identity.settings_hash.html">stilt.identity.settings_hash</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.transport.ModelInfo.html">stilt.transport.ModelInfo</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.footprint.config.footprint_settings.html">stilt.footprint.config.footprint_settings</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.footprint.config.read_footprint_settings.html">stilt.footprint.config.read_footprint_settings</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.read_particles.html">stilt.read_particles</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.particles.particles_metadata.html">stilt.particles.particles_metadata</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.particles.write_particles.html">stilt.particles.write_particles</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.read_footprint.html">stilt.read_footprint</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.footprint.write_footprint.html">stilt.footprint.write_footprint</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.footprint.write_empty_footprint.html">stilt.footprint.write_empty_footprint</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.footprint.open_footprints.html">stilt.footprint.open_footprints</a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.particles.ParticlesAccessor.html">stilt.particles.ParticlesAccessor</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="stilt.particles.ParticlesAccessor.plot.html">stilt.particles.ParticlesAccessor.plot</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.particles.ParticlesAccessor.endpoints.html">stilt.particles.ParticlesAccessor.endpoints</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.particles.ParticlesAccessor.enhancement.html">stilt.particles.ParticlesAccessor.enhancement</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.particles.ParticlesAccessor.grid_exits.html">stilt.particles.ParticlesAccessor.grid_exits</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.particles.ParticlesAccessor.to_cf_trajectories.html">stilt.particles.ParticlesAccessor.to_cf_trajectories</a></li>
 </ul>
 </details></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.footprint.FootprintAccessor.html">stilt.footprint.FootprintAccessor</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -535,7 +485,7 @@
 <li class="toctree-l3"><a class="reference internal" href="stilt.footprint.FootprintAccessor.grid.html">stilt.footprint.FootprintAccessor.grid</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.footprint.FootprintAccessor.name.html">stilt.footprint.FootprintAccessor.name</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.footprint.FootprintAccessor.plot.html">stilt.footprint.FootprintAccessor.plot</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.footprint.FootprintAccessor.receptor.html">stilt.footprint.FootprintAccessor.receptor</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.footprint.FootprintAccessor.release.html">stilt.footprint.FootprintAccessor.release</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.footprint.FootprintAccessor.aggregate.html">stilt.footprint.FootprintAccessor.aggregate</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.footprint.FootprintAccessor.enhancement.html">stilt.footprint.FootprintAccessor.enhancement</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.footprint.FootprintAccessor.to_netcdf.html">stilt.footprint.FootprintAccessor.to_netcdf</a></li>
@@ -580,31 +530,22 @@
 <li class="toctree-l2"><a class="reference internal" href="stilt.footprint.Geometry.html">stilt.footprint.Geometry</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.footprint.overlap_weights.html">stilt.footprint.overlap_weights</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.footprint.check_resolution.html">stilt.footprint.check_resolution</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.spatial.same_crs.html">stilt.spatial.same_crs</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.spatial.is_longlat.html">stilt.spatial.is_longlat</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.spatial.horizontal_dims.html">stilt.spatial.horizontal_dims</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.sampling.sample_field.html">stilt.sampling.sample_field</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.sampling.sample_met.html">stilt.sampling.sample_met</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.sampling.vertical_dim.html">stilt.sampling.vertical_dim</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.sampling.nearest_cell.html">stilt.sampling.nearest_cell</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.sampling.calc_pbl_height.html">stilt.sampling.calc_pbl_height</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../particles.html">The Particle Table</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="stilt.particles.PARTICLE_SCHEMA.html">stilt.particles.PARTICLE_SCHEMA</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.particles.FOOTPRINT_COLUMNS.html">stilt.particles.FOOTPRINT_COLUMNS</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.particles.HNF_PLUME_COLUMNS.html">stilt.particles.HNF_PLUME_COLUMNS</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.particles.check_particles.html">stilt.particles.check_particles</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.particles.add_release_heights.html">stilt.particles.add_release_heights</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.particles.add_foot.html">stilt.particles.add_foot</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.particles.correct_near_field.html">stilt.particles.correct_near_field</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.particles.PARTICLE_SCHEMA.html">runtraj.particles.PARTICLE_SCHEMA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.particles.check_particles.html">runtraj.particles.check_particles</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.particles.add_release_heights.html">runtraj.particles.add_release_heights</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.footprint.add_foot.html">stilt.footprint.add_foot</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.footprint.correct_near_field.html">stilt.footprint.correct_near_field</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.footprint.HNF_PLUME_COLUMNS.html">stilt.footprint.HNF_PLUME_COLUMNS</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../layout.html">Output Layout</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../configuration.html">Configuration</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.ProjectConfig.html">stilt.ProjectConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="stilt.ProjectConfig.footprint.html">stilt.ProjectConfig.footprint</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.ProjectConfig.transport.html">stilt.ProjectConfig.transport</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.ProjectConfig.declared.html">stilt.ProjectConfig.declared</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.ProjectConfig.from_yaml.html">stilt.ProjectConfig.from_yaml</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.ProjectConfig.met_config.html">stilt.ProjectConfig.met_config</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.ProjectConfig.model_post_init.html">stilt.ProjectConfig.model_post_init</a></li>
@@ -615,9 +556,22 @@
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.FootprintConfig.html">stilt.FootprintConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="stilt.FootprintConfig.layer_unit.html">stilt.FootprintConfig.layer_unit</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.FootprintConfig.tres_minutes.html">stilt.FootprintConfig.tres_minutes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.FootprintConfig.zsfc_reasons.html">stilt.FootprintConfig.zsfc_reasons</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.FootprintConfig.override.html">stilt.FootprintConfig.override</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.ExecutionConfig.html">stilt.ExecutionConfig</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.footprint.FootprintStage.html">stilt.footprint.FootprintStage</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="stilt.footprint.FootprintStage.check.html">stilt.footprint.FootprintStage.check</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.footprint.FootprintStage.resolve.html">stilt.footprint.FootprintStage.resolve</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.footprint.FootprintStage.run.html">stilt.footprint.FootprintStage.run</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.footprint.FootprintStage.settings.html">stilt.footprint.FootprintStage.settings</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.ExecutionConfig.html">stilt.ExecutionConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="stilt.ExecutionConfig.cpus.html">stilt.ExecutionConfig.cpus</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.ExecutionConfig.fetch.html">stilt.ExecutionConfig.fetch</a></li>
+</ul>
+</details></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.Bounds.html">stilt.Bounds</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Bounds.contains.html">stilt.Bounds.contains</a></li>
 </ul>
@@ -637,138 +591,153 @@
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../meteorology.html">Meteorology</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.transport.hysplit.MetConfig.html">stilt.transport.hysplit.MetConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.MetConfig.download_options.html">stilt.transport.hysplit.MetConfig.download_options</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.MetConfig.crop.html">stilt.transport.hysplit.MetConfig.crop</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.MetConfig.model_post_init.html">stilt.transport.hysplit.MetConfig.model_post_init</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.MetConfig.settings.html">stilt.transport.hysplit.MetConfig.settings</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.MetConfig.source.html">stilt.transport.hysplit.MetConfig.source</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="runtraj.models.hysplit.MetConfig.html">runtraj.models.hysplit.MetConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.MetConfig.download_options.html">runtraj.models.hysplit.MetConfig.download_options</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.MetConfig.crop.html">runtraj.models.hysplit.MetConfig.crop</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.MetConfig.model_post_init.html">runtraj.models.hysplit.MetConfig.model_post_init</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.MetConfig.settings.html">runtraj.models.hysplit.MetConfig.settings</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.MetConfig.source.html">runtraj.models.hysplit.MetConfig.source</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.transport.hysplit.Met.html">stilt.transport.hysplit.Met</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.crop_dir.html">stilt.transport.hysplit.Met.crop_dir</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.check.html">stilt.transport.hysplit.Met.check</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.check_receptors.html">stilt.transport.hysplit.Met.check_receptors</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.fetch.html">stilt.transport.hysplit.Met.fetch</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.files_for.html">stilt.transport.hysplit.Met.files_for</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.missing.html">stilt.transport.hysplit.Met.missing</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.readable.html">stilt.transport.hysplit.Met.readable</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="runtraj.models.hysplit.Met.html">runtraj.models.hysplit.Met</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.Met.crop_dir.html">runtraj.models.hysplit.Met.crop_dir</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.Met.check.html">runtraj.models.hysplit.Met.check</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.Met.check_releases.html">runtraj.models.hysplit.Met.check_releases</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.Met.fetch.html">runtraj.models.hysplit.Met.fetch</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.Met.files_for.html">runtraj.models.hysplit.Met.files_for</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.Met.missing.html">runtraj.models.hysplit.Met.missing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.Met.readable.html">runtraj.models.hysplit.Met.readable</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.meteorology.run_window.html">stilt.meteorology.run_window</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.meteorology.variogram.html">stilt.meteorology.variogram</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.meteorology.fit_variogram.html">stilt.meteorology.fit_variogram</a></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.meteorology.VariogramFit.html">stilt.meteorology.VariogramFit</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="stilt.meteorology.VariogramFit.__call__.html">stilt.meteorology.VariogramFit.__call__</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.meteorology.run_window.html">runtraj.meteorology.run_window</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.meteorology.variogram.html">runtraj.meteorology.variogram</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.meteorology.fit_variogram.html">runtraj.meteorology.fit_variogram</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="runtraj.meteorology.VariogramFit.html">runtraj.meteorology.VariogramFit</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.meteorology.VariogramFit.__call__.html">runtraj.meteorology.VariogramFit.__call__</a></li>
 </ul>
 </details></li>
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../execution.html">Execution</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="stilt.execution.run.html">stilt.execution.run</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.execution.submit.html">stilt.execution.submit</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.execution.pending.html">stilt.execution.pending</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.execution.wait.html">stilt.execution.wait</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.execution.task_share.html">stilt.execution.task_share</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.execution.runner.resolve_compute_root.html">stilt.execution.runner.resolve_compute_root</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.execution.worker.run_particles.html">stilt.execution.worker.run_particles</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.execution.worker.make_footprint.html">stilt.execution.worker.make_footprint</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.execution.worker.run_receptor.html">stilt.execution.worker.run_receptor</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.execution.worker.run_receptors.html">stilt.execution.worker.run_receptors</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.execution.job_script.html">stilt.execution.job_script</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.execution.fetch_script.html">stilt.execution.fetch_script</a></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.transport.TransportModel.html">stilt.transport.TransportModel</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.TransportModel.config_class.html">stilt.transport.TransportModel.config_class</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.TransportModel.met_config_class.html">stilt.transport.TransportModel.met_config_class</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.TransportModel.data_files.html">stilt.transport.TransportModel.data_files</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.TransportModel.run.html">stilt.transport.TransportModel.run</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.TransportModel.version.html">stilt.transport.TransportModel.version</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.execution.run.html">runtraj.execution.run</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.execution.submit.html">runtraj.execution.submit</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.execution.pending.html">runtraj.execution.pending</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.execution.wait.html">runtraj.execution.wait</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.execution.task_share.html">runtraj.execution.task_share</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.execution.runner.resolve_compute_root.html">runtraj.execution.runner.resolve_compute_root</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.execution.worker.run_particles.html">runtraj.execution.worker.run_particles</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.execution.worker.run_stage.html">runtraj.execution.worker.run_stage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.execution.worker.run_stages.html">runtraj.execution.worker.run_stages</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.execution.worker.run_release.html">runtraj.execution.worker.run_release</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.execution.worker.run_releases.html">runtraj.execution.worker.run_releases</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.execution.job_script.html">runtraj.execution.job_script</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.execution.fetch_script.html">runtraj.execution.fetch_script</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="runtraj.models.TransportModel.html">runtraj.models.TransportModel</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.TransportModel.config_class.html">runtraj.models.TransportModel.config_class</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.TransportModel.met_config_class.html">runtraj.models.TransportModel.met_config_class</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.TransportModel.data_files.html">runtraj.models.TransportModel.data_files</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.TransportModel.run.html">runtraj.models.TransportModel.run</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.TransportModel.sha256.html">runtraj.models.TransportModel.sha256</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.TransportModel.version.html">runtraj.models.TransportModel.version</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.transport.BatchedTransportModel.html">stilt.transport.BatchedTransportModel</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.BatchedTransportModel.run_many.html">stilt.transport.BatchedTransportModel.run_many</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="runtraj.models.BatchedTransportModel.html">runtraj.models.BatchedTransportModel</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.BatchedTransportModel.run_many.html">runtraj.models.BatchedTransportModel.run_many</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.transport.TransportConfig.html">stilt.transport.TransportConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.TransportConfig.RECORDED_WHEN_SET.html">stilt.transport.TransportConfig.RECORDED_WHEN_SET</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.TransportConfig.UNRECORDED.html">stilt.transport.TransportConfig.UNRECORDED</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.TransportConfig.realizations.html">stilt.transport.TransportConfig.realizations</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.TransportConfig.settings.html">stilt.transport.TransportConfig.settings</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="runtraj.models.TransportConfig.html">runtraj.models.TransportConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.TransportConfig.UNRECORDED.html">runtraj.models.TransportConfig.UNRECORDED</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.TransportConfig.realizations.html">runtraj.models.TransportConfig.realizations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.TransportConfig.settings.html">runtraj.models.TransportConfig.settings</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.transport.ModelRun.html">stilt.transport.ModelRun</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.transport.get_model.html">stilt.transport.get_model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.transport.run_model.html">stilt.transport.run_model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.transport.run_model_many.html">stilt.transport.run_model_many</a></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.html">stilt.transport.hysplit.HysplitModel</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.batched.html">stilt.transport.hysplit.HysplitModel.batched</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.needs_workdir.html">stilt.transport.hysplit.HysplitModel.needs_workdir</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.check_met.html">stilt.transport.hysplit.HysplitModel.check_met</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.data_files.html">stilt.transport.hysplit.HysplitModel.data_files</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.downloads_met.html">stilt.transport.hysplit.HysplitModel.downloads_met</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.fetch_met.html">stilt.transport.hysplit.HysplitModel.fetch_met</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.run.html">stilt.transport.hysplit.HysplitModel.run</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.version.html">stilt.transport.hysplit.HysplitModel.version</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.models.ModelRun.html">runtraj.models.ModelRun</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.models.get_model.html">runtraj.models.get_model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.models.run_model.html">runtraj.models.run_model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.models.run_model_many.html">runtraj.models.run_model_many</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="runtraj.models.hysplit.HysplitModel.html">runtraj.models.hysplit.HysplitModel</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitModel.batched.html">runtraj.models.hysplit.HysplitModel.batched</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitModel.needs_workdir.html">runtraj.models.hysplit.HysplitModel.needs_workdir</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitModel.check_met.html">runtraj.models.hysplit.HysplitModel.check_met</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitModel.data_files.html">runtraj.models.hysplit.HysplitModel.data_files</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitModel.downloads_met.html">runtraj.models.hysplit.HysplitModel.downloads_met</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitModel.fetch_met.html">runtraj.models.hysplit.HysplitModel.fetch_met</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitModel.run.html">runtraj.models.hysplit.HysplitModel.run</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitModel.sha256.html">runtraj.models.hysplit.HysplitModel.sha256</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitModel.version.html">runtraj.models.hysplit.HysplitModel.version</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.transport.stilt_r.StiltRModel.html">stilt.transport.stilt_r.StiltRModel</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.stilt_r.StiltRModel.needs_workdir.html">stilt.transport.stilt_r.StiltRModel.needs_workdir</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.stilt_r.StiltRModel.data_files.html">stilt.transport.stilt_r.StiltRModel.data_files</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.stilt_r.StiltRModel.run.html">stilt.transport.stilt_r.StiltRModel.run</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.stilt_r.StiltRModel.version.html">stilt.transport.stilt_r.StiltRModel.version</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.migration.StiltRModel.html">stilt.migration.StiltRModel</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="stilt.migration.StiltRModel.needs_workdir.html">stilt.migration.StiltRModel.needs_workdir</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.migration.StiltRModel.data_files.html">stilt.migration.StiltRModel.data_files</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.migration.StiltRModel.run.html">stilt.migration.StiltRModel.run</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.migration.StiltRModel.sha256.html">stilt.migration.StiltRModel.sha256</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.migration.StiltRModel.version.html">stilt.migration.StiltRModel.version</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.transport.stilt_r.StiltRConfig.html">stilt.transport.stilt_r.StiltRConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.stilt_r.StiltRConfig.UNRECORDED.html">stilt.transport.stilt_r.StiltRConfig.UNRECORDED</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.migration.StiltRConfig.html">stilt.migration.StiltRConfig</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.migration.StiltRMetConfig.html">stilt.migration.StiltRMetConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="stilt.migration.StiltRMetConfig.settings.html">stilt.migration.StiltRMetConfig.settings</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.transport.stilt_r.StiltRMetConfig.html">stilt.transport.stilt_r.StiltRMetConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.stilt_r.StiltRMetConfig.settings.html">stilt.transport.stilt_r.StiltRMetConfig.settings</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="runtraj.stages.Stage.html">runtraj.stages.Stage</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.stages.Stage.check.html">runtraj.stages.Stage.check</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.stages.Stage.resolve.html">runtraj.stages.Stage.resolve</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.stages.Stage.run.html">runtraj.stages.Stage.run</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.stages.Stage.settings.html">runtraj.stages.Stage.settings</a></li>
 </ul>
 </details></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.stages.get_stage.html">runtraj.stages.get_stage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.stages.ordered.html">runtraj.stages.ordered</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.stages.check_stage.html">runtraj.stages.check_stage</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../transforms.html">Transforms</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.transforms.AveragingKernel.html">stilt.transforms.AveragingKernel</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transforms.AveragingKernel.apply.html">stilt.transforms.AveragingKernel.apply</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transforms.AveragingKernel.check.html">stilt.transforms.AveragingKernel.check</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transforms.AveragingKernel.kernel.html">stilt.transforms.AveragingKernel.kernel</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transforms.AveragingKernel.table_receptors.html">stilt.transforms.AveragingKernel.table_receptors</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="runtraj.transforms.AveragingKernel.html">runtraj.transforms.AveragingKernel</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.transforms.AveragingKernel.apply.html">runtraj.transforms.AveragingKernel.apply</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.transforms.AveragingKernel.check.html">runtraj.transforms.AveragingKernel.check</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.transforms.AveragingKernel.kernel.html">runtraj.transforms.AveragingKernel.kernel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.transforms.AveragingKernel.table_releases.html">runtraj.transforms.AveragingKernel.table_releases</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.transforms.PressureWeighting.html">stilt.transforms.PressureWeighting</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transforms.PressureWeighting.reads_zsfc.html">stilt.transforms.PressureWeighting.reads_zsfc</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transforms.PressureWeighting.apply.html">stilt.transforms.PressureWeighting.apply</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="runtraj.transforms.PressureWeighting.html">runtraj.transforms.PressureWeighting</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.transforms.PressureWeighting.reads_zsfc.html">runtraj.transforms.PressureWeighting.reads_zsfc</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.transforms.PressureWeighting.apply.html">runtraj.transforms.PressureWeighting.apply</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.transforms.FirstOrderLifetime.html">stilt.transforms.FirstOrderLifetime</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transforms.FirstOrderLifetime.apply.html">stilt.transforms.FirstOrderLifetime.apply</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="runtraj.transforms.FirstOrderLifetime.html">runtraj.transforms.FirstOrderLifetime</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.transforms.FirstOrderLifetime.apply.html">runtraj.transforms.FirstOrderLifetime.apply</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.transforms.DryDeposition.html">stilt.transforms.DryDeposition</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transforms.DryDeposition.apply.html">stilt.transforms.DryDeposition.apply</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="runtraj.transforms.DryDeposition.html">runtraj.transforms.DryDeposition</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.transforms.DryDeposition.apply.html">runtraj.transforms.DryDeposition.apply</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.transforms.Oxidation.html">stilt.transforms.Oxidation</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transforms.Oxidation.apply.html">stilt.transforms.Oxidation.apply</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transforms.Oxidation.check.html">stilt.transforms.Oxidation.check</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transforms.Oxidation.field.html">stilt.transforms.Oxidation.field</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transforms.Oxidation.rate.html">stilt.transforms.Oxidation.rate</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="runtraj.transforms.Oxidation.html">runtraj.transforms.Oxidation</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.transforms.Oxidation.apply.html">runtraj.transforms.Oxidation.apply</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.transforms.Oxidation.check.html">runtraj.transforms.Oxidation.check</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.transforms.Oxidation.field.html">runtraj.transforms.Oxidation.field</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.transforms.Oxidation.rate.html">runtraj.transforms.Oxidation.rate</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.transforms.averaging_kernel_table.html">stilt.transforms.averaging_kernel_table</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.transforms.release_coordinate.html">stilt.transforms.release_coordinate</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.transforms.particle_pwf.html">stilt.transforms.particle_pwf</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.transforms.ak_weights.html">stilt.transforms.ak_weights</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.transforms.survival.html">stilt.transforms.survival</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.transforms.dry_deposition_survival.html">stilt.transforms.dry_deposition_survival</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.transforms.load_transform.html">stilt.transforms.load_transform</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.transforms.dump_transform.html">stilt.transforms.dump_transform</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.transforms.apply_transforms.html">stilt.transforms.apply_transforms</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.transforms.averaging_kernel_table.html">runtraj.transforms.averaging_kernel_table</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.transforms.weigh.html">runtraj.transforms.weigh</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.transforms.release_coordinate.html">runtraj.transforms.release_coordinate</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.transforms.particle_pwf.html">runtraj.transforms.particle_pwf</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.transforms.ak_weights.html">runtraj.transforms.ak_weights</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.transforms.survival.html">runtraj.transforms.survival</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.transforms.dry_deposition_survival.html">runtraj.transforms.dry_deposition_survival</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.transforms.load_transform.html">runtraj.transforms.load_transform</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.transforms.dump_transform.html">runtraj.transforms.dump_transform</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.transforms.apply_transforms.html">runtraj.transforms.apply_transforms</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.transforms.transform_kind.html">runtraj.transforms.transform_kind</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.sampling.sample_field.html">runtraj.sampling.sample_field</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.sampling.vertical_dim.html">runtraj.sampling.vertical_dim</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.sampling.nearest_cell.html">runtraj.sampling.nearest_cell</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../observations.html">Observations</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="stilt.observations.receptors_from_soundings.html">stilt.observations.receptors_from_soundings</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.observations.releases_from_soundings.html">stilt.observations.releases_from_soundings</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.observations.group_by_overpass.html">stilt.observations.group_by_overpass</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.observations.select_observations_spatial.html">stilt.observations.select_observations_spatial</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.observations.jitter_points.html">stilt.observations.jitter_points</a></li>
@@ -782,7 +751,7 @@
 <li class="toctree-l2"><a class="reference internal" href="stilt.observations.read_ggg_netcdf.html">stilt.observations.read_ggg_netcdf</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.observations.read_coccon.html">stilt.observations.read_coccon</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.observations.read_proffast.html">stilt.observations.read_proffast</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.observations.receptors_from_track.html">stilt.observations.receptors_from_track</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.observations.releases_from_track.html">stilt.observations.releases_from_track</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.observations.check_track.html">stilt.observations.check_track</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.observations.plume_polygon.html">stilt.observations.plume_polygon</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.observations.Plume.html">stilt.observations.Plume</a></li>
@@ -794,30 +763,30 @@
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../project.html">Project And Output</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.output.Output.html">stilt.output.Output</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.clear_failure.html">stilt.output.Output.clear_failure</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.complete.html">stilt.output.Output.complete</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.failure.html">stilt.output.Output.failure</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.failures.html">stilt.output.Output.failures</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.folder.html">stilt.output.Output.folder</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.folders.html">stilt.output.Output.folders</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.hashes.html">stilt.output.Output.hashes</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.keep_workdir.html">stilt.output.Output.keep_workdir</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.kept_workdir.html">stilt.output.Output.kept_workdir</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.log_path.html">stilt.output.Output.log_path</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.logged.html">stilt.output.Output.logged</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.path.html">stilt.output.Output.path</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.present.html">stilt.output.Output.present</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.read.html">stilt.output.Output.read</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.record_failure.html">stilt.output.Output.record_failure</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.table.html">stilt.output.Output.table</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.write_empty_footprint.html">stilt.output.Output.write_empty_footprint</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.write_footprint.html">stilt.output.Output.write_footprint</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.write_log.html">stilt.output.Output.write_log</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.output.Output.write_particles.html">stilt.output.Output.write_particles</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="runtraj.output.Output.html">runtraj.output.Output</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.output.Output.clear_failure.html">runtraj.output.Output.clear_failure</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.output.Output.complete.html">runtraj.output.Output.complete</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.output.Output.failure.html">runtraj.output.Output.failure</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.output.Output.failures.html">runtraj.output.Output.failures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.output.Output.folder.html">runtraj.output.Output.folder</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.output.Output.folders.html">runtraj.output.Output.folders</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.output.Output.hashes.html">runtraj.output.Output.hashes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.output.Output.keep_workdir.html">runtraj.output.Output.keep_workdir</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.output.Output.kept_workdir.html">runtraj.output.Output.kept_workdir</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.output.Output.kinds.html">runtraj.output.Output.kinds</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.output.Output.log_path.html">runtraj.output.Output.log_path</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.output.Output.logged.html">runtraj.output.Output.logged</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.output.Output.make_path.html">runtraj.output.Output.make_path</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.output.Output.path.html">runtraj.output.Output.path</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.output.Output.present.html">runtraj.output.Output.present</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.output.Output.read.html">runtraj.output.Output.read</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.output.Output.record_failure.html">runtraj.output.Output.record_failure</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.output.Output.table.html">runtraj.output.Output.table</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.output.Output.write_log.html">runtraj.output.Output.write_log</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.output.Output.write_particles.html">runtraj.output.Output.write_particles</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.output.completed.html">stilt.output.completed</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.output.completed.html">runtraj.output.completed</a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.footprint.Jacobian.html">stilt.footprint.Jacobian</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="stilt.footprint.Jacobian.to_frame.html">stilt.footprint.Jacobian.to_frame</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.footprint.Jacobian.to_xarray.html">stilt.footprint.Jacobian.to_xarray</a></li>
@@ -826,25 +795,28 @@
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../hysplit.html">HYSPLIT Integration</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.transport.hysplit.HysplitConfig.html">stilt.transport.hysplit.HysplitConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitConfig.UNRECORDED.html">stilt.transport.hysplit.HysplitConfig.UNRECORDED</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitConfig.hourly_ziscale.html">stilt.transport.hysplit.HysplitConfig.hourly_ziscale</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitConfig.maxpar_for.html">stilt.transport.hysplit.HysplitConfig.maxpar_for</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitConfig.realizations.html">stilt.transport.hysplit.HysplitConfig.realizations</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="runtraj.models.hysplit.HysplitConfig.html">runtraj.models.hysplit.HysplitConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitConfig.UNRECORDED.html">runtraj.models.hysplit.HysplitConfig.UNRECORDED</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitConfig.hourly_ziscale.html">runtraj.models.hysplit.HysplitConfig.hourly_ziscale</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitConfig.maxpar_for.html">runtraj.models.hysplit.HysplitConfig.maxpar_for</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitConfig.realizations.html">runtraj.models.hysplit.HysplitConfig.realizations</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.transport.hysplit.write_inputs.html">stilt.transport.hysplit.write_inputs</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.transport.hysplit.run_hycs_std.html">stilt.transport.hysplit.run_hycs_std</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.transport.hysplit.read_particle_dat.html">stilt.transport.hysplit.read_particle_dat</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.transport.hysplit.FailureReason.html">stilt.transport.hysplit.FailureReason</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.models.hysplit.find_hycs_std.html">runtraj.models.hysplit.find_hycs_std</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.models.hysplit.data_tables.html">runtraj.models.hysplit.data_tables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.models.hysplit.write_inputs.html">runtraj.models.hysplit.write_inputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.models.hysplit.run_hycs_std.html">runtraj.models.hysplit.run_hycs_std</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.models.hysplit.read_particle_dat.html">runtraj.models.hysplit.read_particle_dat</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.models.hysplit.FailureReason.html">runtraj.models.hysplit.FailureReason</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../exceptions.html">Exceptions</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="stilt.StiltError.html">stilt.StiltError</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.exceptions.SimulationError.html">stilt.exceptions.SimulationError</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.exceptions.MeteorologyError.html">stilt.exceptions.MeteorologyError</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.exceptions.WorkerDied.html">stilt.exceptions.WorkerDied</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.exceptions.HYSPLITNotFoundError.html">stilt.exceptions.HYSPLITNotFoundError</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.RuntrajError.html">runtraj.RuntrajError</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.exceptions.SimulationError.html">runtraj.exceptions.SimulationError</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.exceptions.MeteorologyError.html">runtraj.exceptions.MeteorologyError</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.exceptions.WorkerDied.html">runtraj.exceptions.WorkerDied</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.exceptions.HYSPLITNotFoundError.html">runtraj.exceptions.HYSPLITNotFoundError</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.exceptions.MissingClass.html">runtraj.exceptions.MissingClass</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.exceptions.EmptyFootprint.html">stilt.exceptions.EmptyFootprint</a></li>
 </ul>
 </details></li>
@@ -918,12 +890,13 @@
 <span class="sig-prename descclassname"><span class="pre">stilt.migration.</span></span><span class="sig-name descname"><span class="pre">import_stilt_r</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">by_id_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">version</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'stilt-r'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">smooth_factor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">met_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/stilt/migration.html#import_stilt_r"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.migration.import_stilt_r" title="Link to this definition">#</a></dt>
 <dd><p>Write the runs of a STILT-R or X-STILT <code class="docutils literal notranslate"><span class="pre">by-id</span></code> folder into a PYSTILT output directory.</p>
 <p>Each run’s particles and footprint, as <a class="reference internal" href="stilt.migration.read_stilt_r.html#stilt.migration.read_stilt_r" title="stilt.migration.read_stilt_r"><code class="xref py py-func docutils literal notranslate"><span class="pre">read_stilt_r()</span></code></a> reads them,
-go to the folders of a variant with <code class="docutils literal notranslate"><span class="pre">model:</span> <span class="pre">stilt-r</span></code>
-(<a class="reference internal" href="stilt.transport.stilt_r.StiltRModel.html#stilt.transport.stilt_r.StiltRModel" title="stilt.transport.stilt_r.StiltRModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">StiltRModel</span></code></a>). A project whose
+go to the folders of a variant whose model is <code class="docutils literal notranslate"><span class="pre">stilt-r</span></code>, a <code class="docutils literal notranslate"><span class="pre">models:</span></code>
+block with <code class="docutils literal notranslate"><span class="pre">class:</span> <span class="pre">stilt.migration.StiltRModel</span></code>
+(<a class="reference internal" href="stilt.migration.StiltRModel.html#stilt.migration.StiltRModel" title="stilt.migration.StiltRModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">StiltRModel</span></code></a>). A project whose
 <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> has that variant reads them as its own results:
 <code class="docutils literal notranslate"><span class="pre">project.status</span></code>, <code class="docutils literal notranslate"><span class="pre">project.particles</span></code>, <code class="docutils literal notranslate"><span class="pre">project.footprints</span></code>, and
 <code class="docutils literal notranslate"><span class="pre">project.jacobian</span></code>. The import prints the variant and its met, to paste
-into <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>, and returns the receptors, for <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>.</p>
+into <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>, and returns the releases, for <code class="docutils literal notranslate"><span class="pre">releases.csv</span></code>.</p>
 <p>Every folder of an output directory is named by the hash of its
 settings, and an imported run’s settings are only what STILT-R’s files
 record, never a default standing in for a value they do not give:</p>
@@ -970,11 +943,11 @@ folders. Every directory they name must be in it.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The receptors of the runs, in folder order, for
-<a class="reference internal" href="stilt.Project.add_receptors.html#stilt.Project.add_receptors" title="stilt.Project.add_receptors"><code class="xref py py-meth docutils literal notranslate"><span class="pre">stilt.Project.add_receptors()</span></code></a>.</p>
+<dd class="field-even"><p>The releases of the runs, in folder order, for
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">stilt.Project.add_releases()</span></code>.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[stilt.receptor.Receptor]</span></p>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[runtraj.releases.Release]</span></p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><ul class="simple">
@@ -993,12 +966,15 @@ folders. Every directory they name must be in it.</p></li>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">receptors</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">migration</span><span class="o">.</span><span class="n">import_stilt_r</span><span class="p">(</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">releases</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">migration</span><span class="o">.</span><span class="n">import_stilt_r</span><span class="p">(</span>
 <span class="gp">... </span>    <span class="s2">"my_project/out/by-id"</span><span class="p">,</span> <span class="s2">"output"</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="s2">"1d936c1"</span>
 <span class="gp">... </span><span class="p">)</span>
 <span class="go">mets:</span>
 <span class="go">  stilt-r:</span>
 <span class="go">    met_path: /data/hrrr</span>
+<span class="go">models:</span>
+<span class="go">  stilt-r:</span>
+<span class="go">    class: stilt.migration.StiltRModel</span>
 <span class="go">variants:</span>
 <span class="go">  stilt-r:</span>
 <span class="go">    model: stilt-r</span>
@@ -1006,7 +982,7 @@ folders. Every directory they name must be in it.</p></li>
 <span class="go">    version: 1d936c1</span>
 <span class="go">    capemin: -1</span>
 <span class="go">    ...</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="s2">"my_project_py"</span><span class="p">,</span> <span class="n">receptors</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="s2">"output"</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="s2">"my_project_py"</span><span class="p">,</span> <span class="n">releases</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="s2">"output"</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
 </pre></div>
 </div>
 </dd></dl>

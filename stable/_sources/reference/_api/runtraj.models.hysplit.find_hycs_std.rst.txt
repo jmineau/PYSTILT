@@ -1,0 +1,6 @@
+﻿runtraj.models.hysplit.find\_hycs\_std
+======================================
+
+.. currentmodule:: runtraj.models.hysplit
+
+.. autofunction:: find_hycs_std

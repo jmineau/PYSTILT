@@ -3,20 +3,25 @@ Core Objects
 
 .. currentmodule:: stilt
 
-The project, its receptors, the simulations it runs, and their outputs.
+The project, its releases, the simulations it runs, and their outputs.
+The particle runs are `runtraj <https://jmineau.github.io/runtraj/>`_'s, and
+its reference has their classes and functions; this page lists what
+``stilt`` adds and the names it gives you.
 
-One receptor, without a project
+One release, without a project
 -------------------------------
 
-:func:`run_trajectories` runs the transport model for one receptor and
+:func:`run_trajectories` runs the transport model for one release and
 returns its particles, and :func:`calc_footprint` makes a footprint from
-them. A project runs the same two steps for each of its receptors and
+them. :func:`footprint.footprint_particles` gives the particles the
+``foot`` a footprint's settings ask for, as a project's footprint stage
+does. A project runs the same two steps for each of its releases and
 stores the results.
 
 .. code-block:: python
 
-   particles = stilt.run_trajectories(receptor, met, n_hours=-24, numpar=200)
-   foot = stilt.calc_footprint(particles, receptor, grid)
+   particles = stilt.run_trajectories(release, met, n_hours=-24, numpar=200)
+   foot = stilt.calc_footprint(particles, release, grid)
 
 .. autosummary::
    :toctree: _api
@@ -24,9 +29,16 @@ stores the results.
 
    run_trajectories
    calc_footprint
+   footprint.footprint_particles
 
 Project interface
 -----------------
+
+:class:`Project` is what you open a project with. It is runtraj's
+:class:`runtraj.Project`, which runs the transport model and reads the
+particles, with the reads of what STILT makes from the particles added: the
+footprints, the Jacobian, and the transport error of a selection. Both open
+the same directory; the workers use runtraj's.
 
 .. autosummary::
    :toctree: _api
@@ -34,65 +46,64 @@ Project interface
 
    Project
 
-Receptor objects
+Release objects
 ----------------
 
 .. autosummary::
    :toctree: _api
    :nosignatures:
 
-   Receptor
-   PointReceptor
-   ColumnReceptor
-   MultiPointReceptor
-   read_receptors
-   receptors.write_receptors
-   receptors.receptors_to_frame
-   receptors.receptors_from_frame
-   receptors.parse_receptor_id
+   Release
+   PointRelease
+   ColumnRelease
+   MultiPointRelease
+   read_releases
 
 Simulation objects
 ------------------
 
-A :class:`~stilt.config.Variant` is one variant of a project, resolved: its configs, its
+A :class:`~runtraj.config.Variant` is one variant of a project, resolved: its configs, its
 met, the transport model build, and the hashes that find its results.
 ``project.variants`` holds them, and :meth:`ProjectConfig.resolve` makes
 them from a config.
+
+:class:`Simulation`, which ``project.simulation(release_id, variant)``
+returns, adds the footprint, the background and the transport error to
+runtraj's :class:`runtraj.Simulation`, which the workers and the stages are
+given.
 
 .. autosummary::
    :toctree: _api
    :nosignatures:
 
    Simulation
-   config.Variant
 
 Settings and their hashes
 -------------------------
 
-:mod:`stilt.identity` records what a result was made with, as each output
-folder's ``_settings.yaml`` holds it, and hashes it. A stored record is read
-back through the current config classes, so a setting added since, with a
-default, still matches.
+:mod:`runtraj.identity` records what a run was made with, as its folder's
+``_settings.yaml`` holds it, and hashes it. A stage records its own settings
+(:meth:`runtraj.stages.Stage.settings`; the footprint's are
+:func:`~stilt.footprint.config.footprint_settings`), which are hashed with
+the particles' hash and the hash of each stage it reads. A stored record is
+read back through the current config classes, so a setting added since, with
+a default, still matches.
 
 .. autosummary::
    :toctree: _api
    :nosignatures:
 
-   identity.run_settings
-   identity.read_run_settings
-   identity.transport_from_settings
-   identity.footprint_settings
-   identity.read_footprint_settings
-   identity.settings_hash
-   transport.ModelInfo
+   footprint.config.footprint_settings
+   footprint.config.read_footprint_settings
 
 Particles and footprints
 ------------------------
 
 A simulation's particles are a pandas DataFrame and its footprint an xarray
-DataArray. PYSTILT's methods on them are under ``.stilt``
-(:class:`~stilt.particles.ParticlesAccessor`,
-:class:`~stilt.footprint.FootprintAccessor`). The functions below read and
+DataArray. PYSTILT's methods on them are under ``.stilt``:
+:class:`~stilt.particles.ParticlesAccessor` (runtraj's
+:class:`~runtraj.particles.ParticlesAccessor` with ``enhancement`` added) and
+:class:`~stilt.footprint.FootprintAccessor`. The functions below read and
 write particle and footprint files without a project.
 
 .. autosummary::
@@ -100,8 +111,6 @@ write particle and footprint files without a project.
    :nosignatures:
 
    read_particles
-   particles.particles_metadata
-   particles.write_particles
    read_footprint
    footprint.write_footprint
    footprint.write_empty_footprint
@@ -113,7 +122,7 @@ Output of STILT-R and X-STILT
 -----------------------------
 
 :mod:`stilt.migration` reads the ``out/by-id`` folder of a STILT-R or
-X-STILT project as receptors, particle tables, and footprints, and imports
+X-STILT project as releases, particle tables, and footprints, and imports
 it into an output directory, where a ``stilt-r`` variant reads it
 (:doc:`/guides/migration/stilt_r`).
 
@@ -127,7 +136,7 @@ it into an output directory, where a ``stilt-r`` variant reads it
 What the particles give beyond the footprint
 --------------------------------------------
 
-The background mole fraction at a receptor, from a field sampled where
+The background mole fraction at a release, from a field sampled where
 the particles end (:doc:`/guides/background`), and the transport error of
 the modeled enhancement, from a wind-error variant
 (:doc:`/guides/transport_error`). With a project they are
@@ -146,7 +155,7 @@ Both weight the particles the way the footprint does.
 Simulation tables
 -----------------
 
-``project.receptors`` is a pandas DataFrame with one row per receptor, and
+``project.releases`` is a pandas DataFrame with one row per release, and
 ``project.simulations`` one with one row per simulation. Select rows as in
 pandas, then pass the selection to the project's :meth:`~Project.status`,
 :meth:`~Project.incomplete`, :meth:`~Project.particles`,
@@ -179,7 +188,7 @@ A :class:`Grid` works as well. It is documented under :doc:`configuration`.
 :mod:`stilt.footprint` also has the helpers that compute how much of each
 footprint cell falls in each target cell. These overlap weights are cached,
 so each geometry's weights are computed once per footprint grid.
-:mod:`stilt.spatial` has the CRS helpers.
+:mod:`runtraj.spatial` has the CRS helpers.
 
 .. autosummary::
    :toctree: _api
@@ -187,25 +196,22 @@ so each geometry's weights are computed once per footprint grid.
 
    footprint.overlap_weights
    footprint.check_resolution
-   spatial.same_crs
-   spatial.is_longlat
-   spatial.horizontal_dims
 
 Sampling fields
 ---------------
 
-:mod:`stilt.sampling` looks up a gridded field at points: a surface flux
-under a footprint or along particle paths (``foot.stilt.enhancement``,
-``particles.stilt.enhancement``), or a mole-fraction field at particle
-endpoints (:func:`stilt.background`). :func:`~stilt.sampling.sample_met`
-reads ARL met files at particle positions, for the particle columns a
-transport model can write from the met.
+:func:`runtraj.sampling.sample_field` looks up a gridded field at points:
+a surface flux under a footprint or along particle paths
+(``foot.stilt.enhancement``, ``particles.stilt.enhancement``), or a
+mole-fraction field at particle endpoints (:func:`stilt.background`); it
+is listed with the transforms (:doc:`transforms`).
+:func:`~stilt.sampling.sample_met` reads ARL met files at particle
+positions, for the particle columns a transport model can write from the
+met.
 
 .. autosummary::
    :toctree: _api
    :nosignatures:
 
-   sampling.sample_field
    sampling.sample_met
-   sampling.vertical_dim
-   sampling.nearest_cell
+   sampling.calc_pbl_height

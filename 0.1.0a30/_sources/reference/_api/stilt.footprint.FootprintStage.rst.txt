@@ -1,0 +1,32 @@
+﻿stilt.footprint.FootprintStage
+==============================
+
+.. currentmodule:: stilt.footprint
+
+
+
+
+
+
+.. class-signature:: stilt.footprint.FootprintStage
+
+
+.. class-parameters:: stilt.footprint.FootprintStage
+
+
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~FootprintStage.check
+   ~FootprintStage.resolve
+   ~FootprintStage.run
+   ~FootprintStage.settings
+
+
+

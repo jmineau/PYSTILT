@@ -1,0 +1,6 @@
+﻿runtraj.exceptions.MeteorologyError
+===================================
+
+.. currentmodule:: runtraj.exceptions
+
+.. autoexception:: MeteorologyError

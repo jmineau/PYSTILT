@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Roadmap &#8212; PYSTILT 0.1.0a29</title>
+    <title>Roadmap &#8212; PYSTILT 0.1.0a30</title>
   
   
   
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=947601de"></script>
+    <script src="../_static/documentation_options.js?v=7752668c"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a29';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a30';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -60,16 +60,22 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="prev" title="Validation" href="validation.html" />
+  
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29" />
+  <meta name="docsearch:version" content="0.1.0a30" />
   
     
     <script src="../_static/searchtools.js"></script>
     <script src="../_static/language_data.js"></script>
     <script src="../searchindex.js"></script>
   
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="PYSTILT">
+  <meta property="og:title" content="Roadmap">
+  <meta property="og:description" content="A Python implementation of the STILT Lagrangian atmospheric transport model.">
+
   </head>
   <body data-default-mode="">
   
@@ -134,7 +140,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a29</p>
+    <p class="title logo__title">PYSTILT</p>
   
 </a></div>
     
@@ -489,10 +495,10 @@ change between releases until v1.0.</p>
 (STILT-R) at <code class="docutils literal notranslate"><span class="pre">rtol=1e-7</span></code> per cell</p></li>
 <li><p>Running locally and on Slurm</p></li>
 <li><p>Reruns that skip finished simulations, judged by which output files exist</p></li>
-<li><p>Variants, which run the same receptors under several named settings in one
+<li><p>Variants, which run the same releases under several named settings in one
 project. Transport-error ensembles and extra footprints are variants too.</p></li>
 <li><p>Helpers for column and satellite observations</p></li>
-<li><p>Reading the <code class="docutils literal notranslate"><span class="pre">by-id</span></code> output of STILT-R and X-STILT as receptors, particles,
+<li><p>Reading the <code class="docutils literal notranslate"><span class="pre">by-id</span></code> output of STILT-R and X-STILT as releases, particles,
 and footprints (<a class="reference internal" href="../reference/_api/stilt.migration.read_stilt_r.html#stilt.migration.read_stilt_r" title="stilt.migration.read_stilt_r"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.migration.read_stilt_r()</span></code></a>), and importing it
 into an output directory, where a <code class="docutils literal notranslate"><span class="pre">stilt-r</span></code> variant reads it
 (<a class="reference internal" href="../reference/_api/stilt.migration.import_stilt_r.html#stilt.migration.import_stilt_r" title="stilt.migration.import_stilt_r"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.migration.import_stilt_r()</span></code></a>)</p></li>
@@ -516,8 +522,8 @@ ground-based instruments (see <em>Future plans</em> below).</p>
 <h2>Execution (call path from stiltctl)<a class="headerlink" href="#execution-call-path-from-stiltctl" title="Link to this heading">#</a></h2>
 <p><a class="reference external" href="https://github.com/jmineau/air-tracker-stiltctl">stiltctl</a> runs STILT on
 cloud infrastructure. PYSTILT keeps its call path. The CLI opens a <code class="docutils literal notranslate"><span class="pre">Project</span></code>,
-and the project hands receptors to workers. Its queue-backed and Kubernetes
-execution was implemented and then removed. Receptors now run on this
+and the project hands releases to workers. Its queue-backed and Kubernetes
+execution was implemented and then removed. Releases now run on this
 machine, or as tasks of a Slurm job array or another scheduler’s array,
 each a <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">--task</span></code> command line.</p>
 <div class="pst-scrollable-table-container"><table class="table">
@@ -555,13 +561,13 @@ each a <code class="docutils literal notranslate"><span class="pre">stilt</span>
 <tr class="row-odd"><td><p>Cloud object store outputs (GCS, S3)</p></td>
 <td><p>Implemented</p></td>
 </tr>
-<tr class="row-even"><td><p>Transport models other than HYSPLIT, named by import path (<code class="docutils literal notranslate"><span class="pre">model:</span> <span class="pre">mypkg.MyModel</span></code>), including models that run many receptors per call</p></td>
+<tr class="row-even"><td><p>Transport models other than HYSPLIT, named by import path (<code class="docutils literal notranslate"><span class="pre">class:</span> <span class="pre">mypkg.MyModel</span></code> in a <code class="docutils literal notranslate"><span class="pre">models</span></code> block), including models that run many releases per call</p></td>
 <td><p>Implemented (the interface; HYSPLIT is the one model)</p></td>
 </tr>
 <tr class="row-odd"><td><p>Met columns (<code class="docutils literal notranslate"><span class="pre">mlht</span></code>, <code class="docutils literal notranslate"><span class="pre">dens</span></code>, <code class="docutils literal notranslate"><span class="pre">pres</span></code>, <code class="docutils literal notranslate"><span class="pre">zsfc</span></code>) sampled at particle positions, for a model that writes only positions (<code class="docutils literal notranslate"><span class="pre">stilt.sampling.sample_met</span></code>)</p></td>
 <td><p>Implemented (see the Meteorology guide for how closely <code class="docutils literal notranslate"><span class="pre">pres</span></code> and <code class="docutils literal notranslate"><span class="pre">dens</span></code> match HYSPLIT’s)</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">foot</span></code> computed from the met files for a model that writes only positions, so its particles make footprints (<code class="docutils literal notranslate"><span class="pre">stilt.particles.add_foot</span></code>)</p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">foot</span></code> computed from the met files for a model that writes only positions, so its particles make footprints (<code class="docutils literal notranslate"><span class="pre">stilt.footprint.add_foot</span></code>)</p></td>
 <td><p>Implemented (no near-field correction for such a model; see Validation for how far a footprint moves)</p></td>
 </tr>
 <tr class="row-odd"><td><p>The mixed-layer height for a computed <code class="docutils literal notranslate"><span class="pre">foot</span></code>: the met’s <code class="docutils literal notranslate"><span class="pre">PBLH</span></code>, HYSPLIT’s Richardson-number method (<code class="docutils literal notranslate"><span class="pre">kmixd:</span> <span class="pre">3</span></code>), or a fixed depth, with a minimum (<code class="docutils literal notranslate"><span class="pre">pbl_height</span></code>, <code class="docutils literal notranslate"><span class="pre">pbl_height_min</span></code>)</p></td>
@@ -591,7 +597,7 @@ feature.</p>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">stilt.observations</span></code> helpers (overpass grouping, sounding selection, jitter, slant geometry)</p></td>
 <td><p>Implemented</p></td>
 </tr>
-<tr class="row-odd"><td><p>Column receptor support</p></td>
+<tr class="row-odd"><td><p>Column release support</p></td>
 <td><p>Implemented</p></td>
 </tr>
 <tr class="row-even"><td><p>Averaging-kernel and pressure-weighting particle transforms</p></td>
@@ -609,7 +615,7 @@ feature.</p>
 <tr class="row-even"><td><p>Declarative transforms in config YAML (default or per variant)</p></td>
 <td><p>Implemented</p></td>
 </tr>
-<tr class="row-odd"><td><p>Slant-column receptor support</p></td>
+<tr class="row-odd"><td><p>Slant-column release support</p></td>
 <td><p>Implemented (see the <em>Slant Columns</em> guide)</p></td>
 </tr>
 <tr class="row-even"><td><p>Slant altitudes from a retrieval’s pressure levels (<code class="docutils literal notranslate"><span class="pre">pressure_altitudes</span></code>)</p></td>
@@ -621,7 +627,7 @@ feature.</p>
 <tr class="row-even"><td><p>Per-sounding averaging kernels in batch runs (<code class="docutils literal notranslate"><span class="pre">averaging_kernel</span></code> with <code class="docutils literal notranslate"><span class="pre">table:</span></code>)</p></td>
 <td><p>Implemented</p></td>
 </tr>
-<tr class="row-odd"><td><p>A receptor and a kernel for each sounding (<code class="docutils literal notranslate"><span class="pre">receptors_from_soundings</span></code>, <code class="docutils literal notranslate"><span class="pre">project.add_table</span></code>)</p></td>
+<tr class="row-odd"><td><p>A release and a kernel for each sounding (<code class="docutils literal notranslate"><span class="pre">releases_from_soundings</span></code>, <code class="docutils literal notranslate"><span class="pre">project.add_table</span></code>)</p></td>
 <td><p>Implemented</p></td>
 </tr>
 <tr class="row-even"><td><p>Product readers (OCO-2/3, TROPOMI, TCCON, EM27/SUN from GGG or PROFFAST)</p></td>
@@ -672,7 +678,7 @@ correlated case is fips’s <code class="docutils literal notranslate"><span cla
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p>Receptors along the track of a car, train, aircraft, or ship, and each measurement’s receptor (<code class="docutils literal notranslate"><span class="pre">receptors_from_track</span></code>)</p></td>
+<tr class="row-even"><td><p>Releases along the track of a car, train, aircraft, or ship, and each measurement’s release (<code class="docutils literal notranslate"><span class="pre">releases_from_track</span></code>)</p></td>
 <td><p>Implemented (see the <em>Mobile Measurements</em> guide)</p></td>
 </tr>
 </tbody>
@@ -685,7 +691,7 @@ correlated case is fips’s <code class="docutils literal notranslate"><span cla
 <ol class="arabic simple">
 <li><p>Readers for the instruments people bring, such as EM27/SUN output
 from PROFFAST and MethaneAIR/MethaneSAT. Which ones come first depends on who is using
-column receptors.</p></li>
+column releases.</p></li>
 <li><p>A YAML form for <a class="reference internal" href="../reference/_api/stilt.Zones.html#stilt.Zones" title="stilt.Zones"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.Zones</span></code></a>, so the <code class="docutils literal notranslate"><span class="pre">geometry</span></code> footprint
 setting can name groups of cells.</p></li>
 </ol>

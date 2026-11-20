@@ -1,0 +1,43 @@
+﻿runtraj.models.hysplit.Met
+==========================
+
+.. currentmodule:: runtraj.models.hysplit
+
+
+
+
+
+
+.. class-signature:: runtraj.models.hysplit.Met
+
+
+.. class-parameters:: runtraj.models.hysplit.Met
+
+
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+   :nosignatures:
+
+   ~Met.crop_dir
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~Met.check
+   ~Met.check_releases
+   ~Met.fetch
+   ~Met.files_for
+   ~Met.missing
+   ~Met.readable
+
+
+

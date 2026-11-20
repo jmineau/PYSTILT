@@ -1,0 +1,45 @@
+﻿runtraj.models.hysplit.HysplitModel
+===================================
+
+.. currentmodule:: runtraj.models.hysplit
+
+
+
+
+
+
+.. class-signature:: runtraj.models.hysplit.HysplitModel
+
+
+.. class-parameters:: runtraj.models.hysplit.HysplitModel
+
+
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+   :nosignatures:
+
+   ~HysplitModel.batched
+   ~HysplitModel.needs_workdir
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~HysplitModel.check_met
+   ~HysplitModel.data_files
+   ~HysplitModel.downloads_met
+   ~HysplitModel.fetch_met
+   ~HysplitModel.run
+   ~HysplitModel.sha256
+   ~HysplitModel.version
+
+
+

@@ -1,6 +1,0 @@
-stilt.transport.TransportModel.run
-==================================
-
-.. currentmodule:: stilt.transport
-
-.. automethod:: TransportModel.run

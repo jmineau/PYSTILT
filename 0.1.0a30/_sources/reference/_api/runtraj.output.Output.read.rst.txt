@@ -1,0 +1,5 @@
+runtraj.output.Output.read
+==========================
+
+.. currentmodule:: runtraj.output
+.. automethod:: Output.read

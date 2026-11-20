@@ -1,0 +1,5 @@
+runtraj.transforms.DryDeposition.apply
+======================================
+
+.. currentmodule:: runtraj.transforms
+.. automethod:: DryDeposition.apply

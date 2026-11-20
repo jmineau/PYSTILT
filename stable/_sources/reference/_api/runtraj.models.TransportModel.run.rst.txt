@@ -1,0 +1,5 @@
+runtraj.models.TransportModel.run
+=================================
+
+.. currentmodule:: runtraj.models
+.. automethod:: TransportModel.run

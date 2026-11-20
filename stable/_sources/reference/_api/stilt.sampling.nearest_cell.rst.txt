@@ -1,6 +1,0 @@
-﻿stilt.sampling.nearest\_cell
-============================
-
-.. currentmodule:: stilt.sampling
-
-.. autofunction:: nearest_cell

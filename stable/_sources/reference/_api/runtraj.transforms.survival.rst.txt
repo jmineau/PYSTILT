@@ -1,0 +1,6 @@
+﻿runtraj.transforms.survival
+===========================
+
+.. currentmodule:: runtraj.transforms
+
+.. autofunction:: survival

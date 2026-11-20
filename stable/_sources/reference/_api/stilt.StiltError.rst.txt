@@ -1,6 +1,0 @@
-﻿stilt.StiltError
-================
-
-.. currentmodule:: stilt
-
-.. autoexception:: StiltError

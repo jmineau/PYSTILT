@@ -1,6 +1,0 @@
-﻿stilt.particles.check\_particles
-================================
-
-.. currentmodule:: stilt.particles
-
-.. autofunction:: check_particles

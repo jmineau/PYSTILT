@@ -1,0 +1,5 @@
+runtraj.output.Output.write\_log
+================================
+
+.. currentmodule:: runtraj.output
+.. automethod:: Output.write_log

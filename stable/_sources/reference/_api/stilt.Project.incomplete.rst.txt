@@ -1,6 +1,0 @@
-stilt.Project.incomplete
-========================
-
-.. currentmodule:: stilt
-
-.. automethod:: Project.incomplete

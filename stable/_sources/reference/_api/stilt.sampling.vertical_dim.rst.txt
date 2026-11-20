@@ -1,6 +1,0 @@
-﻿stilt.sampling.vertical\_dim
-============================
-
-.. currentmodule:: stilt.sampling
-
-.. autofunction:: vertical_dim

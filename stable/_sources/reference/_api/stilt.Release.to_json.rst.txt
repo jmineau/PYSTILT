@@ -1,0 +1,5 @@
+stilt.Release.to\_json
+======================
+
+.. currentmodule:: stilt
+.. automethod:: Release.to_json

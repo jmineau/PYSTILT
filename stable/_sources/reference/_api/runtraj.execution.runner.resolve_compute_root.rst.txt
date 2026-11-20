@@ -1,0 +1,6 @@
+﻿runtraj.execution.runner.resolve\_compute\_root
+===============================================
+
+.. currentmodule:: runtraj.execution.runner
+
+.. autofunction:: resolve_compute_root

@@ -1,0 +1,5 @@
+runtraj.output.Output.log\_path
+===============================
+
+.. currentmodule:: runtraj.output
+.. automethod:: Output.log_path

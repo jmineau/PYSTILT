@@ -1,0 +1,6 @@
+﻿stilt.observations.releases\_from\_soundings
+============================================
+
+.. currentmodule:: stilt.observations
+
+.. autofunction:: releases_from_soundings

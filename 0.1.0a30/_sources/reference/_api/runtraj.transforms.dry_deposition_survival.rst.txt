@@ -1,0 +1,6 @@
+﻿runtraj.transforms.dry\_deposition\_survival
+============================================
+
+.. currentmodule:: runtraj.transforms
+
+.. autofunction:: dry_deposition_survival

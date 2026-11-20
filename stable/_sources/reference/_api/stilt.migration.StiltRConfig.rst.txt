@@ -1,0 +1,24 @@
+﻿stilt.migration.StiltRConfig
+============================
+
+.. currentmodule:: stilt.migration
+
+
+
+
+
+
+.. class-signature:: stilt.migration.StiltRConfig
+
+
+Parameters
+----------
+
+.. config-model:: stilt.migration.StiltRConfig
+
+
+
+
+
+
+

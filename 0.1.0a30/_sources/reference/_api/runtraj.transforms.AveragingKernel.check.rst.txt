@@ -1,0 +1,5 @@
+runtraj.transforms.AveragingKernel.check
+========================================
+
+.. currentmodule:: runtraj.transforms
+.. automethod:: AveragingKernel.check

@@ -1,0 +1,5 @@
+runtraj.output.Output.make\_path
+================================
+
+.. currentmodule:: runtraj.output
+.. automethod:: Output.make_path

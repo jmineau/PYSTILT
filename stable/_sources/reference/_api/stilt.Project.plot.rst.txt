@@ -1,6 +1,0 @@
-stilt.Project.plot
-==================
-
-.. currentmodule:: stilt
-
-.. autoproperty:: Project.plot

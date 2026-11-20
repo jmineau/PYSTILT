@@ -1,0 +1,6 @@
+﻿runtraj.stages.check\_stage
+===========================
+
+.. currentmodule:: runtraj.stages
+
+.. autofunction:: check_stage

@@ -6,20 +6,14 @@
 
 
 
+
+
 .. class-signature:: stilt.particles.ParticlesAccessor
 
 
 .. class-parameters:: stilt.particles.ParticlesAccessor
 
 
-
-Attributes
-----------
-
-.. autosummary::
-   :toctree:
-
-   ~ParticlesAccessor.plot
 
 
 
@@ -29,10 +23,7 @@ Methods
 .. autosummary::
    :toctree:
 
-   ~ParticlesAccessor.endpoints
    ~ParticlesAccessor.enhancement
-   ~ParticlesAccessor.grid_exits
-   ~ParticlesAccessor.to_cf_trajectories
 
 
 

@@ -1,0 +1,5 @@
+runtraj.stages.Stage.resolve
+============================
+
+.. currentmodule:: runtraj.stages
+.. automethod:: Stage.resolve

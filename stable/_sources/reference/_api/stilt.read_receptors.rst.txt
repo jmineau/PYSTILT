@@ -1,6 +1,0 @@
-﻿stilt.read\_receptors
-=====================
-
-.. currentmodule:: stilt
-
-.. autofunction:: read_receptors

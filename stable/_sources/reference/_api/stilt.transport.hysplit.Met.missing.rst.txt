@@ -1,6 +1,0 @@
-stilt.transport.hysplit.Met.missing
-===================================
-
-.. currentmodule:: stilt.transport.hysplit
-
-.. automethod:: Met.missing

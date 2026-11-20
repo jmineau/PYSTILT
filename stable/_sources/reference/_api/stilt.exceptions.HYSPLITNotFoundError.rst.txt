@@ -1,6 +1,0 @@
-﻿stilt.exceptions.HYSPLITNotFoundError
-=====================================
-
-.. currentmodule:: stilt.exceptions
-
-.. autoexception:: HYSPLITNotFoundError

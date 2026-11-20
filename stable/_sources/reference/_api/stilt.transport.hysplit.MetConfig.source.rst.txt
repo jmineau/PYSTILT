@@ -1,6 +1,0 @@
-stilt.transport.hysplit.MetConfig.source
-========================================
-
-.. currentmodule:: stilt.transport.hysplit
-
-.. automethod:: MetConfig.source

@@ -1,6 +1,0 @@
-﻿stilt.transforms.load\_transform
-================================
-
-.. currentmodule:: stilt.transforms
-
-.. autofunction:: load_transform

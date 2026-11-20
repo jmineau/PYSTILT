@@ -1,0 +1,6 @@
+﻿runtraj.transforms.ak\_weights
+==============================
+
+.. currentmodule:: runtraj.transforms
+
+.. autofunction:: ak_weights

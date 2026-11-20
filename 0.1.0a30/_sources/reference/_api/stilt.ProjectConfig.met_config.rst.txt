@@ -1,0 +1,5 @@
+stilt.ProjectConfig.met\_config
+===============================
+
+.. currentmodule:: stilt
+.. automethod:: ProjectConfig.met_config

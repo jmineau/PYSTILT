@@ -1,0 +1,6 @@
+stilt.FootprintConfig.zsfc\_reasons
+===================================
+
+.. currentmodule:: stilt
+
+.. autoproperty:: FootprintConfig.zsfc_reasons

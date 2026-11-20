@@ -2,5 +2,4 @@ stilt.Grid.to\_xarray
 =====================
 
 .. currentmodule:: stilt
-
 .. automethod:: Grid.to_xarray

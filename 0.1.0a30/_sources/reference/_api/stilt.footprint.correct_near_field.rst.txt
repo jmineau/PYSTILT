@@ -1,0 +1,6 @@
+﻿stilt.footprint.correct\_near\_field
+====================================
+
+.. currentmodule:: stilt.footprint
+
+.. autofunction:: correct_near_field

@@ -1,0 +1,6 @@
+﻿runtraj.models.hysplit.write\_inputs
+====================================
+
+.. currentmodule:: runtraj.models.hysplit
+
+.. autofunction:: write_inputs

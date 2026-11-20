@@ -1,6 +1,0 @@
-stilt.transport.TransportConfig.RECORDED\_WHEN\_SET
-===================================================
-
-.. currentmodule:: stilt.transport
-
-.. autoattribute:: TransportConfig.RECORDED_WHEN_SET

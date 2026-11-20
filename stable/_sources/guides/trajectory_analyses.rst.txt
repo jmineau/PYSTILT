@@ -5,11 +5,11 @@ Tools such as HyTraj and pysplit work with a few trajectories per
 measurement: residence time, potential source contribution (PSCF),
 concentration-weighted trajectories (CWT), a mean path, the time the
 air took from a source. PYSTILT's results do all of these, and most get
-simpler, because a run gives hundreds of particles per receptor and a
+simpler, because a run gives hundreds of particles per release and a
 footprint that already weights them by their time near the ground.
 
-The examples use a month of receptors at one site, and a table of your
-measurements with a ``receptor`` column, such as ``project.simulations``
+The examples use a month of releases at one site, and a table of your
+measurements with a ``release`` column, such as ``project.simulations``
 merged with your data:
 
 .. code-block:: python
@@ -19,7 +19,7 @@ merged with your data:
 
    sims = project.simulations
    july = sims[(sims.variant == "hrrr") & sims.time.between("2023-07-01", "2023-07-31 23:00")]
-   obs = july.merge(measurements, on="receptor")   # one row per receptor, with "ch4"
+   obs = july.merge(measurements, on="release")   # one row per release, with "ch4"
 
 Residence time
 --------------
@@ -27,13 +27,13 @@ Residence time
 The footprint is STILT's residence time. It counts the time each particle
 spends in the lower half of the mixed layer, divides by the air density
 and the depth the flux mixes through, and sums over the particles. Summed
-over the hours of the run and averaged over the receptors, it says where
+over the hours of the run and averaged over the releases, it says where
 the air came from near the ground:
 
 .. code-block:: python
 
    footprints = project.footprints(july)
-   residence = footprints.foot.sum("hour").mean("receptor")
+   residence = footprints.foot.sum("hour").mean("release")
    np.log10(residence.where(residence > 0)).plot()
 
 For the time spent anywhere in the column, as HyTraj counts it, count
@@ -53,14 +53,14 @@ Potential source contribution (PSCF)
 ------------------------------------
 
 PSCF is, for each cell, the fraction of the visits that came from
-receptors with a high value. With particles, each particle position is
+releases with a high value. With particles, each particle position is
 one visit:
 
 .. code-block:: python
 
-   high = obs.loc[obs["ch4"] > obs["ch4"].quantile(0.75), "receptor"]
+   high = obs.loc[obs["ch4"] > obs["ch4"].quantile(0.75), "release"]
    visits, _, _ = np.histogram2d(particles["lon"], particles["lat"], bins=[x_edges, y_edges])
-   high_rows = particles["receptor"].isin(high)
+   high_rows = particles["release"].isin(high)
    high_visits, _, _ = np.histogram2d(
        particles.loc[high_rows, "lon"], particles.loc[high_rows, "lat"], bins=[x_edges, y_edges]
    )
@@ -75,28 +75,28 @@ Concentration-weighted trajectories (CWT)
 
 CWT gives each cell the mean of the measured values, weighted by the
 time the air spent over the cell. With footprints the weight is each
-receptor's footprint, which counts only the time near the ground:
+release's footprint, which counts only the time near the ground:
 
 .. code-block:: python
 
-   weight = footprints.foot.sum("hour")   # (receptor, lat, lon)
-   value = obs.set_index("receptor")["ch4"].to_xarray().sel(receptor=weight.receptor)
-   cwt = (weight * value).sum("receptor") / weight.sum("receptor")   # NaN where no footprint reached
+   weight = footprints.foot.sum("hour")   # (release, lat, lon)
+   value = obs.set_index("release")["ch4"].to_xarray().sel(release=weight.release)
+   cwt = (weight * value).sum("release") / weight.sum("release")   # NaN where no footprint reached
    cwt.plot()
 
-A receptor whose footprint is empty has no row in ``footprints``
+A release whose footprint is empty has no row in ``footprints``
 (:doc:`checking`), so it does not count.
 
 A mean path
 -----------
 
-The mean path of a receptor's particles is their mean position at each
+The mean path of a release's particles is their mean position at each
 output step, the center of the cloud as it spreads:
 
 .. code-block:: python
 
    particles = project.particles(july, columns=["age", "lon", "lat", "zagl"])
-   path = particles.groupby(["receptor", "age"])[["lon", "lat", "zagl"]].mean()
+   path = particles.groupby(["release", "age"])[["lon", "lat", "zagl"]].mean()
    one = path.loc[rid].sort_index(ascending=False)   # from the release backwards
 
 It is not the path of a mean-wind trajectory, such as ``hyts_std`` computes.
@@ -114,7 +114,7 @@ of those hours were in sunlight? For smoke at a mountain site, these say
 more about the ozone the smoke made on the way than the time it arrived.
 A backward run answers both for each particle. Its *transit time* is the
 smallest ``|age|`` among its rows inside the region: the time since it
-last left the region before it reached the receptor. A particle that
+last left the region before it reached the release. A particle that
 never enters the region did not come from it.
 
 Draw the region as a shapely polygon in longitude and latitude, around a
@@ -138,7 +138,7 @@ surface source:
    if top is not None:
        inside &= particles["zagl"].to_numpy() <= top
    transit = (
-       particles[inside].groupby(["receptor", "particle"])["hours"].min().rename("transit")
+       particles[inside].groupby(["release", "particle"])["hours"].min().rename("transit")
    )
 
 The sun's elevation at each row's time and place comes from `pvlib
@@ -151,7 +151,7 @@ step:
 
    import pvlib
 
-   route = particles.join(transit, on=["receptor", "particle"], how="inner")
+   route = particles.join(transit, on=["release", "particle"], how="inner")
    route = route[route["hours"] < route["transit"]]
    sun = pvlib.solarposition.spa_python(
        pd.DatetimeIndex(route["time"]).tz_localize("UTC"),
@@ -160,34 +160,34 @@ step:
    )
    route["sunlit"] = sun["elevation"].to_numpy() > 0
    step = particles["age"].abs().drop_duplicates().sort_values().diff().median() / 60   # hours per row
-   sunlit = route.groupby(["receptor", "particle"])["sunlit"].sum().mul(step).rename("sunlit")
+   sunlit = route.groupby(["release", "particle"])["sunlit"].sum().mul(step).rename("sunlit")
 
-Then, for each receptor, the fraction of particles that came from the
+Then, for each release, the fraction of particles that came from the
 region, their mean transit time and its spread, and their mean hours in
 sunlight:
 
 .. code-block:: python
 
    per_particle = pd.concat([transit, sunlit], axis=1).fillna({"sunlit": 0.0})
-   numpar = particles.groupby("receptor")["particle"].nunique()
-   summary = per_particle.groupby("receptor").agg(
+   numpar = particles.groupby("release")["particle"].nunique()
+   summary = per_particle.groupby("release").agg(
        transit_mean=("transit", "mean"),
        transit_sd=("transit", "std"),
        sunlit_mean=("sunlit", "mean"),
    ).reindex(numpar.index)
    summary["from_source"] = (
-       per_particle.groupby("receptor").size().reindex(numpar.index).fillna(0) / numpar
+       per_particle.groupby("release").size().reindex(numpar.index).fillna(0) / numpar
    )
    summary["sunlit_fraction"] = summary["sunlit_mean"] / summary["transit_mean"]
 
-   both = obs.merge(summary, left_on="receptor", right_index=True)
+   both = obs.merge(summary, left_on="release", right_index=True)
 
-A receptor whose particles never reached the region has ``from_source``
+A release whose particles never reached the region has ``from_source``
 0 and NaN for the rest. ``from_source`` is itself a marker of the
 source's air that needs no inventory. With a ratio of enhancements in
 ``obs``, such as ozone to CO for smoke, plot it against
 ``transit_mean`` and color it by ``sunlit_fraction``. The transit times
-of one receptor's particles, ``per_particle.loc[rid, "transit"]``, give
+of one release's particles, ``per_particle.loc[rid, "transit"]``, give
 the whole distribution.
 
 A few things to know:
@@ -197,7 +197,7 @@ A few things to know:
   ``from_source`` comes out low and ``transit_mean`` short. If the
   distribution runs up to ``n_hours``, run longer.
 - **Memory.** A 24-hour run of 1,000 particles is 1.4 million rows, so a
-  day of hourly receptors is about 35 million, and this recipe peaked near
+  day of hourly releases is about 35 million, and this recipe peaked near
   10 GB on one. For more, run it a day at a time and concatenate the
   summaries.
 - **The horizon.** ``elevation > 0`` counts the hours the sun is up.
@@ -211,7 +211,7 @@ Some variations:
 - **A source that moves or switches on and off,** such as a fire's daily
   hotspots: make ``inside`` from a 0/1 field with a ``time`` dimension,
   ``sample_field(mask, particles["lon"], particles["lat"], times=particles["time"], fill_value=0) > 0``
-  (:func:`~stilt.sampling.sample_field`).
+  (:func:`~runtraj.sampling.sample_field`).
 - **Weighting by emissions.** With an emission field, ``foot`` times the
   emission at each row is what that row picked up, and the mean of
   ``hours`` weighted by it is the age of what was emitted into the air.
@@ -224,18 +224,18 @@ Some variations:
 Comparing variants
 ------------------
 
-Variants with different meteorology or settings run the same receptors,
-so their results line up by receptor. The difference of two variants'
+Variants with different meteorology or settings run the same releases,
+so their results line up by release. The difference of two variants'
 mean footprints shows where they disagree:
 
 .. code-block:: python
 
    hrrr = project.footprints(sims[sims.variant == "hrrr"]).foot.sum("hour")
    nam = project.footprints(sims[sims.variant == "nam"]).foot.sum("hour")
-   both = np.intersect1d(hrrr.receptor.values, nam.receptor.values)
-   diff = (hrrr.sel(receptor=both) - nam.sel(receptor=both)).mean("receptor")
+   both = np.intersect1d(hrrr.release.values, nam.release.values)
+   diff = (hrrr.sel(release=both) - nam.sel(release=both)).mean("release")
    diff.plot(cmap="RdBu_r", center=0)
 
 Both variants need the same grid for this. For particles, compare the
-endpoints of each receptor: ``sim.particles.stilt.endpoints()`` gives
+endpoints of each release: ``sim.particles.stilt.endpoints()`` gives
 each particle's last position.

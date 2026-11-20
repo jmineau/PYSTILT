@@ -1,0 +1,5 @@
+runtraj.models.hysplit.HysplitModel.version
+===========================================
+
+.. currentmodule:: runtraj.models.hysplit
+.. automethod:: HysplitModel.version

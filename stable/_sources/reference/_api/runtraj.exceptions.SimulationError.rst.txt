@@ -1,0 +1,6 @@
+﻿runtraj.exceptions.SimulationError
+==================================
+
+.. currentmodule:: runtraj.exceptions
+
+.. autoexception:: SimulationError

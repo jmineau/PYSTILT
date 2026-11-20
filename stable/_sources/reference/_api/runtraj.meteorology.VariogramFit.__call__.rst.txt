@@ -1,0 +1,5 @@
+runtraj.meteorology.VariogramFit.\_\_call\_\_
+=============================================
+
+.. currentmodule:: runtraj.meteorology
+.. automethod:: VariogramFit.__call__

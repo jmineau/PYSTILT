@@ -1,0 +1,6 @@
+﻿stilt.calc\_footprint
+=====================
+
+.. currentmodule:: stilt
+
+.. autofunction:: calc_footprint

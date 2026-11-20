@@ -1,6 +1,0 @@
-stilt.Simulation.kept\_workdir
-==============================
-
-.. currentmodule:: stilt
-
-.. autoproperty:: Simulation.kept_workdir

@@ -1,0 +1,32 @@
+﻿runtraj.transforms.Oxidation
+============================
+
+.. currentmodule:: runtraj.transforms
+
+
+
+
+
+
+.. class-signature:: runtraj.transforms.Oxidation
+
+
+.. class-parameters:: runtraj.transforms.Oxidation
+
+
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~Oxidation.apply
+   ~Oxidation.check
+   ~Oxidation.field
+   ~Oxidation.rate
+
+
+

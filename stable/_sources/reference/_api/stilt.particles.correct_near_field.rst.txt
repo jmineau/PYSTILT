@@ -1,6 +1,0 @@
-﻿stilt.particles.correct\_near\_field
-====================================
-
-.. currentmodule:: stilt.particles
-
-.. autofunction:: correct_near_field

@@ -6,7 +6,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>stilt.footprint.io &#8212; PYSTILT 0.1.0a29</title>
+    <title>stilt.footprint.io &#8212; PYSTILT 0.1.0a30</title>
   
   
   
@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=947601de"></script>
+    <script src="../../../_static/documentation_options.js?v=7752668c"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -51,23 +51,29 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a29';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a30';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
+  
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29" />
+  <meta name="docsearch:version" content="0.1.0a30" />
   
     
     <script src="../../../_static/searchtools.js"></script>
     <script src="../../../_static/language_data.js"></script>
     <script src="../../../searchindex.js"></script>
   
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="PYSTILT">
+  <meta property="og:title" content="stilt.footprint.io">
+  <meta property="og:description" content="A Python implementation of the STILT Lagrangian atmospheric transport model.">
+
   </head>
   <body data-default-mode="">
   
@@ -132,7 +138,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a29</p>
+    <p class="title logo__title">PYSTILT</p>
   
 </a></div>
     
@@ -450,7 +456,7 @@
 <span></span><span class="sd">"""</span>
 <span class="sd">A footprint as an array, and as a file.</span>
 
-<span class="sd">A footprint is an :class:`xarray.DataArray` that carries its receptor and</span>
+<span class="sd">A footprint is an :class:`xarray.DataArray` that carries its release and</span>
 <span class="sd">settings in its attributes. This module builds that array, records the</span>
 <span class="sd">settings as JSON, and reads and writes footprint files: the sparse Parquet</span>
 <span class="sd">files of an output directory, and CF-1.8 NetCDF. :func:`open_footprints`</span>
@@ -471,17 +477,20 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pyarrow</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pa</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.particles.table</span><span class="w"> </span><span class="kn">import</span> <span class="n">stored_release</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.releases</span><span class="w"> </span><span class="kn">import</span> <span class="n">Release</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.spatial</span><span class="w"> </span><span class="kn">import</span> <span class="n">horizontal_dims</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt._paths</span><span class="w"> </span><span class="kn">import</span> <span class="n">location</span><span class="p">,</span> <span class="n">readable</span><span class="p">,</span> <span class="n">write_parquet</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">FootprintConfig</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.identity</span><span class="w"> </span><span class="kn">import</span> <span class="n">footprint_settings</span><span class="p">,</span> <span class="n">read_footprint_settings</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.receptors</span><span class="w"> </span><span class="kn">import</span> <span class="n">Receptor</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.spatial</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grid</span><span class="p">,</span> <span class="n">_with_cf_grid</span><span class="p">,</span> <span class="n">horizontal_dims</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.config</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">FootprintConfig</span><span class="p">,</span>
+    <span class="n">footprint_settings</span><span class="p">,</span>
+    <span class="n">read_footprint_settings</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.grid</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grid</span><span class="p">,</span> <span class="n">_with_cf_grid</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">upath</span><span class="w"> </span><span class="kn">import</span> <span class="n">UPath</span>
-
-    <span class="kn">from</span><span class="w"> </span><span class="nn">stilt._paths</span><span class="w"> </span><span class="kn">import</span> <span class="n">Location</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_naive_utc</span><span class="p">(</span><span class="n">values</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DatetimeIndex</span><span class="p">:</span>
@@ -497,18 +506,17 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">_footprint_array</span><span class="p">(</span>
     <span class="n">values</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
     <span class="n">hours</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
-    <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">,</span>
+    <span class="n">release</span><span class="p">:</span> <span class="n">Release</span><span class="p">,</span>
     <span class="n">config</span><span class="p">:</span> <span class="n">FootprintConfig</span><span class="p">,</span>
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
     <span class="n">y</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-    <span class="n">geometry_hash</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return a footprint: *values* in ``(time, y, x)`` order, at cell centers *x* and *y*.</span>
 
 <span class="sd">    Layer ``k`` starts ``hours[k]`` layers of ``config.tres`` after the</span>
-<span class="sd">    receptor time, and is stamped there, as in STILT-R; a backward run's</span>
+<span class="sd">    release time, and is stamped there, as in STILT-R; a backward run's</span>
 <span class="sd">    first layer is -1. With the default ``tres`` of ``1h``, ``hours`` are</span>
 <span class="sd">    hours. This is the one place a footprint array is made, for</span>
 <span class="sd">    :func:`calc_footprint` and for :func:`read_footprint` alike.</span>
@@ -516,14 +524,14 @@
     <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">grid</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Footprint settings need a grid."</span><span class="p">)</span>
     <span class="n">step</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">tres_minutes</span><span class="p">)</span>
-    <span class="n">times</span> <span class="o">=</span> <span class="n">_naive_utc</span><span class="p">([</span><span class="n">receptor</span><span class="o">.</span><span class="n">time</span> <span class="o">+</span> <span class="nb">int</span><span class="p">(</span><span class="n">h</span><span class="p">)</span> <span class="o">*</span> <span class="n">step</span> <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">hours</span><span class="p">])</span>
+    <span class="n">times</span> <span class="o">=</span> <span class="n">_naive_utc</span><span class="p">([</span><span class="n">release</span><span class="o">.</span><span class="n">time</span> <span class="o">+</span> <span class="nb">int</span><span class="p">(</span><span class="n">h</span><span class="p">)</span> <span class="o">*</span> <span class="n">step</span> <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">hours</span><span class="p">])</span>
     <span class="n">y_dim</span><span class="p">,</span> <span class="n">x_dim</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">dims</span>
     <span class="n">data</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
         <span class="n">values</span><span class="p">,</span>
         <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s2">"time"</span><span class="p">,</span> <span class="n">y_dim</span><span class="p">,</span> <span class="n">x_dim</span><span class="p">],</span>
         <span class="n">coords</span><span class="o">=</span><span class="p">{</span><span class="s2">"time"</span><span class="p">:</span> <span class="n">times</span><span class="p">,</span> <span class="n">y_dim</span><span class="p">:</span> <span class="n">y</span><span class="p">,</span> <span class="n">x_dim</span><span class="p">:</span> <span class="n">x</span><span class="p">},</span>
     <span class="p">)</span>
-    <span class="k">return</span> <span class="n">_describe</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">geometry_hash</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_describe</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_with_cf_metadata</span><span class="p">(</span><span class="n">ds</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">grid</span><span class="p">:</span> <span class="n">Grid</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">:</span>
@@ -539,48 +547,47 @@
 <span class="n">UNITS</span> <span class="o">=</span> <span class="s2">"ppm m2 s umol-1"</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_settings_json</span><span class="p">(</span><span class="n">config</span><span class="p">:</span> <span class="n">FootprintConfig</span><span class="p">,</span> <span class="n">geometry_hash</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Return a footprint's settings as JSON (:func:`stilt.identity.footprint_settings`)."""</span>
-    <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">footprint_settings</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">geometry_hash</span><span class="p">))</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_settings_json</span><span class="p">(</span><span class="n">config</span><span class="p">:</span> <span class="n">FootprintConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return a footprint's settings as JSON (:func:`stilt.footprint.config.footprint_settings`)."""</span>
+    <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">footprint_settings</span><span class="p">(</span><span class="n">config</span><span class="p">))</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_describe</span><span class="p">(</span>
     <span class="n">data</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">,</span>
-    <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">,</span>
+    <span class="n">release</span><span class="p">:</span> <span class="n">Release</span><span class="p">,</span>
     <span class="n">config</span><span class="p">:</span> <span class="n">FootprintConfig</span><span class="p">,</span>
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="n">geometry_hash</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Name a footprint array and attach what it belongs to.</span>
 
-<span class="sd">    The receptor id is a scalar coordinate, which xarray keeps through</span>
-<span class="sd">    arithmetic in every version. The full receptor and the settings are</span>
+<span class="sd">    The release id is a scalar coordinate, which xarray keeps through</span>
+<span class="sd">    arithmetic in every version. The full release and the settings are</span>
 <span class="sd">    attributes, which the ``.stilt`` accessor reads.</span>
 <span class="sd">    """</span>
     <span class="k">return</span> <span class="p">(</span>
         <span class="n">data</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="s2">"foot"</span><span class="p">)</span>
-        <span class="o">.</span><span class="n">assign_coords</span><span class="p">(</span><span class="n">receptor</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">))</span>
+        <span class="o">.</span><span class="n">assign_coords</span><span class="p">(</span><span class="n">release</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">release</span><span class="o">.</span><span class="n">id</span><span class="p">))</span>
         <span class="o">.</span><span class="n">assign_attrs</span><span class="p">(</span>
             <span class="p">{</span>
                 <span class="s2">"units"</span><span class="p">:</span> <span class="n">UNITS</span><span class="p">,</span>
                 <span class="s2">"long_name"</span><span class="p">:</span> <span class="s2">"footprint"</span><span class="p">,</span>
                 <span class="s2">"stilt_name"</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span>
-                <span class="s2">"stilt_receptor"</span><span class="p">:</span> <span class="n">receptor</span><span class="o">.</span><span class="n">to_json</span><span class="p">(),</span>
-                <span class="s2">"stilt_footprint"</span><span class="p">:</span> <span class="n">_settings_json</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">geometry_hash</span><span class="p">),</span>
+                <span class="s2">"stilt_release"</span><span class="p">:</span> <span class="n">release</span><span class="o">.</span><span class="n">to_json</span><span class="p">(),</span>
+                <span class="s2">"stilt_footprint"</span><span class="p">:</span> <span class="n">_settings_json</span><span class="p">(</span><span class="n">config</span><span class="p">),</span>
             <span class="p">}</span>
         <span class="p">)</span>
     <span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_from_sparse_table</span><span class="p">(</span>
-    <span class="n">table</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">FootprintConfig</span><span class="p">,</span> <span class="n">geometry_hash</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">table</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">FootprintConfig</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span> <span class="o">=</span> <span class="s2">"A stored footprint"</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Return the dense footprint of a stored sparse table, or ``None`` when it is empty."""</span>
     <span class="n">meta</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">metadata</span> <span class="ow">or</span> <span class="p">{}</span>
     <span class="k">if</span> <span class="n">_is_empty</span><span class="p">(</span><span class="n">meta</span><span class="p">):</span>
         <span class="k">return</span> <span class="kc">None</span>
-    <span class="n">receptor</span> <span class="o">=</span> <span class="n">Receptor</span><span class="o">.</span><span class="n">from_json</span><span class="p">(</span><span class="n">meta</span><span class="p">[</span><span class="sa">b</span><span class="s2">"stilt:receptor"</span><span class="p">])</span>
+    <span class="n">release</span> <span class="o">=</span> <span class="n">stored_release</span><span class="p">(</span><span class="n">meta</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
     <span class="n">hours</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">meta</span><span class="p">[</span><span class="sa">b</span><span class="s2">"stilt:hours"</span><span class="p">])</span>
     <span class="n">name</span> <span class="o">=</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">b</span><span class="s2">"stilt:name"</span><span class="p">,</span> <span class="sa">b</span><span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
     <span class="n">grid</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">grid</span>
@@ -600,9 +607,7 @@
             <span class="s2">"foot"</span>
         <span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
 
-    <span class="k">return</span> <span class="n">_footprint_array</span><span class="p">(</span>
-        <span class="n">values</span><span class="p">,</span> <span class="n">hours</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">x_axis</span><span class="p">,</span> <span class="n">y_axis</span><span class="p">,</span> <span class="n">geometry_hash</span>
-    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">_footprint_array</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">hours</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">x_axis</span><span class="p">,</span> <span class="n">y_axis</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="read_footprint">
@@ -615,7 +620,7 @@
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Read a footprint file, NetCDF or the Parquet files PYSTILT stores.</span>
 
-<span class="sd">    Each file holds its receptor and settings, so it needs nothing else.</span>
+<span class="sd">    Each file holds its release and settings, so it needs nothing else.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -638,7 +643,7 @@
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
 <span class="sd">    &gt;&gt;&gt; foot = stilt.read_footprint(sim.footprint_path)  # doctest: +SKIP</span>
-<span class="sd">    &gt;&gt;&gt; foot.stilt.receptor  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; foot.stilt.release  # doctest: +SKIP</span>
 <span class="sd">    """</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">pyarrow.parquet</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pq</span>
 
@@ -663,8 +668,8 @@
     <span class="n">stored</span> <span class="o">=</span> <span class="p">(</span><span class="n">table</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">metadata</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">b</span><span class="s2">"stilt:footprint"</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">stored</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> does not record its footprint settings."</span><span class="p">)</span>
-    <span class="n">config</span><span class="p">,</span> <span class="n">geometry_hash</span> <span class="o">=</span> <span class="n">read_footprint_settings</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">stored</span><span class="p">),</span> <span class="n">path</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
-    <span class="n">foot</span> <span class="o">=</span> <span class="n">_from_sparse_table</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">geometry_hash</span><span class="p">)</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">read_footprint_settings</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">stored</span><span class="p">),</span> <span class="n">path</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+    <span class="n">foot</span> <span class="o">=</span> <span class="n">_from_sparse_table</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">foot</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">meta</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">metadata</span> <span class="ow">or</span> <span class="p">{}</span>
         <span class="n">made</span> <span class="o">=</span> <span class="p">{</span>
@@ -705,7 +710,7 @@
     <span class="k">return</span> <span class="nb">min</span><span class="p">(</span><span class="n">cpus</span><span class="p">,</span> <span class="n">MAX_THREADS</span><span class="p">)</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_footer</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Location</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">bytes</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_footer</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">bytes</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""Return the metadata of a stored footprint, reading only its footer."""</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">pyarrow.parquet</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pq</span>
 
@@ -714,9 +719,9 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_dense_block</span><span class="p">(</span>
-    <span class="n">paths</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Location</span><span class="p">],</span> <span class="n">hours</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">ny</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">nx</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">paths</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span><span class="p">],</span> <span class="n">hours</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">ny</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">nx</span><span class="p">:</span> <span class="nb">int</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Read stored footprints into one ``(receptor, hour, y, x)`` block of ``float32``."""</span>
+<span class="w">    </span><span class="sd">"""Read stored footprints into one ``(release, hour, y, x)`` block of ``float32``."""</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">pyarrow.parquet</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pq</span>
 
     <span class="n">block</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">paths</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">hours</span><span class="p">),</span> <span class="n">ny</span><span class="p">,</span> <span class="n">nx</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
@@ -738,12 +743,12 @@
     <span class="n">paths</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span><span class="p">],</span> <span class="o">*</span><span class="p">,</span> <span class="n">workers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Open stored footprints as one dataset, stacked on the layer from each receptor's time.</span>
+<span class="sd">    Open stored footprints as one dataset, stacked on the layer from each release's time.</span>
 
-<span class="sd">    Footprints of many receptors are stacked by their layer offset rather</span>
-<span class="sd">    than by absolute time, so receptors at different times share one</span>
+<span class="sd">    Footprints of many releases are stacked by their layer offset rather</span>
+<span class="sd">    than by absolute time, so releases at different times share one</span>
 <span class="sd">    layer axis (``hour`` for hourly layers). Only the files' metadata is read here. The values are</span>
-<span class="sd">    read with dask when they are used, a block of receptors from one date</span>
+<span class="sd">    read with dask when they are used, a block of releases from one date</span>
 <span class="sd">    folder at a time. :meth:`stilt.Project.footprints` opens a selection</span>
 <span class="sd">    of a project's footprints this way.</span>
 
@@ -759,14 +764,14 @@
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    xarray.Dataset</span>
-<span class="sd">        ``foot`` with dims ``(receptor, hour, lat, lon)`` (``y`` and ``x``</span>
+<span class="sd">        ``foot`` with dims ``(release, hour, lat, lon)`` (``y`` and ``x``</span>
 <span class="sd">        on a projected grid), as ``float32`` like the stored values. The</span>
 <span class="sd">        layer dimension is named for the unit ``tres`` is written in and</span>
-<span class="sd">        counts each layer's start from the receptor time in it: ``hour``</span>
+<span class="sd">        counts each layer's start from the release time in it: ``hour``</span>
 <span class="sd">        -1, -2, ... for ``1h``; ``hour`` -6, -12, ... for ``6h``; ``day`` -1,</span>
 <span class="sd">        -2, ... for ``1D``; ``minute`` -15, -30, ... for ``15min``. The</span>
-<span class="sd">        ``time`` coordinate, with dims ``(receptor, &lt;unit&gt;)``, is that start</span>
-<span class="sd">        as a date and time. A receptor whose footprint is empty has no</span>
+<span class="sd">        ``time`` coordinate, with dims ``(release, &lt;unit&gt;)``, is that start</span>
+<span class="sd">        as a date and time. A release whose footprint is empty has no</span>
 <span class="sd">        row; ``attrs["empty"]`` lists them.</span>
 
 <span class="sd">    Raises</span>
@@ -779,7 +784,7 @@
 <span class="sd">    &gt;&gt;&gt; ds = open_footprints(</span>
 <span class="sd">    ...     sorted(folder.glob("date=2024-07-*/*.parquet"))</span>
 <span class="sd">    ... )  # doctest: +SKIP</span>
-<span class="sd">    &gt;&gt;&gt; ds.foot.sum("hour").mean("receptor").plot()  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; ds.foot.sum("hour").mean("release").plot()  # doctest: +SKIP</span>
 <span class="sd">    """</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">dask.array</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">da</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">dask.delayed</span><span class="w"> </span><span class="kn">import</span> <span class="n">delayed</span>
@@ -802,14 +807,14 @@
             <span class="s2">"These footprints were made with different settings. Open one "</span>
             <span class="s2">"variant's footprints at a time."</span>
         <span class="p">)</span>
-    <span class="n">config</span><span class="p">,</span> <span class="n">geometry_hash</span> <span class="o">=</span> <span class="n">read_footprint_settings</span><span class="p">(</span>
-        <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">stored</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span> <span class="ow">or</span> <span class="sa">b</span><span class="s2">"</span><span class="si">{}</span><span class="s2">"</span><span class="p">),</span> <span class="n">located</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">name</span>
-    <span class="p">)</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">read_footprint_settings</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">stored</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span> <span class="ow">or</span> <span class="sa">b</span><span class="s2">"</span><span class="si">{}</span><span class="s2">"</span><span class="p">),</span> <span class="n">located</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
     <span class="n">grid</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">grid</span>
     <span class="k">if</span> <span class="n">grid</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Stored footprints need settings with a grid."</span><span class="p">)</span>
 
-    <span class="n">receptors</span> <span class="o">=</span> <span class="p">[</span><span class="n">Receptor</span><span class="o">.</span><span class="n">from_json</span><span class="p">(</span><span class="n">meta</span><span class="p">[</span><span class="sa">b</span><span class="s2">"stilt:receptor"</span><span class="p">])</span> <span class="k">for</span> <span class="n">meta</span> <span class="ow">in</span> <span class="n">footers</span><span class="p">]</span>
+    <span class="n">releases</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">stored_release</span><span class="p">(</span><span class="n">meta</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span> <span class="k">for</span> <span class="n">meta</span><span class="p">,</span> <span class="n">path</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">footers</span><span class="p">,</span> <span class="n">located</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="p">]</span>
     <span class="n">is_empty</span> <span class="o">=</span> <span class="p">[</span><span class="n">_is_empty</span><span class="p">(</span><span class="n">meta</span><span class="p">)</span> <span class="k">for</span> <span class="n">meta</span> <span class="ow">in</span> <span class="n">footers</span><span class="p">]</span>
     <span class="n">kept</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">empty</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">is_empty</span><span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">empty</span><span class="p">]</span>
     <span class="n">recorded</span> <span class="o">=</span> <span class="p">[</span><span class="n">h</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">kept</span> <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">footers</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="sa">b</span><span class="s2">"stilt:hours"</span><span class="p">])]</span>
@@ -837,20 +842,20 @@
         <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">hours</span><span class="p">),</span> <span class="n">ny</span><span class="p">,</span> <span class="n">nx</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
     <span class="p">)</span>
 
-    <span class="n">start_times</span> <span class="o">=</span> <span class="n">_naive_utc</span><span class="p">([</span><span class="n">receptors</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">time</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">kept</span><span class="p">])</span>
+    <span class="n">start_times</span> <span class="o">=</span> <span class="n">_naive_utc</span><span class="p">([</span><span class="n">releases</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">time</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">kept</span><span class="p">])</span>
     <span class="n">offsets</span> <span class="o">=</span> <span class="p">(</span><span class="n">hours</span> <span class="o">*</span> <span class="n">config</span><span class="o">.</span><span class="n">tres_minutes</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">"timedelta64[m]"</span><span class="p">)</span>
     <span class="n">times</span> <span class="o">=</span> <span class="n">start_times</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()[:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">+</span> <span class="n">offsets</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:]</span>
     <span class="c1"># The layer dimension is named for tres's unit and counts in it.</span>
     <span class="n">unit</span><span class="p">,</span> <span class="n">unit_minutes</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">layer_unit</span>
     <span class="n">foot</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
         <span class="n">values</span><span class="p">,</span>
-        <span class="n">dims</span><span class="o">=</span><span class="p">(</span><span class="s2">"receptor"</span><span class="p">,</span> <span class="n">unit</span><span class="p">,</span> <span class="n">y_dim</span><span class="p">,</span> <span class="n">x_dim</span><span class="p">),</span>
+        <span class="n">dims</span><span class="o">=</span><span class="p">(</span><span class="s2">"release"</span><span class="p">,</span> <span class="n">unit</span><span class="p">,</span> <span class="n">y_dim</span><span class="p">,</span> <span class="n">x_dim</span><span class="p">),</span>
         <span class="n">coords</span><span class="o">=</span><span class="p">{</span>
-            <span class="s2">"receptor"</span><span class="p">:</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">receptors</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">id</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">kept</span><span class="p">],</span>
+            <span class="s2">"release"</span><span class="p">:</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">releases</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">id</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">kept</span><span class="p">],</span>
             <span class="n">unit</span><span class="p">:</span> <span class="n">hours</span> <span class="o">*</span> <span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">tres_minutes</span> <span class="o">//</span> <span class="n">unit_minutes</span><span class="p">),</span>
             <span class="n">y_dim</span><span class="p">:</span> <span class="n">y_axis</span><span class="p">,</span>
             <span class="n">x_dim</span><span class="p">:</span> <span class="n">x_axis</span><span class="p">,</span>
-            <span class="s2">"time"</span><span class="p">:</span> <span class="p">((</span><span class="s2">"receptor"</span><span class="p">,</span> <span class="n">unit</span><span class="p">),</span> <span class="n">times</span><span class="p">),</span>
+            <span class="s2">"time"</span><span class="p">:</span> <span class="p">((</span><span class="s2">"release"</span><span class="p">,</span> <span class="n">unit</span><span class="p">),</span> <span class="n">times</span><span class="p">),</span>
         <span class="p">},</span>
         <span class="n">name</span><span class="o">=</span><span class="s2">"foot"</span><span class="p">,</span>
         <span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s2">"units"</span><span class="p">:</span> <span class="n">UNITS</span><span class="p">,</span> <span class="s2">"long_name"</span><span class="p">:</span> <span class="s2">"footprint"</span><span class="p">},</span>
@@ -859,13 +864,13 @@
     <span class="n">ds</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
         <span class="p">{</span>
             <span class="s2">"stilt_name"</span><span class="p">:</span> <span class="n">footers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">b</span><span class="s2">"stilt:name"</span><span class="p">,</span> <span class="sa">b</span><span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">(),</span>
-            <span class="s2">"stilt_footprint"</span><span class="p">:</span> <span class="n">_settings_json</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">geometry_hash</span><span class="p">),</span>
+            <span class="s2">"stilt_footprint"</span><span class="p">:</span> <span class="n">_settings_json</span><span class="p">(</span><span class="n">config</span><span class="p">),</span>
             <span class="s2">"empty"</span><span class="p">:</span> <span class="p">[</span>
-                <span class="nb">str</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">id</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span><span class="p">,</span> <span class="n">empty</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">receptors</span><span class="p">,</span> <span class="n">is_empty</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">if</span> <span class="n">empty</span>
+                <span class="nb">str</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">id</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span><span class="p">,</span> <span class="n">empty</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">releases</span><span class="p">,</span> <span class="n">is_empty</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">if</span> <span class="n">empty</span>
             <span class="p">],</span>
         <span class="p">}</span>
     <span class="p">)</span>
-    <span class="n">realization</span> <span class="o">=</span> <span class="n">footers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">b</span><span class="s2">"stilt:realization"</span><span class="p">)</span>
+    <span class="n">realization</span> <span class="o">=</span> <span class="n">footers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">b</span><span class="s2">"runtraj:realization"</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">realization</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">ds</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">"realization"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">realization</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">_with_cf_metadata</span><span class="p">(</span><span class="n">ds</span><span class="p">,</span> <span class="n">grid</span><span class="o">=</span><span class="n">grid</span><span class="p">)</span></div>
@@ -875,7 +880,7 @@
 <span class="c1">#: The columns of a stored footprint, whose rows are its non-zero cells, indexed into its grid.</span>
 <span class="n">FOOTPRINT_SCHEMA</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">schema</span><span class="p">(</span>
     <span class="p">[</span>
-        <span class="p">(</span><span class="s2">"receptor"</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">dictionary</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">int32</span><span class="p">(),</span> <span class="n">pa</span><span class="o">.</span><span class="n">string</span><span class="p">())),</span>
+        <span class="p">(</span><span class="s2">"release"</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">dictionary</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">int32</span><span class="p">(),</span> <span class="n">pa</span><span class="o">.</span><span class="n">string</span><span class="p">())),</span>
         <span class="p">(</span><span class="s2">"hour"</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">int16</span><span class="p">()),</span>
         <span class="p">(</span><span class="s2">"y"</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">int16</span><span class="p">()),</span>
         <span class="p">(</span><span class="s2">"x"</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">int16</span><span class="p">()),</span>
@@ -897,22 +902,32 @@
     <span class="k">return</span> <span class="n">idx</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_pystilt_version</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the installed PYSTILT version, which a footprint file records."""</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">importlib.metadata</span><span class="w"> </span><span class="kn">import</span> <span class="n">PackageNotFoundError</span><span class="p">,</span> <span class="n">version</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">version</span><span class="p">(</span><span class="s2">"pystilt"</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">PackageNotFoundError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">"0+unknown"</span>
+
+
 <span class="k">def</span><span class="w"> </span><span class="nf">_file_metadata</span><span class="p">(</span>
-    <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">,</span>
+    <span class="n">release</span><span class="p">:</span> <span class="n">Release</span><span class="p">,</span>
     <span class="n">config</span><span class="p">:</span> <span class="n">FootprintConfig</span><span class="p">,</span>
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">hours</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
     <span class="n">empty</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
     <span class="n">metadata</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">bytes</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">geometry_hash</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">bytes</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""Return what a footprint file records so that it reads alone."""</span>
     <span class="k">return</span> <span class="p">{</span>
-        <span class="sa">b</span><span class="s2">"stilt:receptor"</span><span class="p">:</span> <span class="n">receptor</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span><span class="o">.</span><span class="n">encode</span><span class="p">(),</span>
+        <span class="sa">b</span><span class="s2">"runtraj:release"</span><span class="p">:</span> <span class="n">release</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span><span class="o">.</span><span class="n">encode</span><span class="p">(),</span>
+        <span class="sa">b</span><span class="s2">"stilt:pystilt"</span><span class="p">:</span> <span class="n">_pystilt_version</span><span class="p">()</span><span class="o">.</span><span class="n">encode</span><span class="p">(),</span>
         <span class="sa">b</span><span class="s2">"stilt:name"</span><span class="p">:</span> <span class="n">name</span><span class="o">.</span><span class="n">encode</span><span class="p">(),</span>
         <span class="sa">b</span><span class="s2">"stilt:hours"</span><span class="p">:</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">hours</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(),</span>
         <span class="sa">b</span><span class="s2">"stilt:empty"</span><span class="p">:</span> <span class="sa">b</span><span class="s2">"true"</span> <span class="k">if</span> <span class="n">empty</span> <span class="k">else</span> <span class="sa">b</span><span class="s2">"false"</span><span class="p">,</span>
-        <span class="sa">b</span><span class="s2">"stilt:footprint"</span><span class="p">:</span> <span class="n">_settings_json</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">geometry_hash</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(),</span>
+        <span class="sa">b</span><span class="s2">"stilt:footprint"</span><span class="p">:</span> <span class="n">_settings_json</span><span class="p">(</span><span class="n">config</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(),</span>
         <span class="o">**</span><span class="p">(</span><span class="n">metadata</span> <span class="ow">or</span> <span class="p">{}),</span>
     <span class="p">}</span>
 
@@ -924,17 +939,16 @@
     <span class="n">foot</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">,</span>
     <span class="n">config</span><span class="p">:</span> <span class="n">FootprintConfig</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">metadata</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">bytes</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">geometry_hash</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span><span class="p">:</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Write a footprint to a Parquet file that :func:`read_footprint` reads alone.</span>
 
 <span class="sd">    Only the non-zero cells are stored, as ``hour`` (the offset of the time</span>
-<span class="sd">    layer from the receptor time, in layers of ``tres``: hours by</span>
+<span class="sd">    layer from the release time, in layers of ``tres``: hours by</span>
 <span class="sd">    default), ``y`` and ``x`` (the cell's place on the grid), and ``foot``</span>
 <span class="sd">    in float32. Every layer is recorded in the metadata, so the dense array</span>
 <span class="sd">    reads back with the same shape. The metadata also</span>
-<span class="sd">    holds the receptor and the footprint settings.</span>
+<span class="sd">    holds the release and the footprint settings.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -947,9 +961,6 @@
 <span class="sd">        the footprint's own, ``foot.stilt.config``.</span>
 <span class="sd">    metadata : dict, optional</span>
 <span class="sd">        More file metadata, such as the settings hash.</span>
-<span class="sd">    geometry_hash : str, optional</span>
-<span class="sd">        Hash of the geometry the grid was derived for. Defaults to the</span>
-<span class="sd">        footprint's own, ``foot.stilt.geometry_hash``.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -961,14 +972,14 @@
 <span class="sd">    ValueError</span>
 <span class="sd">        If the footprint is not on the grid, the grid has more cells along</span>
 <span class="sd">        an axis than ``x`` and ``y`` can hold (32,767), a time layer is</span>
-<span class="sd">        not a whole number of layers (``tres``) from the receptor</span>
-<span class="sd">        time, or more layers from the receptor time than ``hour`` can hold</span>
+<span class="sd">        not a whole number of layers (``tres``) from the release</span>
+<span class="sd">        time, or more layers from the release time than ``hour`` can hold</span>
 <span class="sd">        (32,767).</span>
 <span class="sd">    """</span>
     <span class="n">settings</span> <span class="o">=</span> <span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">config</span> <span class="k">if</span> <span class="n">config</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">config</span>
     <span class="k">if</span> <span class="n">settings</span><span class="o">.</span><span class="n">grid</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Footprint settings need a grid."</span><span class="p">)</span>
-    <span class="n">receptor</span> <span class="o">=</span> <span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">receptor</span>
+    <span class="n">release</span> <span class="o">=</span> <span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">release</span>
     <span class="n">y_dim</span><span class="p">,</span> <span class="n">x_dim</span> <span class="o">=</span> <span class="n">horizontal_dims</span><span class="p">(</span><span class="n">foot</span><span class="p">)</span>
     <span class="n">x_axis</span><span class="p">,</span> <span class="n">y_axis</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">axes</span>
     <span class="n">most</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">iinfo</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int16</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">)</span>
@@ -983,16 +994,16 @@
 
     <span class="n">times</span> <span class="o">=</span> <span class="n">_naive_utc</span><span class="p">(</span><span class="n">foot</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
     <span class="n">step</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="n">settings</span><span class="o">.</span><span class="n">tres_minutes</span><span class="p">)</span>
-    <span class="n">layers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">((</span><span class="n">times</span> <span class="o">-</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">receptor</span><span class="o">.</span><span class="n">time</span><span class="p">))</span> <span class="o">/</span> <span class="n">step</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">layers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">((</span><span class="n">times</span> <span class="o">-</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">release</span><span class="o">.</span><span class="n">time</span><span class="p">))</span> <span class="o">/</span> <span class="n">step</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">layers</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">layers</span><span class="p">)):</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
             <span class="s2">"Footprint time layers are not whole layers of "</span>
-            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">settings</span><span class="o">.</span><span class="n">tres</span><span class="si">}</span><span class="s2"> (tres) from the receptor time."</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">settings</span><span class="o">.</span><span class="n">tres</span><span class="si">}</span><span class="s2"> (tres) from the release time."</span>
         <span class="p">)</span>
     <span class="k">if</span> <span class="n">layers</span><span class="o">.</span><span class="n">size</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">layers</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">&gt;</span> <span class="n">most</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
             <span class="sa">f</span><span class="s2">"The footprint has a layer </span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">layers</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">())</span><span class="si">}</span><span class="s2"> layers of "</span>
-            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">settings</span><span class="o">.</span><span class="n">tres</span><span class="si">}</span><span class="s2"> from the receptor time, and a stored footprint "</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">settings</span><span class="o">.</span><span class="n">tres</span><span class="si">}</span><span class="s2"> from the release time, and a stored footprint "</span>
             <span class="sa">f</span><span class="s2">"holds at most </span><span class="si">{</span><span class="n">most</span><span class="si">}</span><span class="s2">. Use longer layers (tres)."</span>
         <span class="p">)</span>
     <span class="n">hours</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">layers</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int16</span><span class="p">)</span>
@@ -1001,7 +1012,7 @@
     <span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">nan</span><span class="o">=</span><span class="mf">0.0</span><span class="p">))</span>
     <span class="n">table</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">table</span><span class="p">(</span>
         <span class="p">{</span>
-            <span class="s2">"receptor"</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">)]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">))</span><span class="o">.</span><span class="n">dictionary_encode</span><span class="p">(),</span>
+            <span class="s2">"release"</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">release</span><span class="o">.</span><span class="n">id</span><span class="p">)]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">))</span><span class="o">.</span><span class="n">dictionary_encode</span><span class="p">(),</span>
             <span class="s2">"hour"</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">hours</span><span class="p">[</span><span class="n">t</span><span class="p">]),</span>
             <span class="s2">"y"</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">yi</span><span class="p">[</span><span class="n">y</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int16</span><span class="p">)),</span>
             <span class="s2">"x"</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">xi</span><span class="p">[</span><span class="n">x</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int16</span><span class="p">)),</span>
@@ -1010,13 +1021,12 @@
         <span class="n">schema</span><span class="o">=</span><span class="n">FOOTPRINT_SCHEMA</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="n">meta</span> <span class="o">=</span> <span class="n">_file_metadata</span><span class="p">(</span>
-        <span class="n">receptor</span><span class="p">,</span>
+        <span class="n">release</span><span class="p">,</span>
         <span class="n">settings</span><span class="p">,</span>
         <span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
         <span class="n">hours</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span>
         <span class="kc">False</span><span class="p">,</span>
         <span class="n">metadata</span><span class="p">,</span>
-        <span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">geometry_hash</span> <span class="k">if</span> <span class="n">geometry_hash</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">geometry_hash</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="k">return</span> <span class="n">write_parquet</span><span class="p">(</span><span class="n">table</span><span class="o">.</span><span class="n">replace_schema_metadata</span><span class="p">(</span><span class="n">meta</span><span class="p">),</span> <span class="n">location</span><span class="p">(</span><span class="n">path</span><span class="p">))</span></div>
 
@@ -1026,19 +1036,18 @@
 <a class="viewcode-back" href="../../../reference/_api/stilt.footprint.write_empty_footprint.html#stilt.footprint.write_empty_footprint">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">write_empty_footprint</span><span class="p">(</span>
     <span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span><span class="p">,</span>
-    <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">,</span>
+    <span class="n">release</span><span class="p">:</span> <span class="n">Release</span><span class="p">,</span>
     <span class="n">config</span><span class="p">:</span> <span class="n">FootprintConfig</span><span class="p">,</span>
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">,</span>
     <span class="n">metadata</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">bytes</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">geometry_hash</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span><span class="p">:</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Record in a footprint file that a receptor's footprint is empty: no particle reached the grid.</span>
+<span class="sd">    Record in a footprint file that a release's footprint is empty: no particle reached the grid.</span>
 
 <span class="sd">    The file has no rows and is marked ``stilt:empty``;</span>
 <span class="sd">    :func:`read_footprint` returns ``None`` for it.</span>
 <span class="sd">    """</span>
-    <span class="n">meta</span> <span class="o">=</span> <span class="n">_file_metadata</span><span class="p">(</span><span class="n">receptor</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="p">[],</span> <span class="kc">True</span><span class="p">,</span> <span class="n">metadata</span><span class="p">,</span> <span class="n">geometry_hash</span><span class="p">)</span>
+    <span class="n">meta</span> <span class="o">=</span> <span class="n">_file_metadata</span><span class="p">(</span><span class="n">release</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="p">[],</span> <span class="kc">True</span><span class="p">,</span> <span class="n">metadata</span><span class="p">)</span>
     <span class="n">table</span> <span class="o">=</span> <span class="n">FOOTPRINT_SCHEMA</span><span class="o">.</span><span class="n">empty_table</span><span class="p">()</span><span class="o">.</span><span class="n">replace_schema_metadata</span><span class="p">(</span><span class="n">meta</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">write_parquet</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">location</span><span class="p">(</span><span class="n">path</span><span class="p">))</span></div>
 

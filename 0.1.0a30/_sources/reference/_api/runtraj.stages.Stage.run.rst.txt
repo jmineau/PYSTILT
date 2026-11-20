@@ -1,0 +1,5 @@
+runtraj.stages.Stage.run
+========================
+
+.. currentmodule:: runtraj.stages
+.. automethod:: Stage.run

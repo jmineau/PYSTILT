@@ -1,6 +1,0 @@
-﻿stilt.particles.PARTICLE\_SCHEMA
-================================
-
-.. currentmodule:: stilt.particles
-
-.. autodata:: PARTICLE_SCHEMA

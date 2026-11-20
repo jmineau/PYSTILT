@@ -1,0 +1,6 @@
+stilt.Release.geometry
+======================
+
+.. currentmodule:: stilt
+
+.. autoproperty:: Release.geometry

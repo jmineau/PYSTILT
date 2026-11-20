@@ -1,0 +1,5 @@
+runtraj.models.TransportModel.data\_files
+=========================================
+
+.. currentmodule:: runtraj.models
+.. automethod:: TransportModel.data_files

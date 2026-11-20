@@ -1,0 +1,6 @@
+﻿stilt.footprint.add\_foot
+=========================
+
+.. currentmodule:: stilt.footprint
+
+.. autofunction:: add_foot

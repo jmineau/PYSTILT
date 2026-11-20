@@ -1,6 +1,0 @@
-stilt.output.Output.kept\_workdir
-=================================
-
-.. currentmodule:: stilt.output
-
-.. automethod:: Output.kept_workdir

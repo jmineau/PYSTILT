@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Choosing Settings &#8212; PYSTILT 0.1.0a29</title>
+    <title>Choosing Settings &#8212; PYSTILT 0.1.0a30</title>
   
   
   
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=947601de"></script>
+    <script src="../_static/documentation_options.js?v=7752668c"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a29';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a30';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -61,16 +61,22 @@
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Particle Weighting (Transforms)" href="transforms.html" />
     <link rel="prev" title="Projects And Variants" href="projects.html" />
+  
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29" />
+  <meta name="docsearch:version" content="0.1.0a30" />
   
     
     <script src="../_static/searchtools.js"></script>
     <script src="../_static/language_data.js"></script>
     <script src="../searchindex.js"></script>
   
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="PYSTILT">
+  <meta property="og:title" content="Choosing Settings">
+  <meta property="og:description" content="A Python implementation of the STILT Lagrangian atmospheric transport model.">
+
   </head>
   <body data-default-mode="">
   
@@ -135,7 +141,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a29</p>
+    <p class="title logo__title">PYSTILT</p>
   
 </a></div>
     
@@ -411,7 +417,7 @@
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Setting up a project</span></p>
 <ul class="current nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="receptors.html">Receptors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="releases.html">Releases (receptors)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tracks.html">Mobile Measurements</a></li>
 <li class="toctree-l1"><a class="reference internal" href="meteorology.html">Meteorology</a></li>
 <li class="toctree-l1"><a class="reference internal" href="projects.html">Projects And Variants</a></li>
@@ -526,7 +532,7 @@ valleys, coastlines and mixed-layer depth that steer air near a city are
 smoothed away on a coarse grid. In the contiguous US since mid-2015 that is
 HRRR at 3 km. <a class="reference internal" href="meteorology.html"><span class="doc">Meteorology</span></a> has a table of the products and when to use
 each. To see how much the choice matters for your site, run the same
-receptors with a second met as a second variant and compare the footprints.</p>
+releases with a second met as a second variant and compare the footprints.</p>
 </section>
 <section id="how-long-to-run">
 <h2>How long to run<a class="headerlink" href="#how-long-to-run" title="Link to this heading">#</a></h2>
@@ -560,7 +566,7 @@ them end inside the grid, a longer run would add footprint, so raise
 <p>More particles give a smoother footprint, and the far part of a footprint,
 where few particles reach, needs the most. The default of 200 shows the
 shape of a footprint. For results we use 1000, STILT-R’s default. To check
-a value for your site, run a few receptors with three times as many
+a value for your site, run a few releases with three times as many
 particles as a second variant and compare:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">variants</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">hrrr</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span>
@@ -575,7 +581,7 @@ other errors in your study, such as the transport error
 <h2>The footprint grid<a class="headerlink" href="#the-footprint-grid" title="Link to this heading">#</a></h2>
 <p>The grid must cover where the air comes from over the whole run, because
 particles outside it add nothing to the footprint. Plot the particles of a
-few receptors from different seasons and times of day, and draw the grid
+few releases from different seasons and times of day, and draw the grid
 around all of them.</p>
 <p>Make the cells as fine as the finest flux inventory you will multiply the
 footprints by, so that every inventory is as coarse as the footprint or
@@ -591,7 +597,7 @@ STILT-R. Three are worth knowing:</p>
 a rerun or a colleague’s run gives the same footprint
 (<a class="reference internal" href="../getting_started/quickstart.html"><span class="doc">Your First Footprint</span></a>).</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">hnf_plume</span></code>, the near-field correction, is on by default and matters for
-a receptor near strong sources (<a class="reference internal" href="checking.html"><span class="doc">Checking A Run</span></a>).</p></li>
+a release near strong sources (<a class="reference internal" href="checking.html"><span class="doc">Checking A Run</span></a>).</p></li>
 <li><p>A transport-error variant estimates how much the wind errors of the
 meteorology change the modeled enhancement (<a class="reference internal" href="transport_error.html"><span class="doc">Transport Error</span></a>).</p></li>
 </ul>

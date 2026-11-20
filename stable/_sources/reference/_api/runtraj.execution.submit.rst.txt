@@ -1,0 +1,6 @@
+﻿runtraj.execution.submit
+========================
+
+.. currentmodule:: runtraj.execution
+
+.. autofunction:: submit

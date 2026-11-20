@@ -15,7 +15,7 @@ Run with wind errors
 --------------------
 
 The perturbed run is a :doc:`variant <projects>` of its own. It uses
-the same receptors and meteorology, with four wind-error settings added.
+the same releases and meteorology, with four wind-error settings added.
 The names are the same as in STILT-R.
 
 .. code-block:: yaml
@@ -27,14 +27,15 @@ The names are the same as in STILT-R.
        tluverr: 260           # its correlation time, min
        zcoruverr: 450         # its vertical correlation length, m
        horcoruverr: 14        # its horizontal correlation length, km
-       grid: null             # particles only
+       stages: {footprint: null}   # particles only
 
-Every receptor then has a second simulation,
+Every release then has a second simulation,
 ``project.simulation(rid, "hrrr-err")``, whose particles saw the perturbed
 winds. You can add the error variant to a finished project, and only the
 new simulations run. The error run costs as much as the original.
-``grid: null`` skips the footprint, which the error calculation does not
-need. Keep a grid if you want to plot a perturbed footprint.
+``stages: {footprint: null}`` skips the footprint, which the error
+calculation does not need. Leave the line out if you want to plot a
+perturbed footprint.
 
 Choosing the settings
 ~~~~~~~~~~~~~~~~~~~~~
@@ -74,14 +75,15 @@ several draws, set ``realizations`` on the error variant:
        # ...
        realizations: 4        # realizations 0 to 3
 
-The variant then runs four times per receptor, as realizations ``0`` to
+The variant then runs four times per release, as realizations ``0`` to
 ``3`` of ``hrrr-err``: the ``realization`` column of
 ``project.simulations``. The unperturbed ``hrrr`` run is not repeated.
 Each realization needs a different random draw, and there are two ways to
 get one:
 
-- ``krand: 4``, the default. HYSPLIT seeds each run from the clock. The
-  realizations differ, but a rerun gives different ones.
+- ``krand: 4``, STILT-R's value, which ``stilt init`` writes into a new
+  project's config. HYSPLIT seeds each run from the clock. The realizations
+  differ, but a rerun gives different ones.
 - ``krand: 2`` with a ``seed``. Realization ``k`` runs with ``seed + k``,
   and a rerun reproduces every realization exactly.
 
@@ -186,20 +188,20 @@ units squared, and ``noise`` is its standard error
 without and with the perturbation, and ``background`` is 0 unless you pass
 a background field (:doc:`background`). ``realizations`` is how many
 realizations of the error variant went into the estimate: every one that
-has run. A receptor without particles in either variant gets NaN and
+has run. A release without particles in either variant gets NaN and
 ``realizations`` 0.
 
-``errors`` has a row for every receptor in the selection. A Jacobian built
-from the same selection leaves out the receptors with an empty footprint, so
-match the two by ``H.receptors`` (:ref:`the rows of H <jacobian-rows>`).
+``errors`` has a row for every release in the selection. A Jacobian built
+from the same selection leaves out the releases with an empty footprint, so
+match the two by ``H.releases`` (:ref:`the rows of H <jacobian-rows>`).
 
-Each receptor's particles are read whole. A table of 1.4 million rows
-takes about a second to read, so a selection of hundreds of receptors takes
+Each release's particles are read whole. A table of 1.4 million rows
+takes about a second to read, so a selection of hundreds of releases takes
 minutes. For a whole large project, make the call in a Slurm job.
-``workers`` sets how many receptors are read at once (up to 8 by
+``workers`` sets how many releases are read at once (up to 8 by
 default).
 
-``sim.transport_error`` gives the same estimate for one receptor, and
+``sim.transport_error`` gives the same estimate for one release, and
 keeps the per-level table described below:
 
 .. code-block:: python
@@ -211,7 +213,7 @@ keeps the per-level table described below:
 ``result.sd`` is the square root of ``result.variance``. In both calls the
 particles are weighted the way the unperturbed variant's footprint weights
 them, with its transforms: the averaging kernel (including one from a
-per-receptor table), pressure weighting, and any loss on the way.
+per-release table), pressure weighting, and any loss on the way.
 :func:`stilt.transport_error` does the same for particle tables
 you have without a project.
 
@@ -225,9 +227,9 @@ you whether a value means anything:
 - ``result.noise`` is the standard error of ``variance``, from the
   particles of both runs. A ``variance`` within two or three times ``noise``
   is not resolved.
-- Over many receptors, take the mean of the signed ``variance``, by hour,
+- Over many releases, take the mean of the signed ``variance``, by hour,
   season, or site. Its uncertainty is the standard deviation of the
-  receptors' values divided by the square root of their number. Do not clip
+  releases' values divided by the square root of their number. Do not clip
   each value at zero first, because that turns noise into a positive error.
   ``result.sd`` treats a negative variance as zero, so use it only once the
   variance is resolved.
@@ -235,15 +237,15 @@ you whether a value means anything:
 Take the mean and not the median. Most particles miss the sources and a few
 cross them, so the per-particle enhancement is skewed, and so is the
 estimate. The median of a skewed estimate is below its mean. In a test with
-skewed enhancements at a point receptor, the median over receptors was 17
+skewed enhancements at a point release, the median over releases was 17
 to 35 % low, and the mean was within 4 %.
 
 Near a strong source a few particles carry most of the enhancement. One
-receptor's ``variance`` then depends on those few particles and is rarely
-resolved. Combine receptors.
+release's ``variance`` then depends on those few particles and is rarely
+resolved. Combine releases.
 
-For a column receptor the levels are added so that the noise in each level
-averages out over receptors, as it does for a point receptor
+For a column release the levels are added so that the noise in each level
+averages out over releases, as it does for a point release
 (`What the numbers mean`_). Where the error changes sharply with height,
 the column variance comes out high, by up to about 20 %.
 
@@ -252,12 +254,12 @@ and in winter. On a convective afternoon the unperturbed particles already
 fill the boundary layer. The wind error adds little, and the estimate is
 usually within its noise.
 
-One variance per receptor
+One variance per release
 -------------------------
 
 An inversion that uses ``variance`` as the transport part of the
 model-data mismatch gets a diagonal matrix, because PYSTILT gives one
-variance per receptor. That treats the transport errors of different
+variance per release. That treats the transport errors of different
 observations as independent, and they are not. A wind error with
 ``tluverr: 260`` stays correlated for about four hours, so hourly
 observations at one tower share most of their transport error with their
@@ -272,7 +274,7 @@ What the numbers mean
 ---------------------
 
 ``result.levels`` shows the calculation for each release level. A point
-receptor has one level.
+release has one level.
 
 - ``height`` is the level's mean release height in meters, and ``n`` its
   number of particles.
@@ -290,8 +292,8 @@ receptor has one level.
 ``result.enhancement`` is close to what the footprint gives. The two differ
 a little because the footprint smooths the particles onto its grid.
 
-A column receptor's particles are grouped into ``levels`` release-height
-bins of equal width, 20 by default. A multipoint or slant receptor with no
+A column release's particles are grouped into ``levels`` release-height
+bins of equal width, 20 by default. A multipoint or slant release with no
 more than ``levels`` release heights gets one level per height. The levels
 are then added with an exponential error correlation in the vertical:
 
@@ -306,7 +308,7 @@ mean of :math:`e^{-|h_p - h_q| / L}` over the particles ``p`` of one level
 and ``q`` of the other, where ``h`` is a particle's release height. ``L`` is
 ``length_scale``, 356 m by default (X-STILT's value). With
 ``length_scale=None`` the levels are independent, and ``factor`` is
-``weight`` squared. For a point receptor ``factor`` is 1.
+``weight`` squared. For a point release ``factor`` is 1.
 
 Written over pairs of levels, the sum is
 
@@ -329,7 +331,7 @@ where the rest of the calculation differs.
 
 PYSTILT uses each level's ``dvar`` as it is, with its sign, and the column
 sum is linear in it. The noise in ``dvar`` therefore averages out over many
-receptors, for a column as for a point receptor.
+releases, for a column as for a point release.
 
 A pair of levels could instead count with the product of its two standard
 deviations, :math:`\sqrt{\mathrm{dvar}_i\, \mathrm{dvar}_j}`. The two
@@ -337,8 +339,8 @@ forms agree when both levels have the same error. Where the error changes
 with height within a correlation length, the mean is the larger: by 2 % for
 an error that falls by a factor of e in 1000 m, 7 % in 500 m, and 20 % in
 250 m. PYSTILT takes the mean because the square root of a noisy ``dvar`` is
-too small on average, by the same amount at every receptor, so an average
-over receptors stays too small.
+too small on average, by the same amount at every release, so an average
+over releases stays too small.
 
 Fitting a line through only the levels where ``dvar`` is positive would
 bias the result upward: it keeps the levels whose variance happened to
@@ -371,7 +373,8 @@ project:
 
 Before you run them:
 
-- Set ``krand: 2`` and a ``seed`` in the defaults. Every variant then draws
+- Set ``krand: 2`` and a ``seed`` under ``models: hysplit:``. Every variant
+  then draws
   the same turbulence, and the difference between variants is the mixed
   layer alone. Without a seed each run adds its own sampling noise.
 - HYSPLIT applies the minimum mixing depth ``kmix0`` (150 m by default)
@@ -381,11 +384,11 @@ Before you run them:
   repeated for every hour, so it needs ``abs(n_hours) <= 150``. For a
   longer run, give a list. Hours past the end of the list are unscaled.
 
-How much it matters depends on the receptor. A column spans the mixed
+How much it matters depends on the release. A column spans the mixed
 layer, so a change in its depth mostly moves influence around inside the
-column, and the column enhancement changes little. A surface receptor has
+column, and the column enhancement changes little. A surface release has
 no such averaging and can change by tens of percent. Test it for your own
-receptors.
+releases.
 
 The spread between these runs is a sensitivity. To turn it into an error
 you need to know how far the meteorology's mixed-layer height is from the
@@ -515,18 +518,18 @@ since their heights above ground are unknown.
 Step 2: the scales
 ~~~~~~~~~~~~~~~~~~
 
-:func:`~stilt.meteorology.variogram` builds the empirical variogram. It
+:func:`~runtraj.meteorology.variogram` builds the empirical variogram. It
 takes the errors, the coordinate the separation is measured in, and a
 ``group`` label. Only points with the same label are paired. The coordinate
 can also be two columns of longitude and latitude, and the separation is
 then the great-circle distance in kilometers.
-:func:`~stilt.meteorology.fit_variogram` fits the exponential model with
+:func:`~runtraj.meteorology.fit_variogram` fits the exponential model with
 σ fixed.
 
 .. code-block:: python
 
    import numpy as np
-   from stilt.meteorology import fit_variogram, variogram
+   from runtraj.meteorology import fit_variogram, variogram
 
    def scale(errors, lag, group, bins):
        table = variogram(errors, lag, group=group, bins=bins)
@@ -547,7 +550,7 @@ then the great-circle distance in kilometers.
 The recipe makes these choices, and you can change any of them:
 
 - ``layer`` is the height range whose errors matter for your transport.
-  Use the boundary layer and a little above for a surface receptor, and
+  Use the boundary layer and a little above for a surface release, and
   more for a column.
 - The vertical variogram pairs levels within one launch (``group`` is the
   launch time), in 100 m bins up to 3 km.
@@ -570,7 +573,7 @@ The recipe makes these choices, and you can change any of them:
   perturbation does not represent it.
 
 The four values go into ``config.yaml`` under the same names, or into
-:class:`~stilt.transport.hysplit.HysplitConfig`. Look at the fits before you trust
+:class:`~runtraj.models.hysplit.HysplitConfig`. Look at the fits before you trust
 them:
 
 .. code-block:: python

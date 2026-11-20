@@ -1,0 +1,6 @@
+﻿runtraj.meteorology.fit\_variogram
+==================================
+
+.. currentmodule:: runtraj.meteorology
+
+.. autofunction:: fit_variogram

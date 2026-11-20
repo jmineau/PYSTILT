@@ -1,6 +1,0 @@
-stilt.Receptor.id
-=================
-
-.. currentmodule:: stilt
-
-.. autoproperty:: Receptor.id

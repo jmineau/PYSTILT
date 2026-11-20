@@ -1,0 +1,38 @@
+﻿runtraj.transforms.PressureWeighting
+====================================
+
+.. currentmodule:: runtraj.transforms
+
+
+
+
+
+
+.. class-signature:: runtraj.transforms.PressureWeighting
+
+
+.. class-parameters:: runtraj.transforms.PressureWeighting
+
+
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+   :nosignatures:
+
+   ~PressureWeighting.reads_zsfc
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~PressureWeighting.apply
+
+
+

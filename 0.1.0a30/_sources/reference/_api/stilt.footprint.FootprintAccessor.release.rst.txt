@@ -1,0 +1,6 @@
+stilt.footprint.FootprintAccessor.release
+=========================================
+
+.. currentmodule:: stilt.footprint
+
+.. autoproperty:: FootprintAccessor.release

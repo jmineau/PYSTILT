@@ -6,7 +6,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>stilt.exceptions &#8212; PYSTILT 0.1.0a29</title>
+    <title>stilt.exceptions &#8212; PYSTILT 0.1.0a30</title>
   
   
   
@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=947601de"></script>
+    <script src="../../_static/documentation_options.js?v=7752668c"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -51,23 +51,29 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a29';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a30';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
+  
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29" />
+  <meta name="docsearch:version" content="0.1.0a30" />
   
     
     <script src="../../_static/searchtools.js"></script>
     <script src="../../_static/language_data.js"></script>
     <script src="../../searchindex.js"></script>
   
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="PYSTILT">
+  <meta property="og:title" content="stilt.exceptions">
+  <meta property="og:description" content="A Python implementation of the STILT Lagrangian atmospheric transport model.">
+
   </head>
   <body data-default-mode="">
   
@@ -132,7 +138,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a29</p>
+    <p class="title logo__title">PYSTILT</p>
   
 </a></div>
     
@@ -448,97 +454,27 @@
                   
   <h1>Source code for stilt.exceptions</h1><div class="highlight"><pre>
 <span></span><span class="sd">"""</span>
-<span class="sd">Exceptions PYSTILT raises.</span>
+<span class="sd">The exception PYSTILT adds to runtraj's.</span>
 
-<span class="sd">Every one is a :class:`StiltError`, so ``except stilt.StiltError`` catches</span>
-<span class="sd">anything PYSTILT raised on purpose. Each also subclasses the builtin that</span>
-<span class="sd">describes it, so ``except RuntimeError`` or ``except FileNotFoundError``</span>
-<span class="sd">keeps working. Plain input checks raise builtins such as ``ValueError``.</span>
+<span class="sd">Every exception a run raises on purpose is a</span>
+<span class="sd">:class:`runtraj.RuntrajError` (:mod:`runtraj.exceptions`), so</span>
+<span class="sd">``except stilt.RuntrajError`` catches those and this one.</span>
 <span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
-
-<div class="viewcode-block" id="StiltError">
-<a class="viewcode-back" href="../../reference/_api/stilt.StiltError.html#stilt.StiltError">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">StiltError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""Base class for every exception PYSTILT raises."""</span></div>
-
-
-
-<div class="viewcode-block" id="SimulationError">
-<a class="viewcode-back" href="../../reference/_api/stilt.exceptions.SimulationError.html#stilt.SimulationError">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">SimulationError</span><span class="p">(</span><span class="n">StiltError</span><span class="p">,</span> <span class="ne">RuntimeError</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    A simulation failed while it ran.</span>
-
-<span class="sd">    The worker catches it, records it with the simulation</span>
-<span class="sd">    (:attr:`stilt.Simulation.failure`), and goes on to the next one.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    message : str</span>
-<span class="sd">        What went wrong.</span>
-<span class="sd">    reason : str, optional</span>
-<span class="sd">        A short name for the cause, such as ``"MET_COVERAGE"`` or</span>
-<span class="sd">        ``"TIMEOUT"`` (:class:`stilt.transport.hysplit.FailureReason` lists</span>
-<span class="sd">        HYSPLIT's). ``stilt status`` counts failures by it.</span>
-<span class="sd">    log : str, optional</span>
-<span class="sd">        The transport model's log of the failed run, kept with the</span>
-<span class="sd">        simulation (:attr:`stilt.Simulation.log`).</span>
-
-<span class="sd">    Attributes</span>
-<span class="sd">    ----------</span>
-<span class="sd">    reason : str or None</span>
-<span class="sd">        The cause as a plain string (an enum member such as a</span>
-<span class="sd">        ``FailureReason`` is stored by its value), or ``None`` when it has no</span>
-<span class="sd">        short name.</span>
-<span class="sd">    log : str</span>
-<span class="sd">        The model's log, empty when it wrote none.</span>
-<span class="sd">    """</span>
-
-    <span class="n">reason</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="n">log</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">reason</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">log</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">reason</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">reason</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">reason</span><span class="p">)</span>  <span class="c1"># a plain string, as the failure record stores it</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="n">log</span></div>
-
-
-
-<div class="viewcode-block" id="MeteorologyError">
-<a class="viewcode-back" href="../../reference/_api/stilt.exceptions.MeteorologyError.html#stilt.MeteorologyError">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">MeteorologyError</span><span class="p">(</span><span class="n">SimulationError</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""The meteorology files a simulation needs could not be found or staged."""</span>
-
-    <span class="n">reason</span> <span class="o">=</span> <span class="s2">"MET_COVERAGE"</span></div>
-
-
-
-<div class="viewcode-block" id="HYSPLITNotFoundError">
-<a class="viewcode-back" href="../../reference/_api/stilt.exceptions.HYSPLITNotFoundError.html#stilt.HYSPLITNotFoundError">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">HYSPLITNotFoundError</span><span class="p">(</span><span class="n">StiltError</span><span class="p">,</span> <span class="ne">FileNotFoundError</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    The HYSPLIT executable (``hycs_std``) is missing.</span>
-
-<span class="sd">    Raised when there is no bundled build for this platform, and when</span>
-<span class="sd">    ``exe_dir`` holds no ``hycs_std``. Build ``hycs_std`` and set</span>
-<span class="sd">    ``exe_dir`` in ``config.yaml`` to the directory that holds it.</span>
-<span class="sd">    """</span></div>
-
+<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">RuntrajError</span>
 
 
 <div class="viewcode-block" id="EmptyFootprint">
-<a class="viewcode-back" href="../../reference/_api/stilt.exceptions.EmptyFootprint.html#stilt.EmptyFootprint">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">EmptyFootprint</span><span class="p">(</span><span class="n">StiltError</span><span class="p">):</span>
+<a class="viewcode-back" href="../../reference/_api/stilt.exceptions.EmptyFootprint.html#stilt.exceptions.EmptyFootprint">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">EmptyFootprint</span><span class="p">(</span><span class="n">RuntrajError</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    No particle is over the footprint grid, so there is no footprint.</span>
 
-<span class="sd">    An empty footprint is a finished result, not a failure. The worker</span>
-<span class="sd">    catches it and writes a footprint file with no rows, marked empty. The</span>
-<span class="sd">    message says why it is empty: the particles are off the grid, no</span>
+<span class="sd">    An empty footprint is a finished result, not a failure. The footprint</span>
+<span class="sd">    stage catches it and writes a footprint file with no rows, marked empty.</span>
+<span class="sd">    The message says why it is empty: the particles are off the grid, no</span>
 <span class="sd">    particle row has a positive ``foot``, or the table has no rows.</span>
 <span class="sd">    """</span>
 
@@ -549,30 +485,7 @@
 
 
 
-<div class="viewcode-block" id="WorkerDied">
-<a class="viewcode-back" href="../../reference/_api/stilt.exceptions.WorkerDied.html#stilt.WorkerDied">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">WorkerDied</span><span class="p">(</span><span class="n">StiltError</span><span class="p">,</span> <span class="ne">RuntimeError</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    A worker process died without Python's say, and the run stopped.</span>
-
-<span class="sd">    A run on ``cpus`` above 1 raises it when a worker is killed outright</span>
-<span class="sd">    (``SIGKILL``, as the kernel's out-of-memory killer sends). The pool</span>
-<span class="sd">    cannot say which receptor the worker held, so the message names every</span>
-<span class="sd">    receptor that was in progress. What finished is kept and nothing is marked</span>
-<span class="sd">    failed: run again, and only what is missing runs. ``stilt run`` ends</span>
-<span class="sd">    with exit code 3.</span>
-<span class="sd">    """</span></div>
-
-
-
-<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="s2">"EmptyFootprint"</span><span class="p">,</span>
-    <span class="s2">"HYSPLITNotFoundError"</span><span class="p">,</span>
-    <span class="s2">"MeteorologyError"</span><span class="p">,</span>
-    <span class="s2">"SimulationError"</span><span class="p">,</span>
-    <span class="s2">"StiltError"</span><span class="p">,</span>
-    <span class="s2">"WorkerDied"</span><span class="p">,</span>
-<span class="p">]</span>
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"EmptyFootprint"</span><span class="p">]</span>
 </pre></div>
 
                 </article>

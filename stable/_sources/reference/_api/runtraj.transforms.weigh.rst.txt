@@ -1,0 +1,6 @@
+﻿runtraj.transforms.weigh
+========================
+
+.. currentmodule:: runtraj.transforms
+
+.. autofunction:: weigh

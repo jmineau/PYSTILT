@@ -1,6 +1,0 @@
-﻿stilt.execution.wait
-====================
-
-.. currentmodule:: stilt.execution
-
-.. autofunction:: wait

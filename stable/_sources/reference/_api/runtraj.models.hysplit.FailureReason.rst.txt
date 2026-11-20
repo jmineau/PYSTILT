@@ -1,0 +1,14 @@
+﻿runtraj.models.hysplit.FailureReason
+====================================
+
+.. currentmodule:: runtraj.models.hysplit
+
+
+
+
+
+
+.. autoclass:: runtraj.models.hysplit.FailureReason
+   :members:
+   :undoc-members:
+   :show-inheritance:

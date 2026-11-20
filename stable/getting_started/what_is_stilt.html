@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>What Is STILT? &#8212; PYSTILT 0.1.0a29</title>
+    <title>What Is STILT? &#8212; PYSTILT 0.1.0a30</title>
   
   
   
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=947601de"></script>
+    <script src="../_static/documentation_options.js?v=7752668c"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a29';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a30';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -61,16 +61,22 @@
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Installation" href="installation.html" />
     <link rel="prev" title="Getting Started" href="index.html" />
+  
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29" />
+  <meta name="docsearch:version" content="0.1.0a30" />
   
     
     <script src="../_static/searchtools.js"></script>
     <script src="../_static/language_data.js"></script>
     <script src="../searchindex.js"></script>
   
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="PYSTILT">
+  <meta property="og:title" content="What Is STILT?">
+  <meta property="og:description" content="A Python implementation of the STILT Lagrangian atmospheric transport model.">
+
   </head>
   <body data-default-mode="">
   
@@ -135,7 +141,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a29</p>
+    <p class="title logo__title">PYSTILT</p>
   
 </a></div>
     
@@ -488,12 +494,12 @@ version of STILT.</p>
 <section id="how-stilt-works-in-three-steps">
 <h2>How STILT works, in three steps<a class="headerlink" href="#how-stilt-works-in-three-steps" title="Link to this heading">#</a></h2>
 <ol class="arabic simple">
-<li><p><strong>Say where and when you measured.</strong> STILT calls this location and time a
-<a class="reference internal" href="glossary.html#term-receptor"><span class="xref std std-term">receptor</span></a>. It can be a single point (a tower inlet), a vertical
+<li><p><strong>Say where and when you measured.</strong> This location and time is a
+<a class="reference internal" href="glossary.html#term-release"><span class="xref std std-term">release</span></a> (STILT-R calls it a <a class="reference internal" href="glossary.html#term-receptor"><span class="xref std std-term">receptor</span></a>). It can be a single point (a tower inlet), a vertical
 column (a ground-based spectrometer), or a set of points along a slanted
 line of sight (a satellite sounding).</p></li>
 <li><p><strong>Release particles and run them backward.</strong> STILT releases a cloud of
-imaginary air parcels, called <a class="reference internal" href="glossary.html#term-particle"><span class="xref std std-term">particles</span></a>, at the receptor
+imaginary air parcels, called <a class="reference internal" href="glossary.html#term-particle"><span class="xref std std-term">particles</span></a>, at the release
 and moves them backward in time using gridded wind fields from a weather
 model (the <a class="reference internal" href="glossary.html#term-meteorology"><span class="xref std std-term">meteorology</span></a>). Each particle also gets random turbulent
 motion, so the cloud spreads out the way real air mixes. The particle
@@ -562,7 +568,7 @@ straight into pandas and xarray.</p></li>
 outputs are missing.</p></li>
 <li><p>The same project runs on your computer or on a Slurm cluster. Switching
 takes a few lines of configuration.</p></li>
-<li><p>Column and slanted receptors, averaging kernels, and pressure weighting are
+<li><p>Column and slanted releases, averaging kernels, and pressure weighting are
 built in for column and satellite measurements.</p></li>
 <li><p>Particles and footprints are saved as Parquet files, which pandas, R, and
 DuckDB can read. A footprint can also be written as NetCDF.</p></li>

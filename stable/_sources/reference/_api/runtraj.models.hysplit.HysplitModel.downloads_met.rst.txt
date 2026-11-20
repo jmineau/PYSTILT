@@ -1,0 +1,5 @@
+runtraj.models.hysplit.HysplitModel.downloads\_met
+==================================================
+
+.. currentmodule:: runtraj.models.hysplit
+.. automethod:: HysplitModel.downloads_met

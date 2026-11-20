@@ -1,0 +1,5 @@
+stilt.MultiPointRelease.coords
+==============================
+
+.. currentmodule:: stilt
+.. automethod:: MultiPointRelease.coords

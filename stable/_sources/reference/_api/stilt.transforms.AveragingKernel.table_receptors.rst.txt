@@ -1,6 +1,0 @@
-stilt.transforms.AveragingKernel.table\_receptors
-=================================================
-
-.. currentmodule:: stilt.transforms
-
-.. automethod:: AveragingKernel.table_receptors

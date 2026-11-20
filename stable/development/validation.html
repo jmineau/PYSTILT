@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Validation &#8212; PYSTILT 0.1.0a29</title>
+    <title>Validation &#8212; PYSTILT 0.1.0a30</title>
   
   
   
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=947601de"></script>
+    <script src="../_static/documentation_options.js?v=7752668c"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a29';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a30';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -61,16 +61,22 @@
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Roadmap" href="roadmap.html" />
     <link rel="prev" title="STILT-R Parity" href="stilt_r_parity.html" />
+  
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29" />
+  <meta name="docsearch:version" content="0.1.0a30" />
   
     
     <script src="../_static/searchtools.js"></script>
     <script src="../_static/language_data.js"></script>
     <script src="../searchindex.js"></script>
   
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="PYSTILT">
+  <meta property="og:title" content="Validation">
+  <meta property="og:description" content="A Python implementation of the STILT Lagrangian atmospheric transport model.">
+
   </head>
   <body data-default-mode="">
   
@@ -135,7 +141,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a29</p>
+    <p class="title logo__title">PYSTILT</p>
   
 </a></div>
     
@@ -543,8 +549,8 @@ about 0.29 hPa at the 95th percentile with either.</p>
 </section>
 <section id="foot-for-a-model-that-writes-only-positions">
 <h2><code class="docutils literal notranslate"><span class="pre">foot</span></code> for a model that writes only positions<a class="headerlink" href="#foot-for-a-model-that-writes-only-positions" title="Link to this heading">#</a></h2>
-<p>PYSTILT computes <code class="docutils literal notranslate"><span class="pre">foot</span></code> for particles that have none
-(<a class="reference internal" href="../reference/_api/stilt.particles.add_foot.html#stilt.particles.add_foot" title="stilt.particles.add_foot"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.particles.add_foot()</span></code></a>): the time below <code class="docutils literal notranslate"><span class="pre">footprint_depth</span></code> of the mixed
+<p>The footprint stage computes <code class="docutils literal notranslate"><span class="pre">foot</span></code> for particles that have none
+(<a class="reference internal" href="../reference/_api/stilt.footprint.add_foot.html#stilt.footprint.add_foot" title="stilt.footprint.add_foot"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.footprint.add_foot()</span></code></a>): the time below <code class="docutils literal notranslate"><span class="pre">footprint_depth</span></code> of the mixed
 layer over the air below that depth, which it takes from the drop in
 pressure between the ground and the depth in the met files. HYSPLIT
 computes its own the same way in its turbulence steps, adding up the dry
@@ -645,7 +651,7 @@ particles (<code class="docutils literal notranslate"><span class="pre">tests/in
 </table>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">richardson</span></code> is HYSPLIT’s own method ported
-(<code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.sampling.calc_pbl_height()</span></code>): the height it finds, kept at
+(<a class="reference internal" href="../reference/_api/stilt.sampling.calc_pbl_height.html#stilt.sampling.calc_pbl_height" title="stilt.sampling.calc_pbl_height"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.sampling.calc_pbl_height()</span></code></a>): the height it finds, kept at
 least 150 m, has a median ratio of 0.999 to 1.000 to the <code class="docutils literal notranslate"><span class="pre">mlht</span></code> HYSPLIT
 wrote, and 73 to 94 % of rows are within 2 %; the lowest 5 % of ratios
 are 0.77 to 0.94, for reasons not yet looked into. With it, what is left of the

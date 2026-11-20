@@ -1,0 +1,5 @@
+stilt.Release.from\_points
+==========================
+
+.. currentmodule:: stilt
+.. automethod:: Release.from_points

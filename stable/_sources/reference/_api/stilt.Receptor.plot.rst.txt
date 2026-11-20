@@ -1,6 +1,0 @@
-stilt.Receptor.plot
-===================
-
-.. currentmodule:: stilt
-
-.. autoproperty:: Receptor.plot

@@ -9,7 +9,7 @@ background from observations for an inversion, you need both.
 
 Each back-trajectory ends where its air came from. Sample a mole-fraction
 field at every particle's endpoint, average over the particles, and you
-have the background the receptor saw. ``sim.background(field)`` does this
+have the background the release saw. ``sim.background(field)`` does this
 with any field you give it (:func:`stilt.background` without a
 project). X-STILT does the same with
 CarbonTracker in ``endpts.trajfoot``. For a satellite swath you can also
@@ -45,29 +45,29 @@ instead of a field, as a Series indexed by particle number (``particle``).
 ``sim.particles.stilt.endpoints()`` gives the endpoints as a table for this:
 one row per particle, with every column of the particle table.
 
-The background at a receptor
+The background at a release
 ----------------------------
 
 .. code-block:: python
 
    rows = []
-   for rid in project.receptors.receptor:
+   for rid in project.releases.release:
        sim = project.simulation(rid, "hrrr")
        bg = sim.background(field)
        enhancement = float(sim.footprint.stilt.enhancement(flux).sum())
-       rows.append({"receptor": sim.receptor.id, "background": bg.value,
+       rows.append({"release": sim.release.id, "background": bg.value,
                     "enhancement": enhancement, "modeled": bg.value + enhancement})
 
 The background is weighted the way the footprint is, with the variant's
-transforms: the averaging kernel (including one from a per-receptor
+transforms: the averaging kernel (including one from a per-release
 table), pressure weighting, and any loss on the way (lifetime, deposition,
-oxidation). So the background and the enhancement add. For a tower receptor there are no transforms, and the
+oxidation). So the background and the enhancement add. For a tower release there are no transforms, and the
 value is the plain mean over the particles.
 
 ``bg.per_particle`` is the field at each endpoint, and ``bg.weights`` is
 each particle's share of the average. Both are indexed by particle. The
 spread of ``per_particle`` shows how uniform the background was over the
-air the receptor sampled.
+air the release sampled.
 
 What a column's weights cover
 -----------------------------
@@ -75,8 +75,8 @@ What a column's weights cover
 With pressure weighting, the weights sum to the fraction of the column's
 air mass that the particles cover, ``(p_sfc - p_top) / p_sfc``. The
 enhancement covers the same fraction, which is why the two add. It also
-means ``bg.value`` is the background over the receptor's levels only. The
-air above the receptor top saw no fluxes, so its share is the field alone.
+means ``bg.value`` is the background over the release's levels only. The
+air above the release top saw no fluxes, so its share is the field alone.
 Take it from the same model with the same pressure weights and averaging
 kernel, and add it in your own code.
 
@@ -122,15 +122,15 @@ there too when the table has it.
 
 - The exit is the first time the particle crossed the edge. A particle that
   came back in, or ended long after at the edge of the meteorology, has the
-  same exit; :meth:`~stilt.particles.ParticlesAccessor.endpoints` gives
+  same exit; :meth:`~runtraj.particles.ParticlesAccessor.endpoints` gives
   where it ended.
 - The edge is the outer edge of the grid's cells. A projected grid is a
   rectangle in its projection, and a grid across the dateline is read
   modulo 360.
 - A particle whose first row is already outside the grid has no row inside
   to interpolate from. It is reported at that row, on the edge it is
-  farthest beyond. The HYSPLIT build bundled with PYSTILT writes no row at
-  the release, so a receptor next to the edge can give such a particle.
+  farthest beyond. HYSPLIT 5.1.0, STILT-R's build, writes no row at
+  the release, so a release next to the edge can give such a particle.
 
 With transport error
 --------------------
@@ -142,7 +142,7 @@ modeled mole fraction, enhancement plus background:
 
 .. code-block:: python
 
-   err = project.simulation(sim.receptor.id, "hrrr-err")
+   err = project.simulation(sim.release.id, "hrrr-err")
    result = sim.transport_error(err, flux, background=field)
    result.enhancement - result.background   # the enhancement alone
 
@@ -156,7 +156,7 @@ Choices made here
   interpolation. Before the first or after the last time or level, the end
   value is used. Outside the grid there is no value.
 - A loss transform (lifetime, deposition, oxidation) scales the background
-  by the fraction that survives from the endpoint to the receptor, as it
+  by the fraction that survives from the endpoint to the release, as it
   scales the enhancement along the trajectory.
 - Particles without a value are left out, and the others carry their
   weight. This assumes the missing particles have the same mean as the
@@ -183,7 +183,8 @@ Forward runs
 ~~~~~~~~~~~~
 
 A forward run is a run with a positive ``n_hours``. Everything else stays
-the same. The receptor is where and when the particles are released, and
+the same. The release is where and when the particles are released, here at
+the source (:ref:`the diagram <release-source-receptor>`), and
 the particle table records where they go.
 
 A plume is what the whole city puts out, so spread the release over a box
@@ -192,7 +193,7 @@ the hours before the overpass, so that air of every age is included.
 X-STILT's defaults are a 0.3° box, 10 m above ground, and releases from ten
 hours before the overpass up to the overpass, each followed twelve hours
 forward with 1000 particles. In PYSTILT each release is a
-:class:`~stilt.receptors.MultiPointReceptor`, and
+:class:`~runtraj.releases.MultiPointRelease`, and
 :func:`~stilt.observations.jitter_points` spreads its points over the box:
 
 .. code-block:: python
@@ -200,7 +201,7 @@ forward with 1000 particles. In PYSTILT each release is a
    import pandas as pd
    import stilt
    from stilt.observations import jitter_points
-   from stilt.receptors import MultiPointReceptor
+   from runtraj.releases import MultiPointRelease
 
    site = (-111.9, 40.75)                       # Salt Lake City
    overpass = pd.Timestamp("2023-10-19 19:42")  # from the sounding times
@@ -209,8 +210,8 @@ forward with 1000 particles. In PYSTILT each release is a
           (site[0] + half, site[1] + half), (site[0] - half, site[1] + half)]
    points = jitter_points(box, 100)
 
-   receptors = [
-       MultiPointReceptor(
+   releases = [
+       MultiPointRelease(
            time=t,
            longitudes=[p[0] for p in points],
            latitudes=[p[1] for p in points],
@@ -221,11 +222,10 @@ forward with 1000 particles. In PYSTILT each release is a
 
    forward = stilt.Project.init(
        "./forward_12h",             # keep forward runs in a project of their own
-       receptors=receptors,
+       releases=releases,
        mets={"hrrr": met},          # as in the quickstart
+       models={"hysplit": {"n_hours": 12, "numpar": 1000}},   # positive: forward in time
        variants={"hrrr": {}},
-       n_hours=12,                  # positive: forward in time
-       numpar=1000,
    )
    forward.run()
 

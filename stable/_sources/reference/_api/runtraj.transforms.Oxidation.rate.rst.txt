@@ -1,0 +1,5 @@
+runtraj.transforms.Oxidation.rate
+=================================
+
+.. currentmodule:: runtraj.transforms
+.. automethod:: Oxidation.rate

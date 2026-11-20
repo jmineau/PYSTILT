@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Transport Error &#8212; PYSTILT 0.1.0a29</title>
+    <title>Transport Error &#8212; PYSTILT 0.1.0a30</title>
   
   
   
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=947601de"></script>
+    <script src="../_static/documentation_options.js?v=7752668c"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -53,7 +53,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a29';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a30';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -62,16 +62,22 @@
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Background" href="background.html" />
     <link rel="prev" title="Summing Footprints: Areas And The Jacobian" href="aggregation.html" />
+  
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29" />
+  <meta name="docsearch:version" content="0.1.0a30" />
   
     
     <script src="../_static/searchtools.js"></script>
     <script src="../_static/language_data.js"></script>
     <script src="../searchindex.js"></script>
   
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="PYSTILT">
+  <meta property="og:title" content="Transport Error">
+  <meta property="og:description" content="A Python implementation of the STILT Lagrangian atmospheric transport model.">
+
   </head>
   <body data-default-mode="">
   
@@ -136,7 +142,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a29</p>
+    <p class="title logo__title">PYSTILT</p>
   
 </a></div>
     
@@ -412,7 +418,7 @@
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Setting up a project</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="receptors.html">Receptors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="releases.html">Releases (receptors)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tracks.html">Mobile Measurements</a></li>
 <li class="toctree-l1"><a class="reference internal" href="meteorology.html">Meteorology</a></li>
 <li class="toctree-l1"><a class="reference internal" href="projects.html">Projects And Variants</a></li>
@@ -526,7 +532,7 @@ of each observation’s model-data mismatch.</p>
 <section id="run-with-wind-errors">
 <h2>Run with wind errors<a class="headerlink" href="#run-with-wind-errors" title="Link to this heading">#</a></h2>
 <p>The perturbed run is a <a class="reference internal" href="projects.html"><span class="doc">variant</span></a> of its own. It uses
-the same receptors and meteorology, with four wind-error settings added.
+the same releases and meteorology, with four wind-error settings added.
 The names are the same as in STILT-R.</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">variants</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">hrrr</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span><span class="w">                 </span><span class="c1"># the unperturbed run</span>
@@ -535,15 +541,16 @@ The names are the same as in STILT-R.</p>
 <span class="w">    </span><span class="nt">tluverr</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">260</span><span class="w">           </span><span class="c1"># its correlation time, min</span>
 <span class="w">    </span><span class="nt">zcoruverr</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">450</span><span class="w">         </span><span class="c1"># its vertical correlation length, m</span>
 <span class="w">    </span><span class="nt">horcoruverr</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">14</span><span class="w">        </span><span class="c1"># its horizontal correlation length, km</span>
-<span class="w">    </span><span class="nt">grid</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span><span class="w">             </span><span class="c1"># particles only</span>
+<span class="w">    </span><span class="nt">stages</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">footprint</span><span class="p">:</span><span class="w"> </span><span class="nv">null</span><span class="p p-Indicator">}</span><span class="w">   </span><span class="c1"># particles only</span>
 </pre></div>
 </div>
-<p>Every receptor then has a second simulation,
+<p>Every release then has a second simulation,
 <code class="docutils literal notranslate"><span class="pre">project.simulation(rid,</span> <span class="pre">&quot;hrrr-err&quot;)</span></code>, whose particles saw the perturbed
 winds. You can add the error variant to a finished project, and only the
 new simulations run. The error run costs as much as the original.
-<code class="docutils literal notranslate"><span class="pre">grid:</span> <span class="pre">null</span></code> skips the footprint, which the error calculation does not
-need. Keep a grid if you want to plot a perturbed footprint.</p>
+<code class="docutils literal notranslate"><span class="pre">stages:</span> <span class="pre">{footprint:</span> <span class="pre">null}</span></code> skips the footprint, which the error
+calculation does not need. Leave the line out if you want to plot a
+perturbed footprint.</p>
 <section id="choosing-the-settings">
 <h3>Choosing the settings<a class="headerlink" href="#choosing-the-settings" title="Link to this heading">#</a></h3>
 <p>The correlation scales matter as much as the standard deviation. HYSPLIT
@@ -576,14 +583,15 @@ several draws, set <code class="docutils literal notranslate"><span class="pre">
 <span class="w">    </span><span class="nt">realizations</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4</span><span class="w">        </span><span class="c1"># realizations 0 to 3</span>
 </pre></div>
 </div>
-<p>The variant then runs four times per receptor, as realizations <code class="docutils literal notranslate"><span class="pre">0</span></code> to
+<p>The variant then runs four times per release, as realizations <code class="docutils literal notranslate"><span class="pre">0</span></code> to
 <code class="docutils literal notranslate"><span class="pre">3</span></code> of <code class="docutils literal notranslate"><span class="pre">hrrr-err</span></code>: the <code class="docutils literal notranslate"><span class="pre">realization</span></code> column of
 <code class="docutils literal notranslate"><span class="pre">project.simulations</span></code>. The unperturbed <code class="docutils literal notranslate"><span class="pre">hrrr</span></code> run is not repeated.
 Each realization needs a different random draw, and there are two ways to
 get one:</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">krand:</span> <span class="pre">4</span></code>, the default. HYSPLIT seeds each run from the clock. The
-realizations differ, but a rerun gives different ones.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">krand:</span> <span class="pre">4</span></code>, STILT-R’s value, which <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">init</span></code> writes into a new
+project’s config. HYSPLIT seeds each run from the clock. The realizations
+differ, but a rerun gives different ones.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">krand:</span> <span class="pre">2</span></code> with a <code class="docutils literal notranslate"><span class="pre">seed</span></code>. Realization <code class="docutils literal notranslate"><span class="pre">k</span></code> runs with <code class="docutils literal notranslate"><span class="pre">seed</span> <span class="pre">+</span> <span class="pre">k</span></code>,
 and a rerun reproduces every realization exactly.</p></li>
 </ul>
@@ -676,17 +684,17 @@ units squared, and <code class="docutils literal notranslate"><span class="pre">
 without and with the perturbation, and <code class="docutils literal notranslate"><span class="pre">background</span></code> is 0 unless you pass
 a background field (<a class="reference internal" href="background.html"><span class="doc">Background</span></a>). <code class="docutils literal notranslate"><span class="pre">realizations</span></code> is how many
 realizations of the error variant went into the estimate: every one that
-has run. A receptor without particles in either variant gets NaN and
+has run. A release without particles in either variant gets NaN and
 <code class="docutils literal notranslate"><span class="pre">realizations</span></code> 0.</p>
-<p><code class="docutils literal notranslate"><span class="pre">errors</span></code> has a row for every receptor in the selection. A Jacobian built
-from the same selection leaves out the receptors with an empty footprint, so
-match the two by <code class="docutils literal notranslate"><span class="pre">H.receptors</span></code> (<a class="reference internal" href="aggregation.html#jacobian-rows"><span class="std std-ref">the rows of H</span></a>).</p>
-<p>Each receptor’s particles are read whole. A table of 1.4 million rows
-takes about a second to read, so a selection of hundreds of receptors takes
+<p><code class="docutils literal notranslate"><span class="pre">errors</span></code> has a row for every release in the selection. A Jacobian built
+from the same selection leaves out the releases with an empty footprint, so
+match the two by <code class="docutils literal notranslate"><span class="pre">H.releases</span></code> (<a class="reference internal" href="aggregation.html#jacobian-rows"><span class="std std-ref">the rows of H</span></a>).</p>
+<p>Each release’s particles are read whole. A table of 1.4 million rows
+takes about a second to read, so a selection of hundreds of releases takes
 minutes. For a whole large project, make the call in a Slurm job.
-<code class="docutils literal notranslate"><span class="pre">workers</span></code> sets how many receptors are read at once (up to 8 by
+<code class="docutils literal notranslate"><span class="pre">workers</span></code> sets how many releases are read at once (up to 8 by
 default).</p>
-<p><code class="docutils literal notranslate"><span class="pre">sim.transport_error</span></code> gives the same estimate for one receptor, and
+<p><code class="docutils literal notranslate"><span class="pre">sim.transport_error</span></code> gives the same estimate for one release, and
 keeps the per-level table described below:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sim</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">rid</span><span class="p">,</span> <span class="s2">"hrrr"</span><span class="p">)</span>
 <span class="n">result</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">transport_error</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">rid</span><span class="p">,</span> <span class="s2">"hrrr-err"</span><span class="p">),</span> <span class="n">flux</span><span class="p">)</span>
@@ -696,7 +704,7 @@ keeps the per-level table described below:</p>
 <p><code class="docutils literal notranslate"><span class="pre">result.sd</span></code> is the square root of <code class="docutils literal notranslate"><span class="pre">result.variance</span></code>. In both calls the
 particles are weighted the way the unperturbed variant’s footprint weights
 them, with its transforms: the averaging kernel (including one from a
-per-receptor table), pressure weighting, and any loss on the way.
+per-release table), pressure weighting, and any loss on the way.
 <a class="reference internal" href="../reference/_api/stilt.transport_error.html#stilt.transport_error" title="stilt.transport_error"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.transport_error()</span></code></a> does the same for particle tables
 you have without a project.</p>
 </section>
@@ -709,9 +717,9 @@ you whether a value means anything:</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">result.noise</span></code> is the standard error of <code class="docutils literal notranslate"><span class="pre">variance</span></code>, from the
 particles of both runs. A <code class="docutils literal notranslate"><span class="pre">variance</span></code> within two or three times <code class="docutils literal notranslate"><span class="pre">noise</span></code>
 is not resolved.</p></li>
-<li><p>Over many receptors, take the mean of the signed <code class="docutils literal notranslate"><span class="pre">variance</span></code>, by hour,
+<li><p>Over many releases, take the mean of the signed <code class="docutils literal notranslate"><span class="pre">variance</span></code>, by hour,
 season, or site. Its uncertainty is the standard deviation of the
-receptors’ values divided by the square root of their number. Do not clip
+releases’ values divided by the square root of their number. Do not clip
 each value at zero first, because that turns noise into a positive error.
 <code class="docutils literal notranslate"><span class="pre">result.sd</span></code> treats a negative variance as zero, so use it only once the
 variance is resolved.</p></li>
@@ -719,13 +727,13 @@ variance is resolved.</p></li>
 <p>Take the mean and not the median. Most particles miss the sources and a few
 cross them, so the per-particle enhancement is skewed, and so is the
 estimate. The median of a skewed estimate is below its mean. In a test with
-skewed enhancements at a point receptor, the median over receptors was 17
+skewed enhancements at a point release, the median over releases was 17
 to 35 % low, and the mean was within 4 %.</p>
 <p>Near a strong source a few particles carry most of the enhancement. One
-receptor’s <code class="docutils literal notranslate"><span class="pre">variance</span></code> then depends on those few particles and is rarely
-resolved. Combine receptors.</p>
-<p>For a column receptor the levels are added so that the noise in each level
-averages out over receptors, as it does for a point receptor
+release’s <code class="docutils literal notranslate"><span class="pre">variance</span></code> then depends on those few particles and is rarely
+resolved. Combine releases.</p>
+<p>For a column release the levels are added so that the noise in each level
+averages out over releases, as it does for a point release
 (<a class="reference internal" href="#what-the-numbers-mean">What the numbers mean</a>). Where the error changes sharply with height,
 the column variance comes out high, by up to about 20 %.</p>
 <p>The signal is largest when turbulence spreads the particles least, at night
@@ -733,11 +741,11 @@ and in winter. On a convective afternoon the unperturbed particles already
 fill the boundary layer. The wind error adds little, and the estimate is
 usually within its noise.</p>
 </section>
-<section id="one-variance-per-receptor">
-<h2>One variance per receptor<a class="headerlink" href="#one-variance-per-receptor" title="Link to this heading">#</a></h2>
+<section id="one-variance-per-release">
+<h2>One variance per release<a class="headerlink" href="#one-variance-per-release" title="Link to this heading">#</a></h2>
 <p>An inversion that uses <code class="docutils literal notranslate"><span class="pre">variance</span></code> as the transport part of the
 model-data mismatch gets a diagonal matrix, because PYSTILT gives one
-variance per receptor. That treats the transport errors of different
+variance per release. That treats the transport errors of different
 observations as independent, and they are not. A wind error with
 <code class="docutils literal notranslate"><span class="pre">tluverr:</span> <span class="pre">260</span></code> stays correlated for about four hours, so hourly
 observations at one tower share most of their transport error with their
@@ -751,7 +759,7 @@ the effect.</p>
 <section id="what-the-numbers-mean">
 <h2>What the numbers mean<a class="headerlink" href="#what-the-numbers-mean" title="Link to this heading">#</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">result.levels</span></code> shows the calculation for each release level. A point
-receptor has one level.</p>
+release has one level.</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">height</span></code> is the level’s mean release height in meters, and <code class="docutils literal notranslate"><span class="pre">n</span></code> its
 number of particles.</p></li>
@@ -768,8 +776,8 @@ equation 4 for the level.</p></li>
 </ul>
 <p><code class="docutils literal notranslate"><span class="pre">result.enhancement</span></code> is close to what the footprint gives. The two differ
 a little because the footprint smooths the particles onto its grid.</p>
-<p>A column receptor’s particles are grouped into <code class="docutils literal notranslate"><span class="pre">levels</span></code> release-height
-bins of equal width, 20 by default. A multipoint or slant receptor with no
+<p>A column release’s particles are grouped into <code class="docutils literal notranslate"><span class="pre">levels</span></code> release-height
+bins of equal width, 20 by default. A multipoint or slant release with no
 more than <code class="docutils literal notranslate"><span class="pre">levels</span></code> release heights gets one level per height. The levels
 are then added with an exponential error correlation in the vertical:</p>
 <div class="math notranslate nohighlight">
@@ -781,7 +789,7 @@ mean of <span class="math notranslate nohighlight">\(e^{-|h_p - h_q| / L}\)</spa
 and <code class="docutils literal notranslate"><span class="pre">q</span></code> of the other, where <code class="docutils literal notranslate"><span class="pre">h</span></code> is a particle’s release height. <code class="docutils literal notranslate"><span class="pre">L</span></code> is
 <code class="docutils literal notranslate"><span class="pre">length_scale</span></code>, 356 m by default (X-STILT’s value). With
 <code class="docutils literal notranslate"><span class="pre">length_scale=None</span></code> the levels are independent, and <code class="docutils literal notranslate"><span class="pre">factor</span></code> is
-<code class="docutils literal notranslate"><span class="pre">weight</span></code> squared. For a point receptor <code class="docutils literal notranslate"><span class="pre">factor</span></code> is 1.</p>
+<code class="docutils literal notranslate"><span class="pre">weight</span></code> squared. For a point release <code class="docutils literal notranslate"><span class="pre">factor</span></code> is 1.</p>
 <p>Written over pairs of levels, the sum is</p>
 <div class="math notranslate nohighlight">
 \[\sigma^2 = \sum_{i,j} w_i w_j R_{ij}\,
@@ -798,15 +806,15 @@ small bias. The <a class="reference internal" href="migration/x_stilt.html"><spa
 where the rest of the calculation differs.</p>
 <p>PYSTILT uses each level’s <code class="docutils literal notranslate"><span class="pre">dvar</span></code> as it is, with its sign, and the column
 sum is linear in it. The noise in <code class="docutils literal notranslate"><span class="pre">dvar</span></code> therefore averages out over many
-receptors, for a column as for a point receptor.</p>
+releases, for a column as for a point release.</p>
 <p>A pair of levels could instead count with the product of its two standard
 deviations, <span class="math notranslate nohighlight">\(\sqrt{\mathrm{dvar}_i\, \mathrm{dvar}_j}\)</span>. The two
 forms agree when both levels have the same error. Where the error changes
 with height within a correlation length, the mean is the larger: by 2 % for
 an error that falls by a factor of e in 1000 m, 7 % in 500 m, and 20 % in
 250 m. PYSTILT takes the mean because the square root of a noisy <code class="docutils literal notranslate"><span class="pre">dvar</span></code> is
-too small on average, by the same amount at every receptor, so an average
-over receptors stays too small.</p>
+too small on average, by the same amount at every release, so an average
+over releases stays too small.</p>
 <p>Fitting a line through only the levels where <code class="docutils literal notranslate"><span class="pre">dvar</span></code> is positive would
 bias the result upward: it keeps the levels whose variance happened to
 rise, so under pure sampling noise it reports a positive error at every
@@ -834,7 +842,8 @@ project:</p>
 </div>
 <p>Before you run them:</p>
 <ul class="simple">
-<li><p>Set <code class="docutils literal notranslate"><span class="pre">krand:</span> <span class="pre">2</span></code> and a <code class="docutils literal notranslate"><span class="pre">seed</span></code> in the defaults. Every variant then draws
+<li><p>Set <code class="docutils literal notranslate"><span class="pre">krand:</span> <span class="pre">2</span></code> and a <code class="docutils literal notranslate"><span class="pre">seed</span></code> under <code class="docutils literal notranslate"><span class="pre">models:</span> <span class="pre">hysplit:</span></code>. Every variant
+then draws
 the same turbulence, and the difference between variants is the mixed
 layer alone. Without a seed each run adds its own sampling noise.</p></li>
 <li><p>HYSPLIT applies the minimum mixing depth <code class="docutils literal notranslate"><span class="pre">kmix0</span></code> (150 m by default)
@@ -844,11 +853,11 @@ further.</p></li>
 repeated for every hour, so it needs <code class="docutils literal notranslate"><span class="pre">abs(n_hours)</span> <span class="pre">&lt;=</span> <span class="pre">150</span></code>. For a
 longer run, give a list. Hours past the end of the list are unscaled.</p></li>
 </ul>
-<p>How much it matters depends on the receptor. A column spans the mixed
+<p>How much it matters depends on the release. A column spans the mixed
 layer, so a change in its depth mostly moves influence around inside the
-column, and the column enhancement changes little. A surface receptor has
+column, and the column enhancement changes little. A surface release has
 no such averaging and can change by tens of percent. Test it for your own
-receptors.</p>
+releases.</p>
 <p>The spread between these runs is a sensitivity. To turn it into an error
 you need to know how far the meteorology’s mixed-layer height is from the
 real one. One way is to compare it with radiosonde profiles, analyzed with
@@ -957,15 +966,15 @@ since their heights above ground are unknown.</p>
 </section>
 <section id="step-2-the-scales">
 <h3>Step 2: the scales<a class="headerlink" href="#step-2-the-scales" title="Link to this heading">#</a></h3>
-<p><a class="reference internal" href="../reference/_api/stilt.meteorology.variogram.html#stilt.meteorology.variogram" title="stilt.meteorology.variogram"><code class="xref py py-func docutils literal notranslate"><span class="pre">variogram()</span></code></a> builds the empirical variogram. It
+<p><a class="reference internal" href="../reference/_api/runtraj.meteorology.variogram.html#runtraj.meteorology.variogram" title="runtraj.meteorology.variogram"><code class="xref py py-func docutils literal notranslate"><span class="pre">variogram()</span></code></a> builds the empirical variogram. It
 takes the errors, the coordinate the separation is measured in, and a
 <code class="docutils literal notranslate"><span class="pre">group</span></code> label. Only points with the same label are paired. The coordinate
 can also be two columns of longitude and latitude, and the separation is
 then the great-circle distance in kilometers.
-<a class="reference internal" href="../reference/_api/stilt.meteorology.fit_variogram.html#stilt.meteorology.fit_variogram" title="stilt.meteorology.fit_variogram"><code class="xref py py-func docutils literal notranslate"><span class="pre">fit_variogram()</span></code></a> fits the exponential model with
+<a class="reference internal" href="../reference/_api/runtraj.meteorology.fit_variogram.html#runtraj.meteorology.fit_variogram" title="runtraj.meteorology.fit_variogram"><code class="xref py py-func docutils literal notranslate"><span class="pre">fit_variogram()</span></code></a> fits the exponential model with
 σ fixed.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.meteorology</span><span class="w"> </span><span class="kn">import</span> <span class="n">fit_variogram</span><span class="p">,</span> <span class="n">variogram</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.meteorology</span><span class="w"> </span><span class="kn">import</span> <span class="n">fit_variogram</span><span class="p">,</span> <span class="n">variogram</span>
 
 <span class="k">def</span><span class="w"> </span><span class="nf">scale</span><span class="p">(</span><span class="n">errors</span><span class="p">,</span> <span class="n">lag</span><span class="p">,</span> <span class="n">group</span><span class="p">,</span> <span class="n">bins</span><span class="p">):</span>
     <span class="n">table</span> <span class="o">=</span> <span class="n">variogram</span><span class="p">(</span><span class="n">errors</span><span class="p">,</span> <span class="n">lag</span><span class="p">,</span> <span class="n">group</span><span class="o">=</span><span class="n">group</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="n">bins</span><span class="p">)</span>
@@ -987,7 +996,7 @@ then the great-circle distance in kilometers.
 <p>The recipe makes these choices, and you can change any of them:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">layer</span></code> is the height range whose errors matter for your transport.
-Use the boundary layer and a little above for a surface receptor, and
+Use the boundary layer and a little above for a surface release, and
 more for a column.</p></li>
 <li><p>The vertical variogram pairs levels within one launch (<code class="docutils literal notranslate"><span class="pre">group</span></code> is the
 launch time), in 100 m bins up to 3 km.</p></li>
@@ -1010,7 +1019,7 @@ at its smallest lags is the sign.</p></li>
 perturbation does not represent it.</p></li>
 </ul>
 <p>The four values go into <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> under the same names, or into
-<a class="reference internal" href="../reference/_api/stilt.transport.hysplit.HysplitConfig.html#stilt.transport.hysplit.HysplitConfig" title="stilt.transport.hysplit.HysplitConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">HysplitConfig</span></code></a>. Look at the fits before you trust
+<a class="reference internal" href="../reference/_api/runtraj.models.hysplit.HysplitConfig.html#runtraj.models.hysplit.HysplitConfig" title="runtraj.models.hysplit.HysplitConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">HysplitConfig</span></code></a>. Look at the fits before you trust
 them:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
 
@@ -1145,7 +1154,7 @@ the particles kept.</p></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-emission-error">The emission error</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-transport-error">The transport error</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#is-the-estimate-meaningful">Is the estimate meaningful?</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#one-variance-per-receptor">One variance per receptor</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#one-variance-per-release">One variance per release</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-the-numbers-mean">What the numbers mean</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#mixed-layer-height">Mixed-layer height</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#wind-error-statistics">Wind-error statistics</a><ul class="pst-show_toc_level nav section-nav flex-column">

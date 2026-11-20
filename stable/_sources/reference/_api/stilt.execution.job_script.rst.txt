@@ -1,6 +1,0 @@
-﻿stilt.execution.job\_script
-===========================
-
-.. currentmodule:: stilt.execution
-
-.. autofunction:: job_script

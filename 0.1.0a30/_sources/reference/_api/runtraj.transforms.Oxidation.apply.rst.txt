@@ -1,0 +1,5 @@
+runtraj.transforms.Oxidation.apply
+==================================
+
+.. currentmodule:: runtraj.transforms
+.. automethod:: Oxidation.apply

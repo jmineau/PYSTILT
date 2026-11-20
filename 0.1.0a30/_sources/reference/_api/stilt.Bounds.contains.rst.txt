@@ -1,0 +1,5 @@
+stilt.Bounds.contains
+=====================
+
+.. currentmodule:: stilt
+.. automethod:: Bounds.contains

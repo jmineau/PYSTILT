@@ -1,6 +1,0 @@
-﻿stilt.transforms.ak\_weights
-============================
-
-.. currentmodule:: stilt.transforms
-
-.. autofunction:: ak_weights

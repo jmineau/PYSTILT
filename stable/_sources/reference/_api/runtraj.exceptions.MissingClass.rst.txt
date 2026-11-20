@@ -1,0 +1,6 @@
+﻿runtraj.exceptions.MissingClass
+===============================
+
+.. currentmodule:: runtraj.exceptions
+
+.. autoexception:: MissingClass

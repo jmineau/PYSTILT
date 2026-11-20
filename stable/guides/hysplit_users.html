@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>PYSTILT For HYSPLIT Users &#8212; PYSTILT 0.1.0a29</title>
+    <title>PYSTILT For HYSPLIT Users &#8212; PYSTILT 0.1.0a30</title>
   
   
   
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=947601de"></script>
+    <script src="../_static/documentation_options.js?v=7752668c"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a29';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a30';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -61,16 +61,22 @@
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Your Own HYSPLIT Build And Data Tables" href="hysplit_build.html" />
     <link rel="prev" title="Slant Columns" href="slant_columns.html" />
+  
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a29" />
+  <meta name="docsearch:version" content="0.1.0a30" />
   
     
     <script src="../_static/searchtools.js"></script>
     <script src="../_static/language_data.js"></script>
     <script src="../searchindex.js"></script>
   
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="PYSTILT">
+  <meta property="og:title" content="PYSTILT For HYSPLIT Users">
+  <meta property="og:description" content="A Python implementation of the STILT Lagrangian atmospheric transport model.">
+
   </head>
   <body data-default-mode="">
   
@@ -135,7 +141,7 @@
   
   
   
-    <p class="title logo__title">PYSTILT 0.1.0a29</p>
+    <p class="title logo__title">PYSTILT</p>
   
 </a></div>
     
@@ -411,7 +417,7 @@
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Setting up a project</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="receptors.html">Receptors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="releases.html">Releases (receptors)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tracks.html">Mobile Measurements</a></li>
 <li class="toctree-l1"><a class="reference internal" href="meteorology.html">Meteorology</a></li>
 <li class="toctree-l1"><a class="reference internal" href="projects.html">Projects And Variants</a></li>
@@ -520,12 +526,15 @@ ARL met files, and returns every particle’s position at every time step as
 a pandas table. For many starting times and places, and for the same runs
 under other settings, a project runs them all, on your computer or as a
 Slurm job array, and keeps the particles of each set of settings in a
-folder of its own.</p>
+folder of its own. It runs the <code class="docutils literal notranslate"><span class="pre">hycs_std</span></code> you already have: set
+<code class="docutils literal notranslate"><span class="pre">directory</span></code> to the HYSPLIT folder, or put the folder of <code class="docutils literal notranslate"><span class="pre">hycs_std</span></code> on <code class="docutils literal notranslate"><span class="pre">PATH</span></code>
+(<a class="reference internal" href="../getting_started/installation.html"><span class="doc">Installation</span></a>).</p>
 <section id="hysplit-s-words-in-pystilt">
 <h2>HYSPLIT’s words in PYSTILT<a class="headerlink" href="#hysplit-s-words-in-pystilt" title="Link to this heading">#</a></h2>
 <p>PYSTILT comes from STILT, which follows air backward from a measurement and
-calls the time and place its particles start from a <em>receptor</em>. For you, a
-receptor is the starting time and starting locations of <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code>:</p>
+calls the time and place its particles start from a <em>receptor</em>. PYSTILT
+calls it a <em>release</em> (receptor), and for you it is the starting time and
+starting locations of <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code>:</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <colgroup>
 <col style="width: 45.0%" />
@@ -538,16 +547,16 @@ receptor is the starting time and starting locations of <code class="docutils li
 </thead>
 <tbody>
 <tr class="row-even"><td><p>A starting time and one starting location</p></td>
-<td><p>A <a class="reference internal" href="../reference/_api/stilt.PointReceptor.html#stilt.PointReceptor" title="stilt.PointReceptor"><code class="xref py py-class docutils literal notranslate"><span class="pre">PointReceptor</span></code></a></p></td>
+<td><p>A <a class="reference internal" href="../reference/_api/stilt.PointRelease.html#stilt.PointRelease" title="stilt.PointRelease"><code class="xref py py-class docutils literal notranslate"><span class="pre">PointRelease</span></code></a></p></td>
 </tr>
 <tr class="row-odd"><td><p>Several starting locations at one time</p></td>
-<td><p>A <a class="reference internal" href="../reference/_api/stilt.MultiPointReceptor.html#stilt.MultiPointReceptor" title="stilt.MultiPointReceptor"><code class="xref py py-class docutils literal notranslate"><span class="pre">MultiPointReceptor</span></code></a></p></td>
+<td><p>A <a class="reference internal" href="../reference/_api/stilt.MultiPointRelease.html#stilt.MultiPointRelease" title="stilt.MultiPointRelease"><code class="xref py py-class docutils literal notranslate"><span class="pre">MultiPointRelease</span></code></a></p></td>
 </tr>
 <tr class="row-even"><td><p>Two heights at one location, a line source</p></td>
-<td><p>A <a class="reference internal" href="../reference/_api/stilt.ColumnReceptor.html#stilt.ColumnReceptor" title="stilt.ColumnReceptor"><code class="xref py py-class docutils literal notranslate"><span class="pre">ColumnReceptor</span></code></a></p></td>
+<td><p>A <a class="reference internal" href="../reference/_api/stilt.ColumnRelease.html#stilt.ColumnRelease" title="stilt.ColumnRelease"><code class="xref py py-class docutils literal notranslate"><span class="pre">ColumnRelease</span></code></a></p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">KMSL</span></code>, heights above ground or above sea level</p></td>
-<td><p>The receptor’s <code class="docutils literal notranslate"><span class="pre">altitude_ref</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;agl&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;msl&quot;</span></code></p></td>
+<td><p>The release’s <code class="docutils literal notranslate"><span class="pre">altitude_ref</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;agl&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;msl&quot;</span></code></p></td>
 </tr>
 <tr class="row-even"><td><p>The settings of one <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code> and <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code></p></td>
 <td><p>A variant, a named set of settings</p></td>
@@ -566,7 +575,7 @@ Here 1,000 particles leave Salt Lake City at 500 m above ground during one
 hour and are followed 6 hours forward:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [1]: </span><span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
 
-<span class="gp">In [2]: </span><span class="n">start</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">PointReceptor</span><span class="p">(</span>
+<span class="gp">In [2]: </span><span class="n">start</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">PointRelease</span><span class="p">(</span>
 <span class="gp">   ...: </span>    <span class="n">time</span><span class="o">=</span><span class="s2">"2021-07-15 01:00"</span><span class="p">,</span> <span class="n">longitude</span><span class="o">=-</span><span class="mf">111.85</span><span class="p">,</span> <span class="n">latitude</span><span class="o">=</span><span class="mf">40.77</span><span class="p">,</span> <span class="n">altitude</span><span class="o">=</span><span class="mi">500</span>
 <span class="gp">   ...: </span><span class="p">)</span>
 <span class="gp">   ...: </span>
@@ -656,28 +665,30 @@ turbulence on ended about 21 km away and 400 m lower:</p>
 goes, which is a different thing from a trajectory. For a trajectory, run one
 particle.
 For several trajectories from one time, use a
-<a class="reference internal" href="../reference/_api/stilt.MultiPointReceptor.html#stilt.MultiPointReceptor" title="stilt.MultiPointReceptor"><code class="xref py py-class docutils literal notranslate"><span class="pre">MultiPointReceptor</span></code></a> with <code class="docutils literal notranslate"><span class="pre">numpar</span></code> equal to its number of
+<a class="reference internal" href="../reference/_api/stilt.MultiPointRelease.html#stilt.MultiPointRelease" title="stilt.MultiPointRelease"><code class="xref py py-class docutils literal notranslate"><span class="pre">MultiPointRelease</span></code></a> with <code class="docutils literal notranslate"><span class="pre">numpar</span></code> equal to its number of
 locations: HYSPLIT gives each location one particle.</p>
 </section>
 <section id="many-runs-a-project">
 <h2>Many runs: a project<a class="headerlink" href="#many-runs-a-project" title="Link to this heading">#</a></h2>
 <p>A project runs every starting point under every variant, and runs again
-only what is missing. A <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> with no <code class="docutils literal notranslate"><span class="pre">grid</span></code> makes particles
-and no footprints. Here every start runs on HRRR with two vertical motion
+only what is missing. A <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> with no <code class="docutils literal notranslate"><span class="pre">stages</span></code> block makes
+particles and no footprints. Here every start runs on HRRR with two vertical motion
 options, each kept in its own folder:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">mets</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">hrrr</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data/arl/hrrr</span>
 
-<span class="nt">variants</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">hrrr</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span><span class="w">                 </span><span class="c1"># the settings below</span>
-<span class="w">  </span><span class="nt">hrrr-w6</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">w_option</span><span class="p">:</span><span class="w"> </span><span class="nv">6</span><span class="p p-Indicator">}</span><span class="w">   </span><span class="c1"># the same runs with another vertical motion</span>
+<span class="nt">models</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">hysplit</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">n_hours</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">24</span>
+<span class="w">    </span><span class="nt">numpar</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1000</span>
+<span class="w">    </span><span class="nt">emisshrs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.0</span>
 
-<span class="nt">n_hours</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">24</span>
-<span class="nt">numpar</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1000</span>
-<span class="nt">emisshrs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.0</span>
+<span class="nt">variants</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">hrrr</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span><span class="w">                 </span><span class="c1"># the settings above</span>
+<span class="w">  </span><span class="nt">hrrr-w6</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">w_option</span><span class="p">:</span><span class="w"> </span><span class="nv">6</span><span class="p p-Indicator">}</span><span class="w">   </span><span class="c1"># the same runs with another vertical motion</span>
 </pre></div>
 </div>
-<p>The starting points go in <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>, one row each:</p>
+<p>The starting points go in <code class="docutils literal notranslate"><span class="pre">releases.csv</span></code>, one row each:</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>time,longitude,latitude,altitude
 2021-07-15 01:00:00,-111.85,40.77,500
 2021-07-15 13:00:00,-111.85,40.77,500
@@ -697,10 +708,15 @@ of any selection of runs as one table:</p>
 </section>
 <section id="where-each-control-and-setup-cfg-line-comes-from">
 <h2>Where each <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code> and <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> line comes from<a class="headerlink" href="#where-each-control-and-setup-cfg-line-comes-from" title="Link to this heading">#</a></h2>
-<p>Every <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> entry that can change the particles is a setting of the
+<p>Every <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> entry but <code class="docutils literal notranslate"><span class="pre">ICHEM</span></code> and <code class="docutils literal notranslate"><span class="pre">IDSP</span></code> is a setting of the
 same name in lowercase, such as <code class="docutils literal notranslate"><span class="pre">numpar</span></code>, <code class="docutils literal notranslate"><span class="pre">kmixd</span></code> or <code class="docutils literal notranslate"><span class="pre">tlfrac</span></code>
-(<a class="reference internal" href="../reference/configuration.html"><span class="doc">Configuration</span></a> lists them). PYSTILT writes the rest
-itself:</p>
+(<a class="reference internal" href="../reference/configuration.html"><span class="doc">Configuration</span></a> lists them). Each defaults to HYSPLIT’s
+own value in STILT mode. A setting HYSPLIT decides only after reading the
+file (<code class="docutils literal notranslate"><span class="pre">capemin</span></code>, <code class="docutils literal notranslate"><span class="pre">kblt</span></code>, <code class="docutils literal notranslate"><span class="pre">kmixd</span></code>, <code class="docutils literal notranslate"><span class="pre">krand</span></code>, <code class="docutils literal notranslate"><span class="pre">vscales</span></code>) is left out
+unless you give it, so HYSPLIT chooses. <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">init</span></code> writes STILT-R’s
+values for a few of them into a new project’s config
+(<a class="reference internal" href="migration/stilt_r.html"><span class="doc">Coming From STILT-R</span></a>); delete those lines to run HYSPLIT’s. PYSTILT
+writes the rest itself:</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <colgroup>
 <col style="width: 40.0%" />
@@ -713,7 +729,7 @@ itself:</p>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">CONTROL</span></code> starting time and locations</p></td>
-<td><p>The receptor, latitude, longitude and height</p></td>
+<td><p>The release (receptor), latitude, longitude and height</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">CONTROL</span></code> total run time</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">n_hours</span></code></p></td>
@@ -731,7 +747,7 @@ itself:</p>
 <td><p>Fixed: one pollutant, a placeholder grid, no deposition</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> <code class="docutils literal notranslate"><span class="pre">KMSL</span></code></p></td>
-<td><p>The receptor’s <code class="docutils literal notranslate"><span class="pre">altitude_ref</span></code></p></td>
+<td><p>The release’s <code class="docutils literal notranslate"><span class="pre">altitude_ref</span></code></p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> <code class="docutils literal notranslate"><span class="pre">MAXPAR</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">maxpar</span></code>, or when unset enough for <code class="docutils literal notranslate"><span class="pre">numpar</span></code> shared over the locations</p></td>
@@ -745,9 +761,8 @@ itself:</p>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> <code class="docutils literal notranslate"><span class="pre">WINDERRTF</span></code>, <code class="docutils literal notranslate"><span class="pre">ZICONTROLTF</span></code></p></td>
 <td><p>The wind and mixed-layer error settings, and <code class="docutils literal notranslate"><span class="pre">ziscale</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> <code class="docutils literal notranslate"><span class="pre">DELT</span></code>, <code class="docutils literal notranslate"><span class="pre">ICHEM</span></code>, <code class="docutils literal notranslate"><span class="pre">KAGL</span></code>, <code class="docutils literal notranslate"><span class="pre">CMASS</span></code> and 37 more</p></td>
-<td><p>Fixed: STILT mode overrides them, or only concentration grids, puffs,
-dump files or other HYSPLIT programs read them
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> <code class="docutils literal notranslate"><span class="pre">ICHEM</span></code>, <code class="docutils literal notranslate"><span class="pre">IDSP</span></code></p></td>
+<td><p>Fixed at 8 and 2, the only values with which HYSPLIT writes particles
 (<code class="xref py py-data docutils literal notranslate"><span class="pre">FIXED_SETUP</span></code>)</p></td>
 </tr>
 </tbody>

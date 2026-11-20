@@ -1,0 +1,5 @@
+runtraj.output.Output.folder
+============================
+
+.. currentmodule:: runtraj.output
+.. automethod:: Output.folder

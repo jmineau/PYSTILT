@@ -1,0 +1,6 @@
+﻿runtraj.transforms.particle\_pwf
+================================
+
+.. currentmodule:: runtraj.transforms
+
+.. autofunction:: particle_pwf

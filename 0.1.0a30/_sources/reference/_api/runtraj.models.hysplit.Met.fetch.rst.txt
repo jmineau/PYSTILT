@@ -1,0 +1,5 @@
+runtraj.models.hysplit.Met.fetch
+================================
+
+.. currentmodule:: runtraj.models.hysplit
+.. automethod:: Met.fetch

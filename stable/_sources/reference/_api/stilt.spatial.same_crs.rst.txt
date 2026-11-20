@@ -1,6 +1,0 @@
-﻿stilt.spatial.same\_crs
-=======================
-
-.. currentmodule:: stilt.spatial
-
-.. autofunction:: same_crs

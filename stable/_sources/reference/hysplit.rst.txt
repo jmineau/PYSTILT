@@ -3,36 +3,57 @@ HYSPLIT Integration
 
 HYSPLIT is the transport model behind every simulation, unless a variant
 names another. The worker gets it as
-:class:`stilt.transport.hysplit.HysplitModel` (see :doc:`execution`), which
+:class:`runtraj.models.hysplit.HysplitModel` (see :doc:`execution`), which
 picks the met files, writes HYSPLIT's input files, runs ``hycs_std``, and
 reads the particles it writes.
 
 Config
 ------
 
-:class:`stilt.transport.hysplit.HysplitConfig` holds every setting that
-shapes the particles HYSPLIT makes. In ``config.yaml`` they are flat,
-top-level keys.
+:class:`runtraj.models.hysplit.HysplitConfig` holds every setting that
+shapes the particles HYSPLIT makes. In ``config.yaml`` they are the keys
+of the ``hysplit`` block under ``models:``.
 
 .. autosummary::
    :toctree: _api
    :nosignatures:
 
-   stilt.transport.hysplit.HysplitConfig
+   runtraj.models.hysplit.HysplitConfig
+
+The HYSPLIT build
+-----------------
+
+PYSTILT includes no HYSPLIT. :func:`~runtraj.models.hysplit.find_hycs_std`
+returns the ``hycs_std`` a run uses: ``exec/hycs_std`` under ``directory``, or else the
+first on ``PATH`` (:doc:`../getting_started/installation`).
+:meth:`HysplitModel.sha256 <runtraj.models.hysplit.HysplitModel.sha256>`
+is its checksum, part of each run's settings, and
+:meth:`HysplitModel.version <runtraj.models.hysplit.HysplitModel.version>`
+the version it prints when it starts, recorded beside them.
+:func:`~runtraj.models.hysplit.data_tables` gives HYSPLIT's data tables a
+run uses, from the ``bdyfiles/`` folder of ``directory`` or beside the
+``hycs_std`` on ``PATH``.
+
+.. autosummary::
+   :toctree: _api
+   :nosignatures:
+
+   runtraj.models.hysplit.find_hycs_std
+   runtraj.models.hysplit.data_tables
 
 Running HYSPLIT
 ---------------
 
-:func:`~stilt.transport.hysplit.write_inputs` writes everything
+:func:`~runtraj.models.hysplit.write_inputs` writes everything
 ``hycs_std`` reads into a folder: ``CONTROL``, ``SETUP.CFG``, and the error
 and mixed-layer files when the settings call for them. It takes what
 ``CONTROL`` starts from: a release time and release locations (latitude,
 longitude and height, in ``CONTROL``'s order), with ``kmsl`` 0 for heights
 above ground and 1 above sea level, as ``SETUP.CFG``'s ``KMSL``.
-:class:`~stilt.transport.hysplit.HysplitModel` passes a receptor's time,
-release points (``receptor.coords()``) and ``altitude_ref``.
-:func:`~stilt.transport.hysplit.run_hycs_std` runs ``hycs_std`` in the
-folder, and :func:`~stilt.transport.hysplit.read_particle_dat` reads its
+:class:`~runtraj.models.hysplit.HysplitModel` passes a release's time,
+release points (``release.coords()``) and ``altitude_ref``.
+:func:`~runtraj.models.hysplit.run_hycs_std` runs ``hycs_std`` in the
+folder, and :func:`~runtraj.models.hysplit.read_particle_dat` reads its
 ``PARTICLE_STILT.DAT`` as a particle table. Use them to look at or change
 the input files of a run. A project run then adds the release heights and,
 when it makes the footprint, the near-field correction
@@ -42,8 +63,9 @@ when it makes the footprint, the near-field correction
 
    from pathlib import Path
 
-   from stilt.particles import add_release_heights, correct_near_field
-   from stilt.transport.hysplit import (
+   from stilt.footprint import correct_near_field
+   from runtraj.particles import add_release_heights
+   from runtraj.models.hysplit import (
        HysplitConfig,
        read_particle_dat,
        run_hycs_std,
@@ -53,24 +75,24 @@ when it makes the footprint, the near-field correction
    config = HysplitConfig(n_hours=-24, numpar=200)
    write_inputs(
        "run",
-       release_time=receptor.time,
-       locations=receptor.coords(),
+       release_time=release.time,
+       locations=release.coords(),
        config=config,
        met_files=met_files,
-       kmsl=1 if receptor.altitude_ref == "msl" else 0,
+       kmsl=1 if release.altitude_ref == "msl" else 0,
    )
    run_hycs_std(Path("run"))
    particles = read_particle_dat("run/PARTICLE_STILT.DAT", config.varsiwant)
-   particles = add_release_heights(particles, receptor)
-   particles = correct_near_field(particles, receptor, config.footprint_depth)
+   particles = add_release_heights(particles, release)
+   particles = correct_near_field(particles, release, config.veght)
 
 .. autosummary::
    :toctree: _api
    :nosignatures:
 
-   stilt.transport.hysplit.write_inputs
-   stilt.transport.hysplit.run_hycs_std
-   stilt.transport.hysplit.read_particle_dat
+   runtraj.models.hysplit.write_inputs
+   runtraj.models.hysplit.run_hycs_std
+   runtraj.models.hysplit.read_particle_dat
 
 Failure reasons
 ---------------
@@ -81,8 +103,8 @@ particle more than 5 grid cells inside the met's domain means the met ran
 out (``MET_COVERAGE``), since particles that leave the domain end at its
 edge (:doc:`/development/validation`). A known failure, a timeout, or a run
 without particle output raises a
-:class:`~stilt.exceptions.SimulationError` whose ``reason`` is a
-:class:`stilt.transport.hysplit.FailureReason`. The worker records it, and
+:class:`~runtraj.exceptions.SimulationError` whose ``reason`` is a
+:class:`runtraj.models.hysplit.FailureReason`. The worker records it, and
 :attr:`stilt.Simulation.failure` and ``stilt status`` report it.
 
 Each reason, what happened, and what to do:
@@ -98,8 +120,8 @@ Each reason, what happened, and what to do:
 
        - ``No met file ... for <hours>``: a file the run needs is missing.
          Check the met's ``directory`` against the files on disk. A backward run needs files from ``n_hours`` before
-         the receptor time to just after it, a forward run from the
-         receptor time to just after ``n_hours`` later (:doc:`/guides/meteorology`).
+         the release time to just after it, a forward run from the
+         release time to just after ``n_hours`` later (:doc:`/guides/meteorology`).
          ``stilt check`` finds these before a run.
        - ``The met file ... is damaged`` or ``The met files hold no time
          step between ...``: a file is there but cut short, written
@@ -123,10 +145,10 @@ Each reason, what happened, and what to do:
          checks this only when ``outdt`` is 0, the default: with fewer
          rows, a particle's last row can be far from where it left.
        - A HYSPLIT message, such as ``start point not within (x,y,t) any
-         data file``: the receptor is outside the files, in time or in
-         space. ``source point off grid`` says the receptor is outside the
+         data file``: the release is outside the files, in time or in
+         space. ``source point off grid`` says the release is outside the
          met's grid (check the sign of its longitude; ``stilt check``
-         lists such a receptor as ``met_domain``), and ``Start height
+         lists such a release as ``met_domain``), and ``Start height
          above mdl domain`` that it is above the met's top; the line gives the
          height and the top.
    * - ``VARYING_MET_INTERVAL``
@@ -141,15 +163,15 @@ Each reason, what happened, and what to do:
        the log and the kept workdir's ``MESSAGE`` file.
    * - ``PARTICLE_LIMIT``
      - HYSPLIT reached ``maxpar`` before every location of a multipoint
-       receptor got its particles, so the last ones would have fewer or
-       none. Leave ``maxpar`` unset, or raise it (:doc:`/guides/receptors`).
+       release got its particles, so the last ones would have fewer or
+       none. Leave ``maxpar`` unset, or raise it (:doc:`/guides/releases`).
    * - ``EXIT_STATUS``
      - ``hycs_std`` was killed by a signal, or exited with a non-zero
        status, and its log holds no other known message. The message names
        the signal or the status, and the log ends with the last lines of
        HYSPLIT's ``MESSAGE`` file. A ``SIGKILL`` that nothing in PYSTILT
        sent is often the kernel's out-of-memory killer: ask for more
-       memory per task, or run fewer receptors at once. The particles
+       memory per task, or run fewer releases at once. The particles
        HYSPLIT had written are not kept, and running again runs the
        simulation again.
    * - ``TIMEOUT``
@@ -165,4 +187,4 @@ Each reason, what happened, and what to do:
    :toctree: _api
    :nosignatures:
 
-   stilt.transport.hysplit.FailureReason
+   runtraj.models.hysplit.FailureReason

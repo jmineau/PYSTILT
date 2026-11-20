@@ -1,0 +1,34 @@
+﻿stilt.ExecutionConfig
+=====================
+
+.. currentmodule:: stilt
+
+
+
+
+
+
+.. class-signature:: stilt.ExecutionConfig
+
+
+Parameters
+----------
+
+.. config-model:: stilt.ExecutionConfig
+
+
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+   :nosignatures:
+
+   ~ExecutionConfig.cpus
+   ~ExecutionConfig.fetch
+
+
+
+
+

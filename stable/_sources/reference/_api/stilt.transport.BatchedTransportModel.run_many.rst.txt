@@ -1,6 +1,0 @@
-stilt.transport.BatchedTransportModel.run\_many
-===============================================
-
-.. currentmodule:: stilt.transport
-
-.. automethod:: BatchedTransportModel.run_many

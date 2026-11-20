@@ -1,0 +1,6 @@
+﻿runtraj.execution.pending
+=========================
+
+.. currentmodule:: runtraj.execution
+
+.. autofunction:: pending

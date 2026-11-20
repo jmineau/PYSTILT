@@ -9,8 +9,11 @@ R, Julia, DuckDB, or plain pyarrow can read them without PYSTILT. In Python,
 The folders
 -----------
 
-Each kind of result has its own tree. Inside it, each settings folder holds
-the results of one set of settings, split by the receptor's date:
+Each kind of result has its own tree: ``particles/`` for what the transport
+model wrote, and one named for each stage of the project, which is what is
+made from a simulation's results afterward. The footprint is a stage, and
+its tree is ``footprint/``. Inside a tree, each settings folder holds the
+results of one set of settings, split by the release's date:
 
 .. code-block:: text
 
@@ -18,43 +21,51 @@ the results of one set of settings, split by the receptor's date:
      particles/
        settings=hrrr-7d36c8/
          _settings.yaml
-         date=2024-07-15/<receptor id>.parquet
+         date=2024-07-15/<release id>.parquet
        settings=hrrr-err-b2399e/                 an ensemble
          _settings.yaml
-         realization=0/date=2024-07-15/<receptor id>.parquet
-         realization=1/date=2024-07-15/<receptor id>.parquet
-     footprints/
+         realization=0/date=2024-07-15/<release id>.parquet
+         realization=1/date=2024-07-15/<release id>.parquet
+     footprint/
        settings=hrrr-f82d40/
          _settings.yaml
-         date=2024-07-15/<receptor id>.parquet
+         date=2024-07-15/<release id>.parquet
      logs/
-       settings=hrrr-7d36c8/date=2024-07-15/<receptor id>.log
-       settings=hrrr-7d36c8/date=2024-07-15/<receptor id>.failure.yaml
-       settings=hrrr-f82d40/date=2024-07-15/<receptor id>.failure.yaml
+       settings=hrrr-7d36c8/date=2024-07-15/<release id>.log
+       settings=hrrr-7d36c8/date=2024-07-15/<release id>.failure.yaml
+       settings=hrrr-f82d40/date=2024-07-15/<release id>.failure.yaml
      scratch/
-       settings=hrrr-7d36c8/date=2024-07-15/<receptor id>/
+       settings=hrrr-7d36c8/date=2024-07-15/<release id>/
 
 A settings folder is named ``<variant>-<six characters>``. The variant is
 the name in ``config.yaml`` that first made the folder, and the six
 characters are the start of its settings hash (below). The date is the
-receptor's release date in UTC. An ensemble (``realizations: N``) has a
+release's release date in UTC. An ensemble (``realizations: N``) has a
 ``realization=k`` folder between the settings folder and the dates.
 
 The ``logs/`` tree follows the folders of the results:
 
-- ``<receptor id>.log`` is the transport model's log, under the particles'
+- ``<release id>.log`` is the transport model's log, under the particles'
   settings folder.
-- ``<receptor id>.failure.yaml`` says why a result failed. A failed run
-  writes it under the particles' settings folder. A failed footprint
-  writes it under the footprint's own settings folder, since the
+- ``<release id>.failure.yaml`` says why a result failed, and at which
+  ``stage``. A failed run writes it under the particles' settings folder,
+  with ``stage: particles``. A failed footprint writes it under the
+  footprint's own settings folder, with ``stage: footprint``, since the
   particles were fine. It is removed when the result is written.
 
 ``scratch/`` holds kept workdirs, one folder per simulation, under the
 particles' settings folder. A failed run's workdir is kept, and with
 ``keep_workdir: true`` under ``execution:`` every run's is.
 
-The results trees hold only Parquet files and ``_settings.yaml``, so each
-reads as one dataset.
+The ``particles/`` and ``footprint/`` trees hold only Parquet files and
+``_settings.yaml``, so each reads as one dataset. A stage from another
+package has a tree under its own name, with files in the format and with
+the extension that stage chooses.
+
+A simulation is complete when the model's output file exists, and so does
+the file of every stage its variant uses: for a variant with a footprint,
+the particle file and the footprint file. A footprint with no cells is
+still a file (below), so it is complete.
 
 ``_settings.yaml``
 ------------------
@@ -66,6 +77,7 @@ Every settings folder holds a ``_settings.yaml``. A particles folder's:
    name: hrrr
    hash: 7d36c80b3b5a1a33cc355998f5755de469f61c53151a9d1b953fa698c81cd51f
    pystilt: 0.1.0a23
+   model_version: hysplit.v5.1.0
    settings:
      capemin: -1
      # ... every transport parameter, in name order
@@ -73,21 +85,31 @@ Every settings folder holds a ``_settings.yaml``. A particles folder's:
        crop: null
        source: HRRR
      model:
-       data_files: null
+       data_files:
+         ASCDATA.CFG: fd489592654bf600fd96b08d2ccde76f90f0672b7e872fb9fa33dd363fbaa643
+         LANDUSE.ASC: de63b2e3f405cdecbe2f4599ba276bf21b5bb05d786cd54e9c24a051c42b8511
+         ROUGLEN.ASC: a8503953877b09e906e85364e4081c43ffb5d7353e3ffdb259094acbb95588b1
+         TERRAIN.ASC: 0608b518d39ca63fe8774aef887f71f451b1c698c4b708bead36eb926ab86268
        name: hysplit
-       version: v5.1.0
+       sha256: 37346bee81a62f31d2f273c9813d53a76c54d59cfd5adbf3f76a7f870e3f49f9
      n_hours: -24
      # ...
 
-A footprints folder's adds the particles folder it was made from:
+A stage's folder, such as a footprint's, names its stage and what its files
+were made from:
 
 .. code-block:: yaml
 
    name: hrrr
    hash: f82d40aea8c29b2a30b99b1c5a74166937ee4eef5df20aa80407bfb69a3ab7a0
-   particles: hrrr-7d36c8
-   particles_hash: 7d36c80b3b5a1a33cc355998f5755de469f61c53151a9d1b953fa698c81cd51f
-   pystilt: 0.1.0a23
+   stage: footprint
+   class: stilt.footprint.FootprintStage
+   reads:
+     particles:
+       folder: hrrr-7d36c8
+       hash: 7d36c80b3b5a1a33cc355998f5755de469f61c53151a9d1b953fa698c81cd51f
+   versions:
+     pystilt: 0.1.0a30
    settings:
      cells_per_target: 4
      geometry: null
@@ -110,26 +132,40 @@ A footprints folder's adds the particles folder it was made from:
    The folder's settings hash, a SHA-256 in hex. The folder name ends in
    its first six characters.
 ``pystilt``
-   The PYSTILT version that wrote the folder.
+   In a particles folder, the PYSTILT version that wrote the folder.
+``model_version``
+   In a particles folder only: the version the transport model's build
+   reports, such as what ``hycs_std`` prints when it starts. It is not in
+   the hash: ``model.sha256`` is.
 ``settings``
    What the results were made with. In a particles folder, the transport
    model's parameters, ``met`` (the weather product and its crop), and
-   ``model`` (the transport model and its build). An ensemble adds
+   ``model`` (the transport model and its build: the SHA-256 of
+   ``hycs_std``, and of each of HYSPLIT's data tables). An ensemble adds
    ``ensemble: true``, and realization ``k`` ran with ``seed + k``. In a
-   footprints folder, the footprint settings, with the grid.
-``particles``, ``particles_hash``
-   In a footprints folder only: the name and hash of the particles folder.
+   stage's folder, the stage's own settings: for a footprint, the
+   footprint settings, with the grid.
+``stage``, ``class``
+   In a stage's folder only: the stage's name, which is also its tree, and
+   the import path of its class, as ``config.yaml`` names it.
+``reads``
+   In a stage's folder only: what its files were made from, each with the
+   name and the hash of its settings folder. ``particles`` is always there;
+   a stage that reads another stage's files lists that stage too.
+``versions``
+   In a stage's folder only: the PYSTILT version that wrote the folder,
+   and the version of the stage's own package when it is another one.
 
-A particles folder's hash covers its ``settings`` block. A footprints
-folder's hash covers its ``settings`` block together with
-``particles_hash``, so the same footprint settings on other particles give
-another folder. Every result file records its folder's full hash as
-``stilt:hash``.
+A particles folder's hash covers its ``settings`` block. A stage folder's
+hash covers its ``settings`` block together with the hash of each thing
+under ``reads``, so the same footprint settings on other particles give
+another folder. The versions are not part of a hash. Every particle and
+footprint file records its folder's full hash as ``runtraj:hash``.
 
 Particle files
 --------------
 
-A particle file is ``particles/settings=.../date=.../<receptor id>.parquet``,
+A particle file is ``particles/settings=.../date=.../<release id>.parquet``,
 one row per particle per output step. :doc:`particles` describes what each
 column means.
 
@@ -140,9 +176,9 @@ column means.
    * - Column
      - Stored as
      - Notes
-   * - ``receptor``
+   * - ``release``
      - dictionary of string
-     - The receptor id, the same on every row.
+     - The release id, the same on every row.
    * - ``particle``
      - int32
      - :func:`stilt.read_particles` gives it back as float64.
@@ -153,9 +189,9 @@ column means.
    * - ``lon``, ``lat``, ``zagl``, and the rest
      - float64
      - The columns ``varsiwant`` asked HYSPLIT for, plus ``release_height``
-       for a column or multipoint receptor.
+       for a column or multipoint release.
 
-``time`` is not stored: it is the receptor time plus ``age``.
+``time`` is not stored: it is the release time plus ``age``.
 
 The file's metadata (Parquet key-value metadata):
 
@@ -165,18 +201,18 @@ The file's metadata (Parquet key-value metadata):
 
    * - Key
      - Value
-   * - ``stilt:receptor``
-     - The receptor as JSON (below).
-   * - ``stilt:settings``
+   * - ``runtraj:release``
+     - The release as JSON (below).
+   * - ``runtraj:settings``
      - The run's settings as JSON, the ``settings`` block of the folder's
        ``_settings.yaml``.
-   * - ``stilt:met_files``
+   * - ``runtraj:met_files``
      - The met files the run read, a JSON list of paths.
-   * - ``stilt:hash``
+   * - ``runtraj:hash``
      - The folder's settings hash.
    * - ``stilt:pystilt``
      - The PYSTILT version that wrote the file.
-   * - ``stilt:realization``
+   * - ``runtraj:realization``
      - The realization number, in an ensemble only.
 
 Footprint files
@@ -191,12 +227,12 @@ A footprint file holds only the cells that are not zero:
    * - Column
      - Stored as
      - Notes
-   * - ``receptor``
+   * - ``release``
      - dictionary of string
-     - The receptor id.
+     - The release id.
    * - ``hour``
      - int16
-     - The layer, counted from the receptor time in layers of ``tres``:
+     - The layer, counted from the release time in layers of ``tres``:
        hours, by default (below).
    * - ``y``
      - int16
@@ -217,8 +253,8 @@ The file's metadata:
 
    * - Key
      - Value
-   * - ``stilt:receptor``
-     - The receptor as JSON.
+   * - ``runtraj:release``
+     - The release as JSON.
    * - ``stilt:footprint``
      - The footprint settings as JSON, with the grid: the ``settings``
        block of the folder's ``_settings.yaml``.
@@ -230,13 +266,13 @@ The file's metadata:
      - The variant that made the footprint.
    * - ``stilt:empty``
      - ``true`` when no particle reached the grid, else ``false``.
-   * - ``stilt:hash``
+   * - ``runtraj:hash``
      - The folder's settings hash.
    * - ``stilt:particles_hash``
      - The settings hash of the particles it was made from.
    * - ``stilt:pystilt``
      - The PYSTILT version that wrote the file.
-   * - ``stilt:realization``
+   * - ``runtraj:realization``
      - The realization number, in an ensemble only.
 
 An empty footprint is a file with no rows and ``stilt:empty`` set to
@@ -248,13 +284,13 @@ The hour
 ~~~~~~~~
 
 Layer ``k`` holds the particles' influence from ``k`` to ``k + 1`` layers
-after the receptor time, and is stamped at its start. A layer is
+after the release time, and is stamped at its start. A layer is
 ``tres`` long, an hour by default, so the stored ``hour`` is the hour
 unless the settings give another length; it is always the layer number.
 :meth:`stilt.Project.footprints` turns it into the unit ``tres`` is written
 in, and names its dimension for it: layer -1 of ``15min`` layers is
 ``minute`` -15 there. A particle row at ``age`` minutes
-falls in layer ``floor(age / m)``, where ``m`` is ``tres`` in minutes. For a receptor at
+falls in layer ``floor(age / m)``, where ``m`` is ``tres`` in minutes. For a release at
 18:30 on a backward run with hourly layers:
 
 .. list-table::
@@ -271,7 +307,7 @@ falls in layer ``floor(age / m)``, where ``m`` is ``tres`` in minutes. For a rec
      - -2
      - 16:30 to 17:30, stamped 16:30
 
-The layers keep the receptor's minute, so a receptor at 18:30 has layers
+The layers keep the release's minute, so a release at 18:30 has layers
 starting at half past. With ``tres: 15min`` its layer -1 covers 18:15
 to 18:30 and layer -2 covers 18:00 to 18:15. With ``tres`` as long as the
 run (``1D`` for a 24-hour run) there is one layer, -1, stamped at the
@@ -315,7 +351,7 @@ For example, in pyarrow:
 
 The small tolerance keeps the last whole cell when the bounds are decimals
 that binary floats store a little short. Layer ``h`` starts
-``h`` times ``tres`` after the receptor time. ``tres`` is in
+``h`` times ``tres`` after the release time. ``tres`` is in
 ``stilt:footprint``, written as minutes (``15min``), hours (``1h``) or days
 (``1D``); a file that does not record it has hourly layers.
 
@@ -326,10 +362,10 @@ Footprint values are in ppm per (µmol m⁻² s⁻¹), ``ppm m2 s umol-1``. The
 files do not say so; :func:`stilt.read_footprint` adds the units to the
 array it returns.
 
-Receptor ids and the receptor
+Release ids and the release
 -----------------------------
 
-A receptor id is the release time to the minute, then the location:
+A release id is the release time to the minute, then the location:
 
 .. code-block:: text
 
@@ -340,7 +376,7 @@ A receptor id is the release time to the minute, then the location:
 A location ends in ``msl`` when its heights are above sea level. Whole
 numbers are written without a decimal point.
 
-``stilt:receptor`` holds the whole receptor as JSON. Its ``time`` keeps
+``runtraj:release`` holds the whole release as JSON. Its ``time`` keeps
 the seconds, and is UTC with no time zone:
 
 .. code-block:: text
@@ -376,7 +412,7 @@ Which rules a file follows
 
 A file follows the rules of the PYSTILT version that wrote it:
 ``stilt:pystilt`` in a result file, and ``pystilt`` in a
-``_settings.yaml``. There is no separate format number. This page
+``_settings.yaml`` (under ``versions`` in a stage's folder). There is no separate format number. This page
 describes the files of the current version, and the list below says when
 a rule changed.
 
@@ -385,13 +421,20 @@ a rule changed.
   are Parquet files in settings folders, and an empty footprint is marked
   ``stilt:empty``. Files from development builds before it carry a
   version ending in ``.dev...``, and may differ.
+- **After 0.1.0a29**: footprints are in ``footprint/`` (it was
+  ``footprints/``), the tree named for their stage. A stage folder's
+  ``_settings.yaml`` has ``stage``, ``class``, ``reads`` and ``versions``
+  in place of ``particles``, ``particles_hash`` and ``pystilt``, and a
+  failure record says ``stage`` where it said ``step``. The footprint
+  files themselves are unchanged. Footprints stored by an earlier version
+  are not found, and a run makes them again from the stored particles.
 
 Why the output has separate trees
 ---------------------------------
 
 The output directory keeps results, logs, and kept workdirs in separate
-trees (``particles/``, ``footprints/``, ``logs/``, ``scratch/``). Each
-results tree holds Parquet files only, so pyarrow, DuckDB, polars, and R
-read it as one table, and a log or a failure record beside a result would
-break that. Whether a simulation is complete is read from the results
+trees (``particles/``, ``footprint/``, ``logs/``, ``scratch/``). Each
+results tree holds result files only, so pyarrow, DuckDB, polars, and R
+read ``particles/`` or ``footprint/`` as one table, and a log or a failure
+record beside a result would break that. Whether a simulation is complete is read from the results
 trees alone; the logs tree only explains the ones that are not.

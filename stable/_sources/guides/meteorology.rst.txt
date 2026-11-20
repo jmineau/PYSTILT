@@ -55,7 +55,7 @@ and a coarse grid smooths all three away.
      - Long, consistent records. You convert it to ARL yourself
        (`ERA5`_ below).
 
-If you run the same receptors with two products, give each its own met and
+If you run the same releases with two products, give each its own met and
 its own variant, and compare the footprints (:doc:`projects`).
 
 Use files you already have
@@ -74,13 +74,13 @@ subfolders, such as one folder per year. A variant named after a met
 (``hrrr`` here) runs with it.
 
 To see what PYSTILT will read for a run, ask the met which files cover the
-run's hours. For a receptor at 19:00 UTC on 14 January 2021, followed 12
+run's hours. For a release at 19:00 UTC on 14 January 2021, followed 12
 hours back:
 
 .. ipython:: python
 
-   from stilt.meteorology import run_window
-   from stilt.transport.hysplit import Met, MetConfig
+   from runtraj.meteorology import run_window
+   from runtraj.models.hysplit import Met, MetConfig
 
    hrrr = Met("hrrr", MetConfig(directory=met_dir))
    window = run_window("2021-01-14 19:00", n_hours=-12)
@@ -97,12 +97,12 @@ none:
    hrrr.missing(run_window("2021-01-14 19:00", n_hours=-24))
 
 A run with hours missing stops before HYSPLIT starts, and says which hours
-they are. ``stilt check`` makes the same search for every receptor in a
+they are. ``stilt check`` makes the same search for every release in a
 project, so run it before you submit a batch (:doc:`checking`).
 
 Each file holds gridded fields for every hour it covers. Here is the
-mixed-layer height at the receptor's hour. It is about 600 m over the
-receptor (the star), and ranges from under 100 m to over 1,500 m across
+mixed-layer height at the release's hour. It is about 600 m over the
+release (the star), and ranges from under 100 m to over 1,500 m across
 the region, which is the kind of detail a coarser product would lose:
 
 .. ipython:: python

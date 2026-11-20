@@ -1,0 +1,6 @@
+﻿runtraj.meteorology.run\_window
+===============================
+
+.. currentmodule:: runtraj.meteorology
+
+.. autofunction:: run_window

@@ -1,0 +1,5 @@
+runtraj.models.BatchedTransportModel.run\_many
+==============================================
+
+.. currentmodule:: runtraj.models
+.. automethod:: BatchedTransportModel.run_many

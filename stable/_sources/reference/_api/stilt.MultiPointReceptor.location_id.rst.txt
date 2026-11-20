@@ -1,6 +1,0 @@
-stilt.MultiPointReceptor.location\_id
-=====================================
-
-.. currentmodule:: stilt
-
-.. autoproperty:: MultiPointReceptor.location_id
