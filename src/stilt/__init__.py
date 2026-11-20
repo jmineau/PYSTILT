@@ -27,6 +27,7 @@ from runtraj import (
 )
 
 from .background import Background, background
+from .exceptions import EmptyFootprint
 from .footprint import (
     FootprintConfig,
     Grid,
@@ -82,6 +83,7 @@ __all__ = [
     "read_footprint",
     # Satellite columns
     "averaging_kernel_table",
-    # Exceptions (runtraj.exceptions has the rest)
+    # Exceptions (runtraj.exceptions has the rest of runtraj's)
     "RuntrajError",
+    "EmptyFootprint",
 ]

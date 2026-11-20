@@ -27,3 +27,10 @@ def test_results_are_plain_data():
     """Particles and footprints are a DataFrame and a DataArray, not wrapper classes (#107)."""
     for name in ("Trajectories", "Footprint"):
         assert not hasattr(stilt, name), name
+
+
+def test_empty_footprint_is_exported_beside_the_exception_it_extends():
+    """``calc_footprint`` raises ``EmptyFootprint``, so ``stilt`` exports it as it does ``RuntrajError``."""
+    assert "EmptyFootprint" in stilt.__all__
+    assert stilt.EmptyFootprint is stilt.exceptions.EmptyFootprint
+    assert issubclass(stilt.EmptyFootprint, stilt.RuntrajError)
