@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>stilt.footprint.footprint_particles &#8212; PYSTILT 0.1.0a30</title>
+    <title>stilt.footprint.footprint_particles &#8212; PYSTILT dev</title>
   
   
   
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=7752668c"></script>
+    <script src="../../_static/documentation_options.js?v=e782b8b6"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a30';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30" />
+  <meta name="docsearch:version" content="0.1.0a31.dev2+g7925ab595" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -530,8 +530,6 @@
 <li class="toctree-l2"><a class="reference internal" href="stilt.footprint.Geometry.html">stilt.footprint.Geometry</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.footprint.overlap_weights.html">stilt.footprint.overlap_weights</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.footprint.check_resolution.html">stilt.footprint.check_resolution</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.sampling.sample_met.html">stilt.sampling.sample_met</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.sampling.calc_pbl_height.html">stilt.sampling.calc_pbl_height</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../particles.html">The Particle Table</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -887,7 +885,7 @@
 <h1>stilt.footprint.footprint_particles<a class="headerlink" href="#stilt-footprint-footprint-particles" title="Link to this heading">#</a></h1>
 <dl class="py function">
 <dt class="sig sig-object py" id="stilt.footprint.footprint_particles">
-<span class="sig-prename descclassname"><span class="pre">stilt.footprint.</span></span><span class="sig-name descname"><span class="pre">footprint_particles</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">particles</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">met_files</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">z_top</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/stilt/footprint/stage.html#footprint_particles"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.footprint.footprint_particles" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">stilt.footprint.</span></span><span class="sig-name descname"><span class="pre">footprint_particles</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">particles</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">met_files</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">z_top</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variant</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/stilt/footprint/stage.html#footprint_particles"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.footprint.footprint_particles" title="Link to this definition">#</a></dt>
 <dd><p>Return the particles a footprint under <em>config</em> is made from, with the <code class="docutils literal notranslate"><span class="pre">foot</span></code> it uses.</p>
 <p>The particles are returned as they are when they have <code class="docutils literal notranslate"><span class="pre">foot</span></code> and
 <code class="docutils literal notranslate"><span class="pre">pbl_height</span></code> is unset: the transport model’s own <code class="docutils literal notranslate"><span class="pre">foot</span></code>, such as
@@ -906,6 +904,11 @@ nowhere: each footprint computes it again.</p>
 when <code class="docutils literal notranslate"><span class="pre">foot</span></code> is computed, and must still be at those paths then.</p></li>
 <li><p><strong>z_top</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a> | <span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code></a></span></span>) – The top of the run’s domain, HYSPLIT’s <code class="docutils literal notranslate"><span class="pre">z_top</span></code>, which
 <code class="docutils literal notranslate"><span class="pre">pbl_height:</span> <span class="pre">richardson</span></code> reads.</p></li>
+<li><p><strong>variant</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Variant</span></code> | <span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code></a></span></span>) – The variant that made the particles, such as <code class="docutils literal notranslate"><span class="pre">sim.variant</span></code>. Its
+transport model opens the met files in the format it reads
+(<code class="xref py py-func docutils literal notranslate"><span class="pre">runtraj.models.open_met()</span></code>), around the particles. Without it
+the files are read as ARL files, as HYSPLIT’s are, so pass it for a
+transport model whose met is in another format.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -927,7 +930,7 @@ when <code class="docutils literal notranslate"><span class="pre">foot</span></c
 <span class="gp">... </span>    <span class="n">grid</span><span class="o">=</span><span class="n">grid</span><span class="p">,</span> <span class="n">pbl_height</span><span class="o">=</span><span class="s2">"richardson"</span>
 <span class="gp">... </span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">particles</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">footprint</span><span class="o">.</span><span class="n">footprint_particles</span><span class="p">(</span>
-<span class="gp">... </span>    <span class="n">sim</span><span class="o">.</span><span class="n">particles</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">meta</span><span class="o">.</span><span class="n">met_files</span>
+<span class="gp">... </span>    <span class="n">sim</span><span class="o">.</span><span class="n">particles</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">meta</span><span class="o">.</span><span class="n">met_files</span><span class="p">,</span> <span class="n">variant</span><span class="o">=</span><span class="n">sim</span><span class="o">.</span><span class="n">variant</span>
 <span class="gp">... </span><span class="p">)</span>
 </pre></div>
 </div>

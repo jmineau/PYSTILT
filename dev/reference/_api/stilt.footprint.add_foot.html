@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>stilt.footprint.add_foot &#8212; PYSTILT 0.1.0a30</title>
+    <title>stilt.footprint.add_foot &#8212; PYSTILT dev</title>
   
   
   
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=7752668c"></script>
+    <script src="../../_static/documentation_options.js?v=e782b8b6"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a30';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30" />
+  <meta name="docsearch:version" content="0.1.0a31.dev2+g7925ab595" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -530,8 +530,6 @@
 <li class="toctree-l2"><a class="reference internal" href="stilt.footprint.Geometry.html">stilt.footprint.Geometry</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.footprint.overlap_weights.html">stilt.footprint.overlap_weights</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.footprint.check_resolution.html">stilt.footprint.check_resolution</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.sampling.sample_met.html">stilt.sampling.sample_met</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.sampling.calc_pbl_height.html">stilt.sampling.calc_pbl_height</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="../particles.html">The Particle Table</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
@@ -887,7 +885,7 @@
 <h1>stilt.footprint.add_foot<a class="headerlink" href="#stilt-footprint-add-foot" title="Link to this heading">#</a></h1>
 <dl class="py function">
 <dt class="sig sig-object py" id="stilt.footprint.add_foot">
-<span class="sig-prename descclassname"><span class="pre">stilt.footprint.</span></span><span class="sig-name descname"><span class="pre">add_foot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">particles</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">met_files</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">footprint_depth</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pbl_height</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pbl_height_min</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z_top</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/stilt/footprint/foot.html#add_foot"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.footprint.add_foot" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">stilt.footprint.</span></span><span class="sig-name descname"><span class="pre">add_foot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">particles</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">met</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">footprint_depth</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pbl_height</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pbl_height_min</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z_top</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/stilt/footprint/foot.html#add_foot"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.footprint.add_foot" title="Link to this definition">#</a></dt>
 <dd><p>Add <code class="docutils literal notranslate"><span class="pre">foot</span></code>, each particle’s sensitivity to surface fluxes, for a transport model that writes only positions.</p>
 <p>A particle below the depth surface fluxes are mixed through,
 <em>footprint_depth</em> times <code class="docutils literal notranslate"><span class="pre">mlht</span></code> (or <em>footprint_depth</em> meters when it is
@@ -926,16 +924,18 @@ nowhere.</p>
 <li><p><strong>particles</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.1)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a></span>) – Particle table with <code class="docutils literal notranslate"><span class="pre">time</span></code>, the release time plus <code class="docutils literal notranslate"><span class="pre">age</span></code>
 minutes. A <code class="docutils literal notranslate"><span class="pre">mlht</span></code> column (m above ground) is used as it is
 unless <em>pbl_height</em> is set.</p></li>
-<li><p><strong>met_files</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Iterable</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a> | <a class="reference external" href="https://docs.python.org/3/library/os.html#os.PathLike" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">PathLike</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]]</span>) – ARL met files that cover the particles’ times, such as the files
-the run read. They are read on their own levels, which start at the
-ground.</p></li>
+<li><p><strong>met</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Iterable</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a> | <a class="reference external" href="https://docs.python.org/3/library/os.html#os.PathLike" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">PathLike</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]] | <a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.Dataset.html#xarray.Dataset" title="(in xarray v2026.9.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Dataset</span></code></a></span>) – ARL met files that cover the particles’ times, such as the files
+the run read, or met in another format as one Dataset in
+<a class="reference external" href="https://jmineau.github.io/arl-met/stable/_autosummary/arlmet.open_dataset.html#arlmet.open_dataset" title="(in arl-met v0.1.0b12)"><code class="xref py py-func docutils literal notranslate"><span class="pre">arlmet.open_dataset()</span></code></a>’s layout (<code class="xref py py-func docutils literal notranslate"><span class="pre">runtraj.models.open_met()</span></code>
+returns the met of a run either way). It is read on its own levels,
+which start at the ground.</p></li>
 <li><p><strong>footprint_depth</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a></span>) – Height that surface fluxes are mixed through (<code class="docutils literal notranslate"><span class="pre">VEGHT</span></code> in HYSPLIT
 and STILT-R): a fraction of the mixed-layer height when 1 or less,
 else meters above ground.</p></li>
 <li><p><strong>pbl_height</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a> | <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a> | <span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code></a></span></span>) – The mixed-layer height: <code class="docutils literal notranslate"><span class="pre">&quot;met&quot;</span></code> samples the met’s <code class="docutils literal notranslate"><span class="pre">PBLH</span></code>
-(<a class="reference internal" href="stilt.sampling.sample_met.html#stilt.sampling.sample_met" title="stilt.sampling.sample_met"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.sampling.sample_met()</span></code></a>), <code class="docutils literal notranslate"><span class="pre">&quot;richardson&quot;</span></code> finds it from
+(<code class="xref py py-func docutils literal notranslate"><span class="pre">runtraj.sampling.sample_met()</span></code>), <code class="docutils literal notranslate"><span class="pre">&quot;richardson&quot;</span></code> finds it from
 the met’s profile as HYSPLIT’s <code class="docutils literal notranslate"><span class="pre">kmixd:</span> <span class="pre">3</span></code> does
-(<a class="reference internal" href="stilt.sampling.calc_pbl_height.html#stilt.sampling.calc_pbl_height" title="stilt.sampling.calc_pbl_height"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.sampling.calc_pbl_height()</span></code></a>), and a number is a fixed
+(<code class="xref py py-func docutils literal notranslate"><span class="pre">runtraj.sampling.calc_pbl_height()</span></code>), and a number is a fixed
 height in meters. <code class="docutils literal notranslate"><span class="pre">None</span></code> uses the particles’ <code class="docutils literal notranslate"><span class="pre">mlht</span></code>, or the
 met’s <code class="docutils literal notranslate"><span class="pre">PBLH</span></code> when they have none.</p></li>
 <li><p><strong>pbl_height_min</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a></span>) – Lowest mixed-layer height in meters, for a height found here rather
@@ -955,7 +955,7 @@ counts.</p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If <em>particles</em> has a <code class="docutils literal notranslate"><span class="pre">foot</span></code> column already, has no <code class="docutils literal notranslate"><span class="pre">time</span></code>
-    column, or has a row outside the files’ times.</p>
+    column, or has a row outside the met’s times.</p>
 </dd>
 </dl>
 <p class="rubric">Examples</p>

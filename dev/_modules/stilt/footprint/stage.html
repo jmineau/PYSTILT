@@ -6,7 +6,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>stilt.footprint.stage &#8212; PYSTILT 0.1.0a30</title>
+    <title>stilt.footprint.stage &#8212; PYSTILT dev</title>
   
   
   
@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=7752668c"></script>
+    <script src="../../../_static/documentation_options.js?v=e782b8b6"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -51,7 +51,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a30';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30" />
+  <meta name="docsearch:version" content="0.1.0a31.dev2+g7925ab595" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -474,10 +474,13 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span>
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">TypeAdapter</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj</span><span class="w"> </span><span class="kn">import</span> <span class="n">Bounds</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.identity</span><span class="w"> </span><span class="kn">import</span> <span class="n">file_stamp</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_model</span><span class="p">,</span> <span class="n">open_met</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.particles</span><span class="w"> </span><span class="kn">import</span> <span class="n">particles_metadata</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.releases</span><span class="w"> </span><span class="kn">import</span> <span class="n">Release</span>
 
@@ -724,6 +727,7 @@
     <span class="n">met_files</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
     <span class="o">*</span><span class="p">,</span>
     <span class="n">z_top</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the particles a footprint under *config* is made from, with the ``foot`` it uses.</span>
@@ -749,6 +753,12 @@
 <span class="sd">    z_top : float, optional</span>
 <span class="sd">        The top of the run's domain, HYSPLIT's ``z_top``, which</span>
 <span class="sd">        ``pbl_height: richardson`` reads.</span>
+<span class="sd">    variant : runtraj.config.Variant, optional</span>
+<span class="sd">        The variant that made the particles, such as ``sim.variant``. Its</span>
+<span class="sd">        transport model opens the met files in the format it reads</span>
+<span class="sd">        (:func:`runtraj.models.open_met`), around the particles. Without it</span>
+<span class="sd">        the files are read as ARL files, as HYSPLIT's are, so pass it for a</span>
+<span class="sd">        transport model whose met is in another format.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -770,7 +780,7 @@
 <span class="sd">    ...     grid=grid, pbl_height="richardson"</span>
 <span class="sd">    ... )  # doctest: +SKIP</span>
 <span class="sd">    &gt;&gt;&gt; particles = stilt.footprint.footprint_particles(</span>
-<span class="sd">    ...     sim.particles, config, meta.met_files</span>
+<span class="sd">    ...     sim.particles, config, meta.met_files, variant=sim.variant</span>
 <span class="sd">    ... )  # doctest: +SKIP</span>
 <span class="sd">    """</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">_computes_foot</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">config</span><span class="p">):</span>
@@ -791,9 +801,16 @@
         <span class="p">)</span>
     <span class="n">had_foot</span> <span class="o">=</span> <span class="s2">"foot"</span> <span class="ow">in</span> <span class="n">particles</span><span class="o">.</span><span class="n">columns</span>
     <span class="n">out</span> <span class="o">=</span> <span class="n">particles</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="s2">"foot"</span><span class="p">)</span> <span class="k">if</span> <span class="n">had_foot</span> <span class="k">else</span> <span class="n">particles</span>
+    <span class="n">met</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">files</span>
+        <span class="k">if</span> <span class="n">variant</span> <span class="ow">is</span> <span class="kc">None</span>
+        <span class="k">else</span> <span class="n">open_met</span><span class="p">(</span>
+            <span class="n">variant</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="n">variant</span><span class="o">.</span><span class="n">met_config</span><span class="p">,</span> <span class="n">files</span><span class="p">,</span> <span class="n">_particle_bounds</span><span class="p">(</span><span class="n">particles</span><span class="p">)</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
     <span class="n">out</span> <span class="o">=</span> <span class="n">add_foot</span><span class="p">(</span>
         <span class="n">out</span><span class="p">,</span>
-        <span class="n">files</span><span class="p">,</span>
+        <span class="n">met</span><span class="p">,</span>
         <span class="n">config</span><span class="o">.</span><span class="n">footprint_depth</span><span class="p">,</span>
         <span class="n">pbl_height</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">pbl_height</span><span class="p">,</span>
         <span class="n">pbl_height_min</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">pbl_height_min</span><span class="p">,</span>
@@ -807,6 +824,40 @@
     <span class="p">)</span>
     <span class="k">return</span> <span class="n">out</span></div>
 
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_particle_bounds</span><span class="p">(</span><span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Bounds</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return the smallest box around the particles' longitudes and latitudes, or ``None`` when none is finite.</span>
+
+<span class="sd">    Longitudes count modulo 360, so particles on both sides of 180 degrees</span>
+<span class="sd">    get a box across it (``xmin &gt; xmax``), not one around the globe. A box</span>
+<span class="sd">    needs a width and a height: particles at one longitude or latitude get</span>
+<span class="sd">    0.01 degrees on each side; the model adds its own margin.</span>
+<span class="sd">    """</span>
+    <span class="n">lon</span> <span class="o">=</span> <span class="n">particles</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">lat</span> <span class="o">=</span> <span class="n">particles</span><span class="p">[</span><span class="s2">"lat"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">keep</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">lon</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">lat</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">keep</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">lat</span><span class="p">[</span><span class="n">keep</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()),</span> <span class="nb">float</span><span class="p">(</span><span class="n">lat</span><span class="p">[</span><span class="n">keep</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">())</span>
+    <span class="k">if</span> <span class="n">ymin</span> <span class="o">==</span> <span class="n">ymax</span><span class="p">:</span>
+        <span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">ymin</span> <span class="o">-</span> <span class="mf">0.01</span><span class="p">,</span> <span class="o">-</span><span class="mf">90.0</span><span class="p">),</span> <span class="nb">min</span><span class="p">(</span><span class="n">ymax</span> <span class="o">+</span> <span class="mf">0.01</span><span class="p">,</span> <span class="mf">90.0</span><span class="p">)</span>
+    <span class="c1"># The box starts after the widest gap between the sorted longitudes;</span>
+    <span class="c1"># when that gap is the one across 180 degrees, it is the plain box.</span>
+    <span class="n">lon</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">_to_180</span><span class="p">(</span><span class="n">lon</span><span class="p">[</span><span class="n">keep</span><span class="p">]))</span>
+    <span class="n">gaps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">lon</span><span class="p">,</span> <span class="n">append</span><span class="o">=</span><span class="n">lon</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mf">360.0</span><span class="p">)</span>
+    <span class="n">widest</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">gaps</span><span class="p">))</span>
+    <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">lon</span><span class="p">[(</span><span class="n">widest</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="n">lon</span><span class="o">.</span><span class="n">size</span><span class="p">]),</span> <span class="nb">float</span><span class="p">(</span><span class="n">lon</span><span class="p">[</span><span class="n">widest</span><span class="p">])</span>
+    <span class="k">if</span> <span class="n">xmin</span> <span class="o">==</span> <span class="n">xmax</span><span class="p">:</span>
+        <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span> <span class="o">=</span> <span class="n">xmin</span> <span class="o">-</span> <span class="mf">0.01</span><span class="p">,</span> <span class="n">xmax</span> <span class="o">+</span> <span class="mf">0.01</span>
+    <span class="k">return</span> <span class="n">Bounds</span><span class="p">(</span><span class="n">xmin</span><span class="o">=</span><span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="o">=</span><span class="n">xmax</span><span class="p">,</span> <span class="n">ymin</span><span class="o">=</span><span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span><span class="o">=</span><span class="n">ymax</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_to_180</span><span class="p">(</span><span class="n">lon</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return longitudes in degrees from -180 up to 180, those already there as they are."""</span>
+    <span class="n">inside</span> <span class="o">=</span> <span class="p">(</span><span class="n">lon</span> <span class="o">&gt;=</span> <span class="o">-</span><span class="mf">180.0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">lon</span> <span class="o">&lt;</span> <span class="mf">180.0</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">inside</span><span class="p">,</span> <span class="n">lon</span><span class="p">,</span> <span class="p">(</span><span class="n">lon</span> <span class="o">+</span> <span class="mf">180.0</span><span class="p">)</span> <span class="o">%</span> <span class="mf">360.0</span> <span class="o">-</span> <span class="mf">180.0</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_mixed_layer</span><span class="p">(</span><span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">FootprintConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
@@ -832,6 +883,7 @@
     <span class="o">*</span><span class="p">,</span>
     <span class="n">start</span><span class="p">:</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span> <span class="o">|</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">z_top</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return particles read from the file at *path* with the ``foot`` a footprint under *config* uses (:func:`footprint_particles`).</span>
@@ -839,19 +891,48 @@
 <span class="sd">    The met files are read from the particle file's metadata only when</span>
 <span class="sd">    ``foot`` is computed. For that, particles without ``time`` (the run's</span>
 <span class="sd">    own, in memory) get it from *start*, the release time, and lose it</span>
-<span class="sd">    again.</span>
+<span class="sd">    again. *variant*, the variant that made the particles, says how its</span>
+<span class="sd">    transport model opens the met files (:func:`footprint_particles`).</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If ``foot`` is computed, *variant* is not given, and the particle</span>
+<span class="sd">        file's transport model reads met that is not in ARL files.</span>
 <span class="sd">    """</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">_computes_foot</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">config</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">particles</span>
-    <span class="n">met_files</span> <span class="o">=</span> <span class="p">[]</span> <span class="k">if</span> <span class="n">path</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">particles_metadata</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">met_files</span>
+    <span class="n">met_files</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="n">path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">meta</span> <span class="o">=</span> <span class="n">particles_metadata</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">met_files</span> <span class="o">=</span> <span class="n">meta</span><span class="o">.</span><span class="n">met_files</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">meta</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"model"</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"name"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">variant</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">model</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">_refuse_own_met</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
     <span class="n">added_time</span> <span class="o">=</span> <span class="s2">"time"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">particles</span><span class="o">.</span><span class="n">columns</span> <span class="ow">and</span> <span class="n">start</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
     <span class="k">if</span> <span class="n">added_time</span><span class="p">:</span>
         <span class="n">particles</span> <span class="o">=</span> <span class="n">particles</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span>
             <span class="n">time</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">start</span><span class="p">)</span>
             <span class="o">+</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_timedelta</span><span class="p">(</span><span class="n">particles</span><span class="p">[</span><span class="s2">"age"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">unit</span><span class="o">=</span><span class="s2">"min"</span><span class="p">)</span>
         <span class="p">)</span>
-    <span class="n">out</span> <span class="o">=</span> <span class="n">footprint_particles</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">met_files</span><span class="p">,</span> <span class="n">z_top</span><span class="o">=</span><span class="n">z_top</span><span class="p">)</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">footprint_particles</span><span class="p">(</span>
+        <span class="n">particles</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">met_files</span><span class="p">,</span> <span class="n">z_top</span><span class="o">=</span><span class="n">z_top</span><span class="p">,</span> <span class="n">variant</span><span class="o">=</span><span class="n">variant</span>
+    <span class="p">)</span>
     <span class="k">return</span> <span class="n">out</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="s2">"time"</span><span class="p">)</span> <span class="k">if</span> <span class="n">added_time</span> <span class="k">else</span> <span class="n">out</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_refuse_own_met</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Refuse to read the met of *model* as ARL files when the model opens its own (``open_met``)."""</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">found</span> <span class="o">=</span> <span class="n">get_model</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">ImportError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>  <span class="c1"># not installed here: nothing to ask it</span>
+        <span class="k">return</span>
+    <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">found</span><span class="p">,</span> <span class="s2">"open_met"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"The particles in </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> were made by the transport model "</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">model</span><span class="si">!r}</span><span class="s2">, whose met files are not ARL files. Pass the variant "</span>
+            <span class="s2">"that made them (variant=sim.variant), so the model opens its met."</span>
+        <span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">simulation_particles</span><span class="p">(</span><span class="n">sim</span><span class="p">:</span> <span class="n">Simulation</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">FootprintConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
@@ -862,6 +943,7 @@
         <span class="n">sim</span><span class="o">.</span><span class="n">particles_path</span><span class="p">,</span>
         <span class="n">start</span><span class="o">=</span><span class="n">sim</span><span class="o">.</span><span class="n">release</span><span class="o">.</span><span class="n">time</span><span class="p">,</span>
         <span class="n">z_top</span><span class="o">=</span><span class="nb">getattr</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">transport</span><span class="p">,</span> <span class="s2">"z_top"</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+        <span class="n">variant</span><span class="o">=</span><span class="n">sim</span><span class="o">.</span><span class="n">variant</span><span class="p">,</span>
     <span class="p">)</span>
 
 

@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>The Particle Table &#8212; PYSTILT 0.1.0a30</title>
+    <title>The Particle Table &#8212; PYSTILT dev</title>
   
   
   
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=7752668c"></script>
+    <script src="../_static/documentation_options.js?v=e782b8b6"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a30';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -60,12 +60,12 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="runtraj.particles.PARTICLE_SCHEMA" href="_api/runtraj.particles.PARTICLE_SCHEMA.html" />
-    <link rel="prev" title="stilt.sampling.calc_pbl_height" href="_api/stilt.sampling.calc_pbl_height.html" />
+    <link rel="prev" title="stilt.footprint.check_resolution" href="_api/stilt.footprint.check_resolution.html" />
   
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30" />
+  <meta name="docsearch:version" content="0.1.0a31.dev2+g7925ab595" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -530,8 +530,6 @@
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.footprint.Geometry.html">stilt.footprint.Geometry</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.footprint.overlap_weights.html">stilt.footprint.overlap_weights</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.footprint.check_resolution.html">stilt.footprint.check_resolution</a></li>
-<li class="toctree-l2"><a class="reference internal" href="_api/stilt.sampling.sample_met.html">stilt.sampling.sample_met</a></li>
-<li class="toctree-l2"><a class="reference internal" href="_api/stilt.sampling.calc_pbl_height.html">stilt.sampling.calc_pbl_height</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 current active has-children"><a aria-current="page" class="current reference internal" href="#">The Particle Table</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -1019,7 +1017,7 @@ makes the footprint from it in place of the model’s <code class="docutils lite
 PYSTILT’s log says which height it used. <code class="docutils literal notranslate"><span class="pre">met</span></code> is the
 met’s <code class="docutils literal notranslate"><span class="pre">PBLH</span></code>; <code class="docutils literal notranslate"><span class="pre">richardson</span></code> finds the height from the met’s profile
 with a bulk Richardson number, as HYSPLIT’s default <code class="docutils literal notranslate"><span class="pre">kmixd:</span> <span class="pre">3</span></code> does
-(<a class="reference internal" href="_api/stilt.sampling.calc_pbl_height.html#stilt.sampling.calc_pbl_height" title="stilt.sampling.calc_pbl_height"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.sampling.calc_pbl_height()</span></code></a>), on HYSPLIT’s internal levels for
+(<code class="xref py py-func docutils literal notranslate"><span class="pre">runtraj.sampling.calc_pbl_height()</span></code>), on HYSPLIT’s internal levels for
 a HYSPLIT run’s own <code class="docutils literal notranslate"><span class="pre">z_top</span></code> (for another model, HYSPLIT’s default top);
 a number is a fixed height in meters above ground.</p></li>
 </ul>
@@ -1112,11 +1110,12 @@ reads this name only: <code class="docutils literal notranslate"><span class="pr
 grows from the release height above ground, so for a release above sea
 level it also reads <code class="docutils literal notranslate"><span class="pre">zsfc</span></code>. Without it the run’s log says the correction
 was skipped.</p>
-<p>For a model that writes only positions, <a class="reference internal" href="_api/stilt.sampling.sample_met.html#stilt.sampling.sample_met" title="stilt.sampling.sample_met"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.sampling.sample_met()</span></code></a>
+<p>For a model that writes only positions, <code class="xref py py-func docutils literal notranslate"><span class="pre">runtraj.sampling.sample_met()</span></code>
 reads <code class="docutils literal notranslate"><span class="pre">mlht</span></code>, <code class="docutils literal notranslate"><span class="pre">dens</span></code>, <code class="docutils literal notranslate"><span class="pre">pres</span></code> and <code class="docutils literal notranslate"><span class="pre">zsfc</span></code> from the met files at each
 particle’s position and time. Give it the files the run read and the top of
-its domain, which a stored run records:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">stilt.sampling</span><span class="w"> </span><span class="kn">import</span> <span class="n">sample_met</span>
+its domain, which a stored run records (for met that is not in ARL files,
+<code class="xref py py-func docutils literal notranslate"><span class="pre">runtraj.models.open_met()</span></code> opens it as the transport model reads it):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.sampling</span><span class="w"> </span><span class="kn">import</span> <span class="n">sample_met</span>
 
 <span class="n">meta</span> <span class="o">=</span> <span class="n">runtraj</span><span class="o">.</span><span class="n">particles</span><span class="o">.</span><span class="n">particles_metadata</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">particles_path</span><span class="p">)</span>
 <span class="n">sampled</span> <span class="o">=</span> <span class="n">sample_met</span><span class="p">(</span>
@@ -1222,12 +1221,12 @@ from PYSTILT, are not corrected, and a warning says so.</p>
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="_api/stilt.sampling.calc_pbl_height.html"
+       href="_api/stilt.footprint.check_resolution.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">stilt.sampling.calc_pbl_height</p>
+        <p class="prev-next-title">stilt.footprint.check_resolution</p>
       </div>
     </a>
     <a class="right-next"

@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Core Objects &#8212; PYSTILT 0.1.0a30</title>
+    <title>Core Objects &#8212; PYSTILT dev</title>
   
   
   
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=7752668c"></script>
+    <script src="../_static/documentation_options.js?v=e782b8b6"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a30';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30" />
+  <meta name="docsearch:version" content="0.1.0a31.dev2+g7925ab595" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -530,8 +530,6 @@
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.footprint.Geometry.html">stilt.footprint.Geometry</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.footprint.overlap_weights.html">stilt.footprint.overlap_weights</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.footprint.check_resolution.html">stilt.footprint.check_resolution</a></li>
-<li class="toctree-l2"><a class="reference internal" href="_api/stilt.sampling.sample_met.html">stilt.sampling.sample_met</a></li>
-<li class="toctree-l2"><a class="reference internal" href="_api/stilt.sampling.calc_pbl_height.html">stilt.sampling.calc_pbl_height</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="particles.html">The Particle Table</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -1127,20 +1125,11 @@ a surface flux under a footprint or along particle paths
 (<code class="docutils literal notranslate"><span class="pre">foot.stilt.enhancement</span></code>, <code class="docutils literal notranslate"><span class="pre">particles.stilt.enhancement</span></code>), or a
 mole-fraction field at particle endpoints (<a class="reference internal" href="_api/stilt.background.html#stilt.background" title="stilt.background"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.background()</span></code></a>); it
 is listed with the transforms (<a class="reference internal" href="transforms.html"><span class="doc">Transforms</span></a>).
-<a class="reference internal" href="_api/stilt.sampling.sample_met.html#stilt.sampling.sample_met" title="stilt.sampling.sample_met"><code class="xref py py-func docutils literal notranslate"><span class="pre">sample_met()</span></code></a> reads ARL met files at particle
+<code class="xref py py-func docutils literal notranslate"><span class="pre">runtraj.sampling.sample_met()</span></code> reads the met at particle
 positions, for the particle columns a transport model can write from the
-met.</p>
-<div class="pst-scrollable-table-container"><table class="autosummary longtable table">
-<tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="_api/stilt.sampling.sample_met.html#stilt.sampling.sample_met" title="stilt.sampling.sample_met"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sampling.sample_met</span></code></a></p></td>
-<td><p>Return the particles with met columns sampled from ARL files at each particle's position.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="_api/stilt.sampling.calc_pbl_height.html#stilt.sampling.calc_pbl_height" title="stilt.sampling.calc_pbl_height"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sampling.calc_pbl_height</span></code></a></p></td>
-<td><p>Return the mixed-layer height at each particle, found from the met's profile as HYSPLIT's <code class="docutils literal notranslate"><span class="pre">kmixd:</span> <span class="pre">3</span></code> finds it.</p></td>
-</tr>
-</tbody>
-</table>
-</div>
+met, and <code class="xref py py-func docutils literal notranslate"><span class="pre">runtraj.sampling.calc_pbl_height()</span></code> finds the mixed-layer
+height from its profile. Both are runtraj’s, and both take ARL met files or
+met in another format as one dataset (<code class="xref py py-func docutils literal notranslate"><span class="pre">runtraj.models.open_met()</span></code>).</p>
 </section>
 </section>
 
