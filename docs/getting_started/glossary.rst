@@ -100,7 +100,8 @@ Glossary
 
    HYSPLIT
       NOAA's particle transport program, written in Fortran. PYSTILT runs it
-      to move particles and includes a copy for Linux and macOS (Intel).
+      to move particles but does not include it: you download it from NOAA
+      (:doc:`installation`).
 
    simulation
       One release run under one :term:`variant`: one set of particles and

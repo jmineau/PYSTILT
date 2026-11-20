@@ -95,10 +95,9 @@ What you need
   format used by NOAA's Air Resources Laboratory (:term:`ARL`). Many research
   groups keep an archive of these files. If you don't have one, PYSTILT can
   download them from NOAA for you (see :doc:`../guides/meteorology`).
+- HYSPLIT, the Fortran program STILT uses to move particles. PYSTILT does
+  not include it: download it from NOAA (:doc:`installation` says how).
 - The times and locations of your measurements.
-
-You do not need to install HYSPLIT, the Fortran program STILT uses to move
-particles. PYSTILT includes it for Linux and macOS (Intel).
 
 Why PYSTILT?
 ------------
