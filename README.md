@@ -15,6 +15,9 @@
 PYSTILT is a Python version of the [STILT](https://uataq.github.io/stilt/) atmospheric transport model.
 It follows air backward in time from a measurement with [HYSPLIT](https://www.ready.noaa.gov/HYSPLIT.php)
 and computes a footprint, a map of which upwind surface areas influenced the measurement and by how much.
+PYSTILT is built on [runtraj](https://github.com/jmineau/runtraj), which runs HYSPLIT and makes the
+particles; PYSTILT adds the footprint and what is computed from it. Installing PYSTILT installs
+runtraj, and some errors and imports below name it.
 If you run HYSPLIT on its own, PYSTILT also runs it from Python for particles alone; see
 [PYSTILT for HYSPLIT users](https://jmineau.github.io/PYSTILT/stable/guides/hysplit_users.html).
 
@@ -29,11 +32,12 @@ agreement with STILT-R, and runs on a local machine and on Slurm.
 ## Installation
 
 ```bash
-pip install pystilt
+pip install "pystilt[visualization]"
 ```
 
-For plotting, projected grids, aggregation over shapefiles, downloading meteorology from
-NOAA, and reading STILT-R output, install everything:
+This installs PYSTILT and matplotlib and cartopy for plotting maps. For projected grids,
+aggregation over shapefiles, downloading meteorology from NOAA, and reading STILT-R output,
+install everything:
 
 ```bash
 pip install "pystilt[complete]"
@@ -70,12 +74,19 @@ release = stilt.PointRelease(
     latitude=40.766,
     altitude=10,               # meters above ground
 )
-met = "/data/hrrr"             # a folder of ARL files; their headers say what they hold
+met = "/data/hrrr"             # a folder of ARL files; change it to yours (see below)
 grid = stilt.Grid(xmin=-113.0, xmax=-110.5, ymin=40.0, ymax=42.0, xres=0.01, yres=0.01)
 
 particles = stilt.run_trajectories(release, met, n_hours=-24, numpar=100)
 foot = stilt.calc_footprint(particles, release, grid)
 ```
+
+The met folder must hold ARL-format files that cover the release and the 24 hours before it;
+without them the run stops with `MeteorologyError: No met file in ...`. If you have none,
+PYSTILT can download them from NOAA's archive
+(`pip install "pystilt[download]"`); the
+[Meteorology guide](https://jmineau.github.io/PYSTILT/stable/guides/meteorology.html)
+says how.
 
 `particles` is a pandas DataFrame, one row per particle per step, and
 `foot` an xarray DataArray, one map per hour.
