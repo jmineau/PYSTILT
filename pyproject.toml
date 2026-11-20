@@ -35,7 +35,7 @@ dependencies = [
     "pyproj>=3.5",
     "pydantic>=2.5.3",  # runtraj's minimum: earlier ones take NaN for a setting with a lower bound, or fail on the fetch settings
     "pyyaml>=6.0",
-    "runtraj",  # the particle runs; taken from git until its first release ([tool.uv.sources])
+    "runtraj>=0.1.0a1,<0.2",  # the particle runs; up to the next minor, which may break a stage
     "scipy>=1.10",
     "shapely>=2.0",
     "typer>=0.15.4",  # older ones fail with click 8.2 and later (make_metavar)
@@ -255,9 +255,6 @@ where = ["src"]
 # Releases are git tags vX.Y.Z (see CONTRIBUTING.md). Between releases the
 # version is the next one as a dev version, e.g. 0.1.0a23.dev3+g1a2b3c4.
 fallback_version = "0.0.0"  # no git metadata at all (e.g. a bare source copy)
-
-[tool.uv.sources]
-runtraj = { git = "https://github.com/jmineau/runtraj", rev = "9eeb6f4b0a9cd590d9c55a7f9210614cc0b131d2" }
 
 [tool.uv]
 required-version = ">=0.12"

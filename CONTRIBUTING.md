@@ -265,8 +265,9 @@ completion" and "Changing how work is run". The footprint is a stage
 `stilt.Simulation` subclass runtraj's with the reads of what it makes.
 
 A change that needs both packages is two pull requests: runtraj's first,
-then one here that moves the commit `pyproject.toml` takes runtraj from
-(`[tool.uv.sources]`), updates `uv.lock` (`just lock`), and runs the STILT-R
+then one here that raises the runtraj requirement in `pyproject.toml` to the
+release with the change (until it is released, take runtraj from its commit in
+`[tool.uv.sources]`), updates `uv.lock` (`just lock`), and runs the STILT-R
 parity suite.
 
 ## Adding particle transforms
