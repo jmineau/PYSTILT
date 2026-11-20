@@ -4241,8 +4241,8 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "arlmet", specifier = ">=0.1.0b10" },
-    { name = "arlmet", extras = ["archives"], marker = "extra == 'download'", specifier = ">=0.1.0b10" },
+    { name = "arlmet", specifier = ">=0.1.0b12,<0.2" },
+    { name = "arlmet", extras = ["archives"], marker = "extra == 'download'", specifier = ">=0.1.0b12,<0.2" },
     { name = "cartopy", marker = "extra == 'visualization'", specifier = ">=0.26" },
     { name = "dask", extras = ["array"], specifier = ">=2023.6" },
     { name = "exactextract", marker = "extra == 'geometry'", specifier = ">=0.2" },

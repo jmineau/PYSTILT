@@ -26,7 +26,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "arlmet>=0.1.0b10",
+    "arlmet>=0.1.0b12,<0.2",  # up to the next minor: a release that drops a name PYSTILT imports breaks a fresh install
     "dask[array]>=2023.6",
     "netcdf4>=1.6.5",
     "numpy>=1.26",  # cartopy 0.26 needs it
@@ -54,7 +54,7 @@ visualization = [
     "matplotlib>=3.7",
 ]
 download = [
-    "arlmet[archives]>=0.1.0b10",
+    "arlmet[archives]>=0.1.0b12,<0.2",
 ]
 sparse = [
     "sparse>=0.15",
