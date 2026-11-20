@@ -28,6 +28,10 @@ the measurement, and by how much.
      </figcaption>
    </figure>
 
+PYSTILT is built on `runtraj <https://github.com/jmineau/runtraj>`_, which runs
+HYSPLIT and makes the particles; PYSTILT adds the footprint and what is computed
+from it. Installing PYSTILT installs runtraj.
+
 PYSTILT works for towers, aircraft, mobile platforms, and satellite or
 ground-based column measurements. The same project can run one simulation on a
 laptop or tens of thousands on an HPC cluster.
