@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=65171caa"></script>
+    <script src="../../_static/documentation_options.js?v=893d244d"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a31.dev20+g61b2691bb" />
+  <meta name="docsearch:version" content="0.1.0a31.dev21+g002111c51" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -912,7 +912,8 @@ none has a default, because an imported run’s settings name its folder,
 and a default would stand in for a value no file gave. The
 <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> variant the import prints gives them all, except the
 settings of HYSPLIT’s concentration and trajectory modes, which a
-particles-mode run does not record.</p>
+particles-mode run does not record. <code class="docutils literal notranslate"><span class="pre">mode</span></code> may be left out or be
+<code class="docutils literal notranslate"><span class="pre">particles</span></code>: STILT-R ran no other, so any other is refused.</p>
 </dd></dl>
 
 <section id="parameters">
