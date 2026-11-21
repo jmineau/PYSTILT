@@ -2,7 +2,8 @@ In Containers (Docker, Kubernetes)
 ==================================
 
 A project can run in many containers at once, such as the pods of a
-Kubernetes Job, without Slurm. Each container runs one share of the
+Kubernetes Job, without Slurm. ``stilt submit`` makes that Job for you
+(:ref:`kubernetes-submit`). Each container runs one share of the
 releases:
 
 .. code-block:: bash
@@ -88,6 +89,50 @@ registry:
 The image runs ``tini`` as its first process, which passes ``docker stop``
 and Kubernetes' stop signal on to ``stilt``.
 
+.. _kubernetes-submit:
+
+Submitting to Kubernetes
+------------------------
+
+With ``backend: kubernetes`` in ``config.yaml``, ``stilt submit`` makes one
+Kubernetes indexed Job and creates it with ``kubectl``, on the cluster
+``kubectl`` points at. The commands that run a project are runtraj's, which
+runs PYSTILT's particles, so the settings and the Job are runtraj's: its
+guide to `running in containers
+<https://jmineau.github.io/runtraj/stable/guides/containers.html>`_ has
+every one. Name the image with your HYSPLIT in it (`The image`_):
+
+.. code-block:: yaml
+
+   output: s3://bucket/output
+   execution:
+     backend: kubernetes
+     kubernetes:
+       image: registry.example.org/pystilt-hysplit:1
+       completions: 20           # tasks
+       cpus: 4                   # releases each pod runs at once
+       memory: 8Gi               # Kubernetes units: 8Gi, not 8G
+       inputs: s3://bucket/projects/my_project
+       secrets: [bucket-creds]   # a Secret holding the bucket's credentials
+       volumes:
+         - {claim_name: hrrr-arl, mount_path: /met, read_only: true}
+
+.. code-block:: bash
+
+   stilt submit /project
+   stilt status /project
+
+``stilt submit`` copies ``config.yaml``, ``releases.csv`` and ``tables/`` to
+``inputs``, and each pod copies them to its own disk and runs ``runtraj run
+--task I/N``, which the image has with PYSTILT. The pods' volumes are given
+to the image's user, 10001, so they can write a new one. Kubernetes retries
+a pod by its exit code (`Exit codes`_): 3 up to three times per task, 1 and
+4 fail that task, 2 fails the Job. ``stilt status`` counts the simulations
+and lists the project's Jobs. ``stilt schedule`` runs the project every
+hour instead, for the sites in a ``sites.csv``, which suits towers. Run
+``stilt fetch`` before a Job whose pods share a met volume with
+``download`` (`Fetching the meteorology once`_).
+
 .. _fetch-once:
 
 Fetching the meteorology once
@@ -142,11 +187,12 @@ replaces the first with the same contents.
 In Python, ``project.fetch()`` does the same and returns the files, one row
 each, with the times it could not get files for.
 
-A Kubernetes indexed Job
-------------------------
+A Kubernetes indexed Job you write yourself
+-------------------------------------------
 
-An indexed Job gives each pod its index in ``JOB_COMPLETION_INDEX``, which
-is the task number:
+``stilt submit`` writes this Job for you (`Submitting to Kubernetes`_).
+Written by hand, or for another scheduler, an indexed Job gives each pod
+its index in ``JOB_COMPLETION_INDEX``, which is the task number:
 
 .. code-block:: yaml
 
@@ -264,7 +310,8 @@ ends with 1 if the failure remains. A bucket that stays down keeps every
 try at 3, so the program that drives the retries sets how many to make.
 
 For a Kubernetes indexed Job, a ``podFailurePolicy`` that retries on 3 and
-fails the task on 1 and 4 follows from this table.
+fails the task on 1 and 4 follows from this table; the Job ``stilt submit``
+makes has one.
 
 When the Job is done, ``stilt status /project`` counts the finished and
 failed simulations of the whole project. ``stilt status /project --json``

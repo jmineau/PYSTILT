@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=48c25c72"></script>
+    <script src="../_static/documentation_options.js?v=7102d287"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a31.dev17+gd25207246" />
+  <meta name="docsearch:version" content="0.1.0a31.dev18+gf0819f638" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -523,7 +523,8 @@
   <section id="in-containers-docker-kubernetes">
 <h1>In Containers (Docker, Kubernetes)<a class="headerlink" href="#in-containers-docker-kubernetes" title="Link to this heading">#</a></h1>
 <p>A project can run in many containers at once, such as the pods of a
-Kubernetes Job, without Slurm. Each container runs one share of the
+Kubernetes Job, without Slurm. <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">submit</span></code> makes that Job for you
+(<a class="reference internal" href="#kubernetes-submit"><span class="std std-ref">Submitting to Kubernetes</span></a>). Each container runs one share of the
 releases:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>stilt<span class="w"> </span>run<span class="w"> </span>/project<span class="w"> </span>--task<span class="w"> </span><span class="m">3</span>/20
 </pre></div>
@@ -598,6 +599,43 @@ registry:</p>
 <p>The image runs <code class="docutils literal notranslate"><span class="pre">tini</span></code> as its first process, which passes <code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">stop</span></code>
 and Kubernetes’ stop signal on to <code class="docutils literal notranslate"><span class="pre">stilt</span></code>.</p>
 </section>
+<section id="submitting-to-kubernetes">
+<span id="kubernetes-submit"></span><h2>Submitting to Kubernetes<a class="headerlink" href="#submitting-to-kubernetes" title="Link to this heading">#</a></h2>
+<p>With <code class="docutils literal notranslate"><span class="pre">backend:</span> <span class="pre">kubernetes</span></code> in <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>, <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">submit</span></code> makes one
+Kubernetes indexed Job and creates it with <code class="docutils literal notranslate"><span class="pre">kubectl</span></code>, on the cluster
+<code class="docutils literal notranslate"><span class="pre">kubectl</span></code> points at. The commands that run a project are runtraj’s, which
+runs PYSTILT’s particles, so the settings and the Job are runtraj’s: its
+guide to <a class="reference external" href="https://jmineau.github.io/runtraj/stable/guides/containers.html">running in containers</a> has
+every one. Name the image with your HYSPLIT in it (<a class="reference internal" href="#the-image">The image</a>):</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">output</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">s3://bucket/output</span>
+<span class="nt">execution</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">backend</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">kubernetes</span>
+<span class="w">  </span><span class="nt">kubernetes</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">registry.example.org/pystilt-hysplit:1</span>
+<span class="w">    </span><span class="nt">completions</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">20</span><span class="w">           </span><span class="c1"># tasks</span>
+<span class="w">    </span><span class="nt">cpus</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4</span><span class="w">                   </span><span class="c1"># releases each pod runs at once</span>
+<span class="w">    </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8Gi</span><span class="w">               </span><span class="c1"># Kubernetes units: 8Gi, not 8G</span>
+<span class="w">    </span><span class="nt">inputs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">s3://bucket/projects/my_project</span>
+<span class="w">    </span><span class="nt">secrets</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">bucket-creds</span><span class="p p-Indicator">]</span><span class="w">   </span><span class="c1"># a Secret holding the bucket's credentials</span>
+<span class="w">    </span><span class="nt">volumes</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">claim_name</span><span class="p">:</span><span class="w"> </span><span class="nv">hrrr-arl</span><span class="p p-Indicator">,</span><span class="nt"> mount_path</span><span class="p">:</span><span class="w"> </span><span class="nv">/met</span><span class="p p-Indicator">,</span><span class="nt"> read_only</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="p p-Indicator">}</span>
+</pre></div>
+</div>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>stilt<span class="w"> </span>submit<span class="w"> </span>/project
+stilt<span class="w"> </span>status<span class="w"> </span>/project
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">submit</span></code> copies <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>, <code class="docutils literal notranslate"><span class="pre">releases.csv</span></code> and <code class="docutils literal notranslate"><span class="pre">tables/</span></code> to
+<code class="docutils literal notranslate"><span class="pre">inputs</span></code>, and each pod copies them to its own disk and runs <code class="docutils literal notranslate"><span class="pre">runtraj</span> <span class="pre">run</span>
+<span class="pre">--task</span> <span class="pre">I/N</span></code>, which the image has with PYSTILT. The pods’ volumes are given
+to the image’s user, 10001, so they can write a new one. Kubernetes retries
+a pod by its exit code (<a class="reference internal" href="#id1">Exit codes</a>): 3 up to three times per task, 1 and
+4 fail that task, 2 fails the Job. <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span></code> counts the simulations
+and lists the project’s Jobs. <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">schedule</span></code> runs the project every
+hour instead, for the sites in a <code class="docutils literal notranslate"><span class="pre">sites.csv</span></code>, which suits towers. Run
+<code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">fetch</span></code> before a Job whose pods share a met volume with
+<code class="docutils literal notranslate"><span class="pre">download</span></code> (<a class="reference internal" href="#fetching-the-meteorology-once">Fetching the meteorology once</a>).</p>
+</section>
 <section id="fetching-the-meteorology-once">
 <span id="fetch-once"></span><h2>Fetching the meteorology once<a class="headerlink" href="#fetching-the-meteorology-once" title="Link to this heading">#</a></h2>
 <p>With <code class="docutils literal notranslate"><span class="pre">download</span></code> set, a run downloads the met files its hours need into the
@@ -642,10 +680,11 @@ replaces the first with the same contents.</p>
 <p>In Python, <code class="docutils literal notranslate"><span class="pre">project.fetch()</span></code> does the same and returns the files, one row
 each, with the times it could not get files for.</p>
 </section>
-<section id="a-kubernetes-indexed-job">
-<h2>A Kubernetes indexed Job<a class="headerlink" href="#a-kubernetes-indexed-job" title="Link to this heading">#</a></h2>
-<p>An indexed Job gives each pod its index in <code class="docutils literal notranslate"><span class="pre">JOB_COMPLETION_INDEX</span></code>, which
-is the task number:</p>
+<section id="a-kubernetes-indexed-job-you-write-yourself">
+<h2>A Kubernetes indexed Job you write yourself<a class="headerlink" href="#a-kubernetes-indexed-job-you-write-yourself" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">submit</span></code> writes this Job for you (<a class="reference internal" href="#submitting-to-kubernetes">Submitting to Kubernetes</a>).
+Written by hand, or for another scheduler, an indexed Job gives each pod
+its index in <code class="docutils literal notranslate"><span class="pre">JOB_COMPLETION_INDEX</span></code>, which is the task number:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">batch/v1</span>
 <span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Job</span>
 <span class="nt">metadata</span><span class="p">:</span>
@@ -767,7 +806,8 @@ one run it exits 3, and the retry, which runs only what did not finish,
 ends with 1 if the failure remains. A bucket that stays down keeps every
 try at 3, so the program that drives the retries sets how many to make.</p>
 <p>For a Kubernetes indexed Job, a <code class="docutils literal notranslate"><span class="pre">podFailurePolicy</span></code> that retries on 3 and
-fails the task on 1 and 4 follows from this table.</p>
+fails the task on 1 and 4 follows from this table; the Job <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">submit</span></code>
+makes has one.</p>
 <p>When the Job is done, <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span> <span class="pre">/project</span></code> counts the finished and
 failed simulations of the whole project. <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span> <span class="pre">/project</span> <span class="pre">--json</span></code>
 gives the same counts, per state and variant, as JSON for the program
@@ -824,8 +864,9 @@ that drives the Job.</p>
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-every-container-needs">What every container needs</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-image">The image</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#submitting-to-kubernetes">Submitting to Kubernetes</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#fetching-the-meteorology-once">Fetching the meteorology once</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#a-kubernetes-indexed-job">A Kubernetes indexed Job</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#a-kubernetes-indexed-job-you-write-yourself">A Kubernetes indexed Job you write yourself</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#exit-codes">Exit codes</a></li>
 </ul>
   </nav></div>
