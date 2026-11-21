@@ -153,7 +153,9 @@ class Grid(Bounds):
     An ``xmax`` written west of ``xmin`` is read as crossing 180 degrees
     when ``xmin`` is east of 0 and ``xmax`` west of it, as in
     ``xmin=170, xmax=-170``, or when an edge is written past 180 degrees
-    either way (``xmin=-170, xmax=-190``). With both in one hemisphere and
+    (``xmin=-190, xmax=-170``). A box written as ``xmin=-170, xmax=-190``
+    would be 340 degrees wide and is refused, as swapped edges. With both in
+    one hemisphere and
     within 180 degrees, such as ``xmin=-110.5, xmax=-113``, the two are
     most likely swapped, and the grid is refused rather than read as one
     357.5 degrees wide. To have a grid that wide, write its east edge past
