@@ -36,7 +36,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from runtraj.config import VARIANT_NAME_RE, Variant
 from runtraj.exceptions import SimulationError
 from runtraj.models import ModelRun
@@ -114,7 +114,8 @@ class StiltRConfig(HysplitConfig):
     and a default would stand in for a value no file gave. The
     ``config.yaml`` variant the import prints gives them all, except the
     settings of HYSPLIT's concentration and trajectory modes, which a
-    particles-mode run does not record.
+    particles-mode run does not record. ``mode`` may be left out or be
+    ``particles``: STILT-R ran no other, so any other is refused.
     """
 
     #: Fields left out of a run's recorded settings. ``version`` is recorded:
@@ -135,6 +136,19 @@ class StiltRConfig(HysplitConfig):
             "it. Recorded with the runs' settings."
         ),
     )
+
+    @field_validator("mode")
+    @classmethod
+    def _particles_only(cls, mode: str) -> str:
+        """Refuse a mode STILT-R never ran: imported runs are all particle runs."""
+        if mode != "particles":
+            raise ValueError(
+                f"mode: {mode} is not read by a stilt-r block, which reads "
+                "STILT-R's particle runs only (mode: particles, the default). "
+                "Put a variant that runs HYSPLIT in this mode on the hysplit "
+                "model."
+            )
+        return mode
 
     @model_validator(mode="before")
     @classmethod
