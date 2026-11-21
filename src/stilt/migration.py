@@ -40,13 +40,13 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from runtraj.config import VARIANT_NAME_RE, Variant
 from runtraj.exceptions import SimulationError
 from runtraj.models import ModelRun
+from runtraj.models.hysplit import read_namelist
 from runtraj.models.hysplit.config import (
     FIXED_SETUP,
     WIND_ERROR_SETTINGS,
     ZI_ERROR_SETTINGS,
     HysplitConfig,
 )
-from runtraj.models.hysplit.namelist import read_namelist
 from runtraj.output import Output
 from runtraj.particles import check_particles
 from runtraj.releases import Release
@@ -58,7 +58,7 @@ from stilt.footprint.io import _footprint_array
 from stilt.footprint.stage import store_empty_footprint, store_footprint
 
 if TYPE_CHECKING:
-    from runtraj.models.hysplit.control import ControlFile
+    from runtraj.models.hysplit import ControlFile
 
 #: PYSTILT's names for STILT-R's particle columns. HYSPLIT's driver renames
 #: the first four the same way; ``xhgt`` is the release height STILT-R adds
@@ -519,7 +519,7 @@ def _smooth_factor(
 def _control(path: Path) -> ControlFile:
     """Return a run's ``CONTROL`` file, read as PYSTILT reads its own."""
     # STILT-R runs HYSPLIT, so its CONTROL file is HYSPLIT's.
-    from runtraj.models.hysplit.control import ControlFile
+    from runtraj.models.hysplit import ControlFile
 
     try:
         return ControlFile.read(path)

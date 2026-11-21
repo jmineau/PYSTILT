@@ -22,7 +22,7 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 import xarray as xr
-from runtraj.particles.table import stored_release
+from runtraj.particles import release_metadata, stored_release
 from runtraj.releases import Release
 from runtraj.spatial import horizontal_dims
 
@@ -461,7 +461,7 @@ def _file_metadata(
 ) -> dict[bytes, bytes]:
     """Return what a footprint file records so that it reads alone."""
     return {
-        b"runtraj:release": release.to_json().encode(),
+        **release_metadata(release),
         b"stilt:pystilt": _pystilt_version().encode(),
         b"stilt:name": name.encode(),
         b"stilt:hours": json.dumps(hours).encode(),
