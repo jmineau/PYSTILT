@@ -392,7 +392,7 @@ def test_variants_that_differ_in_the_footprints_foot_share_the_run(tmp_path, gri
     )
     variants = config.resolve()
 
-    assert len({v.particles_hash for v in variants.values()}) == 1
+    assert len({v.result_hash for v in variants.values()}) == 1
     assert len({v.stage_hashes["footprint"] for v in variants.values()}) == 3
     # On HYSPLIT's foot the footprint takes the run's veght; computing its
     # own, the footprint's footprint_depth.
@@ -982,7 +982,7 @@ def test_variants_that_differ_only_in_footprint_fields_keep_the_transport(
         and s2.stages.get("footprint").smooth_factor == 2
     )
     assert s2.transport == variants["hrrr"].transport
-    assert s2.particles_hash == variants["hrrr"].particles_hash
+    assert s2.result_hash == variants["hrrr"].result_hash
 
 
 def test_variants_survive_a_yaml_roundtrip_as_written(tmp_path, grid):

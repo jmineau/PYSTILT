@@ -83,9 +83,9 @@ def test_the_footprint_hash_is_pinned(name):
     variant = make_variant(footprint=config)
     assert variant.stage_hashes_on(PARTICLES) == {"footprint": expected}
     # On the variant's own particles, the same rule.
-    assert variant.stage_hashes == variant.stage_hashes_on(variant.particles_hash)
+    assert variant.stage_hashes == variant.stage_hashes_on(variant.result_hash)
     assert variant.stage_hashes["footprint"] == stage_hash(
-        "footprint", FootprintStage().settings(config), variant.particles_hash
+        "footprint", FootprintStage().settings(config), variant.result_hash
     )
 
 
@@ -355,7 +355,7 @@ def test_a_footprint_stage_under_another_name_writes_its_own_files(tmp_path):
     meta = pq.read_metadata(path).metadata
     stamp = file_stamp(variant.stage_hashes["coarse_footprint"])
     assert {key: meta[key] for key in stamp} == stamp
-    assert meta[b"stilt:particles_hash"].decode() == variant.particles_hash
+    assert meta[b"stilt:particles_hash"].decode() == variant.result_hash
     foot = read_footprint(path)
     assert foot is not None and foot.stilt.config.smooth_factor == 0.5
 

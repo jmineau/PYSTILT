@@ -13,7 +13,7 @@ work underneath.
   writes a job array script (:func:`~runtraj.execution.job_script`) whose
   tasks each run ``stilt run --task``, submits it with ``sbatch``, and
   returns the job id at once.
-- :func:`~runtraj.execution.worker.run_particles` runs the transport model for one
+- :func:`~runtraj.execution.worker.run_result` runs the transport model for one
   :class:`~stilt.Simulation` and writes its particles and log.
 - :func:`~runtraj.execution.worker.run_stages` runs the stages of the variants
   that share those particles, the footprint among them: each stage file
@@ -60,7 +60,7 @@ Internal: importable from their modules, and free to change.
    :nosignatures:
 
    runtraj.execution.runner.resolve_compute_root
-   runtraj.execution.worker.run_particles
+   runtraj.execution.worker.run_result
    runtraj.execution.worker.run_stage
    runtraj.execution.worker.run_stages
    runtraj.execution.worker.run_release

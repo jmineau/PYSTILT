@@ -53,7 +53,7 @@ def model_runs(monkeypatch):
         sim.output.write_particles(sim.variant, sim.release, particles, [])
         return particles
 
-    monkeypatch.setattr(worker, "run_particles", fake)
+    monkeypatch.setattr(worker, "run_result", fake)
     return ran
 
 
@@ -109,7 +109,7 @@ def test_a_tree_this_layout_did_not_write_is_listed_as_it_records_itself(
     )
 
 
-def test_a_variant_without_stages_needs_no_particles_hash_to_say_so(tmp_path, release):
+def test_a_variant_without_stages_needs_no_result_hash_to_say_so(tmp_path, release):
     """Asking about a stage a variant does not use reads neither the met nor the model's build."""
     from runtraj.config import Variant
     from runtraj.models.hysplit import HysplitConfig, MetConfig
@@ -123,7 +123,7 @@ def test_a_variant_without_stages_needs_no_particles_hash_to_say_so(tmp_path, re
         model="hysplit",
     )
     with pytest.raises(FileNotFoundError):
-        _ = variant.particles_hash  # the met's files are not here
+        _ = variant.result_hash  # the met's files are not here
     assert variant.stage_hashes == {}
     output = Output(tmp_path / "output")
     assert output.path("footprint", variant, str(release.id)) is None

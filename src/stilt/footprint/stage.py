@@ -560,7 +560,7 @@ def _write(
     of *stage*), and the hash of the particles it was made from.
     """
     stamp = file_stamp(variant.stage_hashes[stage], realization)
-    stamp[b"stilt:particles_hash"] = variant.particles_hash.encode()
+    stamp[b"stilt:particles_hash"] = variant.result_hash.encode()
     if foot is None:
         return write_empty_footprint(path, release, config, variant.name, stamp)
     return write_footprint(path, foot, config, stamp)

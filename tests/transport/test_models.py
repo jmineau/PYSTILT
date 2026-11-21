@@ -80,8 +80,8 @@ def test_a_variant_may_run_another_model(tmp_path, toy):
     assert toy_variant.model == "toy" and toy_variant.transport.nparticles == 10
     assert toy_variant.stages.get("footprint") == hrrr.stages.get("footprint")
     assert variants["toy"].build == ModelInfo(name="toy", version="1.0")
-    assert variants["toy"].particles_hash != variants["hrrr"].particles_hash
+    assert variants["toy"].result_hash != variants["hrrr"].result_hash
     recorded = variants["toy"].run_settings
     assert recorded["model"]["name"] == "toy" and recorded["nparticles"] == 10
     # A stored record reads back through the model's own config class.
-    assert settings_hash(read_run_settings(recorded)) == variants["toy"].particles_hash
+    assert settings_hash(read_run_settings(recorded)) == variants["toy"].result_hash
