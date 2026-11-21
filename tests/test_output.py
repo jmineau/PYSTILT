@@ -61,7 +61,7 @@ def test_run_folder_is_name_and_hash_with_settings_file(tmp_path):
     assert out.folder("particles", VARIANT) is None
     assert out.path("particles", VARIANT, release_at().id) is None
     write_one(out)
-    digest = VARIANT.particles_hash
+    digest = VARIANT.result_hash
     folder = out.folder("particles", VARIANT)
     assert folder == tmp_path / "output" / "particles" / f"settings=hrrr-{digest[:6]}"
     record = yaml.safe_load((folder / "_settings.yaml").read_text())
@@ -135,10 +135,10 @@ def test_footprint_folder_is_variant_name_and_combined_hash(tmp_path):
     variant = output_variant(footprint=config)
     release = release_at()
     store_footprint(out, variant, fake_footprint(release))
-    digest = stage_hash("footprint", footprint_settings(config), VARIANT.particles_hash)
+    digest = stage_hash("footprint", footprint_settings(config), VARIANT.result_hash)
     assert digest == settings_hash(
         {
-            "particles": VARIANT.particles_hash,
+            "particles": VARIANT.result_hash,
             "footprint": {**config.model_dump(mode="json"), "geometry_hash": None},
         }
     )
@@ -166,7 +166,7 @@ def test_footprint_folder_is_variant_name_and_combined_hash(tmp_path):
     assert record["reads"] == {
         "particles": {
             "folder": particles.name.removeprefix("settings="),
-            "hash": VARIANT.particles_hash,
+            "hash": VARIANT.result_hash,
         }
     }
     assert list(record["versions"]) == ["runtraj", "pystilt"]
@@ -718,7 +718,7 @@ def test_each_result_file_names_its_settings_and_the_version_that_wrote_it(tmp_p
     empty = store_empty_footprint(out, FEET, release_at(13))
 
     meta = pq.read_schema(particles).metadata
-    assert meta[b"runtraj:hash"].decode() == FEET.particles_hash
+    assert meta[b"runtraj:hash"].decode() == FEET.result_hash
     assert meta[b"runtraj:version"].decode() == runtraj.__version__
     for path in (footprint, empty):
         meta = pq.read_schema(path).metadata
@@ -806,9 +806,9 @@ def test_a_stored_footprint_says_what_made_it(tmp_path):
     foot = read_footprint(path)
 
     assert foot is not None
-    assert foot.attrs["stilt_particles_hash"] == FEET.particles_hash
+    assert foot.attrs["stilt_particles_hash"] == FEET.result_hash
     assert foot.attrs["stilt_version"]
     nc = foot.stilt.to_netcdf(tmp_path / "foot.nc")
     back = read_footprint(nc)
     assert back is not None
-    assert back.attrs["stilt_particles_hash"] == FEET.particles_hash
+    assert back.attrs["stilt_particles_hash"] == FEET.result_hash

@@ -51,7 +51,7 @@ def _column_trajectory(
     met = reference_met(met_dir)
     # run_model adds the release heights that the pressure weighting reads.
     run = run_model("hysplit", release, params, met, Path(tmp_path) / label, 900)
-    return release, run.particles
+    return release, run.result
 
 
 @integration

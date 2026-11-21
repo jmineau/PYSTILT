@@ -560,7 +560,7 @@ def test_variants_with_equal_transport_settings_share_a_run(tmp_path, point_rele
     )
 
     hrrr, s2, zi = (project.variants[v] for v in ("hrrr", "s2", "zi08"))
-    assert hrrr.particles_hash == s2.particles_hash != zi.particles_hash
+    assert hrrr.result_hash == s2.result_hash != zi.result_hash
 
     _write_trajectory(project, point_release)
     assert project.simulation(point_release.id, "s2").has_particles
@@ -643,7 +643,7 @@ def test_status_without_hycs_std_finds_the_folder_the_variant_made(
 
     status = _without_hycs_std(project, monkeypatch, tmp_path)
     with pytest.raises(FileNotFoundError, match="hycs_std"):
-        _ = status.variants["hrrr"].particles_hash
+        _ = status.variants["hrrr"].result_hash
     assert list(status.status()["state"]) == ["complete"]
     assert list(status.folders()["variant"]) == ["hrrr", "hrrr"]
 

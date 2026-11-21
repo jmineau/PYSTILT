@@ -116,7 +116,7 @@ def hysplit_run(request, met_dir, tmp_path_factory):
 @integration
 def test_add_foot_with_hysplits_samt_and_mlht_reproduces_its_foot(hysplit_run):
     run, release = hysplit_run
-    hysplit = run.particles
+    hysplit = run.result
     ours = add_foot(
         _timed(hysplit.drop(columns="foot"), release), run.met_files, VEGHT
     )["foot"]
@@ -140,7 +140,7 @@ def test_a_positions_only_run_gets_a_foot_that_makes_a_footprint_near_hysplits(
     hysplit_run,
 ):
     run, release = hysplit_run
-    hysplit = run.particles
+    hysplit = run.result
     positions = hysplit[PARTICLE_SCHEMA.names]
 
     # What the footprint of a transport model that writes only positions is made from.
@@ -184,7 +184,7 @@ def test_against_hysplit_on_the_mets_mixed_layer_the_footprint_moves_less(
 ):
     """With ``kmixd: 0`` HYSPLIT's mixed layer is the met's PBLH, at least ``kmix0``."""
     run, release = _run(met_dir, tmp_path / "run", time, kmixd=0)
-    hysplit = run.particles
+    hysplit = run.result
     timed = _timed(hysplit[PARTICLE_SCHEMA.names], release)
     sampled = sample_met(timed, run.met_files, ["mlht"], z_top=None)
     floored = sampled.assign(mlht=np.maximum(sampled["mlht"], KMIX0))
@@ -209,8 +209,8 @@ def test_against_hysplit_on_the_mets_mixed_layer_the_footprint_moves_less(
 @integration
 def test_each_pbl_height_moves_a_positions_only_footprint_from_hysplits(hysplit_run):
     run, release = hysplit_run
-    positions = run.particles[PARTICLE_SCHEMA.names]
-    reference = _total(run.particles, release)
+    positions = run.result[PARTICLE_SCHEMA.names]
+    reference = _total(run.result, release)
     sources = {
         "met": ("met", 0.0),
         f"met, at least {KMIX0} m": ("met", KMIX0),
@@ -246,13 +246,13 @@ def test_pbl_height_set_replaces_hysplits_own_foot(hysplit_run, caplog):
     run, release = hysplit_run
     with caplog.at_level("INFO", logger="stilt.footprint.stage"):
         computed = footprint_particles(
-            _timed(run.particles, release),
+            _timed(run.result, release),
             FootprintConfig(
                 footprint_depth=VEGHT, pbl_height="richardson", pbl_height_min=KMIX0
             ),
             run.met_files,
         )
-    total, cells = _moved(_total(computed, release), _total(run.particles, release))
+    total, cells = _moved(_total(computed, release), _total(run.result, release))
     print(
         f"\nHYSPLIT's particles, foot from pbl_height richardson: footprint total / "
         f"HYSPLIT's {total:.4f}, summed cell differences / HYSPLIT's total {cells:.4f}"

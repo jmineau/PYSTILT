@@ -105,7 +105,7 @@ turns soundings into releases, then a run goes as usual. Keep it out of
 The import contract in `pyproject.toml` (`just imports`) is an exhaustive
 `layers` contract: a new top-level module fails until placed.
 
-**runtraj comes from PyPI** up to its next minor (`runtraj>=0.1.0a1,<0.2`),
+**runtraj comes from PyPI** up to its next minor (`runtraj>=0.1.0a4,<0.2`),
 which may break a stage; a change needing an unreleased runtraj takes it from
 its commit (`[tool.uv.sources]`) until the release. STILT-R parity runs on
 every pull request and on each change of the runtraj requirement.

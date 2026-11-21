@@ -77,9 +77,7 @@ def test_output_on_an_object_store_writes_lists_and_reads(store):
     assert str(path).startswith("s3://")
     assert out.present("particles", VARIANT) == {rid}
     assert out.hashes("particles") == {
-        out.folder("particles", VARIANT).name[
-            len("settings=") :
-        ]: VARIANT.particles_hash  # type: ignore[union-attr]
+        out.folder("particles", VARIANT).name[len("settings=") :]: VARIANT.result_hash  # type: ignore[union-attr]
     }
     particles = read_particles(path)
     assert len(particles) == len(fake_particles(release))

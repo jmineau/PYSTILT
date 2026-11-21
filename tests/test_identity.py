@@ -75,7 +75,7 @@ def test_variants_that_differ_only_in_footprint_fields_share_particles(tmp_path)
         )
     )
     variants = config.resolve()
-    runs = {name: v.particles_hash for name, v in variants.items()}
+    runs = {name: v.result_hash for name, v in variants.items()}
     assert runs["hrrr"] == runs["hrrr-smooth"] == runs["hrrr-coarse"]
     assert runs["hrrr-err"] != runs["hrrr"]
     feet = {name: v.stage_hashes.get("footprint") for name, v in variants.items()}
@@ -105,7 +105,7 @@ def test_a_stored_setting_this_version_does_not_have_keeps_the_run_apart(
     stored = {k: v for k, v in variant.run_settings.items() if k != "veght"}
     stored.update(gone)
     record = read_run_settings(stored)
-    assert settings_hash(record) != variant.particles_hash
+    assert settings_hash(record) != variant.result_hash
     assert {k: record[k] for k in gone} == gone
 
 
@@ -128,7 +128,7 @@ def test_footprints_written_before_tres_are_hourly_and_still_found(tmp_path):
     )
     variants = config.resolve()
     hourly, quarters = variants["hrrr"], variants["hrrr-quarters"]
-    assert hourly.particles_hash == quarters.particles_hash
+    assert hourly.result_hash == quarters.result_hash
     assert hourly.stage_hashes.get("footprint") != quarters.stage_hashes.get(
         "footprint"
     )

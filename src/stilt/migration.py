@@ -42,7 +42,9 @@ from runtraj.exceptions import SimulationError
 from runtraj.models import ModelRun
 from runtraj.models.hysplit import read_namelist
 from runtraj.models.hysplit.config import (
+    CONCENTRATION_ONLY_SETTINGS,
     FIXED_SETUP,
+    TRAJECTORY_ONLY_SETTINGS,
     WIND_ERROR_SETTINGS,
     ZI_ERROR_SETTINGS,
     HysplitConfig,
@@ -110,12 +112,20 @@ class StiltRConfig(HysplitConfig):
     :func:`stilt.migration.import_stilt_r`). Every one must be given:
     none has a default, because an imported run's settings name its folder,
     and a default would stand in for a value no file gave. The
-    ``config.yaml`` variant the import prints gives them all.
+    ``config.yaml`` variant the import prints gives them all, except the
+    settings of HYSPLIT's concentration and trajectory modes, which a
+    particles-mode run does not record.
     """
 
     #: Fields left out of a run's recorded settings. ``version`` is recorded:
     #: it is what tells imported runs of two STILT-R versions apart.
     UNRECORDED: ClassVar[frozenset[str]] = frozenset({"directory"})
+
+    #: Settings of HYSPLIT's other modes. STILT-R ran the particles mode, whose
+    #: record has none of them (:meth:`HysplitConfig.settings`), so no file gives them.
+    OTHER_MODES: ClassVar[frozenset[str]] = frozenset(
+        {"mode", "ichem", *CONCENTRATION_ONLY_SETTINGS, *TRAJECTORY_ONLY_SETTINGS}
+    )
 
     version: str | None = Field(
         None,
@@ -131,7 +141,8 @@ class StiltRConfig(HysplitConfig):
     def _every_setting_given(cls, data: Any) -> Any:
         """Require every recorded setting: an imported run has no defaults."""
         if isinstance(data, dict):
-            missing = sorted(set(cls.model_fields) - cls.UNRECORDED - set(data))
+            given = cls.UNRECORDED | cls.OTHER_MODES | set(data)
+            missing = sorted(set(cls.model_fields) - given)
             if missing:
                 raise ValueError(
                     f"An imported STILT-R run gives every setting, and these are "
