@@ -4261,7 +4261,7 @@ requires-dist = [
     { name = "pystilt", extras = ["visualization"], marker = "extra == 'complete'" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "rdata", marker = "extra == 'stilt-r'", specifier = ">=1.0" },
-    { name = "runtraj", specifier = ">=0.1.0a3,<0.2" },
+    { name = "runtraj", specifier = ">=0.1.0a4,<0.2" },
     { name = "runtraj", extras = ["download"], marker = "extra == 'download'" },
     { name = "s3fs", marker = "extra == 's3'", specifier = ">=2024.12" },
     { name = "scipy", specifier = ">=1.10" },
@@ -4602,7 +4602,7 @@ wheels = [
 
 [[package]]
 name = "runtraj"
-version = "0.1.0a3"
+version = "0.1.0a4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "arlmet" },
@@ -4622,9 +4622,9 @@ dependencies = [
     { name = "universal-pathlib" },
     { name = "xarray" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/56/2d/1dcc04a65ffc3ad653aee70d623bc85ecccda0ce3ed0c1bf980257a0d173/runtraj-0.1.0a3.tar.gz", hash = "sha256:51da4ab92541564bc312d0fea019bb8b3c98956f62f9442cde540e8c84f054bd", size = 1105222, upload-time = "2026-11-20T23:53:23.106Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5e/ff/529aa85871a298ddcc0dab4eb2a64cab96cb60730cdf8b32f06518dabd3f/runtraj-0.1.0a4.tar.gz", hash = "sha256:083c3026f038a596ba9634afebc69400d8387611297c691cce9a2f6eaf8acbdb", size = 1219439, upload-time = "2026-11-21T08:01:54.555Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/27/c4/a9d7375f1ee842883a7e8d8fa17a1064356ec55fc310df89639072482837/runtraj-0.1.0a3-py3-none-any.whl", hash = "sha256:4e7558bc1137687148630c5a0679709d5bf00e10cf4c3fd38044557313a4c8b1", size = 263306, upload-time = "2026-11-20T23:53:21.518Z" },
+    { url = "https://files.pythonhosted.org/packages/3b/86/672a0ab1d18624d5410969abc254985022a044ec8e7bc313108586441567/runtraj-0.1.0a4-py3-none-any.whl", hash = "sha256:7fafa58449d9c43a959f8c1a749716291958f120ed31c28fb9ede7ae005ce79d", size = 298891, upload-time = "2026-11-21T08:01:52.999Z" },
 ]
 
 [package.optional-dependencies]
