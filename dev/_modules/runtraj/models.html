@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=7102d287"></script>
+    <script src="../../_static/documentation_options.js?v=65171caa"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a31.dev18+gf0819f638" />
+  <meta name="docsearch:version" content="0.1.0a31.dev20+g61b2691bb" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -457,7 +457,8 @@
 <span class="sd">The transport model interface.</span>
 
 <span class="sd">A transport model turns one release and one set of transport settings into</span>
-<span class="sd">a particle table. HYSPLIT (:class:`runtraj.models.hysplit.HysplitModel`)</span>
+<span class="sd">a result: a particle table, or another type of result</span>
+<span class="sd">(:mod:`runtraj.results`). HYSPLIT (:class:`runtraj.models.hysplit.HysplitModel`)</span>
 <span class="sd">is the one built in; a model in another package is named by its import</span>
 <span class="sd">path. The worker reaches</span>
 <span class="sd">a model through :func:`get_model` by the name a run's settings record, so</span>
@@ -489,6 +490,7 @@
     <span class="n">write_particles</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.releases</span><span class="w"> </span><span class="kn">import</span> <span class="n">releases_to_frame</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.results</span><span class="w"> </span><span class="kn">import</span> <span class="n">model_result</span><span class="p">,</span> <span class="n">result_type</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.releases</span><span class="w"> </span><span class="kn">import</span> <span class="n">Release</span>
@@ -504,19 +506,21 @@
 
 <span class="sd">    Attributes</span>
 <span class="sd">    ----------</span>
-<span class="sd">    particles : pandas.DataFrame</span>
-<span class="sd">        The particle table, one row per particle per time step</span>
-<span class="sd">        (:data:`runtraj.particles.PARTICLE_SCHEMA`).</span>
+<span class="sd">    result : pandas.DataFrame or xarray.DataTree</span>
+<span class="sd">        What the run made, of the type the model makes with the run's</span>
+<span class="sd">        config (:mod:`runtraj.results`): the particle table, one row per</span>
+<span class="sd">        particle per time step (:data:`runtraj.particles.PARTICLE_SCHEMA`),</span>
+<span class="sd">        or a concentration result (:mod:`runtraj.concentration`).</span>
 <span class="sd">    log : str</span>
-<span class="sd">        The model's log of the run, kept with the particles</span>
+<span class="sd">        The model's log of the run, kept with the result</span>
 <span class="sd">        (:attr:`runtraj.Simulation.log`). Empty for a model that writes none.</span>
 <span class="sd">    met_files : list of Path</span>
-<span class="sd">        The meteorology files the run read, recorded in the particle file</span>
+<span class="sd">        The meteorology files the run read, recorded in the result's file</span>
 <span class="sd">        (:func:`runtraj.particles.particles_metadata`). Empty for a model that reads</span>
 <span class="sd">        no files.</span>
 <span class="sd">    """</span>
 
-    <span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+    <span class="n">result</span><span class="p">:</span> <span class="n">Any</span>
     <span class="n">log</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
     <span class="n">met_files</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span></div>
 
@@ -655,10 +659,11 @@
 <span class="sd">        Whether :meth:`run` is handed an empty directory for its files. True</span>
 <span class="sd">        when the model does not say; a model that writes no files sets it</span>
 <span class="sd">        False, and gets ``None``.</span>
-<span class="sd">    particle_files : tuple of str, optional</span>
-<span class="sd">        The names of the files in its workdir that hold the particles, such</span>
-<span class="sd">        as HYSPLIT's particle file. A failed run's workdir is kept without</span>
-<span class="sd">        them, since they can be large and are read into the particles</span>
+<span class="sd">    result_files : callable, optional</span>
+<span class="sd">        ``result_files(config)`` returns the names of the files in its</span>
+<span class="sd">        workdir that hold a run's result, such as HYSPLIT's particle file</span>
+<span class="sd">        or its ``cdump_&lt;grid&gt;`` files. A failed run's workdir is kept</span>
+<span class="sd">        without them, since they can be large and are read into the result</span>
 <span class="sd">        anyway; ``keep_workdir: true`` keeps them. A model without it has</span>
 <span class="sd">        every file kept.</span>
 <span class="sd">    batched : bool, optional</span>
@@ -714,6 +719,12 @@
 <span class="sd">        ``run_many`` never get such a release. HYSPLIT refuses a multipoint</span>
 <span class="sd">        release whose points share a horizontal location, which it would</span>
 <span class="sd">        join into a line source. A model without it runs every release.</span>
+<span class="sd">    result : callable, optional</span>
+<span class="sd">        ``result(config)``: the type of result the model makes with</span>
+<span class="sd">        *config*, a name in :data:`runtraj.results.RESULT_TYPES`, such as</span>
+<span class="sd">        ``"concentration"``. ``"particles"`` when the model does not say. A</span>
+<span class="sd">        variant's stages read particles, so a variant whose model makes</span>
+<span class="sd">        another type has none.</span>
 <span class="sd">    release_rows : callable, optional</span>
 <span class="sd">        ``release_rows(particles, release)``, for a model that writes no</span>
 <span class="sd">        row at ``age = 0``: returns where each particle of a column or</span>
@@ -788,11 +799,10 @@
         <span class="n">timeout</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ModelRun</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Run one release and return its particles.</span>
+<span class="sd">        Run one release and return what it made.</span>
 
-<span class="sd">        The particles are the model's own: runtraj checks them and adds the</span>
-<span class="sd">        release heights, and ``foot`` when the model wrote none, afterwards</span>
-<span class="sd">        (:func:`run_model`).</span>
+<span class="sd">        The result is the model's own: runtraj checks it afterwards, and</span>
+<span class="sd">        adds the release heights to particles (:func:`run_model`).</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -974,9 +984,10 @@
     <span class="n">timeout</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ModelRun</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Run the transport model called *name* for one release, and finish its particles.</span>
+<span class="sd">    Run the transport model called *name* for one release, and finish its result.</span>
 
-<span class="sd">    The particles are checked against the particle table</span>
+<span class="sd">    The result is checked against its type (:mod:`runtraj.results`).</span>
+<span class="sd">    Particles are checked against the particle table</span>
 <span class="sd">    (:func:`runtraj.particles.check_particles`) and get their release heights</span>
 <span class="sd">    (:func:`runtraj.particles.add_release_heights`). These steps are</span>
 <span class="sd">    runtraj's, the same for any model. Nothing else is added: ``foot`` is</span>
@@ -1004,7 +1015,7 @@
 <span class="sd">        If the model's ``check_releases`` refuses the release</span>
 <span class="sd">        (``RELEASE_REFUSED``), before it runs; if the run fails, as when the</span>
 <span class="sd">        meteorology does not cover it (``MET_COVERAGE``), or the model wrote</span>
-<span class="sd">        no particles; or if where the particles of a column or multipoint</span>
+<span class="sd">        no result (``NO_PARTICLE_DATA``, ``NO_CONCENTRATION_DATA``); or if where the particles of a column or multipoint</span>
 <span class="sd">        release started is not known (``NO_RELEASE_ROWS``).</span>
 <span class="sd">    """</span>
     <span class="k">return</span> <span class="n">_run_one</span><span class="p">(</span><span class="n">get_model</span><span class="p">(</span><span class="n">name</span><span class="p">),</span> <span class="n">release</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">met</span><span class="p">,</span> <span class="n">workdir</span><span class="p">,</span> <span class="n">timeout</span><span class="p">)</span></div>
@@ -1025,7 +1036,7 @@
         <span class="k">raise</span> <span class="n">refused</span>
     <span class="n">window</span> <span class="o">=</span> <span class="n">run_window</span><span class="p">(</span><span class="n">release</span><span class="o">.</span><span class="n">time</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">n_hours</span><span class="p">)</span>
     <span class="n">run</span> <span class="o">=</span> <span class="n">_returned</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">release</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">met</span><span class="p">,</span> <span class="n">window</span><span class="p">,</span> <span class="n">workdir</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">))</span>
-    <span class="k">return</span> <span class="n">_finish</span><span class="p">(</span><span class="n">run</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_finish</span><span class="p">(</span><span class="n">run</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="run_model_many">
@@ -1074,6 +1085,13 @@
     <span class="n">run_many</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"run_many"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">run_many</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Transport model </span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> has no run_many."</span><span class="p">)</span>
+    <span class="n">made</span> <span class="o">=</span> <span class="n">model_result</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">made</span> <span class="o">!=</span> <span class="s2">"particles"</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"Transport model </span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> is batched and makes </span><span class="si">{</span><span class="n">made</span><span class="si">}</span><span class="s2">: a "</span>
+            <span class="s2">"batched model returns one particle table for many releases, so it "</span>
+            <span class="s2">"makes particles."</span>
+        <span class="p">)</span>
     <span class="n">results</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ModelRun</span> <span class="o">|</span> <span class="n">SimulationError</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
         <span class="n">_refused</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">releases</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
     <span class="p">)</span>
@@ -1082,25 +1100,25 @@
         <span class="k">return</span> <span class="n">results</span>
     <span class="n">windows</span> <span class="o">=</span> <span class="p">[</span><span class="n">run_window</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">time</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">n_hours</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">releases</span><span class="p">]</span>
     <span class="n">run</span> <span class="o">=</span> <span class="n">_returned</span><span class="p">(</span><span class="n">run_many</span><span class="p">(</span><span class="n">releases</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">met</span><span class="p">,</span> <span class="n">windows</span><span class="p">,</span> <span class="n">workdir</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">))</span>
-    <span class="k">if</span> <span class="s2">"release"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">run</span><span class="o">.</span><span class="n">particles</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">run</span><span class="o">.</span><span class="n">result</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">"release"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">run</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">SimulationError</span><span class="p">(</span>
             <span class="s2">"A batched transport model's particles need a release column."</span><span class="p">,</span>
             <span class="n">reason</span><span class="o">=</span><span class="s2">"NO_PARTICLE_DATA"</span><span class="p">,</span>
             <span class="n">log</span><span class="o">=</span><span class="n">run</span><span class="o">.</span><span class="n">log</span><span class="p">,</span>
         <span class="p">)</span>
-    <span class="n">by_release</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">run</span><span class="o">.</span><span class="n">particles</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"release"</span><span class="p">,</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">)))</span>
+    <span class="n">by_release</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">run</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"release"</span><span class="p">,</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">)))</span>
     <span class="k">for</span> <span class="n">release</span> <span class="ow">in</span> <span class="n">releases</span><span class="p">:</span>
         <span class="n">rows</span> <span class="o">=</span> <span class="n">by_release</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">release</span><span class="o">.</span><span class="n">id</span><span class="p">))</span>
         <span class="n">own</span> <span class="o">=</span> <span class="n">replace</span><span class="p">(</span>
             <span class="n">run</span><span class="p">,</span>
-            <span class="n">particles</span><span class="o">=</span><span class="p">(</span>
+            <span class="n">result</span><span class="o">=</span><span class="p">(</span>
                 <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
                 <span class="k">if</span> <span class="n">rows</span> <span class="ow">is</span> <span class="kc">None</span>
                 <span class="k">else</span> <span class="n">rows</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="s2">"release"</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
             <span class="p">),</span>
         <span class="p">)</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">results</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">release</span><span class="o">.</span><span class="n">id</span><span class="p">)]</span> <span class="o">=</span> <span class="n">_finish</span><span class="p">(</span><span class="n">own</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
+            <span class="n">results</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">release</span><span class="o">.</span><span class="n">id</span><span class="p">)]</span> <span class="o">=</span> <span class="n">_finish</span><span class="p">(</span><span class="n">own</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
         <span class="k">except</span> <span class="n">SimulationError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
             <span class="n">error</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="n">run</span><span class="o">.</span><span class="n">log</span>
             <span class="n">results</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">release</span><span class="o">.</span><span class="n">id</span><span class="p">)]</span> <span class="o">=</span> <span class="n">error</span>
@@ -1150,37 +1168,51 @@
     <span class="p">}</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_finish</span><span class="p">(</span><span class="n">run</span><span class="p">:</span> <span class="n">ModelRun</span><span class="p">,</span> <span class="n">release</span><span class="p">:</span> <span class="n">Release</span><span class="p">,</span> <span class="n">model</span><span class="p">:</span> <span class="n">TransportModel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ModelRun</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_finish</span><span class="p">(</span>
+    <span class="n">run</span><span class="p">:</span> <span class="n">ModelRun</span><span class="p">,</span> <span class="n">release</span><span class="p">:</span> <span class="n">Release</span><span class="p">,</span> <span class="n">model</span><span class="p">:</span> <span class="n">TransportModel</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">TransportConfig</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ModelRun</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Return *run* with its particles checked and their release heights.</span>
+<span class="sd">    Return *run* with its result checked, and particles with their release heights.</span>
 
 <span class="sd">    Particles that stop before the end of the run are kept: the transport</span>
 <span class="sd">    model fails a run cut short by its meteorology itself, and particles</span>
 <span class="sd">    that all left the met's domain are a complete run. The particles keep</span>
 <span class="sd">    the columns the model wrote: ``foot`` is the model's own, or missing.</span>
+<span class="sd">    Another type of result is checked by its type (:mod:`runtraj.results`).</span>
 
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
 <span class="sd">    SimulationError</span>
-<span class="sd">        With the run's log, if the model wrote no particles, or where each</span>
-<span class="sd">        particle of a column or multipoint release started is not known.</span>
+<span class="sd">        With the run's log, if the model wrote no particles</span>
+<span class="sd">        (``NO_PARTICLE_DATA``), or another type of result that its type</span>
+<span class="sd">        refuses (``NO_CONCENTRATION_DATA``, ...), or where each particle of</span>
+<span class="sd">        a column or multipoint release started is not known.</span>
 <span class="sd">    """</span>
-    <span class="k">if</span> <span class="n">run</span><span class="o">.</span><span class="n">particles</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+    <span class="n">made</span> <span class="o">=</span> <span class="n">model_result</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">made</span> <span class="o">!=</span> <span class="s2">"particles"</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">result_type</span><span class="p">(</span><span class="n">made</span><span class="p">)</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="n">run</span><span class="o">.</span><span class="n">result</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">SimulationError</span><span class="p">(</span>
+                <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">),</span> <span class="n">reason</span><span class="o">=</span><span class="sa">f</span><span class="s2">"NO_</span><span class="si">{</span><span class="n">made</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="si">}</span><span class="s2">_DATA"</span><span class="p">,</span> <span class="n">log</span><span class="o">=</span><span class="n">run</span><span class="o">.</span><span class="n">log</span>
+            <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">error</span>
+        <span class="k">return</span> <span class="n">run</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">run</span><span class="o">.</span><span class="n">result</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="ow">or</span> <span class="n">run</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">SimulationError</span><span class="p">(</span>
             <span class="s2">"The transport model wrote no particles."</span><span class="p">,</span>
             <span class="n">reason</span><span class="o">=</span><span class="s2">"NO_PARTICLE_DATA"</span><span class="p">,</span>
             <span class="n">log</span><span class="o">=</span><span class="n">run</span><span class="o">.</span><span class="n">log</span><span class="p">,</span>
         <span class="p">)</span>
-    <span class="n">check_particles</span><span class="p">(</span><span class="n">run</span><span class="o">.</span><span class="n">particles</span><span class="p">)</span>
+    <span class="n">check_particles</span><span class="p">(</span><span class="n">run</span><span class="o">.</span><span class="n">result</span><span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">particles</span> <span class="o">=</span> <span class="n">add_release_heights</span><span class="p">(</span>
-            <span class="n">run</span><span class="o">.</span><span class="n">particles</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"release_rows"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="n">run</span><span class="o">.</span><span class="n">result</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"release_rows"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="p">)</span>
     <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">SimulationError</span><span class="p">(</span>
             <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">),</span> <span class="n">reason</span><span class="o">=</span><span class="s2">"NO_RELEASE_ROWS"</span><span class="p">,</span> <span class="n">log</span><span class="o">=</span><span class="n">run</span><span class="o">.</span><span class="n">log</span>
         <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">error</span>
-    <span class="k">return</span> <span class="n">replace</span><span class="p">(</span><span class="n">run</span><span class="p">,</span> <span class="n">particles</span><span class="o">=</span><span class="n">particles</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">replace</span><span class="p">(</span><span class="n">run</span><span class="p">,</span> <span class="n">result</span><span class="o">=</span><span class="n">particles</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="run_trajectories">
@@ -1193,12 +1225,15 @@
     <span class="n">workdir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">timeout</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="o">**</span><span class="n">params</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Run the transport model for one release and return its particles.</span>
+<span class="sd">    Run the transport model for one release and return what it made, particles unless the settings say another type.</span>
 
 <span class="sd">    This is what a project runs for each release, without a project: the</span>
-<span class="sd">    particles are returned, not stored.</span>
+<span class="sd">    result is returned, not stored. Its type follows the settings, as a</span>
+<span class="sd">    variant's does (:mod:`runtraj.results`): particles, or with HYSPLIT's</span>
+<span class="sd">    ``mode="trajectory"`` the trajectory table, or with</span>
+<span class="sd">    ``mode="concentration"`` the grids.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -1226,11 +1261,14 @@
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    pandas.DataFrame</span>
+<span class="sd">    pandas.DataFrame or xarray.DataTree</span>
 <span class="sd">        The particle table, one row per particle per output step, with</span>
 <span class="sd">        ``time`` (UTC), the release time plus ``age``, as a table read from</span>
 <span class="sd">        a particle file has. ``foot`` is the model's own (HYSPLIT's, made</span>
 <span class="sd">        with ``veght``). A model that writes no ``foot`` returns none.</span>
+<span class="sd">        With settings that make another type, that type's result: the</span>
+<span class="sd">        trajectory table (:mod:`runtraj.trajectories`), or a tree of</span>
+<span class="sd">        concentration grids (:mod:`runtraj.concentration`).</span>
 
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
@@ -1254,9 +1292,13 @@
 <span class="sd">    ...     n_hours=-24,</span>
 <span class="sd">    ...     numpar=200,  # HYSPLIT's particle count</span>
 <span class="sd">    ... )  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; table = runtraj.run_trajectories(</span>
+<span class="sd">    ...     release, "/data/hrrr", n_hours=-24, mode="trajectory"</span>
+<span class="sd">    ... )  # doctest: +SKIP</span>
 <span class="sd">    """</span>
     <span class="n">transport_model</span> <span class="o">=</span> <span class="n">get_model</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
     <span class="n">config</span> <span class="o">=</span> <span class="n">transport_model</span><span class="o">.</span><span class="n">config_class</span><span class="p">(</span><span class="o">**</span><span class="n">params</span><span class="p">)</span>
+    <span class="n">made</span> <span class="o">=</span> <span class="n">model_result</span><span class="p">(</span><span class="n">transport_model</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
     <span class="n">met_config</span> <span class="o">=</span> <span class="n">transport_model</span><span class="o">.</span><span class="n">met_config_class</span><span class="o">.</span><span class="n">model_validate</span><span class="p">(</span><span class="n">met</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">workdir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">workdir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">workdir</span><span class="p">)</span>
@@ -1266,9 +1308,9 @@
                 <span class="s2">"another run; give an empty or new directory."</span>
             <span class="p">)</span>
         <span class="n">workdir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="n">particles</span> <span class="o">=</span> <span class="n">run_model</span><span class="p">(</span>
-        <span class="n">model</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">met_config</span><span class="p">,</span> <span class="n">workdir</span><span class="p">,</span> <span class="n">timeout</span>
-    <span class="p">)</span><span class="o">.</span><span class="n">particles</span>
+    <span class="n">particles</span> <span class="o">=</span> <span class="n">run_model</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">met_config</span><span class="p">,</span> <span class="n">workdir</span><span class="p">,</span> <span class="n">timeout</span><span class="p">)</span><span class="o">.</span><span class="n">result</span>
+    <span class="k">if</span> <span class="n">made</span> <span class="o">!=</span> <span class="s2">"particles"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">particles</span>
     <span class="n">particles</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">release</span><span class="o">.</span><span class="n">time</span><span class="p">)</span> <span class="o">+</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_timedelta</span><span class="p">(</span>
         <span class="n">particles</span><span class="p">[</span><span class="s2">"age"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">unit</span><span class="o">=</span><span class="s2">"min"</span>
     <span class="p">)</span>
@@ -1310,7 +1352,9 @@
 
 <span class="sd">    With a *release* and its *met* (of ``met_config_class``), it also runs</span>
 <span class="sd">    the model once, through the code a project's run uses (``run``, and</span>
-<span class="sd">    ``run_many`` too for a batched model), and checks the particles: the</span>
+<span class="sd">    ``run_many`` too for a batched model), and checks the result. A result</span>
+<span class="sd">    of a type other than particles (the model's ``result``) is checked by</span>
+<span class="sd">    its type and stored and read back. Particles are checked further: the</span>
 <span class="sd">    columns of the particle table, ages that go the way ``n_hours`` does and</span>
 <span class="sd">    stay within it, the release heights of a column or multipoint release</span>
 <span class="sd">    (from a row at ``age = 0`` or the model's ``release_rows``), and a</span>
@@ -1479,8 +1523,12 @@
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">SimulationError</span><span class="p">):</span>
                 <span class="k">raise</span> <span class="n">result</span>
             <span class="n">runs</span><span class="p">[</span><span class="s2">"run_many"</span><span class="p">]</span> <span class="o">=</span> <span class="n">result</span>
+        <span class="n">made</span> <span class="o">=</span> <span class="n">model_result</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">how</span><span class="p">,</span> <span class="n">run</span> <span class="ow">in</span> <span class="n">runs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="n">_check_particles</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">how</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">run</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">Path</span><span class="p">(</span><span class="n">tmp</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">made</span> <span class="o">==</span> <span class="s2">"particles"</span><span class="p">:</span>
+                <span class="n">_check_particles</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">how</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">run</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">Path</span><span class="p">(</span><span class="n">tmp</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">_check_stored</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">how</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">run</span><span class="p">,</span> <span class="n">made</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">Path</span><span class="p">(</span><span class="n">tmp</span><span class="p">))</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_promised</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">run</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
@@ -1496,7 +1544,7 @@
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Check the finished particles of one run, and that a particle file stores them."""</span>
     <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">run</span><span class="o">.</span><span class="n">log</span><span class="p">,</span> <span class="nb">str</span><span class="p">),</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">what</span><span class="si">}</span><span class="s2">'s ModelRun.log must be a string"</span>
-    <span class="n">finished</span> <span class="o">=</span> <span class="n">run</span><span class="o">.</span><span class="n">particles</span>
+    <span class="n">finished</span> <span class="o">=</span> <span class="n">run</span><span class="o">.</span><span class="n">result</span>
     <span class="n">age</span> <span class="o">=</span> <span class="n">finished</span><span class="p">[</span><span class="s2">"age"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
     <span class="n">backward</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">n_hours</span> <span class="o">&lt;</span> <span class="mi">0</span>
     <span class="k">assert</span> <span class="p">((</span><span class="n">age</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)</span> <span class="k">if</span> <span class="n">backward</span> <span class="k">else</span> <span class="p">(</span><span class="n">age</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">))</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span> <span class="p">(</span>
@@ -1517,6 +1565,26 @@
         <span class="k">raise</span> <span class="ne">AssertionError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">what</span><span class="si">}</span><span class="s2">'s particles cannot be stored: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">error</span>
     <span class="n">missing</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">finished</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">read_particles</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
     <span class="k">assert</span> <span class="ow">not</span> <span class="n">missing</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"a particle file does not store </span><span class="si">{</span><span class="n">what</span><span class="si">}</span><span class="s2">'s </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+    <span class="n">path</span><span class="o">.</span><span class="n">unlink</span><span class="p">()</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_check_stored</span><span class="p">(</span>
+    <span class="n">what</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">run</span><span class="p">:</span> <span class="n">ModelRun</span><span class="p">,</span>
+    <span class="n">made</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">config</span><span class="p">:</span> <span class="n">TransportConfig</span><span class="p">,</span>
+    <span class="n">release</span><span class="p">:</span> <span class="n">Release</span><span class="p">,</span>
+    <span class="n">tmp</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Check that a result of the type *made*, not particles, is stored and read back by its type."""</span>
+    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">run</span><span class="o">.</span><span class="n">log</span><span class="p">,</span> <span class="nb">str</span><span class="p">),</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">what</span><span class="si">}</span><span class="s2">'s ModelRun.log must be a string"</span>
+    <span class="n">kind</span> <span class="o">=</span> <span class="n">result_type</span><span class="p">(</span><span class="n">made</span><span class="p">)</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">tmp</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"result</span><span class="si">{</span><span class="n">kind</span><span class="o">.</span><span class="n">suffix</span><span class="si">}</span><span class="s2">"</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">kind</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">run</span><span class="o">.</span><span class="n">result</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">settings</span><span class="p">(),</span> <span class="n">run</span><span class="o">.</span><span class="n">met_files</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">AssertionError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">what</span><span class="si">}</span><span class="s2">'s </span><span class="si">{</span><span class="n">made</span><span class="si">}</span><span class="s2"> cannot be stored: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">error</span>
+    <span class="n">kind</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="n">kind</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
     <span class="n">path</span><span class="o">.</span><span class="n">unlink</span><span class="p">()</span>
 
 

@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=7102d287"></script>
+    <script src="../../../_static/documentation_options.js?v=65171caa"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a31.dev18+gf0819f638" />
+  <meta name="docsearch:version" content="0.1.0a31.dev20+g61b2691bb" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -459,7 +459,7 @@
 <span class="sd">Workers are handed releases. :func:`run_release` runs every variant of</span>
 <span class="sd">one release. Variants with the same transport settings share one set of</span>
 <span class="sd">particles, so it groups them: the transport model runs once per group where the</span>
-<span class="sd">particles are missing (:func:`run_particles`), then each variant's stages</span>
+<span class="sd">particles are missing (:func:`run_result`), then each variant's stages</span>
 <span class="sd">make their files from the particles in memory (:func:`run_stages`). A stage</span>
 <span class="sd">is the class its ``stages`` block of ``config.yaml`` names</span>
 <span class="sd">(:class:`runtraj.stages.Stage`), so this module imports none.</span>
@@ -553,8 +553,8 @@
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Record why *sim* failed at *stage*, and return one line saying so.</span>
 
-<span class="sd">    *stage* is ``particles`` for the transport model run, or the name of</span>
-<span class="sd">    the stage that failed. The record goes in the logs of the folder whose</span>
+<span class="sd">    *stage* is the variant's result type (``particles``, for most) for the</span>
+<span class="sd">    transport model run, or the name of the stage that failed. The record goes in the logs of the folder whose</span>
 <span class="sd">    result failed (:meth:`runtraj.output.Output.record_failure`): a particles</span>
 <span class="sd">    failure covers every variant on those particles, a stage's failure</span>
 <span class="sd">    every variant with that stage's settings on them. ``reason`` is the</span>
@@ -631,24 +631,24 @@
     <span class="n">sim</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">clear_failure</span><span class="p">(</span><span class="n">stage</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">variant</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">release</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">realization</span><span class="p">)</span>
 
 
-<div class="viewcode-block" id="run_particles">
-<a class="viewcode-back" href="../../../reference/_api/runtraj.execution.worker.run_particles.html#runtraj.execution.worker.run_particles">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">run_particles</span><span class="p">(</span>
+<div class="viewcode-block" id="run_result">
+<a class="viewcode-back" href="../../../reference/_api/runtraj.execution.worker.run_result.html#runtraj.execution.worker.run_result">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">run_result</span><span class="p">(</span>
     <span class="n">sim</span><span class="p">:</span> <span class="n">Simulation</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
     <span class="n">workdir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
     <span class="n">keep_workdir</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">timeout</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Run the transport model for a simulation and write its particles to the output directory.</span>
+<span class="sd">    Run the transport model for a simulation and write its result to the output directory.</span>
 
 <span class="sd">    The transport model the variant names runs in *workdir*</span>
 <span class="sd">    (:func:`runtraj.models.run_model`), with the variant's met. Its log is written to the output</span>
 <span class="sd">    directory whether the run succeeds or fails. The working directory is</span>
 <span class="sd">    then removed, unless the run failed or *keep_workdir* is set, in which</span>
 <span class="sd">    case it is copied under the output directory's ``scratch/`` first. A</span>
-<span class="sd">    failed run's copy leaves out the model's ``particle_files``.</span>
+<span class="sd">    failed run's copy leaves out the model's ``result_files``.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -664,14 +664,16 @@
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    pandas.DataFrame</span>
-<span class="sd">        The particles, also written to the output directory.</span>
+<span class="sd">    pandas.DataFrame or xarray.DataTree</span>
+<span class="sd">        The result, of the variant's type (the particles, for most), also</span>
+<span class="sd">        written to the output directory.</span>
 
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
 <span class="sd">    SimulationError</span>
 <span class="sd">        As the transport model raises it (with a ``reason``), or with</span>
-<span class="sd">        ``reason`` ``NO_PARTICLE_DATA`` when the model wrote no particles.</span>
+<span class="sd">        ``reason`` ``NO_PARTICLE_DATA`` when the model wrote no particles</span>
+<span class="sd">        (``NO_CONCENTRATION_DATA`` for a concentration result).</span>
 <span class="sd">        :class:`~runtraj.exceptions.MeteorologyError` when the met files are</span>
 <span class="sd">        missing.</span>
 <span class="sd">    """</span>
@@ -698,16 +700,16 @@
             <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="n">log</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">log</span>
-        <span class="n">output</span><span class="o">.</span><span class="n">write_particles</span><span class="p">(</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">write_result</span><span class="p">(</span>
             <span class="n">sim</span><span class="o">.</span><span class="n">variant</span><span class="p">,</span>
             <span class="n">sim</span><span class="o">.</span><span class="n">release</span><span class="p">,</span>
-            <span class="n">result</span><span class="o">.</span><span class="n">particles</span><span class="p">,</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">result</span><span class="p">,</span>
             <span class="n">result</span><span class="o">.</span><span class="n">met_files</span><span class="p">,</span>
             <span class="n">sim</span><span class="o">.</span><span class="n">realization</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="n">succeeded</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="n">ended</span> <span class="o">=</span> <span class="kc">True</span>
-        <span class="k">return</span> <span class="n">result</span><span class="o">.</span><span class="n">particles</span>
+        <span class="k">return</span> <span class="n">result</span><span class="o">.</span><span class="n">result</span>
     <span class="k">except</span> <span class="n">SimulationError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
         <span class="n">log</span> <span class="o">=</span> <span class="n">error</span><span class="o">.</span><span class="n">log</span>
         <span class="n">ended</span> <span class="o">=</span> <span class="kc">True</span>
@@ -724,7 +726,8 @@
             <span class="k">if</span> <span class="p">(</span><span class="n">keep_workdir</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">succeeded</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">any</span><span class="p">(</span><span class="n">workdir</span><span class="o">.</span><span class="n">iterdir</span><span class="p">()):</span>
                 <span class="c1"># A failed run's particle files can be large, and the</span>
                 <span class="c1"># model's inputs and logs say why it failed.</span>
-                <span class="n">leave_out</span> <span class="o">=</span> <span class="p">()</span> <span class="k">if</span> <span class="n">keep_workdir</span> <span class="k">else</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"particle_files"</span><span class="p">,</span> <span class="p">())</span>
+                <span class="n">files</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"result_files"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+                <span class="n">leave_out</span> <span class="o">=</span> <span class="n">files</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">transport</span><span class="p">)</span> <span class="k">if</span> <span class="n">files</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">keep_workdir</span> <span class="k">else</span> <span class="p">()</span>
                 <span class="n">output</span><span class="o">.</span><span class="n">keep_workdir</span><span class="p">(</span>
                     <span class="n">sim</span><span class="o">.</span><span class="n">variant</span><span class="p">,</span> <span class="n">rid</span><span class="p">,</span> <span class="n">workdir</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">realization</span><span class="p">,</span> <span class="n">leave_out</span><span class="o">=</span><span class="n">leave_out</span>
                 <span class="p">)</span>
@@ -764,7 +767,7 @@
             <span class="n">path</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="n">missing_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">run_particles_batch</span><span class="p">(</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">run_result_batch</span><span class="p">(</span>
     <span class="n">sims</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Simulation</span><span class="p">],</span> <span class="o">*</span><span class="p">,</span> <span class="n">timeout</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">],</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
 <span class="w">    </span><span class="sd">"""</span>
@@ -801,7 +804,7 @@
             <span class="c1"># error keeps the started line unless the error carries a log.</span>
             <span class="k">if</span> <span class="n">log</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="n">SimulationError</span><span class="p">):</span>
                 <span class="n">_log_end</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="n">log</span><span class="p">)</span>
-            <span class="n">failed</span><span class="p">[</span><span class="n">sim</span><span class="o">.</span><span class="n">release</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">_failed</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="s2">"particles"</span><span class="p">,</span> <span class="n">error</span><span class="p">)</span>
+            <span class="n">failed</span><span class="p">[</span><span class="n">sim</span><span class="o">.</span><span class="n">release</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">_failed</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">variant</span><span class="o">.</span><span class="n">result</span><span class="p">,</span> <span class="n">error</span><span class="p">)</span>
         <span class="k">return</span> <span class="p">{},</span> <span class="n">failed</span>
     <span class="n">written</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="n">failed</span> <span class="o">=</span> <span class="p">{}</span>
@@ -810,17 +813,17 @@
         <span class="n">result</span> <span class="o">=</span> <span class="n">results</span><span class="p">[</span><span class="n">rid</span><span class="p">]</span>
         <span class="n">_log_end</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">log</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">SimulationError</span><span class="p">):</span>
-            <span class="n">failed</span><span class="p">[</span><span class="n">rid</span><span class="p">]</span> <span class="o">=</span> <span class="n">_failed</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="s2">"particles"</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
+            <span class="n">failed</span><span class="p">[</span><span class="n">rid</span><span class="p">]</span> <span class="o">=</span> <span class="n">_failed</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">variant</span><span class="o">.</span><span class="n">result</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
             <span class="k">continue</span>
-        <span class="n">sim</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">write_particles</span><span class="p">(</span>
+        <span class="n">sim</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">write_result</span><span class="p">(</span>
             <span class="n">sim</span><span class="o">.</span><span class="n">variant</span><span class="p">,</span>
             <span class="n">sim</span><span class="o">.</span><span class="n">release</span><span class="p">,</span>
-            <span class="n">result</span><span class="o">.</span><span class="n">particles</span><span class="p">,</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">result</span><span class="p">,</span>
             <span class="n">result</span><span class="o">.</span><span class="n">met_files</span><span class="p">,</span>
             <span class="n">sim</span><span class="o">.</span><span class="n">realization</span><span class="p">,</span>
         <span class="p">)</span>
-        <span class="n">_succeeded</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="s2">"particles"</span><span class="p">)</span>
-        <span class="n">written</span><span class="p">[</span><span class="n">rid</span><span class="p">]</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">particles</span>
+        <span class="n">_succeeded</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">variant</span><span class="o">.</span><span class="n">result</span><span class="p">)</span>
+        <span class="n">written</span><span class="p">[</span><span class="n">rid</span><span class="p">]</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">result</span>
     <span class="k">return</span> <span class="n">written</span><span class="p">,</span> <span class="n">failed</span>
 
 
@@ -1049,7 +1052,7 @@
     <span class="n">groups</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">variant</span> <span class="ow">in</span> <span class="n">project</span><span class="o">.</span><span class="n">variants</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
         <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">variant</span><span class="o">.</span><span class="n">realization_numbers</span><span class="p">:</span>
-            <span class="n">groups</span><span class="o">.</span><span class="n">setdefault</span><span class="p">((</span><span class="n">variant</span><span class="o">.</span><span class="n">particles_hash</span><span class="p">,</span> <span class="n">k</span><span class="p">),</span> <span class="p">[])</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">groups</span><span class="o">.</span><span class="n">setdefault</span><span class="p">((</span><span class="n">variant</span><span class="o">.</span><span class="n">result_hash</span><span class="p">,</span> <span class="n">k</span><span class="p">),</span> <span class="p">[])</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">groups</span>
 
 
@@ -1071,7 +1074,7 @@
 
 <span class="sd">    For each group of variants that share particles, the releases whose</span>
 <span class="sd">    particles are missing (all of them, without *skip_existing*) run in one</span>
-<span class="sd">    call (:func:`run_particles_batch`); then each variant's stages run</span>
+<span class="sd">    call (:func:`run_result_batch`); then each variant's stages run</span>
 <span class="sd">    per release. Returns the failures by release id.</span>
 <span class="sd">    """</span>
     <span class="n">problems</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span><span class="n">rid</span><span class="p">:</span> <span class="p">[]</span> <span class="k">for</span> <span class="n">rid</span> <span class="ow">in</span> <span class="n">release_ids</span><span class="p">}</span>
@@ -1079,10 +1082,10 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="n">_is_batched</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">names</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
             <span class="k">continue</span>
         <span class="n">firsts</span> <span class="o">=</span> <span class="p">[</span><span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">rid</span><span class="p">,</span> <span class="n">names</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">rid</span> <span class="ow">in</span> <span class="n">release_ids</span><span class="p">]</span>
-        <span class="n">todo</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">firsts</span> <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">skip_existing</span> <span class="ow">and</span> <span class="n">s</span><span class="o">.</span><span class="n">has_particles</span><span class="p">)]</span>
+        <span class="n">todo</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">firsts</span> <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">skip_existing</span> <span class="ow">and</span> <span class="n">s</span><span class="o">.</span><span class="n">has_result</span><span class="p">)]</span>
         <span class="n">written</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="k">if</span> <span class="n">todo</span><span class="p">:</span>
-            <span class="n">written</span><span class="p">,</span> <span class="n">failed</span> <span class="o">=</span> <span class="n">run_particles_batch</span><span class="p">(</span><span class="n">todo</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">execution</span><span class="o">.</span><span class="n">timeout</span><span class="p">)</span>
+            <span class="n">written</span><span class="p">,</span> <span class="n">failed</span> <span class="o">=</span> <span class="n">run_result_batch</span><span class="p">(</span><span class="n">todo</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">execution</span><span class="o">.</span><span class="n">timeout</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">rid</span><span class="p">,</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">failed</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
                 <span class="n">problems</span><span class="p">[</span><span class="n">rid</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
         <span class="n">ran</span> <span class="o">=</span> <span class="p">{</span><span class="n">s</span><span class="o">.</span><span class="n">release</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">todo</span><span class="p">}</span>
@@ -1118,19 +1121,22 @@
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""Run the simulations of one release that share particles: the transport model at most once, then each variant's stages."""</span>
     <span class="n">first</span> <span class="o">=</span> <span class="n">sims</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">made</span> <span class="o">=</span> <span class="n">first</span><span class="o">.</span><span class="n">variant</span><span class="o">.</span><span class="n">result</span>
     <span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="n">rerun</span> <span class="o">=</span> <span class="ow">not</span> <span class="p">(</span><span class="n">skip_existing</span> <span class="ow">and</span> <span class="n">first</span><span class="o">.</span><span class="n">has_particles</span><span class="p">)</span>
+    <span class="n">rerun</span> <span class="o">=</span> <span class="ow">not</span> <span class="p">(</span><span class="n">skip_existing</span> <span class="ow">and</span> <span class="n">first</span><span class="o">.</span><span class="n">has_result</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">rerun</span><span class="p">:</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">particles</span> <span class="o">=</span> <span class="n">run_particles</span><span class="p">(</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">run_result</span><span class="p">(</span>
                 <span class="n">first</span><span class="p">,</span>
                 <span class="n">workdir</span><span class="o">=</span><span class="n">_new_workdir</span><span class="p">(</span><span class="n">compute_root</span><span class="p">,</span> <span class="n">first</span><span class="p">),</span>
                 <span class="n">keep_workdir</span><span class="o">=</span><span class="n">execution</span><span class="o">.</span><span class="n">keep_workdir</span><span class="p">,</span>
                 <span class="n">timeout</span><span class="o">=</span><span class="n">execution</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
             <span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
-            <span class="k">return</span> <span class="p">[</span><span class="n">_failed</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="s2">"particles"</span><span class="p">,</span> <span class="n">error</span><span class="p">)]</span>
-        <span class="n">_succeeded</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="s2">"particles"</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">[</span><span class="n">_failed</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="n">made</span><span class="p">,</span> <span class="n">error</span><span class="p">)]</span>
+        <span class="n">_succeeded</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="n">made</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">made</span> <span class="o">==</span> <span class="s2">"particles"</span><span class="p">:</span>
+            <span class="n">particles</span> <span class="o">=</span> <span class="n">result</span>  <span class="c1"># the stages read them in memory</span>
     <span class="k">return</span> <span class="n">run_stages</span><span class="p">(</span><span class="n">sims</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="n">remade</span><span class="o">=</span><span class="n">rerun</span><span class="p">,</span> <span class="n">skip_existing</span><span class="o">=</span><span class="n">skip_existing</span><span class="p">)</span>
 
 
@@ -1481,8 +1487,8 @@
 
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="s2">"run_particles"</span><span class="p">,</span>
-    <span class="s2">"run_particles_batch"</span><span class="p">,</span>
+    <span class="s2">"run_result"</span><span class="p">,</span>
+    <span class="s2">"run_result_batch"</span><span class="p">,</span>
     <span class="s2">"run_release"</span><span class="p">,</span>
     <span class="s2">"run_releases"</span><span class="p">,</span>
     <span class="s2">"run_stage"</span><span class="p">,</span>

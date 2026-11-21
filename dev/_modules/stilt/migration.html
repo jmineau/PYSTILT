@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=7102d287"></script>
+    <script src="../../_static/documentation_options.js?v=65171caa"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a31.dev18+gf0819f638" />
+  <meta name="docsearch:version" content="0.1.0a31.dev20+g61b2691bb" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -497,7 +497,9 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">ModelRun</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.models.hysplit</span><span class="w"> </span><span class="kn">import</span> <span class="n">read_namelist</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.models.hysplit.config</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">CONCENTRATION_ONLY_SETTINGS</span><span class="p">,</span>
     <span class="n">FIXED_SETUP</span><span class="p">,</span>
+    <span class="n">TRAJECTORY_ONLY_SETTINGS</span><span class="p">,</span>
     <span class="n">WIND_ERROR_SETTINGS</span><span class="p">,</span>
     <span class="n">ZI_ERROR_SETTINGS</span><span class="p">,</span>
     <span class="n">HysplitConfig</span><span class="p">,</span>
@@ -567,12 +569,20 @@
 <span class="sd">    :func:`stilt.migration.import_stilt_r`). Every one must be given:</span>
 <span class="sd">    none has a default, because an imported run's settings name its folder,</span>
 <span class="sd">    and a default would stand in for a value no file gave. The</span>
-<span class="sd">    ``config.yaml`` variant the import prints gives them all.</span>
+<span class="sd">    ``config.yaml`` variant the import prints gives them all, except the</span>
+<span class="sd">    settings of HYSPLIT's concentration and trajectory modes, which a</span>
+<span class="sd">    particles-mode run does not record.</span>
 <span class="sd">    """</span>
 
     <span class="c1">#: Fields left out of a run's recorded settings. ``version`` is recorded:</span>
     <span class="c1">#: it is what tells imported runs of two STILT-R versions apart.</span>
     <span class="n">UNRECORDED</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="s2">"directory"</span><span class="p">})</span>
+
+    <span class="c1">#: Settings of HYSPLIT's other modes. STILT-R ran the particles mode, whose</span>
+    <span class="c1">#: record has none of them (:meth:`HysplitConfig.settings`), so no file gives them.</span>
+    <span class="n">OTHER_MODES</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span>
+        <span class="p">{</span><span class="s2">"mode"</span><span class="p">,</span> <span class="s2">"ichem"</span><span class="p">,</span> <span class="o">*</span><span class="n">CONCENTRATION_ONLY_SETTINGS</span><span class="p">,</span> <span class="o">*</span><span class="n">TRAJECTORY_ONLY_SETTINGS</span><span class="p">}</span>
+    <span class="p">)</span>
 
     <span class="n">version</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="kc">None</span><span class="p">,</span>
@@ -588,7 +598,8 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">_every_setting_given</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Require every recorded setting: an imported run has no defaults."""</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
-            <span class="n">missing</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">model_fields</span><span class="p">)</span> <span class="o">-</span> <span class="bp">cls</span><span class="o">.</span><span class="n">UNRECORDED</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
+            <span class="n">given</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">UNRECORDED</span> <span class="o">|</span> <span class="bp">cls</span><span class="o">.</span><span class="n">OTHER_MODES</span> <span class="o">|</span> <span class="nb">set</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+            <span class="n">missing</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">model_fields</span><span class="p">)</span> <span class="o">-</span> <span class="n">given</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                     <span class="sa">f</span><span class="s2">"An imported STILT-R run gives every setting, and these are "</span>

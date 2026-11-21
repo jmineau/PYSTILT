@@ -24,7 +24,6 @@ Attributes
 
    ~HysplitModel.batched
    ~HysplitModel.needs_workdir
-   ~HysplitModel.particle_files
 
 
 
@@ -40,6 +39,8 @@ Methods
    ~HysplitModel.downloads_met
    ~HysplitModel.fetch_met
    ~HysplitModel.release_rows
+   ~HysplitModel.result
+   ~HysplitModel.result_files
    ~HysplitModel.run
    ~HysplitModel.sha256
    ~HysplitModel.version

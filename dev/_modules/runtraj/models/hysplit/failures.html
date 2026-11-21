@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../../_static/documentation_options.js?v=7102d287"></script>
+    <script src="../../../../_static/documentation_options.js?v=65171caa"></script>
     <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a31.dev18+gf0819f638" />
+  <meta name="docsearch:version" content="0.1.0a31.dev20+g61b2691bb" />
   
     
     <script src="../../../../_static/searchtools.js"></script>
@@ -470,8 +470,8 @@
 <span class="sd">    Why a HYSPLIT run failed.</span>
 
 <span class="sd">    The driver reads it from HYSPLIT's log and ``WARNING`` file when the</span>
-<span class="sd">    run ends, or knows it (a timeout, no particle output, its exit</span>
-<span class="sd">    status), and raises a</span>
+<span class="sd">    run ends, or knows it (a timeout, no particle, concentration or</span>
+<span class="sd">    trajectory output, its exit status), and raises a</span>
 <span class="sd">    :class:`~runtraj.exceptions.SimulationError` with it as ``reason``. The</span>
 <span class="sd">    worker records it with the simulation.</span>
 <span class="sd">    """</span>
@@ -479,6 +479,8 @@
     <span class="n">MET_COVERAGE</span> <span class="o">=</span> <span class="s2">"MET_COVERAGE"</span>
     <span class="n">VARYING_MET_INTERVAL</span> <span class="o">=</span> <span class="s2">"VARYING_MET_INTERVAL"</span>
     <span class="n">NO_PARTICLE_DATA</span> <span class="o">=</span> <span class="s2">"NO_PARTICLE_DATA"</span>
+    <span class="n">NO_CONCENTRATION_DATA</span> <span class="o">=</span> <span class="s2">"NO_CONCENTRATION_DATA"</span>
+    <span class="n">NO_TRAJECTORIES_DATA</span> <span class="o">=</span> <span class="s2">"NO_TRAJECTORIES_DATA"</span>
     <span class="n">FORTRAN_RUNTIME_ERROR</span> <span class="o">=</span> <span class="s2">"FORTRAN_RUNTIME_ERROR"</span>
     <span class="n">TIMEOUT</span> <span class="o">=</span> <span class="s2">"TIMEOUT"</span>
     <span class="n">PARTICLE_LIMIT</span> <span class="o">=</span> <span class="s2">"PARTICLE_LIMIT"</span>

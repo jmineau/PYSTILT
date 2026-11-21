@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=7102d287"></script>
+    <script src="../../_static/documentation_options.js?v=65171caa"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a31.dev18+gf0819f638" />
+  <meta name="docsearch:version" content="0.1.0a31.dev20+g61b2691bb" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -508,7 +508,9 @@
     <span class="n">TransportConfig</span><span class="p">,</span>
     <span class="n">get_model</span><span class="p">,</span>
 <span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.results</span><span class="w"> </span><span class="kn">import</span> <span class="n">model_result</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.stages</span><span class="w"> </span><span class="kn">import</span> <span class="n">Stage</span><span class="p">,</span> <span class="n">get_stage</span><span class="p">,</span> <span class="n">ordered</span><span class="p">,</span> <span class="n">reads</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.stages</span><span class="w"> </span><span class="kn">import</span> <span class="n">result</span> <span class="k">as</span> <span class="n">stage_result</span>
 
 <span class="c1">#: Pattern for variant and met names, which become directory names.</span>
 <span class="n">VARIANT_NAME_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"^[a-z0-9][a-z0-9-]*$"</span><span class="p">)</span>
@@ -576,7 +578,7 @@
 <span class="sd">    realization ``k`` with ``seed + k`` (:meth:`transport_for`), and its</span>
 <span class="sd">    results share one folder, a ``realization=k`` partition each.</span>
 
-<span class="sd">    Variants with equal :attr:`particles_hash` share one run of the</span>
+<span class="sd">    Variants with equal :attr:`result_hash` share one run of the</span>
 <span class="sd">    transport model per release (and realization) and differ only in what</span>
 <span class="sd">    their stages make of it. The hashes are</span>
 <span class="sd">    computed once. Change a variant with :func:`dataclasses.replace`, which</span>
@@ -729,9 +731,25 @@
         <span class="k">return</span> <span class="n">settings</span>
 
     <span class="nd">@cached_property</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">particles_hash</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Hash of :attr:`run_settings`, which finds the particles folder."""</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">result_hash</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Hash of :attr:`run_settings`, which finds the folder of the transport model's result.</span>
+
+<span class="sd">        The particles folder, or the folder of the variant's other type of</span>
+<span class="sd">        result (:attr:`result`).</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="n">settings_hash</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">run_settings</span><span class="p">)</span>
+
+    <span class="nd">@cached_property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">result</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        The type of result the variant's transport model makes, such as ``particles`` or ``concentration``.</span>
+
+<span class="sd">        The model's ``result`` with the variant's config</span>
+<span class="sd">        (:mod:`runtraj.results`), and the name of the tree of the output</span>
+<span class="sd">        directory that holds its files.</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="n">model_result</span><span class="p">(</span><span class="n">get_model</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">transport</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">stage</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Stage</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""</span>
@@ -767,22 +785,22 @@
 <span class="sd">        """</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">stages</span><span class="p">:</span>
             <span class="k">return</span> <span class="p">{}</span>  <span class="c1"># without the particles' hash, which reads the met and the build</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">stage_hashes_on</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">particles_hash</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">stage_hashes_on</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">result_hash</span><span class="p">)</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">stage_hashes_on</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">particles_hash</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">stage_hashes_on</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result_hash</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Return the hash of each stage's settings folder for particles hashed *particles_hash*.</span>
+<span class="sd">        Return the hash of each stage's settings folder for a result hashed *result_hash*.</span>
 
 <span class="sd">        :attr:`stage_hashes` for the variant's own particles. Given the hash</span>
 <span class="sd">        of a stored particles folder, it finds the stage folders made from</span>
-<span class="sd">        it where :attr:`particles_hash` cannot be computed, as on a machine</span>
+<span class="sd">        it where :attr:`result_hash` cannot be computed, as on a machine</span>
 <span class="sd">        without the model's executable.</span>
 <span class="sd">        """</span>
         <span class="n">hashes</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">stage_order</span><span class="p">:</span>
             <span class="n">read</span> <span class="o">=</span> <span class="p">{</span><span class="n">r</span><span class="p">:</span> <span class="n">hashes</span><span class="p">[</span><span class="n">r</span><span class="p">]</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">reads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stage</span><span class="p">(</span><span class="n">name</span><span class="p">))}</span>
             <span class="n">hashes</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">stage_hash</span><span class="p">(</span>
-                <span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">stage_settings</span><span class="p">[</span><span class="n">name</span><span class="p">],</span> <span class="n">particles_hash</span><span class="p">,</span> <span class="n">read</span>
+                <span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">stage_settings</span><span class="p">[</span><span class="n">name</span><span class="p">],</span> <span class="n">result_hash</span><span class="p">,</span> <span class="n">read</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">result</span>
             <span class="p">)</span>
         <span class="k">return</span> <span class="n">hashes</span>
 
@@ -1174,8 +1192,9 @@
 <span class="sd">        ------</span>
 <span class="sd">        ValueError</span>
 <span class="sd">            If a variant's transport settings are invalid for its model, its</span>
-<span class="sd">            realizations would repeat one another, or a stage's settings do</span>
-<span class="sd">            not fit the variant's model.</span>
+<span class="sd">            realizations would repeat one another, a stage's settings do</span>
+<span class="sd">            not fit the variant's model, or the variant has a stage and its</span>
+<span class="sd">            model makes a type of result the stage does not read.</span>
 <span class="sd">        """</span>
         <span class="n">start</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">directory</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">Path</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span>
         <span class="n">mets</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
@@ -1187,6 +1206,19 @@
                 <span class="n">declared</span><span class="o">.</span><span class="n">transport</span><span class="p">,</span>
                 <span class="sa">f</span><span class="s2">"Variant </span><span class="si">{</span><span class="n">group</span><span class="si">!r}</span><span class="s2"> (</span><span class="si">{</span><span class="n">declared</span><span class="o">.</span><span class="n">model</span><span class="si">}</span><span class="s2">)"</span><span class="p">,</span>
             <span class="p">)</span>
+            <span class="n">made</span> <span class="o">=</span> <span class="n">model_result</span><span class="p">(</span><span class="n">get_model</span><span class="p">(</span><span class="n">declared</span><span class="o">.</span><span class="n">model</span><span class="p">),</span> <span class="n">transport</span><span class="p">)</span>
+            <span class="n">unread</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="n">name</span><span class="p">:</span> <span class="n">stage_result</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_stages</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">stage</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">declared</span><span class="o">.</span><span class="n">stages</span>
+            <span class="p">}</span>
+            <span class="n">unread</span> <span class="o">=</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="n">r</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">unread</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">r</span> <span class="o">!=</span> <span class="n">made</span><span class="p">}</span>
+            <span class="k">if</span> <span class="n">unread</span><span class="p">:</span>
+                <span class="n">names</span> <span class="o">=</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">unread</span><span class="p">)</span>
+                <span class="n">needs</span> <span class="o">=</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2"> reads </span><span class="si">{</span><span class="n">r</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">unread</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"Variant </span><span class="si">{</span><span class="n">group</span><span class="si">!r}</span><span class="s2"> makes </span><span class="si">{</span><span class="n">made</span><span class="si">}</span><span class="s2">, and its stages cannot "</span>
+                    <span class="sa">f</span><span class="s2">"read it (</span><span class="si">{</span><span class="n">needs</span><span class="si">}</span><span class="s2">). Give the variant </span><span class="si">{</span><span class="n">names</span><span class="si">}</span><span class="s2">: null under "</span>
+                    <span class="s2">"stages to leave them out of it."</span>
+                <span class="p">)</span>
             <span class="n">stages</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
             <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">config</span> <span class="ow">in</span> <span class="n">declared</span><span class="o">.</span><span class="n">stages</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
                 <span class="n">stage</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stages</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">stage</span>

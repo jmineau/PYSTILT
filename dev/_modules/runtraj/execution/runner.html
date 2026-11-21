@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=7102d287"></script>
+    <script src="../../../_static/documentation_options.js?v=65171caa"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a31.dev18+gf0819f638" />
+  <meta name="docsearch:version" content="0.1.0a31.dev20+g61b2691bb" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -488,6 +488,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">runtraj._paths</span><span class="w"> </span><span class="kn">import</span> <span class="n">absolute</span><span class="p">,</span> <span class="n">write_parquet</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">runtraj._transient</span><span class="w"> </span><span class="kn">import</span> <span class="n">is_transient</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.execution.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExecutionConfig</span><span class="p">,</span> <span class="n">FetchConfig</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.execution.inputs</span><span class="w"> </span><span class="kn">import</span> <span class="n">lock</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.fetch</span><span class="w"> </span><span class="kn">import</span> <span class="n">downloads</span><span class="p">,</span> <span class="n">fetch_project</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
@@ -671,7 +672,9 @@
     <span class="k">return</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">unrun</span><span class="o">.</span><span class="n">empty</span> <span class="k">else</span> <span class="n">unrun</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_fetch_here</span><span class="p">(</span><span class="n">project</span><span class="p">:</span> <span class="n">Project</span><span class="p">,</span> <span class="n">unrun</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_fetch_here</span><span class="p">(</span>
+    <span class="n">project</span><span class="p">:</span> <span class="n">Project</span><span class="p">,</span> <span class="n">unrun</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">setting</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"execution.local.fetch"</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Get the met files of the *unrun* simulations in this process, before a local run's workers start.</span>
 
@@ -680,7 +683,7 @@
 <span class="sd">    logged: each run then tries again, and fails as it would have without</span>
 <span class="sd">    the fetch. Any other error is raised.</span>
 <span class="sd">    """</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Getting the met files first (execution.local.fetch)."</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Getting the met files first (</span><span class="si">%s</span><span class="s2">)."</span><span class="p">,</span> <span class="n">setting</span><span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">files</span> <span class="o">=</span> <span class="n">fetch_project</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">unrun</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
@@ -695,6 +698,47 @@
             <span class="nb">len</span><span class="p">(</span><span class="n">problems</span><span class="p">),</span>
             <span class="n">problems</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
         <span class="p">)</span>
+
+
+<span class="c1">#: The lock a task holds where the inputs are while it gets the met files (:func:`fetch_shared`).</span>
+<span class="n">FETCH_LOCK</span> <span class="o">=</span> <span class="s2">"fetch"</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">fetch_shared</span><span class="p">(</span><span class="n">project</span><span class="p">:</span> <span class="n">Project</span><span class="p">,</span> <span class="n">location</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Get the met files of every unfinished simulation, one task at a time, before this task's share runs.</span>
+
+<span class="sd">    For the tasks of one Job, such as pods that share a met directory on a</span>
+<span class="sd">    volume (``runtraj run --task I/N --fetch``, which ``runtraj submit``</span>
+<span class="sd">    gives each pod with ``execution.kubernetes.fetch``). Each holds the</span>
+<span class="sd">    lock :data:`FETCH_LOCK` at *location* while it fetches</span>
+<span class="sd">    (:func:`runtraj.execution.inputs.lock`), so the first downloads the</span>
+<span class="sd">    files and the others, waiting their turn, find them and download</span>
+<span class="sd">    nothing. Nothing is locked when no met downloads. As for a local run's</span>
+<span class="sd">    fetch, a file that could not be had, or a download a retry may get</span>
+<span class="sd">    past, is only logged: each run then tries again.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    project : Project</span>
+<span class="sd">        The project, opened here.</span>
+<span class="sd">    location : str</span>
+<span class="sd">        Where every task reads the project's inputs: the URL they were</span>
+<span class="sd">        copied to, or the project folder on a shared volume.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    OSError</span>
+<span class="sd">        If the lock cannot be made, such as a bucket that cannot be reached.</span>
+<span class="sd">    """</span>
+    <span class="n">sims</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulations</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">downloads</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">sims</span><span class="p">[</span><span class="s2">"variant"</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">()):</span>
+        <span class="k">return</span>
+    <span class="k">with</span> <span class="n">lock</span><span class="p">(</span><span class="n">location</span><span class="p">,</span> <span class="n">FETCH_LOCK</span><span class="p">):</span>
+        <span class="c1"># Listed under the lock: what the task before got is not fetched again.</span>
+        <span class="n">unrun</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">_unrun</span><span class="p">(</span><span class="n">sims</span><span class="p">,</span> <span class="n">skip_existing</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">unrun</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+            <span class="n">_fetch_here</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">unrun</span><span class="p">,</span> <span class="s2">"execution.kubernetes.fetch"</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_status</span><span class="p">(</span><span class="n">project</span><span class="p">:</span> <span class="n">Project</span><span class="p">,</span> <span class="n">release_ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
@@ -1413,10 +1457,12 @@
 
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">"FETCH_LOCK"</span><span class="p">,</span>
     <span class="s2">"MAX_REQUEUES"</span><span class="p">,</span>
     <span class="s2">"NOTICE_SECONDS"</span><span class="p">,</span>
     <span class="s2">"RELIST_SECONDS"</span><span class="p">,</span>
     <span class="s2">"fetch_script"</span><span class="p">,</span>
+    <span class="s2">"fetch_shared"</span><span class="p">,</span>
     <span class="s2">"job_script"</span><span class="p">,</span>
     <span class="s2">"resolve_compute_root"</span><span class="p">,</span>
     <span class="s2">"run"</span><span class="p">,</span>

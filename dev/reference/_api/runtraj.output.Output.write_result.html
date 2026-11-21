@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>runtraj.execution.worker.run_particles &#8212; PYSTILT dev</title>
+    <title>runtraj.output.Output.write_result &#8212; PYSTILT dev</title>
   
   
   
@@ -42,13 +42,13 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=7102d287"></script>
+    <script src="../../_static/documentation_options.js?v=65171caa"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../_static/copybutton.js?v=f281be69"></script>
     <script src="../../_static/design-tabs.js?v=f930bc37"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'reference/_api/runtraj.execution.worker.run_particles';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'reference/_api/runtraj.output.Output.write_result';</script>
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
@@ -59,13 +59,13 @@
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="runtraj.execution.worker.run_stage" href="runtraj.execution.worker.run_stage.html" />
-    <link rel="prev" title="runtraj.execution.runner.resolve_compute_root" href="runtraj.execution.runner.resolve_compute_root.html" />
+    <link rel="next" title="runtraj.output.completed" href="runtraj.output.completed.html" />
+    <link rel="prev" title="runtraj.output.Output.write_particles" href="runtraj.output.Output.write_particles.html" />
   
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a31.dev18+gf0819f638" />
+  <meta name="docsearch:version" content="0.1.0a31.dev20+g61b2691bb" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -74,7 +74,7 @@
   
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="PYSTILT">
-  <meta property="og:title" content="runtraj.execution.worker.run_particles">
+  <meta property="og:title" content="runtraj.output.Output.write_result">
   <meta property="og:description" content="A Python implementation of the STILT Lagrangian atmospheric transport model.">
 
   </head>
@@ -624,14 +624,14 @@
 </details></li>
 </ul>
 </details></li>
-<li class="toctree-l1 current active has-children"><a class="reference internal" href="../execution.html">Execution</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../execution.html">Execution</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="runtraj.execution.run.html">runtraj.execution.run</a></li>
 <li class="toctree-l2"><a class="reference internal" href="runtraj.execution.submit.html">runtraj.execution.submit</a></li>
 <li class="toctree-l2"><a class="reference internal" href="runtraj.execution.pending.html">runtraj.execution.pending</a></li>
 <li class="toctree-l2"><a class="reference internal" href="runtraj.execution.wait.html">runtraj.execution.wait</a></li>
 <li class="toctree-l2"><a class="reference internal" href="runtraj.execution.task_share.html">runtraj.execution.task_share</a></li>
 <li class="toctree-l2"><a class="reference internal" href="runtraj.execution.runner.resolve_compute_root.html">runtraj.execution.runner.resolve_compute_root</a></li>
-<li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#">runtraj.execution.worker.run_particles</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtraj.execution.worker.run_result.html">runtraj.execution.worker.run_result</a></li>
 <li class="toctree-l2"><a class="reference internal" href="runtraj.execution.worker.run_stage.html">runtraj.execution.worker.run_stage</a></li>
 <li class="toctree-l2"><a class="reference internal" href="runtraj.execution.worker.run_stages.html">runtraj.execution.worker.run_stages</a></li>
 <li class="toctree-l2"><a class="reference internal" href="runtraj.execution.worker.run_release.html">runtraj.execution.worker.run_release</a></li>
@@ -664,13 +664,14 @@
 <li class="toctree-l2 has-children"><a class="reference internal" href="runtraj.models.hysplit.HysplitModel.html">runtraj.models.hysplit.HysplitModel</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitModel.batched.html">runtraj.models.hysplit.HysplitModel.batched</a></li>
 <li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitModel.needs_workdir.html">runtraj.models.hysplit.HysplitModel.needs_workdir</a></li>
-<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitModel.particle_files.html">runtraj.models.hysplit.HysplitModel.particle_files</a></li>
 <li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitModel.check_met.html">runtraj.models.hysplit.HysplitModel.check_met</a></li>
 <li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitModel.check_releases.html">runtraj.models.hysplit.HysplitModel.check_releases</a></li>
 <li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitModel.data_files.html">runtraj.models.hysplit.HysplitModel.data_files</a></li>
 <li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitModel.downloads_met.html">runtraj.models.hysplit.HysplitModel.downloads_met</a></li>
 <li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitModel.fetch_met.html">runtraj.models.hysplit.HysplitModel.fetch_met</a></li>
 <li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitModel.release_rows.html">runtraj.models.hysplit.HysplitModel.release_rows</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitModel.result.html">runtraj.models.hysplit.HysplitModel.result</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitModel.result_files.html">runtraj.models.hysplit.HysplitModel.result_files</a></li>
 <li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitModel.run.html">runtraj.models.hysplit.HysplitModel.run</a></li>
 <li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitModel.sha256.html">runtraj.models.hysplit.HysplitModel.sha256</a></li>
 <li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitModel.version.html">runtraj.models.hysplit.HysplitModel.version</a></li>
@@ -684,7 +685,10 @@
 <li class="toctree-l3"><a class="reference internal" href="stilt.migration.StiltRModel.version.html">stilt.migration.StiltRModel.version</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.migration.StiltRConfig.html">stilt.migration.StiltRConfig</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.migration.StiltRConfig.html">stilt.migration.StiltRConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="stilt.migration.StiltRConfig.OTHER_MODES.html">stilt.migration.StiltRConfig.OTHER_MODES</a></li>
+</ul>
+</details></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.migration.StiltRMetConfig.html">stilt.migration.StiltRMetConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="stilt.migration.StiltRMetConfig.settings.html">stilt.migration.StiltRMetConfig.settings</a></li>
 </ul>
@@ -771,8 +775,8 @@
 <li class="toctree-l2"><a class="reference internal" href="stilt.observations.modelled_column.html">stilt.observations.modelled_column</a></li>
 </ul>
 </details></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../project.html">Project And Output</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2 has-children"><a class="reference internal" href="runtraj.output.Output.html">runtraj.output.Output</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="../project.html">Project And Output</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2 current active has-children"><a class="reference internal" href="runtraj.output.Output.html">runtraj.output.Output</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="runtraj.output.Output.clear_failure.html">runtraj.output.Output.clear_failure</a></li>
 <li class="toctree-l3"><a class="reference internal" href="runtraj.output.Output.complete.html">runtraj.output.Output.complete</a></li>
 <li class="toctree-l3"><a class="reference internal" href="runtraj.output.Output.failure.html">runtraj.output.Output.failure</a></li>
@@ -793,6 +797,7 @@
 <li class="toctree-l3"><a class="reference internal" href="runtraj.output.Output.table.html">runtraj.output.Output.table</a></li>
 <li class="toctree-l3"><a class="reference internal" href="runtraj.output.Output.write_log.html">runtraj.output.Output.write_log</a></li>
 <li class="toctree-l3"><a class="reference internal" href="runtraj.output.Output.write_particles.html">runtraj.output.Output.write_particles</a></li>
+<li class="toctree-l3 current active"><a aria-current="page" class="current reference internal" href="#">runtraj.output.Output.write_result</a></li>
 </ul>
 </details></li>
 <li class="toctree-l2"><a class="reference internal" href="runtraj.output.completed.html">runtraj.output.completed</a></li>
@@ -809,6 +814,7 @@
 <li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitConfig.hourly_ziscale.html">runtraj.models.hysplit.HysplitConfig.hourly_ziscale</a></li>
 <li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitConfig.maxpar_for.html">runtraj.models.hysplit.HysplitConfig.maxpar_for</a></li>
 <li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitConfig.realizations.html">runtraj.models.hysplit.HysplitConfig.realizations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitConfig.settings.html">runtraj.models.hysplit.HysplitConfig.settings</a></li>
 </ul>
 </details></li>
 <li class="toctree-l2"><a class="reference internal" href="runtraj.models.hysplit.find_hycs_std.html">runtraj.models.hysplit.find_hycs_std</a></li>
@@ -873,9 +879,12 @@
     <li class="breadcrumb-item"><a href="../index.html" class="nav-link">API Reference</a></li>
     
     
-    <li class="breadcrumb-item"><a href="../execution.html" class="nav-link">Execution</a></li>
+    <li class="breadcrumb-item"><a href="../project.html" class="nav-link">Project And Output</a></li>
     
-    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">runtraj.execution.worker.run_particles</span></li>
+    
+    <li class="breadcrumb-item"><a href="runtraj.output.Output.html" class="nav-link">runtraj.output.Output</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">runtraj.output.Output.write_result</span></li>
   </ul>
 </nav>
 </div>
@@ -892,39 +901,31 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="runtraj-execution-worker-run-particles">
-<h1>runtraj.execution.worker.run_particles<a class="headerlink" href="#runtraj-execution-worker-run-particles" title="Link to this heading">#</a></h1>
-<dl class="py function">
-<dt class="sig sig-object py" id="runtraj.execution.worker.run_particles">
-<span class="sig-prename descclassname"><span class="pre">runtraj.execution.worker.</span></span><span class="sig-name descname"><span class="pre">run_particles</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sim</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">workdir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keep_workdir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/runtraj/execution/worker.html#run_particles"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#runtraj.execution.worker.run_particles" title="Link to this definition">#</a></dt>
-<dd><p>Run the transport model for a simulation and write its particles to the output directory.</p>
-<p>The transport model the variant names runs in <em>workdir</em>
-(<a class="reference internal" href="runtraj.models.run_model.html#runtraj.models.run_model" title="runtraj.models.run_model"><code class="xref py py-func docutils literal notranslate"><span class="pre">runtraj.models.run_model()</span></code></a>), with the variant’s met. Its log is written to the output
-directory whether the run succeeds or fails. The working directory is
-then removed, unless the run failed or <em>keep_workdir</em> is set, in which
-case it is copied under the output directory’s <code class="docutils literal notranslate"><span class="pre">scratch/</span></code> first. A
-failed run’s copy leaves out the model’s <code class="docutils literal notranslate"><span class="pre">particle_files</span></code>.</p>
+  <section id="runtraj-output-output-write-result">
+<h1>runtraj.output.Output.write_result<a class="headerlink" href="#runtraj-output-output-write-result" title="Link to this heading">#</a></h1>
+<dl class="py method">
+<dt class="sig sig-object py" id="runtraj.output.Output.write_result">
+<span class="sig-prename descclassname"><span class="pre">Output.</span></span><span class="sig-name descname"><span class="pre">write_result</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">variant</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">release</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">result</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">met_files</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">realization</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/runtraj/output.html#Output.write_result"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#runtraj.output.Output.write_result" title="Link to this definition">#</a></dt>
+<dd><p>Write a release’s result of the type <em>variant</em> makes (<code class="xref py py-attr docutils literal notranslate"><span class="pre">runtraj.config.Variant.result</span></code>).</p>
+<p>Particles as <a class="reference internal" href="runtraj.output.Output.write_particles.html#runtraj.output.Output.write_particles" title="runtraj.output.Output.write_particles"><code class="xref py py-meth docutils literal notranslate"><span class="pre">write_particles()</span></code></a> writes them; another type as
+the type writes its file (<code class="xref py py-mod docutils literal notranslate"><span class="pre">runtraj.results</span></code>), with the same
+record of the run’s settings and the same stamp.</p>
 <dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If <em>result</em> is not one of the type, or holds nothing: its file
+    makes the simulation complete.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a> | <code class="xref py py-class docutils literal notranslate"><span class="pre">UPath</span></code></span></p>
+</dd>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>sim</strong> (<span class="sphinx_autodoc_typehints-type">runtraj.simulation.Simulation</span>) – What to run.</p></li>
-<li><p><strong>workdir</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a></span>) – Directory to run in, made here. Anything in it is removed first,
-so each run needs its own.</p></li>
-<li><p><strong>keep_workdir</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a></span>) – Keep the working directory of a successful run too.</p></li>
-<li><p><strong>timeout</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a> | <span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code></a></span></span>) – Time limit for the transport model run, in seconds.</p></li>
+<li><p><strong>variant</strong> (<em>Variant</em>)</p></li>
+<li><p><strong>release</strong> (<a class="reference internal" href="stilt.Release.html#stilt.Release" title="stilt.Release"><em>Release</em></a>)</p></li>
+<li><p><strong>result</strong> (<em>Any</em>)</p></li>
+<li><p><strong>met_files</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><em>list</em></a><em>[</em><em>Path</em><em>]</em>)</p></li>
+<li><p><strong>realization</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a><em> | </em><em>None</em>)</p></li>
 </ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The particles, also written to the output directory.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.1)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a></span></p>
-</dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference internal" href="runtraj.exceptions.SimulationError.html#runtraj.exceptions.SimulationError" title="runtraj.exceptions.SimulationError"><strong>SimulationError</strong></a> – As the transport model raises it (with a <code class="docutils literal notranslate"><span class="pre">reason</span></code>), or with
-    <code class="docutils literal notranslate"><span class="pre">reason</span></code> <code class="docutils literal notranslate"><span class="pre">NO_PARTICLE_DATA</span></code> when the model wrote no particles.
-    <a class="reference internal" href="runtraj.exceptions.MeteorologyError.html#runtraj.exceptions.MeteorologyError" title="runtraj.exceptions.MeteorologyError"><code class="xref py py-class docutils literal notranslate"><span class="pre">MeteorologyError</span></code></a> when the met files are
-    missing.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -942,20 +943,20 @@ so each run needs its own.</p></li>
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="runtraj.execution.runner.resolve_compute_root.html"
+       href="runtraj.output.Output.write_particles.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">runtraj.execution.runner.resolve_compute_root</p>
+        <p class="prev-next-title">runtraj.output.Output.write_particles</p>
       </div>
     </a>
     <a class="right-next"
-       href="runtraj.execution.worker.run_stage.html"
+       href="runtraj.output.completed.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">runtraj.execution.worker.run_stage</p>
+        <p class="prev-next-title">runtraj.output.completed</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -978,14 +979,14 @@ so each run needs its own.</p></li>
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#runtraj.execution.worker.run_particles"><code class="docutils literal notranslate"><span class="pre">run_particles()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#runtraj.output.Output.write_result"><code class="docutils literal notranslate"><span class="pre">Output.write_result()</span></code></a></li>
 </ul>
   </nav></div>
 
   <div class="sidebar-secondary-item">
 
   <div class="tocsection sourcelink">
-    <a href="../../_sources/reference/_api/runtraj.execution.worker.run_particles.rst.txt">
+    <a href="../../_sources/reference/_api/runtraj.output.Output.write_result.rst.txt">
       <i class="fa-solid fa-file-lines"></i> Show Source
     </a>
   </div>

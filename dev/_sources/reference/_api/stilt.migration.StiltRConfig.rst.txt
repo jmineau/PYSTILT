@@ -18,6 +18,15 @@ Parameters
 
 
 
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+   :nosignatures:
+
+   ~StiltRConfig.OTHER_MODES
+
 
 
 

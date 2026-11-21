@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=7102d287"></script>
+    <script src="../../../_static/documentation_options.js?v=65171caa"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a31.dev18+gf0819f638" />
+  <meta name="docsearch:version" content="0.1.0a31.dev20+g61b2691bb" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -786,6 +786,17 @@
             <span class="s2">"lets it run as long as its simulations take."</span>
         <span class="p">),</span>
     <span class="p">)</span>
+    <span class="n">fetch</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="kc">False</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Get the met files once, before the pods run, for a met with "</span>
+            <span class="s2">"``download`` whose directory is on a volume every pod mounts: "</span>
+            <span class="s2">"each pod first gets the files of every unfinished simulation, "</span>
+            <span class="s2">"one pod at a time (a lock where the inputs are), so the first "</span>
+            <span class="s2">"downloads them and the others find them. Leave it ``false`` "</span>
+            <span class="s2">"when each pod has its own met directory."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
 
     <span class="nd">@field_validator</span><span class="p">(</span><span class="s2">"memory"</span><span class="p">)</span>
     <span class="nd">@classmethod</span>
@@ -976,11 +987,11 @@
 <span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Whether the met files are got first: ``fetch`` of the block ``backend`` names.</span>
 
-<span class="sd">        A Kubernetes Job has no fetch of its own; run ``runtraj fetch``</span>
-<span class="sd">        before it (:ref:`fetch-once`).</span>
+<span class="sd">        On Kubernetes each pod gets them before its share runs, one pod at a</span>
+<span class="sd">        time (:ref:`fetch-once`).</span>
 <span class="sd">        """</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">backend</span> <span class="o">==</span> <span class="s2">"kubernetes"</span><span class="p">:</span>
-            <span class="k">return</span> <span class="kc">False</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">kubernetes</span><span class="o">.</span><span class="n">fetch</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">local</span><span class="o">.</span><span class="n">fetch</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">backend</span> <span class="o">==</span> <span class="s2">"local"</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">slurm</span><span class="o">.</span><span class="n">fetch</span></div>
 
 
