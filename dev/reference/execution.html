@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=3bdc3ab7"></script>
+    <script src="../_static/documentation_options.js?v=83d1397b"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a31.dev14+g7eed15fb5" />
+  <meta name="docsearch:version" content="0.1.0a31.dev16+ge750675fc" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -664,10 +664,13 @@
 <li class="toctree-l2 has-children"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitModel.html">runtraj.models.hysplit.HysplitModel</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitModel.batched.html">runtraj.models.hysplit.HysplitModel.batched</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitModel.needs_workdir.html">runtraj.models.hysplit.HysplitModel.needs_workdir</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitModel.particle_files.html">runtraj.models.hysplit.HysplitModel.particle_files</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitModel.check_met.html">runtraj.models.hysplit.HysplitModel.check_met</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitModel.check_releases.html">runtraj.models.hysplit.HysplitModel.check_releases</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitModel.data_files.html">runtraj.models.hysplit.HysplitModel.data_files</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitModel.downloads_met.html">runtraj.models.hysplit.HysplitModel.downloads_met</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitModel.fetch_met.html">runtraj.models.hysplit.HysplitModel.fetch_met</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitModel.release_rows.html">runtraj.models.hysplit.HysplitModel.release_rows</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitModel.run.html">runtraj.models.hysplit.HysplitModel.run</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitModel.sha256.html">runtraj.models.hysplit.HysplitModel.sha256</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitModel.version.html">runtraj.models.hysplit.HysplitModel.version</a></li>
@@ -931,7 +934,7 @@ Slurm job array by its id.</p>
 <td><p>Run every simulation of a project that has not finished, and wait for it.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="_api/runtraj.execution.submit.html#runtraj.execution.submit" title="runtraj.execution.submit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">runtraj.execution.submit</span></code></a></p></td>
-<td><p>Submit every simulation of a project that has not finished to Slurm.</p></td>
+<td><p>Submit every simulation of a project that has not finished to Slurm or Kubernetes.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="_api/runtraj.execution.pending.html#runtraj.execution.pending" title="runtraj.execution.pending"><code class="xref py py-obj docutils literal notranslate"><span class="pre">runtraj.execution.pending</span></code></a></p></td>
 <td><p>Return the ids of the releases a run would run, each once, in project order.</p></td>

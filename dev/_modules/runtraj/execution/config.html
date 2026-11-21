@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=3bdc3ab7"></script>
+    <script src="../../../_static/documentation_options.js?v=83d1397b"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a31.dev14+g7eed15fb5" />
+  <meta name="docsearch:version" content="0.1.0a31.dev16+ge750675fc" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -458,6 +458,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">difflib</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">Self</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
@@ -660,6 +661,187 @@
         <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_extra</span> <span class="ow">or</span> <span class="p">{})</span>
 
 
+<span class="c1">#: A Kubernetes memory quantity in its binary units: ``512Mi``, ``8Gi``, ``1.5Ti``.</span>
+<span class="n">_K8S_MEMORY</span> <span class="o">=</span> <span class="sa">r</span><span class="s2">"\d+(\.\d+)?(Ki|Mi|Gi|Ti|Pi|Ei)"</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">Volume</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    A PersistentVolumeClaim mounted in every pod: one entry of ``volumes`` in the ``kubernetes`` block.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; Volume(claim_name="hrrr-arl", mount_path="/met", read_only=True).mount_path</span>
+<span class="sd">    '/met'</span>
+<span class="sd">    """</span>
+
+    <span class="n">model_config</span> <span class="o">=</span> <span class="n">ConfigDict</span><span class="p">(</span><span class="n">extra</span><span class="o">=</span><span class="s2">"forbid"</span><span class="p">,</span> <span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">claim_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Name of the PersistentVolumeClaim."</span><span class="p">)</span>
+    <span class="n">mount_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="o">...</span><span class="p">,</span>
+        <span class="n">pattern</span><span class="o">=</span><span class="sa">r</span><span class="s2">"^/"</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Where the volume is mounted in each pod, an absolute path."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">read_only</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="kc">False</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span><span class="s2">"Mount it read-only, as for a met archive the pods only read."</span><span class="p">),</span>
+    <span class="p">)</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">KubernetesConfig</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    The Kubernetes indexed Job a project's releases run as: the ``kubernetes`` block of ``execution``.</span>
+
+<span class="sd">    The releases are split among ``completions`` tasks, each a pod that</span>
+<span class="sd">    runs ``cpus`` of them at once. The settings use Kubernetes' own names</span>
+<span class="sd">    and units. ``image`` is required: runtraj publishes no image, since an</span>
+<span class="sd">    image has to carry the transport model (HYSPLIT's ``hycs_std``) and the</span>
+<span class="sd">    stages a project names.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; config = KubernetesConfig(</span>
+<span class="sd">    ...     image="registry.example.org/runtraj-hysplit:1",</span>
+<span class="sd">    ...     completions=20,</span>
+<span class="sd">    ...     memory="8Gi",</span>
+<span class="sd">    ...     volumes=[</span>
+<span class="sd">    ...         {"claim_name": "hrrr-arl", "mount_path": "/met", "read_only": True}</span>
+<span class="sd">    ...     ],</span>
+<span class="sd">    ... )</span>
+<span class="sd">    &gt;&gt;&gt; config.completions, config.volumes[0].claim_name</span>
+<span class="sd">    (20, 'hrrr-arl')</span>
+<span class="sd">    """</span>
+
+    <span class="n">model_config</span> <span class="o">=</span> <span class="n">ConfigDict</span><span class="p">(</span><span class="n">extra</span><span class="o">=</span><span class="s2">"forbid"</span><span class="p">,</span> <span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">image</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="kc">None</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Container image of the pods, with runtraj, the transport model and "</span>
+            <span class="s2">"the project's stages. Required with ``backend: kubernetes``."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">completions</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mi">1</span><span class="p">,</span>
+        <span class="n">ge</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Number of tasks (pods to complete), which the releases are split evenly among."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">parallelism</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="kc">None</span><span class="p">,</span>
+        <span class="n">ge</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Most pods running at once. Unset runs every task at once."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">cpus</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mi">1</span><span class="p">,</span>
+        <span class="n">ge</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Releases each pod runs at once, and the CPUs each pod requests."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">memory</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="kc">None</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Memory each pod requests, and its limit, in Kubernetes' binary "</span>
+            <span class="s2">"units such as ``8Gi`` or ``512Mi``."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">namespace</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Namespace of the Job. Unset is ``kubectl``'s current one."</span>
+    <span class="p">)</span>
+    <span class="n">inputs</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="kc">None</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Bucket URL the project's inputs (``config.yaml``, ``releases.csv``, "</span>
+            <span class="s2">"``tables/``, ``sites.csv``) are copied to at submit, such as "</span>
+            <span class="s2">"``s3://bucket/projects/my_project``; each pod copies them back. "</span>
+            <span class="s2">"Unset, the pods open the project folder at the path it has here, "</span>
+            <span class="s2">"so it must be on a volume they mount at that path."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">volumes</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Volume</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"PersistentVolumeClaims mounted in every pod (:class:`Volume`), "</span>
+            <span class="s2">"such as the met archive."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">secrets</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Secrets whose keys become each pod's environment variables, such "</span>
+            <span class="s2">"as a bucket's credentials."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">service_account</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="kc">None</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Service account of the pods, on a cluster that grants bucket "</span>
+            <span class="s2">"access through one."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">active_deadline_seconds</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="kc">None</span><span class="p">,</span>
+        <span class="n">ge</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Seconds the whole Job may run before Kubernetes stops it. Unset "</span>
+            <span class="s2">"lets it run as long as its simulations take."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+
+    <span class="nd">@field_validator</span><span class="p">(</span><span class="s2">"memory"</span><span class="p">)</span>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_kubernetes_memory</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Refuse a size that is not in Kubernetes' binary units, such as Slurm's ``8G``."""</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">re</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="n">_K8S_MEMORY</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">value</span>
+        <span class="n">slurm</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="sa">r</span><span class="s2">"(\d+(\.\d+)?)\s*([KMGT])B?"</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">flags</span><span class="o">=</span><span class="n">re</span><span class="o">.</span><span class="n">I</span><span class="p">)</span>
+        <span class="n">hint</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">" Did you mean </span><span class="si">{</span><span class="n">slurm</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="si">}{</span><span class="n">slurm</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="si">}</span><span class="s2">i?"</span> <span class="k">if</span> <span class="n">slurm</span> <span class="k">else</span> <span class="s2">""</span>
+        <span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"memory </span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2"> is not a Kubernetes size such as 8Gi or 512Mi "</span>
+            <span class="sa">f</span><span class="s2">"(Kubernetes reads 8G as 8 * 1000**3 bytes and 8m as 0.008).</span><span class="si">{</span><span class="n">hint</span><span class="si">}</span><span class="s2">"</span>
+        <span class="p">)</span>
+
+    <span class="nd">@field_validator</span><span class="p">(</span><span class="s2">"inputs"</span><span class="p">)</span>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_a_whole_url</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Refuse a URL typed with one slash, such as ``s3:/bucket``."""</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">check_url</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">value</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">check_url</span><span class="p">(</span><span class="n">location</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Refuse a URL typed without its two slashes, such as ``s3:/bucket``.</span>
+
+<span class="sd">    fsspec reads ``s3:/bucket/projects/my_project`` as a path on this</span>
+<span class="sd">    machine, so copying there would make a folder ``s3:`` here and look</span>
+<span class="sd">    like it worked. A path and a whole URL pass.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If *location* starts like a URL (``s3:``, ``gs:``) with fewer than two</span>
+<span class="sd">        slashes after the colon.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; check_url("s3://bucket/projects/my_project")</span>
+<span class="sd">    &gt;&gt;&gt; check_url("s3:/bucket/projects/my_project")</span>
+<span class="sd">    Traceback (most recent call last):</span>
+<span class="sd">    ...</span>
+<span class="sd">    ValueError: 's3:/bucket/projects/my_project' is not a URL; did you mean 's3://bucket/projects/my_project'?</span>
+<span class="sd">    """</span>
+    <span class="n">match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="sa">r</span><span class="s2">"([A-Za-z][A-Za-z0-9+.-]+):(?!//)/?(.*)"</span><span class="p">,</span> <span class="n">location</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">S</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">match</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"file"</span><span class="p">:</span>
+        <span class="k">return</span>
+    <span class="n">scheme</span><span class="p">,</span> <span class="n">rest</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">groups</span><span class="p">()</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">location</span><span class="si">!r}</span><span class="s2"> is not a URL; did you mean </span><span class="si">{</span><span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">scheme</span><span class="si">}</span><span class="s1">://</span><span class="si">{</span><span class="n">rest</span><span class="si">}</span><span class="s1">'</span><span class="si">!r}</span><span class="s2">?"</span>
+    <span class="p">)</span>
+
+
 <div class="viewcode-block" id="ExecutionConfig">
 <a class="viewcode-back" href="../../../reference/_api/stilt.ExecutionConfig.html#stilt.ExecutionConfig">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">ExecutionConfig</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
@@ -670,8 +852,10 @@
 <span class="sd">    block of its name. With ``backend: local`` the releases run on this</span>
 <span class="sd">    machine as one task (:class:`LocalConfig`). With ``backend: slurm``</span>
 <span class="sd">    they are split among the tasks of one Slurm job array</span>
-<span class="sd">    (:class:`SlurmConfig`). Only the block ``backend`` names is read, so a</span>
-<span class="sd">    config can hold both and be run either way. ``timeout`` and</span>
+<span class="sd">    (:class:`SlurmConfig`), and with ``backend: kubernetes`` among the pods</span>
+<span class="sd">    of one indexed Job (:class:`KubernetesConfig`). Only the block</span>
+<span class="sd">    ``backend`` names is read, so a config can hold several and be run</span>
+<span class="sd">    either way. ``timeout`` and</span>
 <span class="sd">    ``keep_workdir`` apply wherever a run happens. None of these settings</span>
 <span class="sd">    change a result.</span>
 
@@ -688,9 +872,12 @@
 
     <span class="n">model_config</span> <span class="o">=</span> <span class="n">ConfigDict</span><span class="p">(</span><span class="n">extra</span><span class="o">=</span><span class="s2">"forbid"</span><span class="p">,</span> <span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-    <span class="n">backend</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"local"</span><span class="p">,</span> <span class="s2">"slurm"</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+    <span class="n">backend</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"local"</span><span class="p">,</span> <span class="s2">"slurm"</span><span class="p">,</span> <span class="s2">"kubernetes"</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="s2">"local"</span><span class="p">,</span>
-        <span class="n">description</span><span class="o">=</span><span class="s2">"Where to run: on this machine (``local``) or as a Slurm job array (``slurm``)."</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Where to run: on this machine (``local``), as a Slurm job array "</span>
+            <span class="s2">"(``slurm``), or as a Kubernetes indexed Job (``kubernetes``)."</span>
+        <span class="p">),</span>
     <span class="p">)</span>
     <span class="n">local</span><span class="p">:</span> <span class="n">LocalConfig</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="n">default_factory</span><span class="o">=</span><span class="n">LocalConfig</span><span class="p">,</span>
@@ -701,6 +888,13 @@
         <span class="n">description</span><span class="o">=</span><span class="p">(</span>
             <span class="s2">"The job array of a Slurm run (:class:`SlurmConfig`), and any "</span>
             <span class="s2">"other ``sbatch`` option by name. Read with ``backend: slurm``."</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">kubernetes</span><span class="p">:</span> <span class="n">KubernetesConfig</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="n">default_factory</span><span class="o">=</span><span class="n">KubernetesConfig</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"The indexed Job of a Kubernetes run (:class:`KubernetesConfig`). "</span>
+            <span class="s2">"Read with ``backend: kubernetes``."</span>
         <span class="p">),</span>
     <span class="p">)</span>
     <span class="n">timeout</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
@@ -718,7 +912,7 @@
         <span class="n">description</span><span class="o">=</span><span class="p">(</span>
             <span class="s2">"Keep every run's workdir, as the transport model left it, under "</span>
             <span class="s2">"``scratch/`` in the output directory. A failed run's is always "</span>
-            <span class="s2">"kept."</span>
+            <span class="s2">"kept, without the model's particle file unless this is set."</span>
         <span class="p">),</span>
     <span class="p">)</span>
 
@@ -732,11 +926,18 @@
                     <span class="k">continue</span>
                 <span class="n">blocks</span> <span class="o">=</span> <span class="p">[</span>
                     <span class="n">name</span>
-                    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">block</span> <span class="ow">in</span> <span class="p">((</span><span class="s2">"local"</span><span class="p">,</span> <span class="n">LocalConfig</span><span class="p">),</span> <span class="p">(</span><span class="s2">"slurm"</span><span class="p">,</span> <span class="n">SlurmConfig</span><span class="p">))</span>
+                    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">block</span> <span class="ow">in</span> <span class="p">(</span>
+                        <span class="p">(</span><span class="s2">"local"</span><span class="p">,</span> <span class="n">LocalConfig</span><span class="p">),</span>
+                        <span class="p">(</span><span class="s2">"slurm"</span><span class="p">,</span> <span class="n">SlurmConfig</span><span class="p">),</span>
+                        <span class="p">(</span><span class="s2">"kubernetes"</span><span class="p">,</span> <span class="n">KubernetesConfig</span><span class="p">),</span>
+                    <span class="p">)</span>
                     <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">block</span><span class="o">.</span><span class="n">model_fields</span>
                 <span class="p">]</span>
                 <span class="k">if</span> <span class="n">blocks</span><span class="p">:</span>
-                    <span class="n">where</span> <span class="o">=</span> <span class="s2">" or "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">"execution: </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">:"</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">blocks</span><span class="p">)</span>
+                    <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">"execution: </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">:"</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">blocks</span><span class="p">]</span>
+                    <span class="n">where</span> <span class="o">=</span> <span class="s2">" or "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                        <span class="p">[</span><span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">names</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]),</span> <span class="n">names</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">names</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span> <span class="k">else</span> <span class="n">names</span>
+                    <span class="p">)</span>
                     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                         <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">key</span><span class="si">!r}</span><span class="s2"> is a setting of a backend. Write it under </span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">"</span>
                         <span class="o">+</span> <span class="p">(</span><span class="s2">", for the backend it is for."</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">blocks</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="s2">"."</span><span class="p">)</span>
@@ -754,14 +955,32 @@
             <span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span>
 
+    <span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"after"</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_kubernetes_needs_image</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Raise when a Kubernetes run names no image."""</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">backend</span> <span class="o">==</span> <span class="s2">"kubernetes"</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">kubernetes</span><span class="o">.</span><span class="n">image</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">"execution.kubernetes.image is required with backend: kubernetes: "</span>
+                <span class="s2">"an image with runtraj, the transport model and the project's "</span>
+                <span class="s2">"stages (runtraj publishes none)."</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">cpus</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Releases a task runs at once: ``cpus`` of the block ``backend`` names."""</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">local</span><span class="o">.</span><span class="n">cpus</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">backend</span> <span class="o">==</span> <span class="s2">"local"</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">slurm</span><span class="o">.</span><span class="n">cpus</span>
+        <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">backend</span><span class="p">)</span><span class="o">.</span><span class="n">cpus</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">fetch</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span> <span class="o">|</span> <span class="n">FetchConfig</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Whether the met files are got first: ``fetch`` of the block ``backend`` names."""</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Whether the met files are got first: ``fetch`` of the block ``backend`` names.</span>
+
+<span class="sd">        A Kubernetes Job has no fetch of its own; run ``runtraj fetch``</span>
+<span class="sd">        before it (:ref:`fetch-once`).</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">backend</span> <span class="o">==</span> <span class="s2">"kubernetes"</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">local</span><span class="o">.</span><span class="n">fetch</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">backend</span> <span class="o">==</span> <span class="s2">"local"</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">slurm</span><span class="o">.</span><span class="n">fetch</span></div>
 
 
@@ -812,8 +1031,11 @@
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
     <span class="s2">"ExecutionConfig"</span><span class="p">,</span>
     <span class="s2">"FetchConfig"</span><span class="p">,</span>
+    <span class="s2">"KubernetesConfig"</span><span class="p">,</span>
     <span class="s2">"LocalConfig"</span><span class="p">,</span>
     <span class="s2">"SlurmConfig"</span><span class="p">,</span>
+    <span class="s2">"Volume"</span><span class="p">,</span>
+    <span class="s2">"check_url"</span><span class="p">,</span>
     <span class="s2">"slurm_minutes"</span><span class="p">,</span>
 <span class="p">]</span>
 </pre></div>

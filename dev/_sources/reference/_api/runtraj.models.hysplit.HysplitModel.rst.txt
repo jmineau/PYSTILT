@@ -24,6 +24,7 @@ Attributes
 
    ~HysplitModel.batched
    ~HysplitModel.needs_workdir
+   ~HysplitModel.particle_files
 
 
 
@@ -34,9 +35,11 @@ Methods
    :toctree:
 
    ~HysplitModel.check_met
+   ~HysplitModel.check_releases
    ~HysplitModel.data_files
    ~HysplitModel.downloads_met
    ~HysplitModel.fetch_met
+   ~HysplitModel.release_rows
    ~HysplitModel.run
    ~HysplitModel.sha256
    ~HysplitModel.version

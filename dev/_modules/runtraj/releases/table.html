@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=3bdc3ab7"></script>
+    <script src="../../../_static/documentation_options.js?v=83d1397b"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a31.dev14+g7eed15fb5" />
+  <meta name="docsearch:version" content="0.1.0a31.dev16+ge750675fc" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -482,7 +482,7 @@
     <span class="n">_parse_time_text</span><span class="p">,</span>
     <span class="n">_point_location</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">.validation</span><span class="w"> </span><span class="kn">import</span> <span class="n">column_errors</span><span class="p">,</span> <span class="n">multipoint_errors</span><span class="p">,</span> <span class="n">point_errors</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.validation</span><span class="w"> </span><span class="kn">import</span> <span class="n">column_errors</span><span class="p">,</span> <span class="n">point_errors</span>
 
 <span class="c1">#: The columns of a release table, one row per release point.</span>
 <span class="n">COLUMNS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"group"</span><span class="p">,</span> <span class="s2">"time"</span><span class="p">,</span> <span class="s2">"longitude"</span><span class="p">,</span> <span class="s2">"latitude"</span><span class="p">,</span> <span class="s2">"altitude"</span><span class="p">,</span> <span class="s2">"altitude_ref"</span><span class="p">)</span>
@@ -541,7 +541,8 @@
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
 <span class="sd">    ValueError</span>
-<span class="sd">        If a column is named ``r_idx``, the old name of ``group``.</span>
+<span class="sd">        If a column is named ``r_idx``, the old name of ``group``, or two</span>
+<span class="sd">        columns name one field, such as ``altitude`` and ``zagl``.</span>
 <span class="sd">    """</span>
     <span class="n">old</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">frame</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">c</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"r_idx"</span><span class="p">]</span>
     <span class="k">if</span> <span class="n">old</span><span class="p">:</span>
@@ -551,10 +552,13 @@
         <span class="p">)</span>
     <span class="n">spelling</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="k">for</span> <span class="n">field</span><span class="p">,</span> <span class="n">aliases</span> <span class="ow">in</span> <span class="n">ALIASES</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">frame</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">col</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">aliases</span><span class="p">:</span>
-                <span class="n">spelling</span><span class="p">[</span><span class="n">field</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">col</span><span class="p">)</span>
-                <span class="k">break</span>
+        <span class="n">found</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">col</span><span class="p">)</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">frame</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">col</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">aliases</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">found</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"The columns </span><span class="si">{</span><span class="n">found</span><span class="si">}</span><span class="s2"> all name the release's </span><span class="si">{</span><span class="n">field</span><span class="si">}</span><span class="s2">; keep one."</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">found</span><span class="p">:</span>
+            <span class="n">spelling</span><span class="p">[</span><span class="n">field</span><span class="p">]</span> <span class="o">=</span> <span class="n">found</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
     <span class="n">frame</span> <span class="o">=</span> <span class="n">frame</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="n">field</span> <span class="k">for</span> <span class="n">field</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">spelling</span><span class="o">.</span><span class="n">items</span><span class="p">()})</span>
     <span class="k">if</span> <span class="s2">"altitude_ref"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">frame</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
         <span class="n">implied</span> <span class="o">=</span> <span class="s2">"msl"</span> <span class="k">if</span> <span class="n">spelling</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"altitude"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"zmsl"</span> <span class="k">else</span> <span class="s2">"agl"</span>
@@ -610,14 +614,19 @@
 <span class="sd">        or latitude out of range or empty, a height that is empty or not</span>
 <span class="sd">        finite, a negative height above ground, rows of one group that</span>
 <span class="sd">        differ in time or altitude reference, a column whose two heights are</span>
-<span class="sd">        equal, a multipoint release with two points at one location, or two</span>
-<span class="sd">        different releases with one id. Also for a misnamed</span>
+<span class="sd">        equal, or two different releases with one id. Also for a misnamed</span>
 <span class="sd">        ``altitude_ref`` column (:func:`releases_from_frame`).</span>
 <span class="sd">    """</span>
+    <span class="n">found</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">frame</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
     <span class="n">frame</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">_normalize_columns</span><span class="p">(</span><span class="n">frame</span><span class="p">)</span>
     <span class="n">required</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"time"</span><span class="p">,</span> <span class="s2">"longitude"</span><span class="p">,</span> <span class="s2">"latitude"</span><span class="p">,</span> <span class="s2">"altitude"</span><span class="p">)</span>
-    <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">frame</span><span class="o">.</span><span class="n">columns</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">required</span><span class="p">):</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Release table must contain columns: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">required</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">required</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">frame</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+        <span class="n">accepted</span> <span class="o">=</span> <span class="s2">"; "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">c</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">ALIASES</span><span class="p">[</span><span class="n">c</span><span class="p">])</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">missing</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"The release table has no </span><span class="si">{</span><span class="s1">' or '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span><span class="si">}</span><span class="s2"> column. The names "</span>
+            <span class="sa">f</span><span class="s2">"read as one are (</span><span class="si">{</span><span class="n">accepted</span><span class="si">}</span><span class="s2">); its columns are </span><span class="si">{</span><span class="n">found</span><span class="si">}</span><span class="s2">."</span>
+        <span class="p">)</span>
     <span class="n">clash</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">frame</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">ROW_COLUMNS</span><span class="p">]</span>
     <span class="k">if</span> <span class="n">clash</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
@@ -625,9 +634,6 @@
             <span class="s2">"those names. Rename the column."</span>
         <span class="p">)</span>
     <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">frame</span><span class="p">)</span>
-    <span class="n">lon</span> <span class="o">=</span> <span class="n">frame</span><span class="p">[</span><span class="s2">"longitude"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
-    <span class="n">lat</span> <span class="o">=</span> <span class="n">frame</span><span class="p">[</span><span class="s2">"latitude"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
-    <span class="n">alt</span> <span class="o">=</span> <span class="n">frame</span><span class="p">[</span><span class="s2">"altitude"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
     <span class="n">ref</span> <span class="o">=</span> <span class="n">frame</span><span class="p">[</span><span class="s2">"altitude_ref"</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
     <span class="c1"># Group keys as text: a file that mixes numeric and string ids must not</span>
     <span class="c1"># split one release into two. Without a group column, every row is a release.</span>
@@ -647,6 +653,18 @@
             <span class="p">)</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">message</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
+    <span class="k">def</span><span class="w"> </span><span class="nf">numbers</span><span class="p">(</span><span class="n">column</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Return *column* as floats, calling *fail* on a row that is not a number."""</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_numeric</span><span class="p">(</span><span class="n">frame</span><span class="p">[</span><span class="n">column</span><span class="p">],</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"coerce"</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="n">frame</span><span class="p">[</span><span class="n">column</span><span class="p">]</span><span class="o">.</span><span class="n">notna</span><span class="p">()</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="o">&amp;</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">text</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+            <span class="n">got</span> <span class="o">=</span> <span class="n">frame</span><span class="p">[</span><span class="n">column</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()[</span><span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">text</span><span class="p">)[</span><span class="mi">0</span><span class="p">]]</span>
+            <span class="n">fail</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">column</span><span class="si">}</span><span class="s2"> must be a number; got </span><span class="si">{</span><span class="n">got</span><span class="si">!r}</span><span class="s2">."</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">values</span>
+
+    <span class="n">lon</span> <span class="o">=</span> <span class="n">numbers</span><span class="p">(</span><span class="s2">"longitude"</span><span class="p">)</span>
+    <span class="n">lat</span> <span class="o">=</span> <span class="n">numbers</span><span class="p">(</span><span class="s2">"latitude"</span><span class="p">)</span>
+    <span class="n">alt</span> <span class="o">=</span> <span class="n">numbers</span><span class="p">(</span><span class="s2">"altitude"</span><span class="p">)</span>
     <span class="n">time</span> <span class="o">=</span> <span class="n">_times</span><span class="p">(</span><span class="n">frame</span><span class="p">[</span><span class="s2">"time"</span><span class="p">],</span> <span class="n">fail</span><span class="p">)</span>
     <span class="n">fail</span><span class="p">(</span><span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">ref</span><span class="p">,</span> <span class="p">(</span><span class="s2">"agl"</span><span class="p">,</span> <span class="s2">"msl"</span><span class="p">)),</span> <span class="s2">"altitude_ref must be 'agl' or 'msl'."</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">bad</span><span class="p">,</span> <span class="n">message</span> <span class="ow">in</span> <span class="n">point_errors</span><span class="p">(</span><span class="n">lon</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">alt</span><span class="p">,</span> <span class="n">ref</span><span class="p">):</span>
@@ -703,10 +721,6 @@
             <span class="p">)</span>
     <span class="n">multi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">"multipoint"</span><span class="p">)</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">multi</span><span class="p">):</span>
-        <span class="k">for</span> <span class="n">bad</span><span class="p">,</span> <span class="n">message</span> <span class="ow">in</span> <span class="n">multipoint_errors</span><span class="p">(</span><span class="n">lon</span><span class="p">[</span><span class="n">multi</span><span class="p">],</span> <span class="n">lat</span><span class="p">[</span><span class="n">multi</span><span class="p">],</span> <span class="n">codes</span><span class="p">[</span><span class="n">multi</span><span class="p">]):</span>
-            <span class="n">dup</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
-            <span class="n">dup</span><span class="p">[</span><span class="n">multi</span><span class="p">]</span> <span class="o">=</span> <span class="n">bad</span>
-            <span class="n">fail</span><span class="p">(</span><span class="n">dup</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span>
         <span class="n">found</span> <span class="o">=</span> <span class="n">_multipoint_locations</span><span class="p">(</span>
             <span class="n">codes</span><span class="p">[</span><span class="n">multi</span><span class="p">],</span> <span class="n">lon</span><span class="p">[</span><span class="n">multi</span><span class="p">],</span> <span class="n">lat</span><span class="p">[</span><span class="n">multi</span><span class="p">],</span> <span class="n">alt</span><span class="p">[</span><span class="n">multi</span><span class="p">],</span> <span class="n">group_ref</span>
         <span class="p">)</span>
@@ -892,14 +906,24 @@
 <span class="sd">    Raise if two different releases share an id.</span>
 
 <span class="sd">    An id names a release's result files, so two releases with one id</span>
-<span class="sd">    would overwrite each other. Equal releases listed twice are fine.</span>
+<span class="sd">    would overwrite each other. Equal releases listed twice are fine, but</span>
+<span class="sd">    not with different labels (``attrs``): only one set could be kept.</span>
 <span class="sd">    """</span>
     <span class="n">seen</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Release</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">releases</span><span class="p">:</span>
         <span class="n">other</span> <span class="o">=</span> <span class="n">seen</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">other</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">r</span> <span class="ow">and</span> <span class="n">other</span> <span class="o">!=</span> <span class="n">r</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">other</span> <span class="ow">is</span> <span class="n">r</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">other</span> <span class="o">!=</span> <span class="n">r</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"Two different releases share the id </span><span class="si">{</span><span class="n">r</span><span class="o">.</span><span class="n">id</span><span class="si">!r}</span><span class="s2">: </span><span class="si">{</span><span class="n">other</span><span class="si">!r}</span><span class="s2"> and </span><span class="si">{</span><span class="n">r</span><span class="si">!r}</span><span class="s2">."</span>
+                <span class="sa">f</span><span class="s2">"Two different releases share the id </span><span class="si">{</span><span class="n">r</span><span class="o">.</span><span class="n">id</span><span class="si">!r}</span><span class="s2">: </span><span class="si">{</span><span class="n">other</span><span class="si">!r}</span><span class="s2"> at "</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">other</span><span class="o">.</span><span class="n">time</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="n">r</span><span class="si">!r}</span><span class="s2"> at </span><span class="si">{</span><span class="n">r</span><span class="o">.</span><span class="n">time</span><span class="si">}</span><span class="s2">."</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">other</span><span class="o">.</span><span class="n">attrs</span> <span class="o">!=</span> <span class="n">r</span><span class="o">.</span><span class="n">attrs</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"The release </span><span class="si">{</span><span class="n">r</span><span class="o">.</span><span class="n">id</span><span class="si">!r}</span><span class="s2"> is listed twice with different labels, "</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">other</span><span class="o">.</span><span class="n">attrs</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="n">r</span><span class="o">.</span><span class="n">attrs</span><span class="si">}</span><span class="s2">. Only one set can be kept: list it "</span>
+                <span class="s2">"once."</span>
             <span class="p">)</span>
 
 
@@ -910,7 +934,14 @@
 
 <span class="k">def</span><span class="w"> </span><span class="nf">read_release_frame</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">IO</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Read a releases CSV as a table, with ``group`` and ``time`` as text, without building releases."""</span>
-    <span class="n">header</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">nrows</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">columns</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">header</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">nrows</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">columns</span>
+    <span class="k">except</span> <span class="n">pd</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">EmptyDataError</span><span class="p">:</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">path</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">))</span> <span class="k">else</span> <span class="s2">"The releases file"</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> is empty. A releases file needs a header row, such as "</span>
+            <span class="s2">"time,longitude,latitude,altitude, and a row per release."</span>
+        <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
     <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">"seek"</span><span class="p">):</span>
         <span class="n">path</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
     <span class="c1"># With type inference, pandas types each chunk of a large file on its</span>

@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../../_static/documentation_options.js?v=3bdc3ab7"></script>
+    <script src="../../../../_static/documentation_options.js?v=83d1397b"></script>
     <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a31.dev14+g7eed15fb5" />
+  <meta name="docsearch:version" content="0.1.0a31.dev16+ge750675fc" />
   
     
     <script src="../../../../_static/searchtools.js"></script>
@@ -824,12 +824,13 @@
             <span class="s2">"Random seed for a reproducible run. Different seeds give "</span>
             <span class="s2">"different runs. Requires ``krand: 2``. HYSPLIT 5.1.0 "</span>
             <span class="s2">"ignores the seed under ``krand`` 4 and 10 to 13, and under 1 uses "</span>
-            <span class="s2">"it only for the initial turbulent velocity. runtraj writes it to "</span>
-            <span class="s2">"``SETUP.CFG`` as ``-(abs(seed) + 1)``, because HYSPLIT reseeds its "</span>
-            <span class="s2">"generator only from a negative value and gives every ``SEED`` of "</span>
-            <span class="s2">"0 or more the same stream. Realization ``k`` of a variant runs "</span>
-            <span class="s2">"with ``seed + k``, so realization 0 shares the unperturbed run's "</span>
-            <span class="s2">"seed."</span>
+            <span class="s2">"it only for the initial turbulent velocity. Must be 0 or more: "</span>
+            <span class="s2">"runtraj writes it to ``SETUP.CFG`` as ``-(seed + 1)``, because "</span>
+            <span class="s2">"HYSPLIT reseeds its generator only from a negative value and "</span>
+            <span class="s2">"gives every ``SEED`` of 0 or more the same stream, so a seed "</span>
+            <span class="s2">"and its negative would give the same run. Realization ``k`` of "</span>
+            <span class="s2">"a variant runs with ``seed + k``, so realization 0 shares the "</span>
+            <span class="s2">"unperturbed run's seed."</span>
         <span class="p">),</span>
     <span class="p">)</span>
     <span class="n">krnd</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
@@ -1186,7 +1187,15 @@
 
     <span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"after"</span><span class="p">)</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_validate_seed</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Require ``krand=2`` when a seed is set."""</span>
+<span class="w">        </span><span class="sd">"""Require a seed of 0 or more, and ``krand=2``, when a seed is set."""</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">seed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">seed</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"seed=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">seed</span><span class="si">}</span><span class="s2"> must be 0 or more: runtraj writes the seed "</span>
+                <span class="s2">"to SETUP.CFG as -(seed + 1) because HYSPLIT reseeds only from "</span>
+                <span class="s2">"a negative value, so a seed and its negative would give the "</span>
+                <span class="s2">"same run, and the realizations of a negative seed would "</span>
+                <span class="s2">"repeat one another. Use a seed of 0 or more."</span>
+            <span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">seed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">krand</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
             <span class="n">got</span> <span class="o">=</span> <span class="s2">"krand unset"</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">krand</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">"krand=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">krand</span><span class="si">}</span><span class="s2">"</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>

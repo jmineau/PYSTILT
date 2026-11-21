@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=3bdc3ab7"></script>
+    <script src="../../../_static/documentation_options.js?v=83d1397b"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a31.dev14+g7eed15fb5" />
+  <meta name="docsearch:version" content="0.1.0a31.dev16+ge750675fc" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -492,7 +492,12 @@
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.visualization</span><span class="w"> </span><span class="kn">import</span> <span class="n">ReleasePlotAccessor</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">.validation</span><span class="w"> </span><span class="kn">import</span> <span class="n">_raise_first</span><span class="p">,</span> <span class="n">column_errors</span><span class="p">,</span> <span class="n">multipoint_errors</span><span class="p">,</span> <span class="n">point_errors</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.validation</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">_raise_first</span><span class="p">,</span>
+    <span class="n">column_errors</span><span class="p">,</span>
+    <span class="n">point_errors</span><span class="p">,</span>
+    <span class="n">two_points_errors</span><span class="p">,</span>
+<span class="p">)</span>
 
 <span class="n">TimeLike</span><span class="p">:</span> <span class="n">TypeAlias</span> <span class="o">=</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span> <span class="o">|</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">datetime64</span> <span class="o">|</span> <span class="nb">str</span>
 
@@ -1072,15 +1077,19 @@
 <span class="sd">    Release that releases particles from several points at once.</span>
 
 <span class="sd">    Use it for a slanted column, such as a satellite sounding sampled at</span>
-<span class="sd">    several heights along the line of sight. Each point must have its own</span>
-<span class="sd">    longitude and latitude. For several heights at one location, use a</span>
-<span class="sd">    :class:`ColumnRelease` or one :class:`PointRelease` per height.</span>
+<span class="sd">    several heights along the line of sight. Points may share a horizontal</span>
+<span class="sd">    location, but a transport model may refuse such a release: HYSPLIT joins</span>
+<span class="sd">    them into a line source, so with HYSPLIT use a :class:`ColumnRelease` or</span>
+<span class="sd">    one :class:`PointRelease` per height. A release of only two points at</span>
+<span class="sd">    one location is refused here, since ``releases.csv`` reads it as a</span>
+<span class="sd">    column.</span>
 
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
 <span class="sd">    ValueError</span>
 <span class="sd">        If the arrays differ in length, a coordinate is out of range or not a</span>
-<span class="sd">        finite number, or two points share a horizontal location.</span>
+<span class="sd">        finite number, or the release has exactly two points at one</span>
+<span class="sd">        horizontal location.</span>
 <span class="sd">    """</span>
 
     <span class="n">kind</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"multipoint"</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
@@ -1097,24 +1106,31 @@
     <span class="nd">@field_validator</span><span class="p">(</span><span class="s2">"longitudes"</span><span class="p">,</span> <span class="s2">"latitudes"</span><span class="p">,</span> <span class="s2">"altitudes"</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"before"</span><span class="p">)</span>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_as_floats</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">"""Return the values as a tuple of floats."""</span>
-        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
+<span class="w">        </span><span class="sd">"""Return the values, a list or 1-D array of numbers, as a tuple of floats."""</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"must be a list of numbers, not the text </span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">values</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"must be a list or 1-D array of numbers; got shape </span><span class="si">{</span><span class="n">values</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">values</span><span class="p">)</span>
 
     <span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"after"</span><span class="p">)</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_check</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MultiPointRelease</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Check the points, and that no two share a horizontal location."""</span>
+<span class="w">        </span><span class="sd">"""Check the points, and that two points are not at one location, which releases.csv reads as a column."""</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">longitudes</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">latitudes</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">altitudes</span><span class="p">)):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                 <span class="s2">"longitudes, latitudes, and altitudes must have the same length."</span>
             <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">longitudes</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"A MultiPointRelease needs at least one point."</span><span class="p">)</span>
         <span class="n">_raise_first</span><span class="p">(</span>
             <span class="p">[</span>
                 <span class="o">*</span><span class="n">point_errors</span><span class="p">(</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">longitudes</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">latitudes</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">altitudes</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">altitude_ref</span>
                 <span class="p">),</span>
-                <span class="o">*</span><span class="n">multipoint_errors</span><span class="p">(</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">longitudes</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">latitudes</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">longitudes</span><span class="p">)</span>
-                <span class="p">),</span>
+                <span class="o">*</span><span class="n">two_points_errors</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">longitudes</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">latitudes</span><span class="p">),</span>
             <span class="p">]</span>
         <span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span>

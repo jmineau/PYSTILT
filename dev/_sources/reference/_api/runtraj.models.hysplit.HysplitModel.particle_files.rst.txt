@@ -1,0 +1,6 @@
+runtraj.models.hysplit.HysplitModel.particle\_files
+===================================================
+
+.. currentmodule:: runtraj.models.hysplit
+
+.. autoattribute:: HysplitModel.particle_files

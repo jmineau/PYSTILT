@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=3bdc3ab7"></script>
+    <script src="../../_static/documentation_options.js?v=83d1397b"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a31.dev14+g7eed15fb5" />
+  <meta name="docsearch:version" content="0.1.0a31.dev16+ge750675fc" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -545,7 +545,10 @@
 <span class="sd">    Longitude/latitude bounding box, in degrees.</span>
 
 <span class="sd">    The edges are finite numbers, and ``-90 &lt;= ymin &lt; ymax &lt;= 90``.</span>
-<span class="sd">    Longitudes count modulo 360 (:meth:`contains`).</span>
+<span class="sd">    Longitudes count modulo 360 (:meth:`contains`), so ``xmin`` east of</span>
+<span class="sd">    ``xmax`` is a box across the dateline. Such a box is refused when it</span>
+<span class="sd">    would be more than 180 degrees wide, as when the edges were swapped</span>
+<span class="sd">    (``xmin=-109, xmax=-114``); write a wider one with ``xmax`` past 180.</span>
 <span class="sd">    """</span>
 
     <span class="n">model_config</span> <span class="o">=</span> <span class="n">ConfigDict</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -571,6 +574,14 @@
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">"Bounds need -90 &lt;= ymin &lt; ymax &lt;= 90 degrees latitude; got "</span>
                 <span class="sa">f</span><span class="s2">"ymin=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ymin</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">, ymax=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ymax</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">."</span>
+            <span class="p">)</span>
+        <span class="n">width</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xmax</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmin</span><span class="p">)</span> <span class="o">%</span> <span class="mf">360.0</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmin</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmax</span> <span class="ow">and</span> <span class="n">width</span> <span class="o">&gt;</span> <span class="mf">180.0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"Bounds xmin=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">xmin</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> is east of xmax=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">xmax</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">, which "</span>
+                <span class="sa">f</span><span class="s2">"makes a box across the dateline </span><span class="si">{</span><span class="n">width</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> degrees wide. Were "</span>
+                <span class="s2">"the edges swapped? For a box that wide, write xmax past 180 "</span>
+                <span class="sa">f</span><span class="s2">"(xmax=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">xmax</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">360</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">)."</span>
             <span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span>
 

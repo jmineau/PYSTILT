@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=3bdc3ab7"></script>
+    <script src="../../../_static/documentation_options.js?v=83d1397b"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a31.dev14+g7eed15fb5" />
+  <meta name="docsearch:version" content="0.1.0a31.dev16+ge750675fc" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -782,6 +782,12 @@
 <span class="sd">    stopped by ``scancel`` is not requeued.</span>
 <span class="sd">    """</span>
     <span class="n">execution</span> <span class="o">=</span> <span class="n">execution</span> <span class="k">if</span> <span class="n">execution</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">project</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">execution</span>
+    <span class="k">if</span> <span class="n">execution</span><span class="o">.</span><span class="n">backend</span> <span class="o">==</span> <span class="s2">"kubernetes"</span> <span class="ow">and</span> <span class="n">task</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">"run() waits for its runs, and a Kubernetes Job is not waited "</span>
+            <span class="s2">"for here. Use submit() (runtraj submit), and runtraj status to "</span>
+            <span class="s2">"follow it."</span>
+        <span class="p">)</span>
     <span class="n">todo</span> <span class="o">=</span> <span class="n">pending</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">releases</span><span class="o">=</span><span class="n">releases</span><span class="p">,</span> <span class="n">task</span><span class="o">=</span><span class="n">task</span><span class="p">,</span> <span class="n">skip_existing</span><span class="o">=</span><span class="n">skip_existing</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">todo</span><span class="p">:</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"run: every simulation is complete; nothing to do"</span><span class="p">)</span>
@@ -839,7 +845,7 @@
     <span class="n">compute_root</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Submit every simulation of a project that has not finished to Slurm.</span>
+<span class="sd">    Submit every simulation of a project that has not finished to Slurm or Kubernetes.</span>
 
 <span class="sd">    The releases with missing results are split among up to ``n_workers``</span>
 <span class="sd">    tasks of one job array, and this returns once it is submitted. The</span>
@@ -864,6 +870,13 @@
 <span class="sd">    again. If ``sbatch`` refuses the array, the fetch job is cancelled.</span>
 <span class="sd">    Set ``execution.slurm.fetch`` to ``false`` for no fetch job.</span>
 
+<span class="sd">    With ``backend: kubernetes`` it makes one indexed Job instead, whose</span>
+<span class="sd">    pods each run ``runtraj run &lt;project&gt; --task I/N``</span>
+<span class="sd">    (:func:`runtraj.execution.kubernetes.submit_job`), and creates it with</span>
+<span class="sd">    ``kubectl``. Each task runs its share of every release of the project</span>
+<span class="sd">    and skips the complete ones, so *releases* and ``skip_existing=False``</span>
+<span class="sd">    are refused there, and *compute_root* is each pod's own.</span>
+
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    project, releases, execution, skip_existing, compute_root</span>
@@ -872,26 +885,42 @@
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    str or None</span>
-<span class="sd">        The Slurm job id of the array, or ``None`` when nothing needs to</span>
-<span class="sd">        run. ``squeue -j &lt;id&gt;`` follows it and ``scancel &lt;id&gt;`` stops it.</span>
-<span class="sd">        A fetch job is a job of its own: its id is logged and written to</span>
+<span class="sd">        The Slurm job id of the array, or the name of the Kubernetes Job,</span>
+<span class="sd">        or ``None`` when nothing needs to run. ``squeue -j &lt;id&gt;`` follows a</span>
+<span class="sd">        job array and ``scancel &lt;id&gt;`` stops it; ``kubectl get job &lt;name&gt;``</span>
+<span class="sd">        and ``kubectl delete job &lt;name&gt;`` do the same for a Job. A fetch</span>
+<span class="sd">        job is a job of its own: its id is logged and written to</span>
 <span class="sd">        ``fetch.id`` in the submission folder, and ``scancel`` stops it too.</span>
 
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
 <span class="sd">    ValueError</span>
-<span class="sd">        If the execution backend is not Slurm.</span>
+<span class="sd">        If the execution backend is ``local``, or on Kubernetes with</span>
+<span class="sd">        *releases* or ``skip_existing=False``.</span>
 <span class="sd">    """</span>
     <span class="n">execution</span> <span class="o">=</span> <span class="n">execution</span> <span class="k">if</span> <span class="n">execution</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">project</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">execution</span>
-    <span class="k">if</span> <span class="n">execution</span><span class="o">.</span><span class="n">backend</span> <span class="o">!=</span> <span class="s2">"slurm"</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">execution</span><span class="o">.</span><span class="n">backend</span> <span class="o">==</span> <span class="s2">"local"</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">"submit sends work to Slurm, and this run's backend is "</span>
-            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">execution</span><span class="o">.</span><span class="n">backend</span><span class="si">!r}</span><span class="s2">. Use run(), or set execution.backend to slurm."</span>
+            <span class="s2">"submit sends work to Slurm or Kubernetes, and this run's backend "</span>
+            <span class="s2">"is 'local'. Use run(), or set execution.backend to slurm or "</span>
+            <span class="s2">"kubernetes."</span>
+        <span class="p">)</span>
+    <span class="k">if</span> <span class="n">execution</span><span class="o">.</span><span class="n">backend</span> <span class="o">==</span> <span class="s2">"kubernetes"</span> <span class="ow">and</span> <span class="p">(</span>
+        <span class="n">releases</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">skip_existing</span>
+    <span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">"A Kubernetes Job runs every unfinished release of the project and "</span>
+            <span class="s2">"skips the complete ones, as a retried pod must: it takes no list "</span>
+            <span class="s2">"of releases and no --no-skip."</span>
         <span class="p">)</span>
     <span class="n">todo</span> <span class="o">=</span> <span class="n">pending</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">releases</span><span class="o">=</span><span class="n">releases</span><span class="p">,</span> <span class="n">skip_existing</span><span class="o">=</span><span class="n">skip_existing</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">todo</span><span class="p">:</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"submit: every simulation is complete; nothing to do"</span><span class="p">)</span>
         <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">execution</span><span class="o">.</span><span class="n">backend</span> <span class="o">==</span> <span class="s2">"kubernetes"</span><span class="p">:</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">.kubernetes</span><span class="w"> </span><span class="kn">import</span> <span class="n">submit_job</span>
+
+        <span class="k">return</span> <span class="n">submit_job</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">todo</span><span class="p">,</span> <span class="n">execution</span><span class="p">)</span>
     <span class="n">job_id</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">_submit</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">todo</span><span class="p">,</span> <span class="n">execution</span><span class="p">,</span> <span class="n">skip_existing</span><span class="p">,</span> <span class="n">compute_root</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">job_id</span></div>
 

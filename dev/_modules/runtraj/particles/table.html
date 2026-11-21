@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=3bdc3ab7"></script>
+    <script src="../../../_static/documentation_options.js?v=83d1397b"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a31.dev14+g7eed15fb5" />
+  <meta name="docsearch:version" content="0.1.0a31.dev16+ge750675fc" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -461,8 +461,7 @@
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Mapping</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Mapping</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">NamedTuple</span>
 
@@ -484,8 +483,8 @@
 
 
 <span class="c1">#: The columns every particle table has, as a particle file stores them:</span>
-<span class="c1">#: what a transport model's run must return. ``particle`` is the particle number</span>
-<span class="c1">#: (1 to ``numpar``), ``age`` the minutes since release (negative for a</span>
+<span class="c1">#: what a transport model's run must return. ``particle`` is the number the</span>
+<span class="c1">#: transport model gives the particle, ``age`` the minutes since release (negative for a</span>
 <span class="c1">#: backward run), ``lon`` and ``lat`` the position in degrees, and ``zagl``</span>
 <span class="c1">#: the height above ground in meters. The reference page on the particle</span>
 <span class="c1">#: table says what the other columns are.</span>
@@ -592,6 +591,27 @@
         <span class="n">met_files</span><span class="o">=</span><span class="p">[</span><span class="n">Path</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">meta</span><span class="p">[</span><span class="sa">b</span><span class="s2">"runtraj:met_files"</span><span class="p">])],</span>
         <span class="n">realization</span><span class="o">=</span><span class="kc">None</span> <span class="k">if</span> <span class="n">realization</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">int</span><span class="p">(</span><span class="n">realization</span><span class="p">),</span>
     <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">release_metadata</span><span class="p">(</span><span class="n">release</span><span class="p">:</span> <span class="n">Release</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">bytes</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return the Parquet schema metadata that records *release* in a result file.</span>
+
+<span class="sd">    A stage that writes its own Parquet file merges this into the file's</span>
+<span class="sd">    metadata, so that :func:`stored_release` reads the release back and the</span>
+<span class="sd">    file is found as the release's.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    release : Release</span>
+<span class="sd">        The release the file was made for.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dict</span>
+<span class="sd">        The metadata entries, to merge with the file's other entries.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="p">{</span><span class="sa">b</span><span class="s2">"runtraj:release"</span><span class="p">:</span> <span class="n">release</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span><span class="o">.</span><span class="n">encode</span><span class="p">()}</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">stored_release</span><span class="p">(</span><span class="n">meta</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">bytes</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">],</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Release</span><span class="p">:</span>
@@ -776,7 +796,7 @@
         <span class="p">),</span>
     <span class="p">)</span>
     <span class="n">meta</span> <span class="o">=</span> <span class="p">{</span>
-        <span class="sa">b</span><span class="s2">"runtraj:release"</span><span class="p">:</span> <span class="n">release</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span><span class="o">.</span><span class="n">encode</span><span class="p">(),</span>
+        <span class="o">**</span><span class="n">release_metadata</span><span class="p">(</span><span class="n">release</span><span class="p">),</span>
         <span class="sa">b</span><span class="s2">"runtraj:settings"</span><span class="p">:</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">settings</span><span class="p">))</span><span class="o">.</span><span class="n">encode</span><span class="p">(),</span>
         <span class="sa">b</span><span class="s2">"runtraj:met_files"</span><span class="p">:</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">met_files</span><span class="p">])</span><span class="o">.</span><span class="n">encode</span><span class="p">(),</span>
         <span class="o">**</span><span class="p">(</span><span class="n">metadata</span> <span class="ow">or</span> <span class="p">{}),</span>
@@ -811,8 +831,9 @@
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return whether a multipoint release's particles can be told from their points only by height.</span>
 
-<span class="sd">    :func:`add_release_heights` matches them by height when every point has its</span>
-<span class="sd">    own altitude and the model writes no release (``t = 0``) rows; for a</span>
+<span class="sd">    HYSPLIT's release rows match them by height when every point has its</span>
+<span class="sd">    own altitude and the run wrote no release (``t = 0``) rows</span>
+<span class="sd">    (:func:`runtraj.models.hysplit.releases.release_rows`); for a</span>
 <span class="sd">    release above sea level that height is ``zagl + zsfc``. Points that share</span>
 <span class="sd">    an altitude are matched by position, and so are points more than</span>
 <span class="sd">    ``1000 m`` apart, which position tells apart reliably. This is the one</span>
@@ -830,132 +851,179 @@
     <span class="p">)</span>
 
 
+<span class="c1">#: Columns of a table of release rows: where each particle started.</span>
+<span class="n">RELEASE_ROW_COLUMNS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"particle"</span><span class="p">,</span> <span class="s2">"lon"</span><span class="p">,</span> <span class="s2">"lat"</span><span class="p">,</span> <span class="s2">"height"</span><span class="p">)</span>
+
+
 <div class="viewcode-block" id="add_release_heights">
 <a class="viewcode-back" href="../../../reference/_api/runtraj.particles.add_release_heights.html#runtraj.particles.add_release_heights">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">add_release_heights</span><span class="p">(</span><span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">release</span><span class="p">:</span> <span class="n">Release</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">add_release_heights</span><span class="p">(</span>
+    <span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+    <span class="n">release</span><span class="p">:</span> <span class="n">Release</span><span class="p">,</span>
+    <span class="n">release_rows</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">Release</span><span class="p">],</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return *particles* with each particle's ``release_height``, for a column or multipoint release.</span>
 
-<span class="sd">    The release row (``age = 0``) says where each particle started. For a</span>
-<span class="sd">    multipoint release that is one of its points, and ``release_height`` is that</span>
-<span class="sd">    point's altitude. For a column release it is inside one of the</span>
-<span class="sd">    ``numpar`` slabs the column is split into, and ``release_height`` is that slab's</span>
-<span class="sd">    center: the slab is what the particle stands for, not the random</span>
-<span class="sd">    height inside it. A model that writes no release row, such as HYSPLIT</span>
-<span class="sd">    5.1.0, falls back to matching: a column's particles are</span>
-<span class="sd">    released bottom to top in ``particle`` order, and a multipoint release's</span>
-<span class="sd">    are matched to the nearest point from their first row.</span>
+<span class="sd">    Each particle's release row says where it started: its row at</span>
+<span class="sd">    ``age = 0``, or, for a transport model that writes none, the row</span>
+<span class="sd">    *release_rows* gives (the model's ``release_rows``,</span>
+<span class="sd">    :class:`runtraj.models.TransportModel`). For a multipoint release</span>
+<span class="sd">    ``release_height`` is the altitude of the point the particle started</span>
+<span class="sd">    at. For a column release it is the center of the particle's slab: the</span>
+<span class="sd">    column is split into slabs of equal depth, one per release row, and the</span>
+<span class="sd">    slab is what the particle stands for, not the random height inside it.</span>
+<span class="sd">    So the release rows must hold every particle released, including any</span>
+<span class="sd">    missing from *particles*, such as one that left the met's domain before</span>
+<span class="sd">    its first row.</span>
 
 <span class="sd">    A point release's particles are returned as they are.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    particles : pandas.DataFrame</span>
+<span class="sd">        The particle table of one release.</span>
+<span class="sd">    release : Release</span>
+<span class="sd">        The release the particles started from.</span>
+<span class="sd">    release_rows : callable, optional</span>
+<span class="sd">        ``release_rows(particles, release)``, which returns a table with</span>
+<span class="sd">        :data:`RELEASE_ROW_COLUMNS`, one row per particle released: where it</span>
+<span class="sd">        started, its ``height`` in the release's vertical reference. It</span>
+<span class="sd">        holds each particle of *particles* once, and may hold particles</span>
+<span class="sd">        released but not in *particles*. Used when the particles have no</span>
+<span class="sd">        row at ``age = 0``, or their heights above sea level cannot be known</span>
+<span class="sd">        without ``zsfc``.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If the particles have no release rows and *release_rows* is not</span>
+<span class="sd">        given, *release_rows* returns a table without its columns or</span>
+<span class="sd">        without each particle once, or a release row's height is needed and</span>
+<span class="sd">        cannot be known (``zsfc`` missing for a release above sea level).</span>
 <span class="sd">    """</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">release</span><span class="p">,</span> <span class="n">ColumnRelease</span> <span class="o">|</span> <span class="n">MultiPointRelease</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">particles</span>
+    <span class="n">started</span> <span class="o">=</span> <span class="n">_started</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">release_rows</span><span class="p">)</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">release</span><span class="p">,</span> <span class="n">ColumnRelease</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">particles</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span>
-            <span class="n">release_height</span><span class="o">=</span><span class="n">_column_release_heights</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">release</span><span class="p">)</span>
-        <span class="p">)</span>
-    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">release</span><span class="p">,</span> <span class="n">MultiPointRelease</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">particles</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span>
-            <span class="n">release_height</span><span class="o">=</span><span class="n">_multipoint_release_heights</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">release</span><span class="p">)</span>
-        <span class="p">)</span>
-    <span class="k">return</span> <span class="n">particles</span></div>
+        <span class="n">heights</span> <span class="o">=</span> <span class="n">_column_heights</span><span class="p">(</span><span class="n">started</span><span class="p">,</span> <span class="n">release</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">heights</span> <span class="o">=</span> <span class="n">_multipoint_heights</span><span class="p">(</span><span class="n">started</span><span class="p">,</span> <span class="n">release</span><span class="p">)</span>
+    <span class="n">mapping</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">started</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">heights</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">particles</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span>
+        <span class="n">release_height</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span>
+            <span class="n">particles</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">index</span><span class="o">=</span><span class="n">particles</span><span class="o">.</span><span class="n">index</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">mapping</span><span class="o">.</span><span class="n">get</span><span class="p">)</span>
+    <span class="p">)</span></div>
 
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_release_rows</span><span class="p">(</span><span class="n">p</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Return each particle's release row (``age = 0``), or ``None`` when the model wrote none."""</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_started</span><span class="p">(</span>
+    <span class="n">p</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+    <span class="n">release</span><span class="p">:</span> <span class="n">Release</span><span class="p">,</span>
+    <span class="n">release_rows</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">Release</span><span class="p">],</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return each particle's release row, with :data:`RELEASE_ROW_COLUMNS`."""</span>
     <span class="n">released</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">p</span><span class="p">[</span><span class="s2">"age"</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="s2">"particle"</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">released</span><span class="o">.</span><span class="n">empty</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">released</span><span class="p">)</span> <span class="o">!=</span> <span class="n">p</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">]</span><span class="o">.</span><span class="n">nunique</span><span class="p">():</span>
-        <span class="k">return</span> <span class="kc">None</span>
-    <span class="k">return</span> <span class="n">released</span>
+    <span class="n">rows</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">released</span><span class="o">.</span><span class="n">empty</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">released</span><span class="p">)</span> <span class="o">==</span> <span class="n">p</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">]</span><span class="o">.</span><span class="n">nunique</span><span class="p">():</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+            <span class="p">{</span>
+                <span class="s2">"particle"</span><span class="p">:</span> <span class="n">released</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span>
+                <span class="s2">"lon"</span><span class="p">:</span> <span class="n">released</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
+                <span class="s2">"lat"</span><span class="p">:</span> <span class="n">released</span><span class="p">[</span><span class="s2">"lat"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
+                <span class="s2">"height"</span><span class="p">:</span> <span class="n">_height</span><span class="p">(</span><span class="n">released</span><span class="p">,</span> <span class="n">release</span><span class="p">),</span>
+            <span class="p">}</span>
+        <span class="p">)</span>
+        <span class="c1"># Heights a release above sea level cannot have without zsfc: the</span>
+        <span class="c1"># model's own release rows may know them.</span>
+        <span class="k">if</span> <span class="n">release_rows</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">rows</span><span class="p">[</span><span class="s2">"height"</span><span class="p">]</span><span class="o">.</span><span class="n">isna</span><span class="p">()</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+            <span class="k">return</span> <span class="n">rows</span>
+    <span class="k">if</span> <span class="n">release_rows</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"The particles of </span><span class="si">{</span><span class="n">release</span><span class="o">.</span><span class="n">kind</span><span class="si">}</span><span class="s2"> release </span><span class="si">{</span><span class="n">release</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2"> have no row "</span>
+            <span class="s2">"at age = 0, so where each one started is not known. A transport "</span>
+            <span class="s2">"model that writes no such row gives release_rows."</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">_checked_rows</span><span class="p">(</span><span class="n">release_rows</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">release</span><span class="p">),</span> <span class="n">p</span><span class="p">,</span> <span class="n">release_rows</span><span class="p">)</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_height</span><span class="p">(</span><span class="n">rows</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">release</span><span class="p">:</span> <span class="n">Release</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Return the rows' heights in the release's vertical reference, or ``None`` when they cannot be known."""</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_checked_rows</span><span class="p">(</span>
+    <span class="n">rows</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">p</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">release_rows</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the table *release_rows* gave, after checking it holds each particle of *p* once."""</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">release_rows</span><span class="p">,</span> <span class="s2">"__qualname__"</span><span class="p">,</span> <span class="s2">"release_rows"</span><span class="p">)</span>
+    <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">RELEASE_ROW_COLUMNS</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">rows</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> returned no </span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2"> column(s)."</span><span class="p">)</span>
+    <span class="n">repeated</span> <span class="o">=</span> <span class="n">rows</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">]</span><span class="o">.</span><span class="n">duplicated</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">repeated</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> returned more than one row for particle "</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">rows</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">repeated</span><span class="p">,</span><span class="w"> </span><span class="s1">'particle'</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">."</span>
+        <span class="p">)</span>
+    <span class="n">absent</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">setdiff1d</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">(),</span> <span class="n">rows</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">absent</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> returned no row for particle </span><span class="si">{</span><span class="n">absent</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">rows</span><span class="p">[</span><span class="nb">list</span><span class="p">(</span><span class="n">RELEASE_ROW_COLUMNS</span><span class="p">)]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_height</span><span class="p">(</span><span class="n">rows</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">release</span><span class="p">:</span> <span class="n">Release</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the rows' heights in the release's vertical reference, ``nan`` when they cannot be known."""</span>
     <span class="k">if</span> <span class="s2">"zagl"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">rows</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
-        <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
     <span class="k">if</span> <span class="n">release</span><span class="o">.</span><span class="n">altitude_ref</span> <span class="o">==</span> <span class="s2">"agl"</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">rows</span><span class="p">[</span><span class="s2">"zagl"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
     <span class="k">if</span> <span class="s2">"zsfc"</span> <span class="ow">in</span> <span class="n">rows</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
         <span class="k">return</span> <span class="p">(</span><span class="n">rows</span><span class="p">[</span><span class="s2">"zagl"</span><span class="p">]</span> <span class="o">+</span> <span class="n">rows</span><span class="p">[</span><span class="s2">"zsfc"</span><span class="p">])</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
-    <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_column_release_heights</span><span class="p">(</span><span class="n">p</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">release</span><span class="p">:</span> <span class="n">ColumnRelease</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Return each row's release height for a column release: the center of its particle's slab.</span>
-
-<span class="sd">    The column is split into ``numpar`` slabs of equal depth. With release</span>
-<span class="sd">    rows, a particle's slab is the one its release height falls in;</span>
-<span class="sd">    without them, particle ``particle`` is in slab ``particle``, as HYSPLIT</span>
-<span class="sd">    releases them.</span>
-<span class="sd">    """</span>
-    <span class="n">numpar</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">())</span>
-    <span class="n">step</span> <span class="o">=</span> <span class="p">(</span><span class="n">release</span><span class="o">.</span><span class="n">top</span> <span class="o">-</span> <span class="n">release</span><span class="o">.</span><span class="n">bottom</span><span class="p">)</span> <span class="o">/</span> <span class="n">numpar</span>
-    <span class="n">released</span> <span class="o">=</span> <span class="n">_release_rows</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
-    <span class="n">height</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">released</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">_height</span><span class="p">(</span><span class="n">released</span><span class="p">,</span> <span class="n">release</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">released</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">height</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">return</span> <span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">]</span> <span class="o">-</span> <span class="mf">0.5</span><span class="p">)</span> <span class="o">*</span> <span class="n">step</span> <span class="o">+</span> <span class="n">release</span><span class="o">.</span><span class="n">bottom</span>
-    <span class="n">slab</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">((</span><span class="n">height</span> <span class="o">-</span> <span class="n">release</span><span class="o">.</span><span class="n">bottom</span><span class="p">)</span> <span class="o">/</span> <span class="n">step</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="n">numpar</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
-    <span class="n">center</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
-        <span class="nb">zip</span><span class="p">(</span><span class="n">released</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">],</span> <span class="n">release</span><span class="o">.</span><span class="n">bottom</span> <span class="o">+</span> <span class="p">(</span><span class="n">slab</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)</span> <span class="o">*</span> <span class="n">step</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="p">)</span>
-    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">index</span><span class="o">=</span><span class="n">p</span><span class="o">.</span><span class="n">index</span><span class="p">)</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">center</span><span class="o">.</span><span class="n">get</span><span class="p">)</span>
-
-
-<span class="k">def</span><span class="w"> </span><span class="nf">_multipoint_release_heights</span><span class="p">(</span>
-    <span class="n">p</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">release</span><span class="p">:</span> <span class="n">MultiPointRelease</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Return each row's release altitude for a multipoint release.</span>
-
-<span class="sd">    The particle table does not record which point a particle came from.</span>
-<span class="sd">    It is recovered from each particle's row nearest the release time:</span>
-
-<span class="sd">    1. If the model writes release (``t = 0``) rows, match the nearest</span>
-<span class="sd">       release point horizontally. Nothing has moved yet, so this is exact.</span>
-<span class="sd">    2. Otherwise the first row is one time step after release. Height</span>
-<span class="sd">       drifts about 30 times less than horizontal position over that step,</span>
-<span class="sd">       so when all release heights differ (as in a slanted column), match</span>
-<span class="sd">       on height.</span>
-<span class="sd">    3. Otherwise match on horizontal position, and warn when the release</span>
-<span class="sd">       points are too close together for that to be reliable.</span>
-<span class="sd">    """</span>
-    <span class="n">first</span> <span class="o">=</span> <span class="p">(</span>
-        <span class="n">p</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">_age</span><span class="o">=</span><span class="n">p</span><span class="p">[</span><span class="s2">"age"</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">())</span>
-        <span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s2">"_age"</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">"stable"</span><span class="p">)</span>
-        <span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="s2">"particle"</span><span class="p">)</span>
-    <span class="p">)</span>
-    <span class="n">lons</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">release</span><span class="o">.</span><span class="n">longitudes</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
-    <span class="n">lats</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">release</span><span class="o">.</span><span class="n">latitudes</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
-    <span class="n">alts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">release</span><span class="o">.</span><span class="n">altitudes</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
-    <span class="n">has_t0</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">((</span><span class="n">first</span><span class="p">[</span><span class="s2">"_age"</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">())</span>
-
-    <span class="c1"># Height of each particle in the release's own vertical reference.</span>
-    <span class="n">height</span> <span class="o">=</span> <span class="n">_height</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="n">release</span><span class="p">)</span>
-
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">has_t0</span> <span class="ow">and</span> <span class="n">height</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">alts</span><span class="p">))</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">alts</span><span class="p">):</span>
-        <span class="n">nearest</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">height</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">-</span> <span class="n">alts</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:]),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">xy</span> <span class="o">=</span> <span class="n">first</span><span class="p">[[</span><span class="s2">"lon"</span><span class="p">,</span> <span class="s2">"lat"</span><span class="p">]]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
-        <span class="n">pts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">((</span><span class="n">lons</span><span class="p">,</span> <span class="n">lats</span><span class="p">))</span>
-        <span class="n">nearest</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span>
-            <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="n">xy</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">pts</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:])</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_column_heights</span><span class="p">(</span><span class="n">started</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">release</span><span class="p">:</span> <span class="n">ColumnRelease</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the center of the slab each particle started in, one slab per release row."""</span>
+    <span class="n">height</span> <span class="o">=</span> <span class="n">started</span><span class="p">[</span><span class="s2">"height"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">height</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"Column release </span><span class="si">{</span><span class="n">release</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2"> is above sea level and its release "</span>
+            <span class="s2">"rows have no zsfc, so the slab each particle started in is not "</span>
+            <span class="s2">"known."</span>
         <span class="p">)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">has_t0</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">alts</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="n">spacing</span> <span class="o">=</span> <span class="n">_closest_points_m</span><span class="p">(</span><span class="n">lons</span><span class="p">,</span> <span class="n">lats</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">spacing</span> <span class="o">&lt;</span> <span class="n">_MIN_RELIABLE_SPACING_M</span><span class="p">:</span>
-                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">"MultiPointRelease release points are as close as "</span>
-                    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">spacing</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> m and cannot be separated by altitude, and this "</span>
-                    <span class="s2">"model writes no t=0 row, so particles cannot be "</span>
-                    <span class="s2">"reliably matched to their release points; 'release_height' may be wrong. "</span>
-                    <span class="s2">"Use a HYSPLIT build that writes release-time rows "</span>
-                    <span class="s2">"(HysplitConfig.directory) or space the points more than "</span>
-                    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">_MIN_RELIABLE_SPACING_M</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> m apart."</span><span class="p">,</span>
-                    <span class="n">stacklevel</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
-                <span class="p">)</span>
+    <span class="n">n_slabs</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">started</span><span class="p">)</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="p">(</span><span class="n">release</span><span class="o">.</span><span class="n">top</span> <span class="o">-</span> <span class="n">release</span><span class="o">.</span><span class="n">bottom</span><span class="p">)</span> <span class="o">/</span> <span class="n">n_slabs</span>
+    <span class="n">slab</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">((</span><span class="n">height</span> <span class="o">-</span> <span class="n">release</span><span class="o">.</span><span class="n">bottom</span><span class="p">)</span> <span class="o">/</span> <span class="n">step</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="n">n_slabs</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">release</span><span class="o">.</span><span class="n">bottom</span> <span class="o">+</span> <span class="p">(</span><span class="n">slab</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)</span> <span class="o">*</span> <span class="n">step</span>
 
-    <span class="n">mapping</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">first</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">alts</span><span class="p">[</span><span class="n">nearest</span><span class="p">],</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
-    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">"particle"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">index</span><span class="o">=</span><span class="n">p</span><span class="o">.</span><span class="n">index</span><span class="p">)</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">mapping</span><span class="o">.</span><span class="n">get</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_multipoint_heights</span><span class="p">(</span>
+    <span class="n">started</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">release</span><span class="p">:</span> <span class="n">MultiPointRelease</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return the altitude of the point each particle started at.</span>
+
+<span class="sd">    A particle started at the point nearest its release row horizontally;</span>
+<span class="sd">    among points at one location, at the one nearest its height.</span>
+<span class="sd">    """</span>
+    <span class="n">alts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">release</span><span class="o">.</span><span class="n">altitudes</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">xy</span> <span class="o">=</span> <span class="n">started</span><span class="p">[[</span><span class="s2">"lon"</span><span class="p">,</span> <span class="s2">"lat"</span><span class="p">]]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">(</span>
+        <span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">release</span><span class="o">.</span><span class="n">longitudes</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">release</span><span class="o">.</span><span class="n">latitudes</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">d2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="n">xy</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">points</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:])</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">nearest</span> <span class="o">=</span> <span class="n">d2</span> <span class="o">&lt;=</span> <span class="n">d2</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">+</span> <span class="mf">1e-12</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">nearest</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+        <span class="n">height</span> <span class="o">=</span> <span class="n">started</span><span class="p">[</span><span class="s2">"height"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">height</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"Multipoint release </span><span class="si">{</span><span class="n">release</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2"> has points at one location "</span>
+                <span class="s2">"and is above sea level, and its release rows have no zsfc, so "</span>
+                <span class="s2">"the point each particle started at is not known."</span>
+            <span class="p">)</span>
+        <span class="n">dz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">nearest</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">height</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">-</span> <span class="n">alts</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:]),</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">alts</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">dz</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)]</span>
+    <span class="k">return</span> <span class="n">alts</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">d2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)]</span>
 </pre></div>
 
                 </article>

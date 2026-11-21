@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../../_static/documentation_options.js?v=3bdc3ab7"></script>
+    <script src="../../../../_static/documentation_options.js?v=83d1397b"></script>
     <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a31.dev14+g7eed15fb5" />
+  <meta name="docsearch:version" content="0.1.0a31.dev16+ge750675fc" />
   
     
     <script src="../../../../_static/searchtools.js"></script>
@@ -487,6 +487,7 @@
 <span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.failures</span><span class="w"> </span><span class="kn">import</span> <span class="n">FailureReason</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.met</span><span class="w"> </span><span class="kn">import</span> <span class="n">Met</span><span class="p">,</span> <span class="n">MetConfig</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.releases</span><span class="w"> </span><span class="kn">import</span> <span class="n">check_releases</span><span class="p">,</span> <span class="n">release_rows</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
@@ -591,6 +592,8 @@
     <span class="n">met_config_class</span> <span class="o">=</span> <span class="n">MetConfig</span>
     <span class="c1">#: HYSPLIT writes its inputs and outputs as files in a directory.</span>
     <span class="n">needs_workdir</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="c1">#: Its particle file, left out of a failed run's kept workdir.</span>
+    <span class="n">particle_files</span> <span class="o">=</span> <span class="p">(</span><span class="n">PARTICLE_FILE</span><span class="p">,)</span>
     <span class="c1">#: One hycs_std process per release.</span>
     <span class="n">batched</span> <span class="o">=</span> <span class="kc">False</span>
 
@@ -715,6 +718,31 @@
 <span class="sd">        True</span>
 <span class="sd">        """</span>
         <span class="k">return</span> <span class="n">met</span><span class="o">.</span><span class="n">download</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="HysplitModel.check_releases">
+<a class="viewcode-back" href="../../../../reference/_api/runtraj.models.hysplit.HysplitModel.check_releases.html#runtraj.models.hysplit.HysplitModel.check_releases">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">check_releases</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">releases</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">HysplitConfig</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Return the releases HYSPLIT cannot run: multipoint releases whose points share a location.</span>
+
+<span class="sd">        No setting changes which, so *config* is not read. See</span>
+<span class="sd">        :func:`runtraj.models.hysplit.releases.check_releases`.</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="n">check_releases</span><span class="p">(</span><span class="n">releases</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="HysplitModel.release_rows">
+<a class="viewcode-back" href="../../../../reference/_api/runtraj.models.hysplit.HysplitModel.release_rows.html#runtraj.models.hysplit.HysplitModel.release_rows">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">release_rows</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">release</span><span class="p">:</span> <span class="n">Release</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Return where each particle started, for a HYSPLIT build that writes no row at ``age = 0``.</span>
+
+<span class="sd">        See :func:`runtraj.models.hysplit.releases.release_rows`.</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="n">release_rows</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">release</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="HysplitModel.run">
