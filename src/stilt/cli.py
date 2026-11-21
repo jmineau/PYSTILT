@@ -26,7 +26,7 @@ app = typer.Typer(
     name="stilt",
     help="Run STILT simulations and check on a project.",
     no_args_is_help=True,
-    cls=cli._Group,
+    cls=cli.ExitCodeGroup,
 )
 
 _NEW_PROJECT_ARG = typer.Argument(

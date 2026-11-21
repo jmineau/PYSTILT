@@ -4148,7 +4148,6 @@ wheels = [
 name = "pystilt"
 source = { editable = "." }
 dependencies = [
-    { name = "arlmet" },
     { name = "dask", extra = ["array"] },
     { name = "netcdf4" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
@@ -4170,17 +4169,17 @@ dependencies = [
 
 [package.optional-dependencies]
 complete = [
-    { name = "arlmet", extra = ["archives"] },
     { name = "cartopy" },
     { name = "exactextract" },
     { name = "geopandas" },
     { name = "h3" },
     { name = "matplotlib" },
     { name = "rdata" },
+    { name = "runtraj", extra = ["download"] },
     { name = "sparse" },
 ]
 download = [
-    { name = "arlmet", extra = ["archives"] },
+    { name = "runtraj", extra = ["download"] },
 ]
 gcs = [
     { name = "gcsfs" },
@@ -4206,6 +4205,7 @@ visualization = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "arlmet", extra = ["archives"] },
     { name = "cf-xarray" },
     { name = "docstr-coverage" },
     { name = "flask" },
@@ -4241,8 +4241,6 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "arlmet", specifier = ">=0.1.0b10" },
-    { name = "arlmet", extras = ["archives"], marker = "extra == 'download'", specifier = ">=0.1.0b10" },
     { name = "cartopy", marker = "extra == 'visualization'", specifier = ">=0.26" },
     { name = "dask", extras = ["array"], specifier = ">=2023.6" },
     { name = "exactextract", marker = "extra == 'geometry'", specifier = ">=0.2" },
@@ -4263,7 +4261,8 @@ requires-dist = [
     { name = "pystilt", extras = ["visualization"], marker = "extra == 'complete'" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "rdata", marker = "extra == 'stilt-r'", specifier = ">=1.0" },
-    { name = "runtraj", specifier = ">=0.1.0a2,<0.2" },
+    { name = "runtraj", specifier = ">=0.1.0a3,<0.2" },
+    { name = "runtraj", extras = ["download"], marker = "extra == 'download'" },
     { name = "s3fs", marker = "extra == 's3'", specifier = ">=2024.12" },
     { name = "scipy", specifier = ">=1.10" },
     { name = "shapely", specifier = ">=2.0" },
@@ -4276,6 +4275,7 @@ provides-extras = ["geometry", "visualization", "download", "sparse", "stilt-r",
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "arlmet", extras = ["archives"], specifier = ">=0.1.0b12" },
     { name = "cf-xarray", specifier = ">=0.10" },
     { name = "docstr-coverage", specifier = ">=2.3" },
     { name = "flask", specifier = ">=3.0" },
@@ -4602,10 +4602,11 @@ wheels = [
 
 [[package]]
 name = "runtraj"
-version = "0.1.0a2"
+version = "0.1.0a3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "arlmet" },
+    { name = "fsspec" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "pandas" },
@@ -4621,9 +4622,14 @@ dependencies = [
     { name = "universal-pathlib" },
     { name = "xarray" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3a/8e/22c227467efb50c134f9a699faef8800ed0a0dc8c029a49bfc06040c78e7/runtraj-0.1.0a2.tar.gz", hash = "sha256:d2693707404a9b1ce8c23cd553b654539de11ab77589bc6b4caea421d70170f5", size = 1036121, upload-time = "2026-11-20T05:02:45.68Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/56/2d/1dcc04a65ffc3ad653aee70d623bc85ecccda0ce3ed0c1bf980257a0d173/runtraj-0.1.0a3.tar.gz", hash = "sha256:51da4ab92541564bc312d0fea019bb8b3c98956f62f9442cde540e8c84f054bd", size = 1105222, upload-time = "2026-11-20T23:53:23.106Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a3/b1/5a2af18c2b644740a35ab6d01fb5d377187ad06a3e68fd1bce4b536d3e20/runtraj-0.1.0a2-py3-none-any.whl", hash = "sha256:8b7b1bd425765f1132a4f96987efbd80e149644fc0c3d0230cac35a5adfab5b7", size = 225471, upload-time = "2026-11-20T05:02:44.175Z" },
+    { url = "https://files.pythonhosted.org/packages/27/c4/a9d7375f1ee842883a7e8d8fa17a1064356ec55fc310df89639072482837/runtraj-0.1.0a3-py3-none-any.whl", hash = "sha256:4e7558bc1137687148630c5a0679709d5bf00e10cf4c3fd38044557313a4c8b1", size = 263306, upload-time = "2026-11-20T23:53:21.518Z" },
+]
+
+[package.optional-dependencies]
+download = [
+    { name = "arlmet", extra = ["archives"] },
 ]
 
 [[package]]

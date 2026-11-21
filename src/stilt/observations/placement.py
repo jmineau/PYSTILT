@@ -25,6 +25,8 @@ from shapely.geometry import Point, Polygon
 JitterMethod = Literal["regular", "random"]
 
 _EARTH_RADIUS_M = 6_371_000.0
+_R_D = 287.04  # dry air gas constant, J kg^-1 K^-1
+_G = 9.80616  # HYSPLIT's gravity, m s^-2 (standard gravity is 9.80665)
 _STD_LAPSE_RATE = 0.0065  # K m^-1
 _STD_SEA_LEVEL_TEMPERATURE = 288.15  # K
 
@@ -131,9 +133,6 @@ def pressure_altitudes(
         Altitudes in meters above sea level, from the surface upward, so the
         first one anchors the slant at the sounding's location.
     """
-    # Imported here, as elsewhere in stilt: arlmet takes about a second to import.
-    from arlmet.vertical import R_D, G, hypsometric_z_agl
-
     p = np.asarray(pressures, dtype=float).ravel()
     if p.size == 0:
         raise ValueError("pressure_altitudes requires at least one pressure level.")
@@ -162,10 +161,14 @@ def pressure_altitudes(
 
     z_sfc = float(surface_altitude)
     if t is not None:
-        z = z_sfc + hypsometric_z_agl(p, surface_pressure, t)
+        # Each layer is (R_d / g) * mean T * ln(p_below / p_above); the layer
+        # between the surface and the first level takes the first level's T.
+        p_below = np.concatenate([[surface_pressure], p[:-1]])
+        t_below = np.concatenate([t[:1], t[:-1]])
+        z = z_sfc + np.cumsum(_R_D / _G * (t_below + t) / 2 * np.log(p_below / p))
     else:
         t_sfc = _STD_SEA_LEVEL_TEMPERATURE - _STD_LAPSE_RATE * z_sfc
-        exponent = R_D * _STD_LAPSE_RATE / G
+        exponent = _R_D * _STD_LAPSE_RATE / _G
         z = z_sfc + t_sfc / _STD_LAPSE_RATE * (1 - (p / surface_pressure) ** exponent)
 
     if top is not None:
