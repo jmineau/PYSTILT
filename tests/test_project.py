@@ -387,9 +387,7 @@ def test_add_releases_appends_only_new_ones_and_refreshes_the_views(
     assert project.add_releases(point_release) == []
 
 
-def test_add_releases_appends_in_the_files_own_columns(
-    tmp_path, point_release, column_release
-):
+def test_add_releases_appends_in_the_files_own_columns(tmp_path, column_release):
     """A hand-written file keeps its columns, its group values, and extra columns."""
     project = _project(tmp_path)
     text = (
@@ -398,7 +396,7 @@ def test_add_releases_appends_in_the_files_own_columns(
     )
     project.releases_path.write_text(text)
 
-    added = project.add_releases([point_release, column_release])
+    added = project.add_releases([column_release])
 
     assert added == [column_release.id]
     stored = project.releases_path.read_text()
@@ -1108,6 +1106,17 @@ def _write_aged_particles(
             "foot": np.full(n, 1e-3),
         }
     )
+    if hasattr(release, "bottom"):
+        # A column release starts its particles at heights only its age = 0
+        # rows give; a point release has the one height it was written with.
+        start = particles.assign(
+            age=0.0,
+            lon=release.longitude,
+            lat=release.latitude,
+            zagl=release.bottom + (release.top - release.bottom) * rng.random(n),
+            foot=0.0,
+        )
+        particles = pd.concat([start, particles], ignore_index=True)
     particles = finished(particles, sim.release)
     sim.output.write_particles(sim.variant, sim.release, particles, [], realization)
 
