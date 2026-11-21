@@ -139,7 +139,7 @@ def test_commands_report_invalid_config_yaml(tmp_path, command):
         ),
         (
             "time,longitude,latitude\n2024-07-01 12:00:00,-111.85,40.77\n",
-            "Error: Release table must contain columns",
+            "Error: The release table has no altitude column",
         ),
     ],
     ids=["latitude", "time", "columns"],
@@ -234,8 +234,10 @@ def test_cli_help_lists_current_commands():
         "fetch",
         "init",
         "run",
+        "schedule",
         "status",
         "submit",
+        "tick",
     }
     for command in expected:
         assert command in result.output
@@ -351,7 +353,7 @@ def test_check_tells_a_release_above_sea_level_to_add_zsfc_and_exits_1(tmp_path)
 
     assert result.exit_code == 1, result.output
     row = next(line for line in result.output.splitlines() if line.startswith("zsfc"))
-    assert "zsfc is not in varsiwant" in row
+    assert "zsfc is not in HYSPLIT's varsiwant" in row
     assert "varsiwant: [time, indx, long, lati, zagl, foot, mlht" in row
     assert "Found 1 problem: zsfc 1" in result.output
 
