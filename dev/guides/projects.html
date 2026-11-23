@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=893d244d"></script>
+    <script src="../_static/documentation_options.js?v=f2e6b648"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a31.dev21+g002111c51" />
+  <meta name="docsearch:version" content="0.1.0a31.dev22+g31da0455b" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -611,9 +611,9 @@ from the release (see <a class="reference internal" href="background.html#plume-
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">numpar</span></code>, under <code class="docutils literal notranslate"><span class="pre">models:</span> <span class="pre">hysplit:</span></code></p></td>
 <td><p>Particles released per simulation. More particles give a smoother
-footprint and take longer. The default is 200, enough to try a
-project; we use 1000 for results, as the config <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">init</span></code>
-writes does.</p></td>
+footprint and take longer. <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">init</span></code> writes 1000, STILT-R’s
+value, which we use for results; left out of the config, HYSPLIT’s
+2500 applies.</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">1000</span></code></p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">grid</span></code>, under <code class="docutils literal notranslate"><span class="pre">stages:</span> <span class="pre">footprint:</span></code></p></td>
