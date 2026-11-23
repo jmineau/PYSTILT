@@ -26,7 +26,7 @@ If you run HYSPLIT on its own, PYSTILT also runs it from Python for particles al
 PYSTILT is alpha software. There are no backward compatibility guarantees before v1.0, and the
 public API may still change.
 
-The transport core is stable. The test suite covers HYSPLIT runs, trajectories and footprints,
+The test suite covers HYSPLIT runs, trajectories and footprints,
 agreement with STILT-R, and runs on a local machine and on Slurm.
 
 ## Installation

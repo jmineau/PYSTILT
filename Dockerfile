@@ -18,10 +18,6 @@
 
 FROM python:3.13-slim-bookworm AS build
 COPY --from=ghcr.io/astral-sh/uv:0.12.23 /uv /bin/uv
-# runtraj comes from git until its first release ([tool.uv.sources]).
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends git \
-    && rm -rf /var/lib/apt/lists/*
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
     UV_PROJECT_ENVIRONMENT=/opt/venv \

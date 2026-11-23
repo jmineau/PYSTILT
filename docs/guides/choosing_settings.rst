@@ -60,8 +60,9 @@ How many particles
 ------------------
 
 More particles give a smoother footprint, and the far part of a footprint,
-where few particles reach, needs the most. The default of 200 shows the
-shape of a footprint. For results we use 1000, STILT-R's default. To check
+where few particles reach, needs the most. 200 shows the shape of a
+footprint and is enough to try a project. For results we use 1000,
+STILT-R's value and the one ``stilt init`` writes. To check
 a value for your site, run a few releases with three times as many
 particles as a second variant and compare:
 
