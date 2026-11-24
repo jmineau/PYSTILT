@@ -1,0 +1,6 @@
+runtraj.models.TransportModel.needs\_workdir
+============================================
+
+.. currentmodule:: runtraj.models
+
+.. autoattribute:: TransportModel.needs_workdir

@@ -6,7 +6,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>runtraj.sampling &#8212; PYSTILT 0.1.0a30</title>
+    <title>runtraj.sampling &#8212; PYSTILT 0.1.0a31</title>
   
   
   
@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=7752668c"></script>
+    <script src="../../_static/documentation_options.js?v=d32ae295"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -51,7 +51,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a30';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a31';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30" />
+  <meta name="docsearch:version" content="0.1.0a31" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -465,17 +465,23 @@
 <span class="sd">mole fraction where each particle ends, or a surface flux under each</span>
 <span class="sd">particle. Units are not converted.</span>
 
-<span class="sd">:func:`sample_met` reads ARL met files at particle positions as HYSPLIT</span>
-<span class="sd">does, for the columns HYSPLIT writes from the met (``mlht``, ``dens``,</span>
-<span class="sd">``pres``, ``zsfc``), which a transport model that writes only positions</span>
-<span class="sd">leaves out. :func:`calc_pbl_height` finds the mixed-layer height from the</span>
-<span class="sd">met's profile, as HYSPLIT does by default.</span>
+<span class="sd">:func:`sample_met` reads met at particle positions as HYSPLIT does, for</span>
+<span class="sd">the columns HYSPLIT writes from the met (``mlht``, ``dens``, ``pres``,</span>
+<span class="sd">``zsfc``), which a transport model that writes only positions leaves out.</span>
+<span class="sd">:func:`calc_pbl_height` finds the mixed-layer height from the met, as the</span>
+<span class="sd">transport model of the run did (HYSPLIT's ``kmixd``, or FLEXPART's</span>
+<span class="sd">method). Both read ARL files, or met in another</span>
+<span class="sd">format converted by arlmet (:meth:`runtraj.models.MetConfig.open` opens a</span>
+<span class="sd">run's met files the way its transport model reads them).</span>
 <span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterable</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Iterator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">contextlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">contextmanager</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
@@ -499,7 +505,7 @@
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    coords : numpy.ndarray</span>
-<span class="sd">        Cell centers along one axis, ascending or descending.</span>
+<span class="sd">        Cell centers along one axis, strictly ascending or strictly descending.</span>
 <span class="sd">    values : numpy.ndarray</span>
 <span class="sd">        Positions to look up.</span>
 
@@ -511,6 +517,13 @@
     <span class="n">coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">coords</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">coords</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">coords</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Field coordinates must be a non-empty 1-D array."</span><span class="p">)</span>
+    <span class="n">steps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">((</span><span class="n">steps</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span> <span class="ow">or</span> <span class="p">(</span><span class="n">steps</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">"Field coordinates must strictly increase or strictly decrease; "</span>
+            <span class="sa">f</span><span class="s2">"got </span><span class="si">{</span><span class="n">coords</span><span class="p">[:</span><span class="mi">6</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span><span class="si">}{</span><span class="s1">' ...'</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">coords</span><span class="o">.</span><span class="n">size</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">6</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">''</span><span class="si">}</span><span class="s2">. "</span>
+            <span class="s2">"Sort the field along that dimension and drop repeated values."</span>
+        <span class="p">)</span>
     <span class="n">ascending</span> <span class="o">=</span> <span class="n">coords</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">coords</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
     <span class="n">c</span> <span class="o">=</span> <span class="n">coords</span> <span class="k">if</span> <span class="n">ascending</span> <span class="k">else</span> <span class="n">coords</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
     <span class="k">if</span> <span class="n">c</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
@@ -601,7 +614,9 @@
 <span class="sd">        vertical dimension. Required when the field has one. Matched to the</span>
 <span class="sd">        nearest level, so a point above the top level takes the top level.</span>
 <span class="sd">    times : array-like, optional</span>
-<span class="sd">        Time of each point. Required when the field has a ``time``</span>
+<span class="sd">        Time of each point, as datetimes or date strings, with none</span>
+<span class="sd">        missing. A time with a time zone is converted to UTC, which the</span>
+<span class="sd">        field's times are taken to be in. Required when the field has a ``time``</span>
 <span class="sd">        dimension. By default matched to the nearest time, so times</span>
 <span class="sd">        outside the field's span take the first or last step. See</span>
 <span class="sd">        ``step_starts``.</span>
@@ -629,6 +644,12 @@
 <span class="sd">        One value per point.</span>
 <span class="sd">    """</span>
     <span class="n">y_dim</span><span class="p">,</span> <span class="n">x_dim</span> <span class="o">=</span> <span class="n">horizontal_dims</span><span class="p">(</span><span class="n">field</span><span class="p">)</span>
+    <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span><span class="n">d</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="p">(</span><span class="n">y_dim</span><span class="p">,</span> <span class="n">x_dim</span><span class="p">)</span> <span class="k">if</span> <span class="n">d</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">field</span><span class="o">.</span><span class="n">coords</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"The field has no coordinates for its </span><span class="si">{</span><span class="s1">' and '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">repr</span><span class="p">,</span><span class="w"> </span><span class="n">missing</span><span class="p">))</span><span class="si">}</span><span class="s2"> "</span>
+            <span class="s2">"dimensions, so a point cannot be placed in it. Assign them first."</span>
+        <span class="p">)</span>
     <span class="n">xs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
     <span class="n">ys</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
     <span class="k">if</span> <span class="n">xs</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">ys</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
@@ -655,9 +676,20 @@
     <span class="k">if</span> <span class="s2">"time"</span> <span class="ow">in</span> <span class="n">field</span><span class="o">.</span><span class="n">dims</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">times</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"field has a time dimension; pass times."</span><span class="p">)</span>
-        <span class="n">stamps</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DatetimeIndex</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">times</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()))</span>
+        <span class="n">raw</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">times</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">raw</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">kind</span> <span class="ow">in</span> <span class="s2">"biufc"</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"times must be datetimes or date strings; got numbers (</span><span class="si">{</span><span class="n">raw</span><span class="o">.</span><span class="n">dtype</span><span class="si">}</span><span class="s2">)."</span>
+            <span class="p">)</span>
+        <span class="n">stamps</span> <span class="o">=</span> <span class="n">_utc</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">DatetimeIndex</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">raw</span><span class="p">)))</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">stamps</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">xs</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"times must have the same length as x and y."</span><span class="p">)</span>
+        <span class="n">missing</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">stamps</span><span class="o">.</span><span class="n">isna</span><span class="p">())</span>
+        <span class="k">if</span> <span class="n">missing</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"times holds </span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">missing</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span><span class="si">}</span><span class="s2"> missing value(s), the first "</span>
+                <span class="sa">f</span><span class="s2">"at position </span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">missing</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span><span class="si">}</span><span class="s2">."</span>
+            <span class="p">)</span>
         <span class="n">index</span> <span class="o">=</span> <span class="n">field</span><span class="o">.</span><span class="n">indexes</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">step_starts</span><span class="p">:</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">IntervalIndex</span><span class="p">):</span>
@@ -688,6 +720,28 @@
 
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_utc</span><span class="p">(</span><span class="n">times</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DatetimeIndex</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DatetimeIndex</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return *times* in UTC without a time zone, as met and fields label theirs."""</span>
+    <span class="k">if</span> <span class="n">times</span><span class="o">.</span><span class="n">tz</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">times</span><span class="o">.</span><span class="n">tz_convert</span><span class="p">(</span><span class="s2">"UTC"</span><span class="p">)</span><span class="o">.</span><span class="n">tz_localize</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">times</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_check_z_top</span><span class="p">(</span><span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">z_top</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Refuse a *z_top* that is not positive, or below a particle, as one given in km would be."""</span>
+    <span class="k">if</span> <span class="n">z_top</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">z_top</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"z_top must be a positive height in meters; got </span><span class="si">{</span><span class="n">z_top</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s2">"zagl"</span> <span class="ow">in</span> <span class="n">particles</span><span class="o">.</span><span class="n">columns</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">particles</span><span class="p">):</span>
+        <span class="n">highest</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">(</span><span class="n">particles</span><span class="p">[</span><span class="s2">"zagl"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)))</span>
+        <span class="k">if</span> <span class="n">highest</span> <span class="o">&gt;</span> <span class="n">z_top</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"z_top is </span><span class="si">{</span><span class="n">z_top</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> m, below particles at up to </span><span class="si">{</span><span class="n">highest</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> m "</span>
+                <span class="s2">"above ground. z_top is the top of the run's domain in meters."</span>
+            <span class="p">)</span>
+
+
 <span class="k">def</span><span class="w"> </span><span class="nf">_nearest_level</span><span class="p">(</span><span class="n">levels</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">,</span> <span class="n">z</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Return the index of the level nearest each ``z``."""</span>
     <span class="n">coords</span> <span class="o">=</span> <span class="n">levels</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
@@ -697,8 +751,8 @@
 
 
 <span class="c1">#: The ARL variables each particle column is computed from, by :func:`sample_met`.</span>
-<span class="c1">#: ``pres`` is the ``PRES`` field, not arlmet's virtual ``"pressure"``, which</span>
-<span class="c1">#: is NaN at a height on sigma files (jmineau/arl-met#65).</span>
+<span class="c1">#: ``PRES`` stands for the pressure: the met's ``PRES`` field where it has</span>
+<span class="c1">#: one (:func:`_pressure_variable`).</span>
 <span class="n">_MET_VARIABLES</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
     <span class="s2">"mlht"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"PBLH"</span><span class="p">,),</span>
     <span class="s2">"dens"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"PRES"</span><span class="p">,</span> <span class="s2">"TEMP"</span><span class="p">,</span> <span class="s2">"SPHU"</span><span class="p">),</span>
@@ -714,16 +768,102 @@
 <span class="c1">#: not import HYSPLIT's package).</span>
 <span class="n">_DEFAULT_Z_TOP</span> <span class="o">=</span> <span class="mf">25000.0</span>
 
+<span class="c1">#: Met to sample: the paths of ARL files (or one path), or one Dataset in</span>
+<span class="c1">#: :func:`arlmet.open_dataset`'s layout, such as a converter's output.</span>
+<span class="n">Met</span> <span class="o">=</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">|</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span>
+
+
+<span class="nd">@contextmanager</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_opened</span><span class="p">(</span><span class="n">met</span><span class="p">:</span> <span class="n">Met</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""Yield *met* as :func:`arlmet.sample_points` reads it: the files opened (and closed afterwards), or the Dataset."""</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">arlmet</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">met</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">):</span>
+        <span class="k">yield</span> <span class="p">[</span><span class="n">met</span><span class="p">]</span>
+        <span class="k">return</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">met</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="n">Path</span><span class="p">(</span><span class="n">met</span><span class="p">)</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"met is a folder, </span><span class="si">{</span><span class="n">met</span><span class="si">}</span><span class="s2">. Give the met files a run read, such "</span>
+                <span class="s2">"as particles_metadata(path).met_files."</span>
+            <span class="p">)</span>
+        <span class="n">met</span> <span class="o">=</span> <span class="p">[</span><span class="n">met</span><span class="p">]</span>
+    <span class="n">handles</span> <span class="o">=</span> <span class="p">[</span><span class="n">arlmet</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">met</span><span class="p">]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">handles</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"No met files were given."</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">yield</span> <span class="n">handles</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">handle</span> <span class="ow">in</span> <span class="n">handles</span><span class="p">:</span>
+            <span class="n">handle</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_met_times</span><span class="p">(</span><span class="n">sources</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DatetimeIndex</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the met times of the opened met, in order, in UTC without a time zone."""</span>
+    <span class="n">times</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">source</span> <span class="ow">in</span> <span class="n">sources</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">):</span>
+            <span class="n">index</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DatetimeIndex</span><span class="p">(</span><span class="n">source</span><span class="o">.</span><span class="n">indexes</span><span class="p">[</span><span class="s2">"time"</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">index</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DatetimeIndex</span><span class="p">(</span><span class="n">source</span><span class="o">.</span><span class="n">times</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">index</span><span class="o">.</span><span class="n">tz</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">index</span> <span class="o">=</span> <span class="n">index</span><span class="o">.</span><span class="n">tz_convert</span><span class="p">(</span><span class="s2">"UTC"</span><span class="p">)</span><span class="o">.</span><span class="n">tz_localize</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+        <span class="n">times</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DatetimeIndex</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">times</span><span class="p">))</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_header</span><span class="p">(</span><span class="n">source</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return what holds the grid, source and vertical axis of opened met: the file, or a Dataset's ``arl`` accessor."""</span>
+    <span class="k">return</span> <span class="n">source</span><span class="o">.</span><span class="n">arl</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">)</span> <span class="k">else</span> <span class="n">source</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_met_variables</span><span class="p">(</span><span class="n">sources</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return the names of the variables every source of the opened met holds.</span>
+
+<span class="sd">    A variable that only some of the files hold cannot be sampled at every</span>
+<span class="sd">    met time, so it counts as missing.</span>
+<span class="sd">    """</span>
+    <span class="n">held</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">source</span> <span class="ow">in</span> <span class="n">sources</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">):</span>
+            <span class="n">held</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="nb">str</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">source</span><span class="o">.</span><span class="n">data_vars</span><span class="p">})</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">held</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="n">record</span><span class="o">.</span><span class="n">variable</span> <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">source</span><span class="o">.</span><span class="n">records</span><span class="p">})</span>
+    <span class="k">return</span> <span class="nb">set</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="o">*</span><span class="n">held</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_pressure_variable</span><span class="p">(</span><span class="n">sources</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">names</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return what to sample for the pressure: the met's ``PRES`` field, arlmet's ``"pressure"``, or ``None``.</span>
+
+<span class="sd">    A file with ``PRES`` on its levels, such as HRRR's, gives the pressure</span>
+<span class="sd">    HYSPLIT reads. A file on pressure levels (GFS) or hybrid levels (ERA5)</span>
+<span class="sd">    has none: its pressure comes from its vertical axis, which arlmet's</span>
+<span class="sd">    virtual ``"pressure"`` reads. Terrain-following levels and WRF's hybrid</span>
+<span class="sd">    levels give no pressure without ``PRES``, so met with such a file and</span>
+<span class="sd">    no ``PRES`` in every file has none (``None``).</span>
+<span class="sd">    """</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">arlmet</span>
+
+    <span class="k">if</span> <span class="s2">"PRES"</span> <span class="ow">in</span> <span class="n">names</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">"PRES"</span>
+    <span class="k">for</span> <span class="n">source</span> <span class="ow">in</span> <span class="n">sources</span><span class="p">:</span>
+        <span class="n">axis</span> <span class="o">=</span> <span class="n">_header</span><span class="p">(</span><span class="n">source</span><span class="p">)</span><span class="o">.</span><span class="n">vertical_axis</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="n">arlmet</span><span class="o">.</span><span class="n">TerrainAxis</span> <span class="o">|</span> <span class="n">arlmet</span><span class="o">.</span><span class="n">WrfAxis</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="s2">"pressure"</span>
+
 
 <span class="k">def</span><span class="w"> </span><span class="nf">sample_met</span><span class="p">(</span>
     <span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
-    <span class="n">files</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
+    <span class="n">met</span><span class="p">:</span> <span class="n">Met</span><span class="p">,</span>
     <span class="n">columns</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"mlht"</span><span class="p">,</span> <span class="s2">"dens"</span><span class="p">,</span> <span class="s2">"pres"</span><span class="p">,</span> <span class="s2">"zsfc"</span><span class="p">),</span>
     <span class="o">*</span><span class="p">,</span>
     <span class="n">z_top</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">_DEFAULT_Z_TOP</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Return the particles with met columns sampled from ARL files at each particle's position.</span>
+<span class="sd">    Return the particles with met columns sampled at each particle's position.</span>
 
 <span class="sd">    A transport model that writes only positions can get the columns</span>
 <span class="sd">    HYSPLIT writes from the met this way. Each row is sampled at its</span>
@@ -736,26 +876,33 @@
 <span class="sd">    - ``mlht`` is ``PBLH``, the met model's boundary-layer height, in m</span>
 <span class="sd">      above ground.</span>
 <span class="sd">    - ``dens`` is 100 ``PRES`` / (R ``TEMP`` (1 + 0.61 ``SPHU``)), the</span>
-<span class="sd">      density of moist air in kg m⁻³, with R = 287.04 J kg⁻¹ K⁻¹.</span>
-<span class="sd">    - ``pres`` is ``PRES``, the pressure, in hPa.</span>
+<span class="sd">      density of moist air in kg m⁻³, with R = 287.04 J kg⁻¹ K⁻¹. Met</span>
+<span class="sd">      without ``SPHU`` gives the density of dry air, up to about 1 %</span>
+<span class="sd">      higher, as :func:`calc_pbl_height` uses.</span>
+<span class="sd">    - ``pres`` is ``PRES``, the pressure, in hPa. Met without a ``PRES``</span>
+<span class="sd">      field, such as GFS on pressure levels or ERA5 on model levels, gives</span>
+<span class="sd">      the pressure of its vertical axis instead.</span>
 <span class="sd">    - ``zsfc`` is ``SHGT``, the terrain height, in m above sea level.</span>
 
 <span class="sd">    ``pres`` and ``dens`` follow what HYSPLIT reads, to the differences</span>
-<span class="sd">    under Notes. ``mlht`` is the met's: HYSPLIT's is the</span>
-<span class="sd">    met's ``PBLH`` only with ``kmixd: 0``, and then it is at least ``kmix0``;</span>
-<span class="sd">    the default, ``kmixd: 3``, finds the mixed layer from the profile, as</span>
-<span class="sd">    :func:`calc_pbl_height` does.</span>
+<span class="sd">    under Notes. ``mlht`` is the met's. HYSPLIT's own ``mlht`` is the met's</span>
+<span class="sd">    ``PBLH`` (at least ``kmix0``) only when HYSPLIT runs with ``kmixd: 0``;</span>
+<span class="sd">    with HYSPLIT's default, ``kmixd: 3``, it finds the mixed layer from the</span>
+<span class="sd">    profile, as :func:`calc_pbl_height` does.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    particles : pandas.DataFrame</span>
-<span class="sd">        A particle table with ``lon``, ``lat``, ``zagl``, and ``time``.</span>
+<span class="sd">        A particle table with ``lon``, ``lat``, ``zagl``, and ``time``</span>
+<span class="sd">        (UTC; a time with a time zone is converted to UTC).</span>
 <span class="sd">        ``sim.particles`` has ``time``. For a table a transport model</span>
 <span class="sd">        returned, add it: the release time plus ``age`` minutes.</span>
-<span class="sd">    files : iterable of path-like</span>
+<span class="sd">    met : path-like, iterable of path-like, or xarray.Dataset</span>
 <span class="sd">        ARL met files that cover the particles' times, such as the files the</span>
 <span class="sd">        run read (``met_files`` of :class:`runtraj.models.ModelRun` or of</span>
-<span class="sd">        :func:`runtraj.particles.particles_metadata`).</span>
+<span class="sd">        :func:`runtraj.particles.particles_metadata`), or met in another</span>
+<span class="sd">        format as one Dataset in :func:`arlmet.open_dataset`'s layout</span>
+<span class="sd">        (:meth:`runtraj.models.MetConfig.open`, or an arlmet converter's output).</span>
 <span class="sd">    columns : iterable of str, default ("mlht", "dens", "pres", "zsfc")</span>
 <span class="sd">        The columns to add.</span>
 <span class="sd">    z_top : float or None, default 25000</span>
@@ -777,9 +924,9 @@
 <span class="sd">    ValueError</span>
 <span class="sd">        If a column is not one of the four or is in *particles* already</span>
 <span class="sd">        (drop it first), *particles* has no ``time`` column, a row is outside</span>
-<span class="sd">        the files' times, or *z_top* is not positive.</span>
+<span class="sd">        the files' times, or *z_top* is not positive or is below a particle.</span>
 <span class="sd">    KeyError</span>
-<span class="sd">        If the files lack a variable a column needs.</span>
+<span class="sd">        If the met lacks a variable a column needs.</span>
 
 <span class="sd">    Notes</span>
 <span class="sd">    -----</span>
@@ -788,7 +935,7 @@
 
 <span class="sd">    - ``zsfc``: a few meters, since HYSPLIT reads the terrain where the</span>
 <span class="sd">      particle was before its turbulent step.</span>
-<span class="sd">    - ``mlht``: a median of 16 to 30 m, against a run with ``kmixd: 0``</span>
+<span class="sd">    - ``mlht``: a median of 16 to 30 m, against a HYSPLIT run with ``kmixd: 0``</span>
 <span class="sd">      floored at ``kmix0``. HYSPLIT reads the nearest grid point's ``PBLH``;</span>
 <span class="sd">      this function interpolates it.</span>
 <span class="sd">    - ``pres``: a median of 0.02 hPa, 0.23 to 0.30 hPa at the 95th</span>
@@ -817,6 +964,7 @@
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
             <span class="sa">f</span><span class="s2">"sample_met cannot sample </span><span class="si">{</span><span class="n">unknown</span><span class="si">}</span><span class="s2">; it samples </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">_MET_VARIABLES</span><span class="p">)</span><span class="si">}</span><span class="s2">."</span>
         <span class="p">)</span>
+    <span class="n">_check_z_top</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">z_top</span><span class="p">)</span>
     <span class="n">present</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">columns</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">particles</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
     <span class="k">if</span> <span class="n">present</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
@@ -828,10 +976,23 @@
         <span class="p">)</span>
     <span class="n">variables</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">v</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">columns</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">_MET_VARIABLES</span><span class="p">[</span><span class="n">c</span><span class="p">]))</span>
 
-    <span class="n">handles</span> <span class="o">=</span> <span class="p">[</span><span class="n">arlmet</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">files</span><span class="p">]</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="n">met_times</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DatetimeIndex</span><span class="p">(</span><span class="nb">sorted</span><span class="p">({</span><span class="n">t</span> <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">handles</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">h</span><span class="o">.</span><span class="n">times</span><span class="p">}))</span>
-        <span class="n">times</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DatetimeIndex</span><span class="p">(</span><span class="n">particles</span><span class="p">[</span><span class="s2">"time"</span><span class="p">])</span>
+    <span class="k">with</span> <span class="n">_opened</span><span class="p">(</span><span class="n">met</span><span class="p">)</span> <span class="k">as</span> <span class="n">sources</span><span class="p">:</span>
+        <span class="n">available</span> <span class="o">=</span> <span class="n">_met_variables</span><span class="p">(</span><span class="n">sources</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s2">"SPHU"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">available</span><span class="p">:</span>
+            <span class="n">variables</span> <span class="o">=</span> <span class="p">[</span><span class="n">v</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">variables</span> <span class="k">if</span> <span class="n">v</span> <span class="o">!=</span> <span class="s2">"SPHU"</span><span class="p">]</span>
+        <span class="n">pressure</span> <span class="o">=</span> <span class="n">_pressure_variable</span><span class="p">(</span><span class="n">sources</span><span class="p">,</span> <span class="n">available</span><span class="p">)</span>
+        <span class="n">missing</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">variables</span><span class="p">)</span> <span class="o">-</span> <span class="n">available</span> <span class="o">-</span> <span class="p">{</span><span class="s2">"PRES"</span><span class="p">}</span>
+        <span class="k">if</span> <span class="s2">"PRES"</span> <span class="ow">in</span> <span class="n">variables</span> <span class="ow">and</span> <span class="n">pressure</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">missing</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">"PRES"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"sample_met needs the met variables </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span><span class="si">}</span><span class="s2">, which the "</span>
+                <span class="s2">"met lacks."</span>
+            <span class="p">)</span>
+        <span class="c1"># PRES is sampled as the pressure the met has (checked just above).</span>
+        <span class="n">names</span> <span class="o">=</span> <span class="p">[(</span><span class="n">pressure</span> <span class="ow">or</span> <span class="n">v</span><span class="p">)</span> <span class="k">if</span> <span class="n">v</span> <span class="o">==</span> <span class="s2">"PRES"</span> <span class="k">else</span> <span class="n">v</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">variables</span><span class="p">]</span>
+        <span class="n">met_times</span> <span class="o">=</span> <span class="n">_met_times</span><span class="p">(</span><span class="n">sources</span><span class="p">)</span>
+        <span class="n">times</span> <span class="o">=</span> <span class="n">_utc</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">DatetimeIndex</span><span class="p">(</span><span class="n">particles</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]))</span>
         <span class="n">before</span><span class="p">,</span> <span class="n">after</span><span class="p">,</span> <span class="n">weight</span> <span class="o">=</span> <span class="n">_bracket</span><span class="p">(</span><span class="n">met_times</span><span class="p">,</span> <span class="n">times</span><span class="p">)</span>
         <span class="c1"># Each row is sampled at the met time before it and, unless it is on</span>
         <span class="c1"># a met time, at the one after. One call samples both.</span>
@@ -842,28 +1003,26 @@
         <span class="p">)</span>
         <span class="n">points</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">before</span><span class="p">,</span> <span class="n">after</span><span class="p">[</span><span class="n">later</span><span class="p">]])</span>
         <span class="n">sampled</span> <span class="o">=</span> <span class="n">arlmet</span><span class="o">.</span><span class="n">sample_points</span><span class="p">(</span>
-            <span class="n">handles</span><span class="p">,</span> <span class="n">points</span><span class="p">,</span> <span class="n">variables</span><span class="p">,</span> <span class="n">z_kind</span><span class="o">=</span><span class="s2">"agl"</span><span class="p">,</span> <span class="n">model_top</span><span class="o">=</span><span class="n">z_top</span>
+            <span class="n">sources</span><span class="p">,</span> <span class="n">points</span><span class="p">,</span> <span class="n">names</span><span class="p">,</span> <span class="n">z_kind</span><span class="o">=</span><span class="s2">"agl"</span><span class="p">,</span> <span class="n">model_top</span><span class="o">=</span><span class="n">z_top</span>
         <span class="p">)</span>
-    <span class="k">finally</span><span class="p">:</span>
-        <span class="k">for</span> <span class="n">handle</span> <span class="ow">in</span> <span class="n">handles</span><span class="p">:</span>
-            <span class="n">handle</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 
     <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">particles</span><span class="p">)</span>
     <span class="n">w</span> <span class="o">=</span> <span class="n">weight</span><span class="p">[</span><span class="n">later</span><span class="p">]</span>
-    <span class="n">met</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
-    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">variables</span><span class="p">:</span>
+    <span class="n">values_at</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">variable</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">variables</span><span class="p">,</span> <span class="n">names</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
         <span class="n">values</span> <span class="o">=</span> <span class="n">sampled</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
         <span class="n">at_rows</span> <span class="o">=</span> <span class="n">values</span><span class="p">[:</span><span class="n">n</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="n">at_rows</span><span class="p">[</span><span class="n">later</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">w</span><span class="p">)</span> <span class="o">*</span> <span class="n">at_rows</span><span class="p">[</span><span class="n">later</span><span class="p">]</span> <span class="o">+</span> <span class="n">w</span> <span class="o">*</span> <span class="n">values</span><span class="p">[</span><span class="n">n</span><span class="p">:]</span>
-        <span class="n">met</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">at_rows</span>
+        <span class="n">values_at</span><span class="p">[</span><span class="n">variable</span><span class="p">]</span> <span class="o">=</span> <span class="n">at_rows</span>
 
     <span class="n">out</span> <span class="o">=</span> <span class="n">particles</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
     <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">column</span> <span class="o">==</span> <span class="s2">"dens"</span><span class="p">:</span>
-            <span class="n">virtual_temperature</span> <span class="o">=</span> <span class="n">met</span><span class="p">[</span><span class="s2">"TEMP"</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="mf">0.61</span> <span class="o">*</span> <span class="n">met</span><span class="p">[</span><span class="s2">"SPHU"</span><span class="p">])</span>
-            <span class="n">out</span><span class="p">[</span><span class="n">column</span><span class="p">]</span> <span class="o">=</span> <span class="mf">100.0</span> <span class="o">*</span> <span class="n">met</span><span class="p">[</span><span class="s2">"PRES"</span><span class="p">]</span> <span class="o">/</span> <span class="p">(</span><span class="n">_R_DRY</span> <span class="o">*</span> <span class="n">virtual_temperature</span><span class="p">)</span>
+            <span class="n">sphu</span> <span class="o">=</span> <span class="n">values_at</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"SPHU"</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+            <span class="n">virtual_temperature</span> <span class="o">=</span> <span class="n">values_at</span><span class="p">[</span><span class="s2">"TEMP"</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="mf">0.61</span> <span class="o">*</span> <span class="n">sphu</span><span class="p">)</span>
+            <span class="n">out</span><span class="p">[</span><span class="n">column</span><span class="p">]</span> <span class="o">=</span> <span class="mf">100.0</span> <span class="o">*</span> <span class="n">values_at</span><span class="p">[</span><span class="s2">"PRES"</span><span class="p">]</span> <span class="o">/</span> <span class="p">(</span><span class="n">_R_DRY</span> <span class="o">*</span> <span class="n">virtual_temperature</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">out</span><span class="p">[</span><span class="n">column</span><span class="p">]</span> <span class="o">=</span> <span class="n">met</span><span class="p">[</span><span class="n">_MET_VARIABLES</span><span class="p">[</span><span class="n">column</span><span class="p">][</span><span class="mi">0</span><span class="p">]]</span>
+            <span class="n">out</span><span class="p">[</span><span class="n">column</span><span class="p">]</span> <span class="o">=</span> <span class="n">values_at</span><span class="p">[</span><span class="n">_MET_VARIABLES</span><span class="p">[</span><span class="n">column</span><span class="p">][</span><span class="mi">0</span><span class="p">]]</span>
     <span class="k">return</span> <span class="n">out</span>
 
 
@@ -877,6 +1036,9 @@
 <span class="sd">    """</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">met_times</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"The met files hold no time steps."</span><span class="p">)</span>
+    <span class="c1"># In nanoseconds both: a particle's time need not be a whole microsecond.</span>
+    <span class="n">met_times</span> <span class="o">=</span> <span class="n">met_times</span><span class="o">.</span><span class="n">as_unit</span><span class="p">(</span><span class="s2">"ns"</span><span class="p">)</span>
+    <span class="n">times</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DatetimeIndex</span><span class="p">(</span><span class="n">times</span><span class="p">)</span><span class="o">.</span><span class="n">as_unit</span><span class="p">(</span><span class="s2">"ns"</span><span class="p">)</span>
     <span class="n">after</span> <span class="o">=</span> <span class="n">met_times</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">times</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="s2">"left"</span><span class="p">)</span>
     <span class="n">outside</span> <span class="o">=</span> <span class="p">(</span><span class="n">after</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">met_times</span><span class="p">))</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">times</span> <span class="o">&lt;</span> <span class="n">met_times</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
     <span class="k">if</span> <span class="n">outside</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
@@ -904,20 +1066,78 @@
 <span class="c1">#: The bulk Richardson number at the top of the mixed layer (``stbanl.f``).</span>
 <span class="n">_CRITICAL_RICHARDSON</span> <span class="o">=</span> <span class="mf">0.25</span>
 
+<span class="c1">#: FLEXPART's constants for the mixed layer (``par_mod.f90`` and</span>
+<span class="c1">#: ``richardson`` in ``getfields_mod.f90``): gravity in m s⁻², the gas</span>
+<span class="c1">#: constant and heat capacity of dry air in J kg⁻¹ K⁻¹, the weight ``b`` of</span>
+<span class="c1">#: u*² in the wind shear and ``bs`` of the temperature excess, and the</span>
+<span class="c1">#: least and greatest mixed-layer height in m.</span>
+<span class="n">_FLEXPART_GRAV</span> <span class="o">=</span> <span class="mf">9.81</span>
+<span class="n">_FLEXPART_R_AIR</span> <span class="o">=</span> <span class="mf">287.05</span>
+<span class="n">_FLEXPART_CP</span> <span class="o">=</span> <span class="mf">1004.6</span>
+<span class="n">_FLEXPART_B</span> <span class="o">=</span> <span class="mf">100.0</span>
+<span class="n">_FLEXPART_BS</span> <span class="o">=</span> <span class="mf">8.5</span>
+<span class="n">_FLEXPART_HMIX_MIN</span> <span class="o">=</span> <span class="mf">100.0</span>
+<span class="n">_FLEXPART_HMIX_MAX</span> <span class="o">=</span> <span class="mf">4500.0</span>
+
+<span class="c1">#: The met variables each method of :func:`calc_pbl_height` reads, besides</span>
+<span class="c1">#: the pressure (``PRES`` or the vertical axis) the profile methods need.</span>
+<span class="c1">#: ``hysplit`` also needs ``USTR`` or ``UMOF`` and ``VMOF``.</span>
+<span class="n">_PBL_VARIABLES</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"hysplit"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"TEMP"</span><span class="p">,</span> <span class="s2">"UWND"</span><span class="p">,</span> <span class="s2">"VWND"</span><span class="p">,</span> <span class="s2">"SHGT"</span><span class="p">,</span> <span class="s2">"SHTF"</span><span class="p">},</span>
+    <span class="s2">"hysplit_temperature"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"TEMP"</span><span class="p">,</span> <span class="s2">"SHGT"</span><span class="p">},</span>
+    <span class="s2">"met"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"PBLH"</span><span class="p">,</span> <span class="s2">"SHGT"</span><span class="p">},</span>
+    <span class="s2">"flexpart"</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">"TEMP"</span><span class="p">,</span>
+        <span class="s2">"SPHU"</span><span class="p">,</span>
+        <span class="s2">"UWND"</span><span class="p">,</span>
+        <span class="s2">"VWND"</span><span class="p">,</span>
+        <span class="s2">"PRSS"</span><span class="p">,</span>
+        <span class="s2">"T02M"</span><span class="p">,</span>
+        <span class="s2">"DP2M"</span><span class="p">,</span>
+        <span class="s2">"U10M"</span><span class="p">,</span>
+        <span class="s2">"V10M"</span><span class="p">,</span>
+        <span class="s2">"USTR"</span><span class="p">,</span>
+        <span class="s2">"SHTF"</span><span class="p">,</span>
+    <span class="p">},</span>
+<span class="p">}</span>
+
 
 <span class="k">def</span><span class="w"> </span><span class="nf">calc_pbl_height</span><span class="p">(</span>
     <span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
-    <span class="n">files</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
+    <span class="n">met</span><span class="p">:</span> <span class="n">Met</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
+    <span class="n">method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"hysplit"</span><span class="p">,</span>
     <span class="n">z_top</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">_DEFAULT_Z_TOP</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Return the mixed-layer height at each particle, found from the met's profile as HYSPLIT's ``kmixd: 3`` finds it.</span>
+<span class="sd">    Return the mixed-layer height at each particle, found from the met as a transport model finds it.</span>
 
-<span class="sd">    This is HYSPLIT's default way to find the mixed layer, ported from its</span>
-<span class="sd">    source (``stbanl.f``, Holtslag and Boville, 1993). Going up the column,</span>
-<span class="sd">    the mixed layer ends where the bulk Richardson number between the</span>
-<span class="sd">    lowest level and the level reached passes 0.25::</span>
+<span class="sd">    The mixed layer a stage reads should be the one the particles were</span>
+<span class="sd">    mixed in, and each transport model finds it in its own way. Choose the</span>
+<span class="sd">    *method* of the run the particles came from:</span>
+
+<span class="sd">    - ``"hysplit"`` (the default): HYSPLIT's default, ``kmixd: 3``. Going</span>
+<span class="sd">      up the column, the mixed layer ends where the bulk Richardson number</span>
+<span class="sd">      between the lowest level and the level reached passes 0.25 (below).</span>
+<span class="sd">    - ``"hysplit_temperature"``: HYSPLIT's ``kmixd: 1``. The top is the</span>
+<span class="sd">      highest level whose potential temperature is within 2 K of the</span>
+<span class="sd">      column's lowest.</span>
+<span class="sd">    - ``"met"``: the met's own boundary-layer height ``PBLH``, as it is</span>
+<span class="sd">      used with HYSPLIT's ``kmixd: 0``.</span>
+<span class="sd">    - ``"flexpart"``: FLEXPART's Richardson method (below), for a FLEXPART</span>
+<span class="sd">      run on ERA5 model levels. FLEXPART on GFS uses the met's ``PBLH``</span>
+<span class="sd">      instead; give it ``"met"``.</span>
+
+<span class="sd">    HYSPLIT finds the height at each met grid point and met time, and a</span>
+<span class="sd">    particle takes the nearest grid point's height at the met times before</span>
+<span class="sd">    and after it, linear in time. The three HYSPLIT methods do the same, on</span>
+<span class="sd">    HYSPLIT's internal levels for a run with the top *z_top*. They apply</span>
+<span class="sd">    no minimum, as HYSPLIT's ``kmix0`` does: take ``numpy.maximum`` with</span>
+<span class="sd">    yours. Each height is at least a little above the lowest internal</span>
+<span class="sd">    level, as in HYSPLIT.</span>
+
+<span class="sd">    ``"hysplit"`` is ported from HYSPLIT's source (``stbanl.f``, Holtslag</span>
+<span class="sd">    and Boville, 1993)::</span>
 
 <span class="sd">        Ri = g · (θ(z) − θ₁ − θₑ) · (z − z₁) / ((θ₁ + θₑ) · |V(z) − V₁|²)</span>
 
@@ -926,47 +1146,104 @@
 <span class="sd">    air, is ``8.5 u* θ* / (u*³ + 0.6 w*³)^(1/3)`` in unstable air and 0</span>
 <span class="sd">    otherwise, with the friction velocity ``u*`` (``USTR``) and the</span>
 <span class="sd">    friction temperature ``θ*`` from the sensible heat flux (``SHTF``) at</span>
-<span class="sd">    the ground. The height is interpolated to where Ri is 0.25.</span>
+<span class="sd">    the ground. The height is interpolated to where Ri is 0.25. A column</span>
+<span class="sd">    with no height where Ri reaches 0.25 gets the second-highest internal</span>
+<span class="sd">    level, as in HYSPLIT.</span>
 
-<span class="sd">    HYSPLIT computes the height at each met grid point and met time; a</span>
-<span class="sd">    particle takes the nearest grid point's height at the met times before</span>
-<span class="sd">    and after it, linear in time. So does this function, on HYSPLIT's</span>
-<span class="sd">    internal levels for a run with the top *z_top*. It applies no minimum,</span>
-<span class="sd">    as HYSPLIT's ``kmix0`` does: take ``numpy.maximum`` with yours. A</span>
-<span class="sd">    column with no height where Ri reaches 0.25 gets the second-highest</span>
-<span class="sd">    internal level, as in HYSPLIT.</span>
+<span class="sd">    ``"flexpart"`` is ported from FLEXPART 11's ``richardson``</span>
+<span class="sd">    (``getfields_mod.f90``, after Vogelezang and Holtslag, 1996). It works</span>
+<span class="sd">    on the met's own levels, with heights integrated up from 2 m, and</span>
+<span class="sd">    measures from the 2 m virtual potential temperature θᵥ₂ (``T02M``,</span>
+<span class="sd">    ``DP2M``) and the wind of the lowest level V₁::</span>
 
-<span class="sd">    On three 6-hour HRRR runs from Salt Lake City, the height it finds,</span>
-<span class="sd">    kept at least 150 m, has a median ratio of 0.999 to 1.000 to the</span>
-<span class="sd">    ``mlht`` HYSPLIT wrote with ``kmixd: 3``, and 73 to 94 % of rows are</span>
-<span class="sd">    within 2 %.</span>
+<span class="sd">        Ri = g · (θᵥ(z) − θᵥ₂ − θₑ) · (z − 2) / ((θᵥ₂ + θₑ) · max(|V(z) − V₁|² + 100 u*², 0.1))</span>
+
+<span class="sd">    The top is where Ri first passes 0.25 in a layer that is not unstable,</span>
+<span class="sd">    found to a twentieth of the layer. In unstable air the temperature</span>
+<span class="sd">    excess θₑ = 8.5 H / (cₚ w*), with H the upward heat flux and w* the</span>
+<span class="sd">    convective velocity of that top, is added and the top found again, up</span>
+<span class="sd">    to three times. The height is kept between 100 and 4500 m, as</span>
+<span class="sd">    FLEXPART keeps it. A particle takes the greatest height of the four</span>
+<span class="sd">    grid points around it at the met times before and after it, as</span>
+<span class="sd">    FLEXPART does by default. FLEXPART's ``LSUBGRID: 1`` raises the height</span>
+<span class="sd">    by a subgrid-orography excess; that is left out, since the converted</span>
+<span class="sd">    met holds no subgrid orography, and FLEXPART leaves it off by default.</span>
+
+<span class="sd">    On three 6-hour HRRR runs from Salt Lake City, ``"hysplit"``, kept at</span>
+<span class="sd">    least 150 m, has a median ratio of 0.999 to 1.000 to the ``mlht``</span>
+<span class="sd">    HYSPLIT wrote with ``kmixd: 3``, and 73 to 94 % of rows are within 2 %.</span>
+<span class="sd">    On a 24-hour FLEXPART 11 run on ERA5 model levels from Salt Lake City,</span>
+<span class="sd">    ``"flexpart"`` matched the mixed layer FLEXPART found (Notes).</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    particles : pandas.DataFrame</span>
 <span class="sd">        A particle table with ``lon``, ``lat``, and ``time``.</span>
-<span class="sd">    files : iterable of path-like</span>
-<span class="sd">        ARL met files that cover the particles' times, with ``TEMP``,</span>
-<span class="sd">        ``PRES``, ``UWND``, ``VWND`` and ``SHGT``, the sensible heat flux</span>
-<span class="sd">        ``SHTF``, and the friction velocity ``USTR`` or the momentum fluxes</span>
-<span class="sd">        ``UMOF`` and ``VMOF``.</span>
+<span class="sd">    met : path-like, iterable of path-like, or xarray.Dataset</span>
+<span class="sd">        ARL met files that cover the particles' times, or met in another</span>
+<span class="sd">        format as one Dataset in :func:`arlmet.open_dataset`'s layout, as</span>
+<span class="sd">        :func:`sample_met` takes. What it needs depends on *method*:</span>
+
+<span class="sd">        - ``"hysplit"``: ``TEMP``, ``UWND``, ``VWND`` and ``SHGT``, the</span>
+<span class="sd">          sensible heat flux ``SHTF``, the friction velocity ``USTR`` or the</span>
+<span class="sd">          momentum fluxes ``UMOF`` and ``VMOF``, and the pressure:</span>
+<span class="sd">          ``PRES``, or a vertical axis it follows from.</span>
+<span class="sd">        - ``"hysplit_temperature"``: ``TEMP``, ``SHGT`` and the pressure.</span>
+<span class="sd">        - ``"met"``: ``PBLH`` and ``SHGT``.</span>
+<span class="sd">        - ``"flexpart"``: ``TEMP``, ``SPHU``, ``UWND``, ``VWND``, the</span>
+<span class="sd">          pressure, and at the ground ``PRSS``, ``T02M``, ``DP2M``,</span>
+<span class="sd">          ``U10M``, ``V10M``, ``USTR`` and ``SHTF``.</span>
+<span class="sd">    method : {"hysplit", "hysplit_temperature", "met", "flexpart"}, default "hysplit"</span>
+<span class="sd">        How the mixed layer is found: the transport model and its method.</span>
 <span class="sd">    z_top : float, default 25000</span>
 <span class="sd">        The top of the domain in meters, which sets HYSPLIT's internal</span>
 <span class="sd">        levels (``z_top`` of :class:`runtraj.models.hysplit.HysplitConfig`).</span>
+<span class="sd">        ``"flexpart"`` reads the met's own levels and ignores it.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    numpy.ndarray</span>
 <span class="sd">        The mixed-layer height at each row, in m above ground. A row off</span>
-<span class="sd">        the met's grid is NaN.</span>
+<span class="sd">        the met's grid is NaN. A met time that lacks the surface fluxes,</span>
+<span class="sd">        as a GFS analysis (``f000``) does without the previous cycle's</span>
+<span class="sd">        forecast, has no height from ``"hysplit"`` or ``"flexpart"``: a row</span>
+<span class="sd">        at that time is NaN, and a row between it and a met time with the</span>
+<span class="sd">        fluxes takes the height of the other time. (HYSPLIT refuses such</span>
+<span class="sd">        met, so there is no ``mlht`` of its own to compare.) A column where</span>
+<span class="sd">        ``"flexpart"`` finds no top in the met's levels has none, where</span>
+<span class="sd">        FLEXPART stops.</span>
 
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
 <span class="sd">    ValueError</span>
-<span class="sd">        If *particles* has no ``time`` column or a row is outside the</span>
-<span class="sd">        files' times.</span>
+<span class="sd">        If *method* is not one of the four, *particles* has no ``time``</span>
+<span class="sd">        column, or a row is outside the files' times.</span>
 <span class="sd">    KeyError</span>
-<span class="sd">        If the files lack a variable it needs.</span>
+<span class="sd">        If the met lacks a variable the method needs.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    A Dataset gives the met's own values. HYSPLIT reads the ARL file</span>
+<span class="sd">    written from it, whose values are packed: in mountains ``SHGT`` can</span>
+<span class="sd">    move by a few meters. In a deep, nearly neutral afternoon layer, a few</span>
+<span class="sd">    meters near the ground move the ``"hysplit"`` height by hundreds of</span>
+<span class="sd">    meters, most of all on pressure levels, whose first level above the</span>
+<span class="sd">    ground can be only meters above HYSPLIT's lowest internal level. On two</span>
+<span class="sd">    hours of ERA5 pressure levels over Salt Lake City in July, the height</span>
+<span class="sd">    from the Dataset had a median ratio of 0.91 to HYSPLIT's ``mlht``. From</span>
+<span class="sd">    the ARL file HYSPLIT read, the median ratio was 0.999, with 99 % of rows</span>
+<span class="sd">    within 2 %. To compare with a HYSPLIT run, give the files it read.</span>
+
+<span class="sd">    FLEXPART writes a particle's ``hmix`` interpolated from the grid</span>
+<span class="sd">    points' heights (bilinear across the grid, linear in time), not the</span>
+<span class="sd">    greatest of them it mixes the particle in, so ``"flexpart"`` is at</span>
+<span class="sd">    least the ``hmix`` it wrote at most rows. Interpolated the same way, the</span>
+<span class="sd">    grid points' heights ``"flexpart"`` finds had a median ratio of 1.000</span>
+<span class="sd">    to the ``hmix`` of the run above, with 80 % of 24,000 rows within 2 %</span>
+<span class="sd">    and 94 % within 10 %. The rest comes from the converted met, which</span>
+<span class="sd">    differs from what FLEXPART reads in two small ways: an ARL hybrid level</span>
+<span class="sd">    keeps its pressure offset to the whole hPa, and ``USTR`` is found with</span>
+<span class="sd">    the density of dry air at 2 m, where FLEXPART uses moist air.</span>
 
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
@@ -976,95 +1253,224 @@
 <span class="sd">    &gt;&gt;&gt; mlht = runtraj.sampling.calc_pbl_height(</span>
 <span class="sd">    ...     sim.particles, meta.met_files</span>
 <span class="sd">    ... )  # doctest: +SKIP</span>
-<span class="sd">    """</span>
-    <span class="kn">import</span><span class="w"> </span><span class="nn">arlmet</span>
 
+<span class="sd">    A FLEXPART run on ERA5, with the met its transport model opens:</span>
+
+<span class="sd">    &gt;&gt;&gt; met = met_config.open(files, bounds)  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; mlht = runtraj.sampling.calc_pbl_height(</span>
+<span class="sd">    ...     particles, met, method="flexpart"</span>
+<span class="sd">    ... )  # doctest: +SKIP</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">method</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_PBL_VARIABLES</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"calc_pbl_height has no method </span><span class="si">{</span><span class="n">method</span><span class="si">!r}</span><span class="s2">; choose one of "</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">_PBL_VARIABLES</span><span class="p">)</span><span class="si">}</span><span class="s2">."</span>
+        <span class="p">)</span>
     <span class="k">if</span> <span class="s2">"time"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">particles</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
             <span class="s2">"calc_pbl_height needs a 'time' column: the release time plus 'age' minutes."</span>
         <span class="p">)</span>
-    <span class="n">handles</span> <span class="o">=</span> <span class="p">[</span><span class="n">arlmet</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">files</span><span class="p">]</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="n">first</span> <span class="o">=</span> <span class="n">handles</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="n">names</span> <span class="o">=</span> <span class="p">{</span><span class="n">r</span><span class="o">.</span><span class="n">variable</span> <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">handles</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">h</span><span class="o">.</span><span class="n">records</span><span class="p">}</span>
-        <span class="n">momentum</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"USTR"</span><span class="p">]</span> <span class="k">if</span> <span class="s2">"USTR"</span> <span class="ow">in</span> <span class="n">names</span> <span class="k">else</span> <span class="p">[</span><span class="s2">"UMOF"</span><span class="p">,</span> <span class="s2">"VMOF"</span><span class="p">]</span>
-        <span class="n">missing</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
-            <span class="p">{</span><span class="s2">"TEMP"</span><span class="p">,</span> <span class="s2">"PRES"</span><span class="p">,</span> <span class="s2">"UWND"</span><span class="p">,</span> <span class="s2">"VWND"</span><span class="p">,</span> <span class="s2">"SHGT"</span><span class="p">,</span> <span class="s2">"SHTF"</span><span class="p">,</span> <span class="o">*</span><span class="n">momentum</span><span class="p">}</span> <span class="o">-</span> <span class="n">names</span>
-        <span class="p">)</span>
+    <span class="n">_check_z_top</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">z_top</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">_opened</span><span class="p">(</span><span class="n">met</span><span class="p">)</span> <span class="k">as</span> <span class="n">sources</span><span class="p">:</span>
+        <span class="n">names</span> <span class="o">=</span> <span class="n">_met_variables</span><span class="p">(</span><span class="n">sources</span><span class="p">)</span>
+        <span class="n">pressure</span> <span class="o">=</span> <span class="n">_pressure_variable</span><span class="p">(</span><span class="n">sources</span><span class="p">,</span> <span class="n">names</span><span class="p">)</span>
+        <span class="n">needed</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">_PBL_VARIABLES</span><span class="p">[</span><span class="n">method</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">"hysplit"</span><span class="p">:</span>
+            <span class="n">needed</span> <span class="o">|=</span> <span class="p">{</span><span class="s2">"USTR"</span><span class="p">}</span> <span class="k">if</span> <span class="s2">"USTR"</span> <span class="ow">in</span> <span class="n">names</span> <span class="k">else</span> <span class="p">{</span><span class="s2">"UMOF"</span><span class="p">,</span> <span class="s2">"VMOF"</span><span class="p">}</span>
+        <span class="n">missing</span> <span class="o">=</span> <span class="n">needed</span> <span class="o">-</span> <span class="n">names</span>
+        <span class="k">if</span> <span class="n">method</span> <span class="o">!=</span> <span class="s2">"met"</span> <span class="ow">and</span> <span class="n">pressure</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">missing</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">"PRES"</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"calc_pbl_height needs the met variables </span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2">, which the "</span>
-                <span class="s2">"files lack."</span>
+                <span class="sa">f</span><span class="s2">"calc_pbl_height needs the met variables </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span><span class="si">}</span><span class="s2">, which "</span>
+                <span class="s2">"the met lacks."</span>
             <span class="p">)</span>
-        <span class="n">met_times</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DatetimeIndex</span><span class="p">(</span><span class="nb">sorted</span><span class="p">({</span><span class="n">t</span> <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">handles</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">h</span><span class="o">.</span><span class="n">times</span><span class="p">}))</span>
-        <span class="n">before</span><span class="p">,</span> <span class="n">after</span><span class="p">,</span> <span class="n">weight</span> <span class="o">=</span> <span class="n">_bracket</span><span class="p">(</span><span class="n">met_times</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DatetimeIndex</span><span class="p">(</span><span class="n">particles</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]))</span>
-
-        <span class="c1"># One column per met grid point and met time, at the nearest grid point.</span>
-        <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">first</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">fractional_indices</span><span class="p">(</span>
+        <span class="n">met_times</span> <span class="o">=</span> <span class="n">_met_times</span><span class="p">(</span><span class="n">sources</span><span class="p">)</span>
+        <span class="n">before</span><span class="p">,</span> <span class="n">after</span><span class="p">,</span> <span class="n">weight</span> <span class="o">=</span> <span class="n">_bracket</span><span class="p">(</span>
+            <span class="n">met_times</span><span class="p">,</span> <span class="n">_utc</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">DatetimeIndex</span><span class="p">(</span><span class="n">particles</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]))</span>
+        <span class="p">)</span>
+        <span class="n">header</span> <span class="o">=</span> <span class="n">_header</span><span class="p">(</span><span class="n">sources</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">reads</span> <span class="o">=</span> <span class="n">_grid_points_read</span><span class="p">(</span>
+            <span class="n">header</span><span class="o">.</span><span class="n">grid</span><span class="p">,</span>
             <span class="n">particles</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
             <span class="n">particles</span><span class="p">[</span><span class="s2">"lat"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
-        <span class="p">)</span>
-        <span class="n">rows</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-            <span class="p">{</span>
-                <span class="s2">"i"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">rint</span><span class="p">(</span><span class="n">x</span><span class="p">),</span>
-                <span class="s2">"j"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">rint</span><span class="p">(</span><span class="n">y</span><span class="p">),</span>
-                <span class="s2">"lon"</span><span class="p">:</span> <span class="n">particles</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
-                <span class="s2">"lat"</span><span class="p">:</span> <span class="n">particles</span><span class="p">[</span><span class="s2">"lat"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
-            <span class="p">}</span>
-        <span class="p">)</span>
-        <span class="n">later</span> <span class="o">=</span> <span class="n">weight</span> <span class="o">&gt;</span> <span class="mi">0</span>
-        <span class="n">both</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span>
-            <span class="p">[</span><span class="n">rows</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="n">before</span><span class="p">),</span> <span class="n">rows</span><span class="p">[</span><span class="n">later</span><span class="p">]</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="n">after</span><span class="p">[</span><span class="n">later</span><span class="p">])],</span>
-            <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">before</span><span class="p">,</span>
+            <span class="n">after</span><span class="p">,</span>
+            <span class="n">weight</span><span class="p">,</span>
+            <span class="n">around</span><span class="o">=</span><span class="n">method</span> <span class="o">==</span> <span class="s2">"flexpart"</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="n">key</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"i"</span><span class="p">,</span> <span class="s2">"j"</span><span class="p">,</span> <span class="s2">"time"</span><span class="p">]</span>
-        <span class="n">columns</span> <span class="o">=</span> <span class="n">both</span><span class="o">.</span><span class="n">dropna</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="s2">"i"</span><span class="p">,</span> <span class="s2">"j"</span><span class="p">])</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="n">key</span><span class="p">)</span>
+        <span class="n">columns</span> <span class="o">=</span> <span class="n">reads</span><span class="p">[[</span><span class="o">*</span><span class="n">key</span><span class="p">,</span> <span class="s2">"lon"</span><span class="p">,</span> <span class="s2">"lat"</span><span class="p">]]</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="n">key</span><span class="p">)</span>
         <span class="n">columns</span> <span class="o">=</span> <span class="n">columns</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">"flexpart"</span><span class="p">:</span>
+            <span class="n">zmix</span> <span class="o">=</span> <span class="n">_flexpart_columns</span><span class="p">(</span><span class="n">sources</span><span class="p">,</span> <span class="n">columns</span><span class="p">,</span> <span class="n">header</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">pressure</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">zmix</span> <span class="o">=</span> <span class="n">_hysplit_columns</span><span class="p">(</span>
+                <span class="n">sources</span><span class="p">,</span> <span class="n">columns</span><span class="p">,</span> <span class="n">header</span><span class="p">,</span> <span class="n">names</span><span class="p">,</span> <span class="n">pressure</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">z_top</span>
+            <span class="p">)</span>
+    <span class="n">columns</span><span class="p">[</span><span class="s2">"zmix"</span><span class="p">]</span> <span class="o">=</span> <span class="n">zmix</span>
+    <span class="n">reads</span> <span class="o">=</span> <span class="n">reads</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">columns</span><span class="p">[[</span><span class="o">*</span><span class="n">key</span><span class="p">,</span> <span class="s2">"zmix"</span><span class="p">]],</span> <span class="n">on</span><span class="o">=</span><span class="n">key</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s2">"left"</span><span class="p">)</span>
 
-        <span class="n">levels</span> <span class="o">=</span> <span class="n">arlmet</span><span class="o">.</span><span class="n">internal_levels</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="n">model_top</span><span class="o">=</span><span class="n">z_top</span><span class="p">)</span>
-        <span class="n">heights</span> <span class="o">=</span> <span class="n">levels</span><span class="o">.</span><span class="n">heights</span>
-        <span class="n">ground</span> <span class="o">=</span> <span class="n">arlmet</span><span class="o">.</span><span class="n">sample_points</span><span class="p">(</span>
-            <span class="n">handles</span><span class="p">,</span>
-            <span class="n">columns</span><span class="p">[[</span><span class="s2">"lon"</span><span class="p">,</span> <span class="s2">"lat"</span><span class="p">,</span> <span class="s2">"time"</span><span class="p">]]</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">z</span><span class="o">=</span><span class="mf">0.0</span><span class="p">),</span>
-            <span class="p">[</span><span class="s2">"SHGT"</span><span class="p">,</span> <span class="s2">"SHTF"</span><span class="p">,</span> <span class="o">*</span><span class="n">momentum</span><span class="p">],</span>
-            <span class="n">z_kind</span><span class="o">=</span><span class="s2">"agl"</span><span class="p">,</span>
-            <span class="n">method</span><span class="o">=</span><span class="s2">"nearest"</span><span class="p">,</span>
-            <span class="n">model_top</span><span class="o">=</span><span class="n">z_top</span><span class="p">,</span>
-        <span class="p">)</span>
-        <span class="c1"># The internal levels above each column's ground, (columns, levels).</span>
-        <span class="n">zz</span> <span class="o">=</span> <span class="n">levels</span><span class="o">.</span><span class="n">heights_at</span><span class="p">(</span><span class="n">ground</span><span class="p">[</span><span class="s2">"SHGT"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">))</span>
-        <span class="n">n_col</span><span class="p">,</span> <span class="n">n_lev</span> <span class="o">=</span> <span class="n">zz</span><span class="o">.</span><span class="n">shape</span>
-        <span class="n">at_levels</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-            <span class="p">{</span>
-                <span class="s2">"lon"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">columns</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">n_lev</span><span class="p">),</span>
-                <span class="s2">"lat"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">columns</span><span class="p">[</span><span class="s2">"lat"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">n_lev</span><span class="p">),</span>
-                <span class="s2">"time"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">columns</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">n_lev</span><span class="p">),</span>
-                <span class="s2">"z"</span><span class="p">:</span> <span class="n">zz</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span>
-            <span class="p">}</span>
-        <span class="p">)</span>
-        <span class="n">profile_variables</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"TEMP"</span><span class="p">,</span> <span class="s2">"PRES"</span><span class="p">,</span> <span class="s2">"UWND"</span><span class="p">,</span> <span class="s2">"VWND"</span><span class="p">]</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">particles</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">"flexpart"</span><span class="p">:</span>
+        <span class="c1"># The greatest height of the grid points around, at both met times.</span>
+        <span class="n">most</span> <span class="o">=</span> <span class="n">reads</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"row"</span><span class="p">)[</span><span class="s2">"zmix"</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">most</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">))</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+
+    <span class="c1"># Each row takes its grid point's height at the met times around it.</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+    <span class="n">after_value</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+    <span class="n">first</span> <span class="o">=</span> <span class="o">~</span><span class="n">reads</span><span class="p">[</span><span class="s2">"late"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+    <span class="n">out</span><span class="p">[</span><span class="n">reads</span><span class="p">[</span><span class="s2">"row"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()[</span><span class="n">first</span><span class="p">]]</span> <span class="o">=</span> <span class="n">reads</span><span class="p">[</span><span class="s2">"zmix"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()[</span><span class="n">first</span><span class="p">]</span>
+    <span class="n">after_value</span><span class="p">[</span><span class="n">reads</span><span class="p">[</span><span class="s2">"row"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()[</span><span class="o">~</span><span class="n">first</span><span class="p">]]</span> <span class="o">=</span> <span class="n">reads</span><span class="p">[</span><span class="s2">"zmix"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()[</span><span class="o">~</span><span class="n">first</span><span class="p">]</span>
+    <span class="n">later</span> <span class="o">=</span> <span class="n">weight</span> <span class="o">&gt;</span> <span class="mi">0</span>
+    <span class="n">w</span> <span class="o">=</span> <span class="n">weight</span><span class="p">[</span><span class="n">later</span><span class="p">]</span>
+    <span class="n">before_value</span><span class="p">,</span> <span class="n">after_value</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="n">later</span><span class="p">],</span> <span class="n">after_value</span><span class="p">[</span><span class="n">later</span><span class="p">]</span>
+    <span class="c1"># Between a met time with a height and one without (a GFS analysis has</span>
+    <span class="c1"># no fluxes), the row takes the height it has.</span>
+    <span class="n">out</span><span class="p">[</span><span class="n">later</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">before_value</span><span class="p">),</span>
+        <span class="n">after_value</span><span class="p">,</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">after_value</span><span class="p">),</span>
+            <span class="n">before_value</span><span class="p">,</span>
+            <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">w</span><span class="p">)</span> <span class="o">*</span> <span class="n">before_value</span> <span class="o">+</span> <span class="n">w</span> <span class="o">*</span> <span class="n">after_value</span><span class="p">,</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">out</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_grid_points_read</span><span class="p">(</span>
+    <span class="n">grid</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">lon</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">lat</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">before</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">after</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">weight</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">around</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return the met grid points and times each row reads its height from.</span>
+
+<span class="sd">    One table row per read: the particle's ``row``, the grid point's ``i``,</span>
+<span class="sd">    ``j``, ``lon`` and ``lat``, the met ``time``, and ``late`` for the met</span>
+<span class="sd">    time after the particle's. A row reads the nearest grid point, or with</span>
+<span class="sd">    *around* the four around it, at the met time before it and, unless it</span>
+<span class="sd">    is on a met time, the one after. A grid point off the grid is not read.</span>
+<span class="sd">    """</span>
+    <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">fractional_indices</span><span class="p">(</span><span class="n">lon</span><span class="p">,</span> <span class="n">lat</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">around</span><span class="p">:</span>
+        <span class="n">x0</span><span class="p">,</span> <span class="n">y0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+        <span class="n">corners</span> <span class="o">=</span> <span class="p">[(</span><span class="n">x0</span><span class="p">,</span> <span class="n">y0</span><span class="p">),</span> <span class="p">(</span><span class="n">x0</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">y0</span><span class="p">),</span> <span class="p">(</span><span class="n">x0</span><span class="p">,</span> <span class="n">y0</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="n">x0</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">y0</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">corners</span> <span class="o">=</span> <span class="p">[(</span><span class="n">np</span><span class="o">.</span><span class="n">rint</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">rint</span><span class="p">(</span><span class="n">y</span><span class="p">))]</span>
+    <span class="n">rows</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">lon</span><span class="p">))</span>
+    <span class="n">later</span> <span class="o">=</span> <span class="n">weight</span> <span class="o">&gt;</span> <span class="mi">0</span>
+    <span class="n">parts</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">corners</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">late</span><span class="p">,</span> <span class="n">keep</span><span class="p">,</span> <span class="n">time</span> <span class="ow">in</span> <span class="p">(</span>
+            <span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="n">rows</span><span class="p">,</span> <span class="n">before</span><span class="p">),</span>
+            <span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="n">rows</span><span class="p">[</span><span class="n">later</span><span class="p">],</span> <span class="n">after</span><span class="p">[</span><span class="n">later</span><span class="p">]),</span>
+        <span class="p">):</span>
+            <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+                    <span class="p">{</span>
+                        <span class="s2">"row"</span><span class="p">:</span> <span class="n">keep</span><span class="p">,</span>
+                        <span class="s2">"i"</span><span class="p">:</span> <span class="n">i</span><span class="p">[</span><span class="n">keep</span><span class="p">],</span>
+                        <span class="s2">"j"</span><span class="p">:</span> <span class="n">j</span><span class="p">[</span><span class="n">keep</span><span class="p">],</span>
+                        <span class="s2">"time"</span><span class="p">:</span> <span class="n">time</span><span class="p">,</span>
+                        <span class="s2">"late"</span><span class="p">:</span> <span class="n">late</span><span class="p">,</span>
+                    <span class="p">}</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+    <span class="n">reads</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">parts</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">grid</span><span class="o">.</span><span class="n">wraps_lon</span><span class="p">:</span>
+        <span class="n">reads</span><span class="p">[</span><span class="s2">"i"</span><span class="p">]</span> <span class="o">=</span> <span class="n">reads</span><span class="p">[</span><span class="s2">"i"</span><span class="p">]</span> <span class="o">%</span> <span class="n">grid</span><span class="o">.</span><span class="n">nx</span>
+    <span class="n">on_grid</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">reads</span><span class="p">[</span><span class="s2">"i"</span><span class="p">]</span><span class="o">.</span><span class="n">between</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">nx</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">reads</span><span class="p">[</span><span class="s2">"j"</span><span class="p">]</span><span class="o">.</span><span class="n">between</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">ny</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+    <span class="n">reads</span> <span class="o">=</span> <span class="n">reads</span><span class="p">[</span><span class="n">on_grid</span><span class="p">]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="n">reads</span><span class="p">[</span><span class="s2">"i"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+    <span class="n">j</span> <span class="o">=</span> <span class="n">reads</span><span class="p">[</span><span class="s2">"j"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+    <span class="n">coords</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">calculate_coords</span><span class="p">()</span>
+    <span class="n">lons</span><span class="p">,</span> <span class="n">lats</span> <span class="o">=</span> <span class="n">coords</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">coords</span><span class="p">[</span><span class="s2">"lat"</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">lons</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">reads</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">],</span> <span class="n">reads</span><span class="p">[</span><span class="s2">"lat"</span><span class="p">]</span> <span class="o">=</span> <span class="n">lons</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">lats</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">reads</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">],</span> <span class="n">reads</span><span class="p">[</span><span class="s2">"lat"</span><span class="p">]</span> <span class="o">=</span> <span class="n">lons</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">i</span><span class="p">],</span> <span class="n">lats</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">reads</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_hysplit_columns</span><span class="p">(</span>
+    <span class="n">sources</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span>
+    <span class="n">columns</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+    <span class="n">header</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">names</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">pressure</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">method</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">z_top</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the mixed-layer height of each grid point and met time in *columns*, as HYSPLIT's *method* finds it."""</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">arlmet</span>
+
+    <span class="n">momentum</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"USTR"</span><span class="p">]</span> <span class="k">if</span> <span class="s2">"USTR"</span> <span class="ow">in</span> <span class="n">names</span> <span class="k">else</span> <span class="p">[</span><span class="s2">"UMOF"</span><span class="p">,</span> <span class="s2">"VMOF"</span><span class="p">]</span>
+    <span class="n">ground_variables</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">"hysplit"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"SHGT"</span><span class="p">,</span> <span class="s2">"SHTF"</span><span class="p">,</span> <span class="o">*</span><span class="n">momentum</span><span class="p">],</span>
+        <span class="s2">"hysplit_temperature"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"SHGT"</span><span class="p">],</span>
+        <span class="s2">"met"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"SHGT"</span><span class="p">,</span> <span class="s2">"PBLH"</span><span class="p">],</span>
+    <span class="p">}[</span><span class="n">method</span><span class="p">]</span>
+    <span class="n">levels</span> <span class="o">=</span> <span class="n">arlmet</span><span class="o">.</span><span class="n">internal_levels</span><span class="p">(</span><span class="n">sources</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">model_top</span><span class="o">=</span><span class="n">z_top</span><span class="p">)</span>
+    <span class="n">ground</span> <span class="o">=</span> <span class="n">arlmet</span><span class="o">.</span><span class="n">sample_points</span><span class="p">(</span>
+        <span class="n">sources</span><span class="p">,</span>
+        <span class="n">columns</span><span class="p">[[</span><span class="s2">"lon"</span><span class="p">,</span> <span class="s2">"lat"</span><span class="p">,</span> <span class="s2">"time"</span><span class="p">]]</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">z</span><span class="o">=</span><span class="mf">0.0</span><span class="p">),</span>
+        <span class="n">ground_variables</span><span class="p">,</span>
+        <span class="n">z_kind</span><span class="o">=</span><span class="s2">"agl"</span><span class="p">,</span>
+        <span class="n">method</span><span class="o">=</span><span class="s2">"nearest"</span><span class="p">,</span>
+        <span class="n">model_top</span><span class="o">=</span><span class="n">z_top</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="c1"># The internal levels above each column's ground, (columns, levels).</span>
+    <span class="n">zz</span> <span class="o">=</span> <span class="n">levels</span><span class="o">.</span><span class="n">heights_at</span><span class="p">(</span><span class="n">ground</span><span class="p">[</span><span class="s2">"SHGT"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">))</span>
+    <span class="n">n_col</span><span class="p">,</span> <span class="n">n_lev</span> <span class="o">=</span> <span class="n">zz</span><span class="o">.</span><span class="n">shape</span>
+    <span class="c1"># Always a little above the lowest level, as in HYSPLIT.</span>
+    <span class="n">floor</span> <span class="o">=</span> <span class="n">zz</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="p">(</span><span class="n">zz</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">zz</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="mf">1000.0</span> <span class="k">if</span> <span class="n">n_lev</span> <span class="o">&gt;=</span> <span class="mi">2</span> <span class="k">else</span> <span class="n">zz</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">"met"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">ground</span><span class="p">[</span><span class="s2">"PBLH"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span> <span class="n">floor</span><span class="p">)</span>
+
+    <span class="n">at_levels</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+        <span class="p">{</span>
+            <span class="s2">"lon"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">columns</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">n_lev</span><span class="p">),</span>
+            <span class="s2">"lat"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">columns</span><span class="p">[</span><span class="s2">"lat"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">n_lev</span><span class="p">),</span>
+            <span class="s2">"time"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">columns</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">n_lev</span><span class="p">),</span>
+            <span class="s2">"z"</span><span class="p">:</span> <span class="n">zz</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span>
+        <span class="p">}</span>
+    <span class="p">)</span>
+    <span class="n">profile_variables</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"TEMP"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">pressure</span><span class="p">)]</span>
+    <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">"hysplit"</span><span class="p">:</span>
+        <span class="n">profile_variables</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">"UWND"</span><span class="p">,</span> <span class="s2">"VWND"</span><span class="p">]</span>
         <span class="k">if</span> <span class="s2">"SPHU"</span> <span class="ow">in</span> <span class="n">names</span><span class="p">:</span>
             <span class="n">profile_variables</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"SPHU"</span><span class="p">)</span>
-        <span class="n">profile</span> <span class="o">=</span> <span class="n">arlmet</span><span class="o">.</span><span class="n">sample_points</span><span class="p">(</span>
-            <span class="n">handles</span><span class="p">,</span>
-            <span class="n">at_levels</span><span class="p">,</span>
-            <span class="n">profile_variables</span><span class="p">,</span>
-            <span class="n">z_kind</span><span class="o">=</span><span class="s2">"agl"</span><span class="p">,</span>
-            <span class="n">method</span><span class="o">=</span><span class="s2">"nearest"</span><span class="p">,</span>
-            <span class="n">model_top</span><span class="o">=</span><span class="n">z_top</span><span class="p">,</span>
-        <span class="p">)</span>
-    <span class="k">finally</span><span class="p">:</span>
-        <span class="k">for</span> <span class="n">handle</span> <span class="ow">in</span> <span class="n">handles</span><span class="p">:</span>
-            <span class="n">handle</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">profile</span> <span class="o">=</span> <span class="n">arlmet</span><span class="o">.</span><span class="n">sample_points</span><span class="p">(</span>
+        <span class="n">sources</span><span class="p">,</span>
+        <span class="n">at_levels</span><span class="p">,</span>
+        <span class="n">profile_variables</span><span class="p">,</span>
+        <span class="n">z_kind</span><span class="o">=</span><span class="s2">"agl"</span><span class="p">,</span>
+        <span class="n">method</span><span class="o">=</span><span class="s2">"nearest"</span><span class="p">,</span>
+        <span class="n">model_top</span><span class="o">=</span><span class="n">z_top</span><span class="p">,</span>
+    <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">grid</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">profile</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">n_col</span><span class="p">,</span> <span class="n">n_lev</span><span class="p">)</span>
 
-    <span class="n">temp</span><span class="p">,</span> <span class="n">pres</span><span class="p">,</span> <span class="n">uu</span><span class="p">,</span> <span class="n">vv</span> <span class="o">=</span> <span class="n">grid</span><span class="p">(</span><span class="s2">"TEMP"</span><span class="p">),</span> <span class="n">grid</span><span class="p">(</span><span class="s2">"PRES"</span><span class="p">),</span> <span class="n">grid</span><span class="p">(</span><span class="s2">"UWND"</span><span class="p">),</span> <span class="n">grid</span><span class="p">(</span><span class="s2">"VWND"</span><span class="p">)</span>
-    <span class="n">sphu</span> <span class="o">=</span> <span class="n">grid</span><span class="p">(</span><span class="s2">"SPHU"</span><span class="p">)</span> <span class="k">if</span> <span class="s2">"SPHU"</span> <span class="ow">in</span> <span class="n">profile_variables</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">temp</span><span class="p">)</span>
+    <span class="n">temp</span><span class="p">,</span> <span class="n">pres</span> <span class="o">=</span> <span class="n">grid</span><span class="p">(</span><span class="s2">"TEMP"</span><span class="p">),</span> <span class="n">grid</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">pressure</span><span class="p">))</span>
     <span class="n">theta</span> <span class="o">=</span> <span class="n">temp</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1000.0</span> <span class="o">/</span> <span class="n">pres</span><span class="p">)</span> <span class="o">**</span> <span class="mf">0.286</span>
+    <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">"hysplit_temperature"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">_temperature_mixed_layer</span><span class="p">(</span><span class="n">zz</span><span class="p">,</span> <span class="n">theta</span><span class="p">),</span> <span class="n">floor</span><span class="p">)</span>
+
+    <span class="n">uu</span><span class="p">,</span> <span class="n">vv</span> <span class="o">=</span> <span class="n">grid</span><span class="p">(</span><span class="s2">"UWND"</span><span class="p">),</span> <span class="n">grid</span><span class="p">(</span><span class="s2">"VWND"</span><span class="p">)</span>
+    <span class="n">sphu</span> <span class="o">=</span> <span class="n">grid</span><span class="p">(</span><span class="s2">"SPHU"</span><span class="p">)</span> <span class="k">if</span> <span class="s2">"SPHU"</span> <span class="ow">in</span> <span class="n">profile_variables</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">temp</span><span class="p">)</span>
     <span class="n">density</span> <span class="o">=</span> <span class="mf">100.0</span> <span class="o">*</span> <span class="n">pres</span> <span class="o">/</span> <span class="p">(</span><span class="n">_R_DRY</span> <span class="o">*</span> <span class="n">temp</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="mf">0.61</span> <span class="o">*</span> <span class="n">sphu</span><span class="p">))</span>
-    <span class="n">ks</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">heights</span> <span class="o">&lt;=</span> <span class="n">_SURFACE_LAYER_TOP</span><span class="p">)),</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+    <span class="n">ks</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">levels</span><span class="o">.</span><span class="n">heights</span> <span class="o">&lt;=</span> <span class="n">_SURFACE_LAYER_TOP</span><span class="p">)),</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
     <span class="k">if</span> <span class="s2">"USTR"</span> <span class="ow">in</span> <span class="n">momentum</span><span class="p">:</span>
         <span class="n">ustar</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">ground</span><span class="p">[</span><span class="s2">"USTR"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span> <span class="mf">0.0001</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
@@ -1077,19 +1483,202 @@
 
         <span class="n">ustar</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hypot</span><span class="p">(</span><span class="n">component</span><span class="p">(</span><span class="s2">"UMOF"</span><span class="p">),</span> <span class="n">component</span><span class="p">(</span><span class="s2">"VMOF"</span><span class="p">))</span>
     <span class="n">heat</span> <span class="o">=</span> <span class="n">ground</span><span class="p">[</span><span class="s2">"SHTF"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">first</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"ETA"</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">header</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"ETA"</span><span class="p">:</span>
         <span class="n">heat</span> <span class="o">=</span> <span class="o">-</span><span class="n">heat</span>  <span class="c1"># NAM's (ETA's) flux is positive downward (prfcom.f)</span>
     <span class="n">zmix</span> <span class="o">=</span> <span class="n">_richardson_mixed_layer</span><span class="p">(</span><span class="n">zz</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">uu</span><span class="p">,</span> <span class="n">vv</span><span class="p">,</span> <span class="n">density</span><span class="p">,</span> <span class="n">ustar</span><span class="p">,</span> <span class="n">heat</span><span class="p">,</span> <span class="n">ks</span><span class="p">)</span>
+    <span class="c1"># Without the fluxes the stability is unknown: no height, rather than</span>
+    <span class="c1"># the stable one a missing heat flux would give.</span>
+    <span class="n">zmix</span><span class="p">[</span><span class="o">~</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">heat</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">ustar</span><span class="p">))]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+    <span class="k">return</span> <span class="n">zmix</span>
 
-    <span class="c1"># Each row takes its grid point's height at the met times around it.</span>
-    <span class="n">columns</span><span class="p">[</span><span class="s2">"zmix"</span><span class="p">]</span> <span class="o">=</span> <span class="n">zmix</span>
-    <span class="n">found</span> <span class="o">=</span> <span class="n">both</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">columns</span><span class="p">[[</span><span class="o">*</span><span class="n">key</span><span class="p">,</span> <span class="s2">"zmix"</span><span class="p">]],</span> <span class="n">on</span><span class="o">=</span><span class="n">key</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s2">"left"</span><span class="p">)[</span><span class="s2">"zmix"</span><span class="p">]</span>
-    <span class="n">value</span> <span class="o">=</span> <span class="n">found</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
-    <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">particles</span><span class="p">)</span>
-    <span class="n">out</span> <span class="o">=</span> <span class="n">value</span><span class="p">[:</span><span class="n">n</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-    <span class="n">w</span> <span class="o">=</span> <span class="n">weight</span><span class="p">[</span><span class="n">later</span><span class="p">]</span>
-    <span class="n">out</span><span class="p">[</span><span class="n">later</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">w</span><span class="p">)</span> <span class="o">*</span> <span class="n">out</span><span class="p">[</span><span class="n">later</span><span class="p">]</span> <span class="o">+</span> <span class="n">w</span> <span class="o">*</span> <span class="n">value</span><span class="p">[</span><span class="n">n</span><span class="p">:]</span>
-    <span class="k">return</span> <span class="n">out</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_temperature_mixed_layer</span><span class="p">(</span><span class="n">zz</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">theta</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return the mixed-layer height of each column, as HYSPLIT's ``stbanl.f`` finds it for ``kmixd: 1``.</span>
+
+<span class="sd">    *zz* (m above ground) and *theta* (potential temperature, K) are</span>
+<span class="sd">    ``(columns, levels)``. Going down from the top, the mixed layer ends at</span>
+<span class="sd">    the first level whose potential temperature is within 2 K of the</span>
+<span class="sd">    column's lowest.</span>
+<span class="sd">    """</span>
+    <span class="n">n_lev</span> <span class="o">=</span> <span class="n">zz</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">within</span> <span class="o">=</span> <span class="n">theta</span> <span class="o">&lt;=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmin</span><span class="p">(</span><span class="n">theta</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">+</span> <span class="mf">2.0</span>
+    <span class="n">top</span> <span class="o">=</span> <span class="n">n_lev</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">within</span><span class="p">[:,</span> <span class="p">::</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">take_along_axis</span><span class="p">(</span><span class="n">zz</span><span class="p">,</span> <span class="n">top</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)[:,</span> <span class="mi">0</span><span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_flexpart_columns</span><span class="p">(</span>
+    <span class="n">sources</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">columns</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">header</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">pressure</span><span class="p">:</span> <span class="nb">str</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the mixed-layer height of each grid point and met time in *columns*, as FLEXPART's ``richardson`` finds it."""</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">arlmet</span>
+
+    <span class="n">ground_variables</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"PRSS"</span><span class="p">,</span> <span class="s2">"T02M"</span><span class="p">,</span> <span class="s2">"DP2M"</span><span class="p">,</span> <span class="s2">"U10M"</span><span class="p">,</span> <span class="s2">"V10M"</span><span class="p">,</span> <span class="s2">"USTR"</span><span class="p">,</span> <span class="s2">"SHTF"</span><span class="p">]</span>
+    <span class="n">ground</span> <span class="o">=</span> <span class="n">arlmet</span><span class="o">.</span><span class="n">sample_points</span><span class="p">(</span>
+        <span class="n">sources</span><span class="p">,</span>
+        <span class="n">columns</span><span class="p">[[</span><span class="s2">"lon"</span><span class="p">,</span> <span class="s2">"lat"</span><span class="p">,</span> <span class="s2">"time"</span><span class="p">]]</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">z</span><span class="o">=</span><span class="mf">0.0</span><span class="p">),</span>
+        <span class="n">ground_variables</span><span class="p">,</span>
+        <span class="n">z_kind</span><span class="o">=</span><span class="s2">"native"</span><span class="p">,</span>
+        <span class="n">method</span><span class="o">=</span><span class="s2">"nearest"</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="c1"># The met's own levels; level 0 is the ground.</span>
+    <span class="n">n_lev</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">header</span><span class="o">.</span><span class="n">vertical_axis</span><span class="o">.</span><span class="n">levels</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+    <span class="n">at_levels</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+        <span class="p">{</span>
+            <span class="s2">"lon"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">columns</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">n_lev</span><span class="p">),</span>
+            <span class="s2">"lat"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">columns</span><span class="p">[</span><span class="s2">"lat"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">n_lev</span><span class="p">),</span>
+            <span class="s2">"time"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">columns</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">n_lev</span><span class="p">),</span>
+            <span class="s2">"z"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">n_lev</span> <span class="o">+</span> <span class="mf">1.0</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">columns</span><span class="p">)),</span>
+        <span class="p">}</span>
+    <span class="p">)</span>
+    <span class="n">variables</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"TEMP"</span><span class="p">,</span> <span class="s2">"SPHU"</span><span class="p">,</span> <span class="s2">"UWND"</span><span class="p">,</span> <span class="s2">"VWND"</span><span class="p">,</span> <span class="n">pressure</span><span class="p">]</span>
+    <span class="n">profile</span> <span class="o">=</span> <span class="n">arlmet</span><span class="o">.</span><span class="n">sample_points</span><span class="p">(</span>
+        <span class="n">sources</span><span class="p">,</span> <span class="n">at_levels</span><span class="p">,</span> <span class="n">variables</span><span class="p">,</span> <span class="n">z_kind</span><span class="o">=</span><span class="s2">"native"</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">"nearest"</span>
+    <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">grid</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">profile</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">columns</span><span class="p">),</span> <span class="n">n_lev</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">at_ground</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">ground</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+
+    <span class="n">heat</span> <span class="o">=</span> <span class="n">at_ground</span><span class="p">(</span><span class="s2">"SHTF"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">header</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"ETA"</span><span class="p">:</span>
+        <span class="n">heat</span> <span class="o">=</span> <span class="o">-</span><span class="n">heat</span>  <span class="c1"># positive downward in NAM's (ETA's) files</span>
+    <span class="n">zmix</span> <span class="o">=</span> <span class="n">_flexpart_mixed_layer</span><span class="p">(</span>
+        <span class="mf">100.0</span> <span class="o">*</span> <span class="n">grid</span><span class="p">(</span><span class="n">pressure</span><span class="p">),</span>
+        <span class="n">grid</span><span class="p">(</span><span class="s2">"TEMP"</span><span class="p">),</span>
+        <span class="n">grid</span><span class="p">(</span><span class="s2">"SPHU"</span><span class="p">),</span>
+        <span class="n">grid</span><span class="p">(</span><span class="s2">"UWND"</span><span class="p">),</span>
+        <span class="n">grid</span><span class="p">(</span><span class="s2">"VWND"</span><span class="p">),</span>
+        <span class="mf">100.0</span> <span class="o">*</span> <span class="n">at_ground</span><span class="p">(</span><span class="s2">"PRSS"</span><span class="p">),</span>
+        <span class="n">at_ground</span><span class="p">(</span><span class="s2">"T02M"</span><span class="p">),</span>
+        <span class="n">at_ground</span><span class="p">(</span><span class="s2">"DP2M"</span><span class="p">),</span>
+        <span class="n">at_ground</span><span class="p">(</span><span class="s2">"U10M"</span><span class="p">),</span>
+        <span class="n">at_ground</span><span class="p">(</span><span class="s2">"V10M"</span><span class="p">),</span>
+        <span class="n">at_ground</span><span class="p">(</span><span class="s2">"USTR"</span><span class="p">),</span>
+        <span class="n">heat</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">zmix</span><span class="p">[</span><span class="o">~</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">heat</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">at_ground</span><span class="p">(</span><span class="s2">"USTR"</span><span class="p">)))]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+    <span class="k">return</span> <span class="n">zmix</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_saturation_vapor_pressure</span><span class="p">(</span><span class="n">t</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the saturation vapor pressure over water in Pa at *t* in K, by Goff and Gratch, as FLEXPART's ``ew``."""</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="mf">373.16</span> <span class="o">/</span> <span class="n">t</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="o">-</span><span class="mf">7.90298</span> <span class="o">*</span> <span class="p">(</span><span class="n">y</span> <span class="o">-</span> <span class="mf">1.0</span><span class="p">)</span> <span class="o">+</span> <span class="mf">5.02808</span> <span class="o">*</span> <span class="mf">0.43429</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.3816</span> <span class="o">*</span> <span class="p">(</span><span class="o">-</span><span class="mf">1.0</span> <span class="o">+</span> <span class="mf">10.0</span> <span class="o">**</span> <span class="p">((</span><span class="mf">1.0</span> <span class="o">-</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">y</span><span class="p">)</span> <span class="o">*</span> <span class="mf">11.344</span><span class="p">))</span> <span class="o">/</span> <span class="mf">1e7</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="mf">8.1328</span> <span class="o">*</span> <span class="p">(</span><span class="o">-</span><span class="mf">1.0</span> <span class="o">+</span> <span class="mf">10.0</span> <span class="o">**</span> <span class="p">((</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">y</span><span class="p">)</span> <span class="o">*</span> <span class="mf">3.49149</span><span class="p">))</span> <span class="o">/</span> <span class="mf">1e3</span>
+    <span class="k">return</span> <span class="mf">101324.6</span> <span class="o">*</span> <span class="mf">10.0</span> <span class="o">**</span> <span class="p">(</span><span class="n">a</span> <span class="o">+</span> <span class="n">c</span> <span class="o">+</span> <span class="n">d</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_flexpart_mixed_layer</span><span class="p">(</span>
+    <span class="n">pres</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">temp</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">sphu</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">uu</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">vv</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">psfc</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">t2</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">td2</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">u10</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">v10</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">ustar</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">heat</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return the mixed-layer height of each column, as FLEXPART's ``richardson`` finds it.</span>
+
+<span class="sd">    *pres* (Pa), *temp* (K), *sphu* (kg kg⁻¹), *uu* and *vv* (m s⁻¹) are</span>
+<span class="sd">    ``(columns, levels)`` on the met's levels from the lowest up; *psfc*</span>
+<span class="sd">    (Pa), *t2* and *td2* (K), *u10* and *v10* (m s⁻¹), *ustar* (m s⁻¹) and</span>
+<span class="sd">    *heat*, the sensible heat flux (W m⁻², positive upward), are per</span>
+<span class="sd">    column. A level at or below the ground (its pressure at least</span>
+<span class="sd">    *psfc*) is passed over. A column with no top is NaN.</span>
+<span class="sd">    """</span>
+    <span class="n">g</span><span class="p">,</span> <span class="n">cp</span> <span class="o">=</span> <span class="n">_FLEXPART_GRAV</span><span class="p">,</span> <span class="n">_FLEXPART_CP</span>
+    <span class="n">kappa</span> <span class="o">=</span> <span class="n">_FLEXPART_R_AIR</span> <span class="o">/</span> <span class="n">cp</span>
+    <span class="n">n_col</span> <span class="o">=</span> <span class="n">pres</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="c1"># The levels above the ground first in each column; the rest are NaN.</span>
+    <span class="n">above</span> <span class="o">=</span> <span class="n">pres</span> <span class="o">&lt;</span> <span class="n">psfc</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span>
+    <span class="n">order</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="o">~</span><span class="n">above</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">"stable"</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">compact</span><span class="p">(</span><span class="n">a</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">take_along_axis</span><span class="p">(</span><span class="n">above</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">take_along_axis</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="n">pres</span><span class="p">,</span> <span class="n">temp</span><span class="p">,</span> <span class="n">sphu</span><span class="p">,</span> <span class="n">uu</span><span class="p">,</span> <span class="n">vv</span> <span class="o">=</span> <span class="p">(</span><span class="n">compact</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="p">(</span><span class="n">pres</span><span class="p">,</span> <span class="n">temp</span><span class="p">,</span> <span class="n">sphu</span><span class="p">,</span> <span class="n">uu</span><span class="p">,</span> <span class="n">vv</span><span class="p">))</span>
+    <span class="n">tv</span> <span class="o">=</span> <span class="n">temp</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="mf">0.608</span> <span class="o">*</span> <span class="n">sphu</span><span class="p">)</span>
+    <span class="n">theta</span> <span class="o">=</span> <span class="n">tv</span> <span class="o">*</span> <span class="p">(</span><span class="mf">100000.0</span> <span class="o">/</span> <span class="n">pres</span><span class="p">)</span> <span class="o">**</span> <span class="n">kappa</span>
+
+    <span class="c1"># Heights, integrated up from 2 m with the virtual temperature.</span>
+    <span class="n">tv2</span> <span class="o">=</span> <span class="n">t2</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="mf">0.378</span> <span class="o">*</span> <span class="n">_saturation_vapor_pressure</span><span class="p">(</span><span class="n">td2</span><span class="p">)</span> <span class="o">/</span> <span class="n">psfc</span><span class="p">)</span>
+    <span class="n">const</span> <span class="o">=</span> <span class="n">_FLEXPART_R_AIR</span> <span class="o">/</span> <span class="n">g</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty_like</span><span class="p">(</span><span class="n">pres</span><span class="p">)</span>
+    <span class="n">pold</span><span class="p">,</span> <span class="n">tvold</span><span class="p">,</span> <span class="n">zold</span> <span class="o">=</span> <span class="n">psfc</span><span class="p">,</span> <span class="n">tv2</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">n_col</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">pres</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+        <span class="n">log_p</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">pold</span> <span class="o">/</span> <span class="n">pres</span><span class="p">[:,</span> <span class="n">k</span><span class="p">])</span>
+        <span class="k">with</span> <span class="n">np</span><span class="o">.</span><span class="n">errstate</span><span class="p">(</span><span class="n">divide</span><span class="o">=</span><span class="s2">"ignore"</span><span class="p">,</span> <span class="n">invalid</span><span class="o">=</span><span class="s2">"ignore"</span><span class="p">):</span>
+            <span class="n">layer</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">tv</span><span class="p">[:,</span> <span class="n">k</span><span class="p">]</span> <span class="o">-</span> <span class="n">tvold</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">0.2</span><span class="p">,</span>
+                <span class="n">const</span> <span class="o">*</span> <span class="n">log_p</span> <span class="o">*</span> <span class="p">(</span><span class="n">tv</span><span class="p">[:,</span> <span class="n">k</span><span class="p">]</span> <span class="o">-</span> <span class="n">tvold</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">tv</span><span class="p">[:,</span> <span class="n">k</span><span class="p">]</span> <span class="o">/</span> <span class="n">tvold</span><span class="p">),</span>
+                <span class="n">const</span> <span class="o">*</span> <span class="n">log_p</span> <span class="o">*</span> <span class="n">tv</span><span class="p">[:,</span> <span class="n">k</span><span class="p">],</span>
+            <span class="p">)</span>
+        <span class="n">z</span><span class="p">[:,</span> <span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">zold</span> <span class="o">+</span> <span class="n">layer</span>
+        <span class="n">pold</span><span class="p">,</span> <span class="n">tvold</span><span class="p">,</span> <span class="n">zold</span> <span class="o">=</span> <span class="n">pres</span><span class="p">[:,</span> <span class="n">k</span><span class="p">],</span> <span class="n">tv</span><span class="p">[:,</span> <span class="n">k</span><span class="p">],</span> <span class="n">z</span><span class="p">[:,</span> <span class="n">k</span><span class="p">]</span>
+
+    <span class="c1"># Each layer's lower edge: the 2 m level below the lowest model level.</span>
+    <span class="n">shear</span> <span class="o">=</span> <span class="n">_FLEXPART_B</span> <span class="o">*</span> <span class="n">ustar</span><span class="o">**</span><span class="mi">2</span>
+    <span class="n">u_below</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">([</span><span class="n">u10</span><span class="p">,</span> <span class="n">uu</span><span class="p">[:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]])</span>
+    <span class="n">v_below</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">([</span><span class="n">v10</span><span class="p">,</span> <span class="n">vv</span><span class="p">[:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]])</span>
+    <span class="n">z_below</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">n_col</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">),</span> <span class="n">z</span><span class="p">[:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]])</span>
+    <span class="n">rows</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_col</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">richardson</span><span class="p">(</span><span class="n">theta_at</span><span class="p">,</span> <span class="n">z_at</span><span class="p">,</span> <span class="n">u_at</span><span class="p">,</span> <span class="n">v_at</span><span class="p">,</span> <span class="n">thetaref</span><span class="p">):</span>
+        <span class="n">du</span> <span class="o">=</span> <span class="p">(</span><span class="n">u_at</span> <span class="o">-</span> <span class="n">uu</span><span class="p">[:,</span> <span class="p">:</span><span class="mi">1</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="n">v_at</span> <span class="o">-</span> <span class="n">vv</span><span class="p">[:,</span> <span class="p">:</span><span class="mi">1</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">shear</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">g</span> <span class="o">/</span> <span class="n">thetaref</span> <span class="o">*</span> <span class="p">(</span><span class="n">theta_at</span> <span class="o">-</span> <span class="n">thetaref</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">z_at</span> <span class="o">-</span> <span class="mf">2.0</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">du</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">)</span>
+
+    <span class="n">excess</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_col</span><span class="p">)</span>
+    <span class="n">h</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">n_col</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+    <span class="n">going</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">n_col</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+        <span class="n">thetaref</span> <span class="o">=</span> <span class="p">(</span><span class="n">tv2</span> <span class="o">*</span> <span class="p">(</span><span class="mf">100000.0</span> <span class="o">/</span> <span class="n">psfc</span><span class="p">)</span> <span class="o">**</span> <span class="n">kappa</span> <span class="o">+</span> <span class="n">excess</span><span class="p">)[:,</span> <span class="kc">None</span><span class="p">]</span>
+        <span class="n">theta_below</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">([</span><span class="n">thetaref</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">theta</span><span class="p">[:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]])</span>
+        <span class="n">ri</span> <span class="o">=</span> <span class="n">richardson</span><span class="p">(</span><span class="n">theta</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">uu</span><span class="p">,</span> <span class="n">vv</span><span class="p">,</span> <span class="n">thetaref</span><span class="p">)</span>
+        <span class="c1"># The first level where Ri passes 0.25 above a layer that is not unstable.</span>
+        <span class="n">top</span> <span class="o">=</span> <span class="p">(</span><span class="n">ri</span> <span class="o">&gt;</span> <span class="n">_CRITICAL_RICHARDSON</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">theta_below</span> <span class="o">&lt;</span> <span class="n">theta</span><span class="p">)</span>
+        <span class="n">found</span> <span class="o">=</span> <span class="n">top</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">top</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="c1"># Then the first twentieth of that layer where it passes.</span>
+        <span class="n">frac</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">21</span><span class="p">)</span> <span class="o">/</span> <span class="mf">20.0</span>
+        <span class="n">zl</span> <span class="o">=</span> <span class="n">z_below</span><span class="p">[</span><span class="n">rows</span><span class="p">,</span> <span class="n">k</span><span class="p">][:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">+</span> <span class="n">frac</span> <span class="o">*</span> <span class="p">(</span><span class="n">z</span><span class="p">[</span><span class="n">rows</span><span class="p">,</span> <span class="n">k</span><span class="p">]</span> <span class="o">-</span> <span class="n">z_below</span><span class="p">[</span><span class="n">rows</span><span class="p">,</span> <span class="n">k</span><span class="p">])[:,</span> <span class="kc">None</span><span class="p">]</span>
+        <span class="n">thetal</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">theta_below</span><span class="p">[</span><span class="n">rows</span><span class="p">,</span> <span class="n">k</span><span class="p">][:,</span> <span class="kc">None</span><span class="p">]</span>
+            <span class="o">+</span> <span class="n">frac</span> <span class="o">*</span> <span class="p">(</span><span class="n">theta</span><span class="p">[</span><span class="n">rows</span><span class="p">,</span> <span class="n">k</span><span class="p">]</span> <span class="o">-</span> <span class="n">theta_below</span><span class="p">[</span><span class="n">rows</span><span class="p">,</span> <span class="n">k</span><span class="p">])[:,</span> <span class="kc">None</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="n">ul</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">u_below</span><span class="p">[</span><span class="n">rows</span><span class="p">,</span> <span class="n">k</span><span class="p">][:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">+</span> <span class="n">frac</span> <span class="o">*</span> <span class="p">(</span><span class="n">uu</span><span class="p">[</span><span class="n">rows</span><span class="p">,</span> <span class="n">k</span><span class="p">]</span> <span class="o">-</span> <span class="n">u_below</span><span class="p">[</span><span class="n">rows</span><span class="p">,</span> <span class="n">k</span><span class="p">])[:,</span> <span class="kc">None</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="n">vl</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">v_below</span><span class="p">[</span><span class="n">rows</span><span class="p">,</span> <span class="n">k</span><span class="p">][:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">+</span> <span class="n">frac</span> <span class="o">*</span> <span class="p">(</span><span class="n">vv</span><span class="p">[</span><span class="n">rows</span><span class="p">,</span> <span class="n">k</span><span class="p">]</span> <span class="o">-</span> <span class="n">v_below</span><span class="p">[</span><span class="n">rows</span><span class="p">,</span> <span class="n">k</span><span class="p">])[:,</span> <span class="kc">None</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="n">ril</span> <span class="o">=</span> <span class="n">richardson</span><span class="p">(</span><span class="n">thetal</span><span class="p">,</span> <span class="n">zl</span><span class="p">,</span> <span class="n">ul</span><span class="p">,</span> <span class="n">vl</span><span class="p">,</span> <span class="n">thetaref</span><span class="p">)</span>
+        <span class="n">crossed</span> <span class="o">=</span> <span class="n">ril</span> <span class="o">&gt;</span> <span class="n">_CRITICAL_RICHARDSON</span>
+        <span class="n">step</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">crossed</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">crossed</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span> <span class="mi">19</span><span class="p">)</span>
+        <span class="n">new_h</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">found</span><span class="p">,</span> <span class="n">zl</span><span class="p">[</span><span class="n">rows</span><span class="p">,</span> <span class="n">step</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">going</span><span class="p">,</span> <span class="n">new_h</span><span class="p">,</span> <span class="n">h</span><span class="p">)</span>
+        <span class="c1"># In unstable air, again with the temperature excess of rising air.</span>
+        <span class="n">unstable</span> <span class="o">=</span> <span class="n">going</span> <span class="o">&amp;</span> <span class="n">found</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">heat</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">np</span><span class="o">.</span><span class="n">errstate</span><span class="p">(</span><span class="n">invalid</span><span class="o">=</span><span class="s2">"ignore"</span><span class="p">):</span>
+            <span class="n">wst</span> <span class="o">=</span> <span class="p">(</span><span class="n">h</span> <span class="o">*</span> <span class="n">g</span> <span class="o">/</span> <span class="n">thetaref</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">heat</span> <span class="o">/</span> <span class="n">cp</span><span class="p">)</span> <span class="o">**</span> <span class="mf">0.333</span>
+            <span class="n">excess</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">unstable</span><span class="p">,</span> <span class="n">_FLEXPART_BS</span> <span class="o">*</span> <span class="n">heat</span> <span class="o">/</span> <span class="n">cp</span> <span class="o">/</span> <span class="n">wst</span><span class="p">,</span> <span class="n">excess</span><span class="p">)</span>
+        <span class="n">going</span> <span class="o">=</span> <span class="n">unstable</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">going</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+            <span class="k">break</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="n">_FLEXPART_HMIX_MIN</span><span class="p">,</span> <span class="n">_FLEXPART_HMIX_MAX</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_richardson_mixed_layer</span><span class="p">(</span>
@@ -1103,7 +1692,7 @@
     <span class="n">ks</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Return the mixed-layer height of each column, as ``stbanl.f`` finds it for ``kmixd: 3``.</span>
+<span class="sd">    Return the mixed-layer height of each column, as HYSPLIT's ``stbanl.f`` finds it for ``kmixd: 3``.</span>
 
 <span class="sd">    *zz* (m above ground), *theta* (potential temperature, K), *uu* and</span>
 <span class="sd">    *vv* (m s⁻¹) and *density* (kg m⁻³) are ``(columns, levels)`` on the</span>

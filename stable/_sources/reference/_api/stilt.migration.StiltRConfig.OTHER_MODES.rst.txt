@@ -1,0 +1,6 @@
+stilt.migration.StiltRConfig.OTHER\_MODES
+=========================================
+
+.. currentmodule:: stilt.migration
+
+.. autoattribute:: StiltRConfig.OTHER_MODES

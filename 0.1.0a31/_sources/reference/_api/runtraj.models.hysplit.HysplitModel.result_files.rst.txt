@@ -1,0 +1,5 @@
+runtraj.models.hysplit.HysplitModel.result\_files
+=================================================
+
+.. currentmodule:: runtraj.models.hysplit
+.. automethod:: HysplitModel.result_files

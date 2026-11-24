@@ -1,6 +1,0 @@
-﻿stilt.sampling.sample\_met
-==========================
-
-.. currentmodule:: stilt.sampling
-
-.. autofunction:: sample_met

@@ -1,0 +1,6 @@
+stilt.ExecutionConfig.cpus
+==========================
+
+.. currentmodule:: stilt
+
+.. autoproperty:: ExecutionConfig.cpus

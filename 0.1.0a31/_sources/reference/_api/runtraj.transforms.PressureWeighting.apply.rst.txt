@@ -1,0 +1,5 @@
+runtraj.transforms.PressureWeighting.apply
+==========================================
+
+.. currentmodule:: runtraj.transforms
+.. automethod:: PressureWeighting.apply

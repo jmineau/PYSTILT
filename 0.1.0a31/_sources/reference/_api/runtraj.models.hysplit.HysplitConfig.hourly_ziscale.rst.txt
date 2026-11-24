@@ -1,0 +1,5 @@
+runtraj.models.hysplit.HysplitConfig.hourly\_ziscale
+====================================================
+
+.. currentmodule:: runtraj.models.hysplit
+.. automethod:: HysplitConfig.hourly_ziscale

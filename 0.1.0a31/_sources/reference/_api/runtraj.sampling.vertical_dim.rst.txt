@@ -1,0 +1,6 @@
+﻿runtraj.sampling.vertical\_dim
+==============================
+
+.. currentmodule:: runtraj.sampling
+
+.. autofunction:: vertical_dim

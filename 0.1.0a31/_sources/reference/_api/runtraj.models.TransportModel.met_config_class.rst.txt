@@ -1,0 +1,6 @@
+runtraj.models.TransportModel.met\_config\_class
+================================================
+
+.. currentmodule:: runtraj.models
+
+.. autoattribute:: TransportModel.met_config_class

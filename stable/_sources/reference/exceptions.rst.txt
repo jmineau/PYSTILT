@@ -80,7 +80,7 @@ Empty footprints
 :class:`~stilt.exceptions.EmptyFootprint` is a finished result, not a
 failure. :func:`stilt.calc_footprint` raises it when no particle
 reaches the grid, and a run writes a footprint file with no rows, marked
-empty (:doc:`layout`).
+empty (:doc:`layout`). It is exported as ``stilt.EmptyFootprint``.
 
 .. autosummary::
    :toctree: _api

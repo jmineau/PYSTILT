@@ -1,0 +1,6 @@
+﻿stilt.footprint.config.footprint\_settings
+==========================================
+
+.. currentmodule:: stilt.footprint.config
+
+.. autofunction:: footprint_settings

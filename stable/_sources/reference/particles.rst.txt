@@ -134,7 +134,7 @@ them share one transport model run:
   PYSTILT's log says which height it used. ``met`` is the
   met's ``PBLH``; ``richardson`` finds the height from the met's profile
   with a bulk Richardson number, as HYSPLIT's default ``kmixd: 3`` does
-  (:func:`stilt.sampling.calc_pbl_height`), on HYSPLIT's internal levels for
+  (:func:`runtraj.sampling.calc_pbl_height`), on HYSPLIT's internal levels for
   a HYSPLIT run's own ``z_top`` (for another model, HYSPLIT's default top);
   a number is a fixed height in meters above ground.
 
@@ -217,14 +217,15 @@ grows from the release height above ground, so for a release above sea
 level it also reads ``zsfc``. Without it the run's log says the correction
 was skipped.
 
-For a model that writes only positions, :func:`stilt.sampling.sample_met`
+For a model that writes only positions, :func:`runtraj.sampling.sample_met`
 reads ``mlht``, ``dens``, ``pres`` and ``zsfc`` from the met files at each
 particle's position and time. Give it the files the run read and the top of
-its domain, which a stored run records:
+its domain, which a stored run records (for met that is not in ARL files,
+:meth:`runtraj.models.MetConfig.open` opens it as the transport model reads it):
 
 .. code-block:: python
 
-   from stilt.sampling import sample_met
+   from runtraj.sampling import sample_met
 
    meta = runtraj.particles.particles_metadata(sim.particles_path)
    sampled = sample_met(

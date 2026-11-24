@@ -1,0 +1,5 @@
+runtraj.output.Output.kinds
+===========================
+
+.. currentmodule:: runtraj.output
+.. automethod:: Output.kinds

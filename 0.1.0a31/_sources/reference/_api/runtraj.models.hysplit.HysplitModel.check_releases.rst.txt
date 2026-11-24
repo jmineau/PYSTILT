@@ -1,0 +1,5 @@
+runtraj.models.hysplit.HysplitModel.check\_releases
+===================================================
+
+.. currentmodule:: runtraj.models.hysplit
+.. automethod:: HysplitModel.check_releases

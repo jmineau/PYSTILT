@@ -6,7 +6,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>stilt.footprint.grid &#8212; PYSTILT 0.1.0a30</title>
+    <title>stilt.footprint.grid &#8212; PYSTILT 0.1.0a31</title>
   
   
   
@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=7752668c"></script>
+    <script src="../../../_static/documentation_options.js?v=d32ae295"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -51,7 +51,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a30';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a31';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30" />
+  <meta name="docsearch:version" content="0.1.0a31" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -610,7 +610,9 @@
 <span class="sd">    An ``xmax`` written west of ``xmin`` is read as crossing 180 degrees</span>
 <span class="sd">    when ``xmin`` is east of 0 and ``xmax`` west of it, as in</span>
 <span class="sd">    ``xmin=170, xmax=-170``, or when an edge is written past 180 degrees</span>
-<span class="sd">    either way (``xmin=-170, xmax=-190``). With both in one hemisphere and</span>
+<span class="sd">    (``xmin=-190, xmax=-170``). A box written as ``xmin=-170, xmax=-190``</span>
+<span class="sd">    would be 340 degrees wide and is refused, as swapped edges. With both in</span>
+<span class="sd">    one hemisphere and</span>
 <span class="sd">    within 180 degrees, such as ``xmin=-110.5, xmax=-113``, the two are</span>
 <span class="sd">    most likely swapped, and the grid is refused rather than read as one</span>
 <span class="sd">    357.5 degrees wide. To have a grid that wide, write its east edge past</span>

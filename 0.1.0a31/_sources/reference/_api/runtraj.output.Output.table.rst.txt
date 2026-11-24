@@ -1,0 +1,5 @@
+runtraj.output.Output.table
+===========================
+
+.. currentmodule:: runtraj.output
+.. automethod:: Output.table

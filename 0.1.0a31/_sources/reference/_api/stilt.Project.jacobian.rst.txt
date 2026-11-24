@@ -1,0 +1,5 @@
+stilt.Project.jacobian
+======================
+
+.. currentmodule:: stilt
+.. automethod:: Project.jacobian

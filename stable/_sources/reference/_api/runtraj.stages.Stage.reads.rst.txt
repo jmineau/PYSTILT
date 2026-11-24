@@ -1,0 +1,6 @@
+runtraj.stages.Stage.reads
+==========================
+
+.. currentmodule:: runtraj.stages
+
+.. autoattribute:: Stage.reads

@@ -1,0 +1,6 @@
+stilt.ExecutionConfig.block
+===========================
+
+.. currentmodule:: stilt
+
+.. autoproperty:: ExecutionConfig.block

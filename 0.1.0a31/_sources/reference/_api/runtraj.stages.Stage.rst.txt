@@ -1,0 +1,46 @@
+﻿runtraj.stages.Stage
+====================
+
+.. currentmodule:: runtraj.stages
+
+
+
+
+
+
+.. class-signature:: runtraj.stages.Stage
+
+
+.. class-parameters:: runtraj.stages.Stage
+
+
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+   :nosignatures:
+
+   ~Stage.config_class
+   ~Stage.name
+   ~Stage.reads
+   ~Stage.result
+   ~Stage.suffix
+   ~Stage.version
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~Stage.check
+   ~Stage.resolve
+   ~Stage.run
+   ~Stage.settings
+
+
+

@@ -1,0 +1,6 @@
+runtraj.models.TransportModel.name
+==================================
+
+.. currentmodule:: runtraj.models
+
+.. autoattribute:: TransportModel.name

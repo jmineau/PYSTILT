@@ -43,6 +43,7 @@ Methods
    ~Output.table
    ~Output.write_log
    ~Output.write_particles
+   ~Output.write_result
 
 
 

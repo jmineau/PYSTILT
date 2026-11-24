@@ -1,0 +1,50 @@
+﻿runtraj.models.TransportModel
+=============================
+
+.. currentmodule:: runtraj.models
+
+
+
+
+
+
+.. class-signature:: runtraj.models.TransportModel
+
+
+.. class-parameters:: runtraj.models.TransportModel
+
+
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+   :nosignatures:
+
+   ~TransportModel.batched
+   ~TransportModel.config_class
+   ~TransportModel.met_config_class
+   ~TransportModel.name
+   ~TransportModel.needs_workdir
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~TransportModel.check_releases
+   ~TransportModel.data_files
+   ~TransportModel.release_rows
+   ~TransportModel.result
+   ~TransportModel.result_files
+   ~TransportModel.run
+   ~TransportModel.run_many
+   ~TransportModel.sha256
+   ~TransportModel.version
+
+
+

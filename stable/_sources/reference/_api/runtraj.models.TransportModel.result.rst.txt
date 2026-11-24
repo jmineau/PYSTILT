@@ -1,0 +1,5 @@
+runtraj.models.TransportModel.result
+====================================
+
+.. currentmodule:: runtraj.models
+.. automethod:: TransportModel.result

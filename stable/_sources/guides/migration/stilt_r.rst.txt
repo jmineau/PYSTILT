@@ -107,8 +107,8 @@ The workflow side by side
      - same names, usually on a variant of their own
        (:doc:`../transport_error`)
    * - ``n_nodes`` and ``n_cores`` with Slurm
-     - ``execution: backend: slurm``, with ``n_workers`` array tasks of
-       ``cpus`` CPUs each under ``execution: slurm:`` (:doc:`../slurm`)
+     - ``execution: backend: slurm``, with ``n_workers`` array tasks at once,
+       of ``cpus`` CPUs each under ``execution: slurm:`` (:doc:`../slurm`)
    * - ``slurm_options``
      - ``time``, ``mem``, ``partition``, ``account``, ``qos``, and any
        other ``sbatch`` option by its name, under ``execution: slurm:``

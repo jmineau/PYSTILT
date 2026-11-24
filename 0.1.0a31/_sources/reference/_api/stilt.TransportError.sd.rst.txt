@@ -1,0 +1,6 @@
+stilt.TransportError.sd
+=======================
+
+.. currentmodule:: stilt
+
+.. autoproperty:: TransportError.sd

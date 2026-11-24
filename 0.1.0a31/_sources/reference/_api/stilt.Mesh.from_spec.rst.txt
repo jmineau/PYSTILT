@@ -1,0 +1,5 @@
+stilt.Mesh.from\_spec
+=====================
+
+.. currentmodule:: stilt
+.. automethod:: Mesh.from_spec

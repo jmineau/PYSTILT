@@ -1,0 +1,5 @@
+runtraj.models.hysplit.HysplitMetConfig.crop
+============================================
+
+.. currentmodule:: runtraj.models.hysplit
+.. automethod:: HysplitMetConfig.crop

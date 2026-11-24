@@ -1,0 +1,5 @@
+stilt.migration.StiltRMetConfig.settings
+========================================
+
+.. currentmodule:: stilt.migration
+.. automethod:: StiltRMetConfig.settings

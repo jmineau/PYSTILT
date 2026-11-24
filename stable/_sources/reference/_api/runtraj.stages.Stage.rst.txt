@@ -15,6 +15,20 @@
 
 
 
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+   :nosignatures:
+
+   ~Stage.config_class
+   ~Stage.name
+   ~Stage.reads
+   ~Stage.result
+   ~Stage.suffix
+   ~Stage.version
+
 
 
 Methods

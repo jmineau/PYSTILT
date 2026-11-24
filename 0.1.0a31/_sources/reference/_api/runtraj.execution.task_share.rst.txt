@@ -1,0 +1,6 @@
+﻿runtraj.execution.task\_share
+=============================
+
+.. currentmodule:: runtraj.execution
+
+.. autofunction:: task_share

@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Execution &#8212; PYSTILT 0.1.0a30</title>
+    <title>Execution &#8212; PYSTILT 0.1.0a31</title>
   
   
   
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=7752668c"></script>
+    <script src="../_static/documentation_options.js?v=d32ae295"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a30';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a31';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30" />
+  <meta name="docsearch:version" content="0.1.0a31" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -530,8 +530,6 @@
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.footprint.Geometry.html">stilt.footprint.Geometry</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.footprint.overlap_weights.html">stilt.footprint.overlap_weights</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/stilt.footprint.check_resolution.html">stilt.footprint.check_resolution</a></li>
-<li class="toctree-l2"><a class="reference internal" href="_api/stilt.sampling.sample_met.html">stilt.sampling.sample_met</a></li>
-<li class="toctree-l2"><a class="reference internal" href="_api/stilt.sampling.calc_pbl_height.html">stilt.sampling.calc_pbl_height</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="particles.html">The Particle Table</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -567,7 +565,14 @@
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.footprint.FootprintStage.settings.html">stilt.footprint.FootprintStage.settings</a></li>
 </ul>
 </details></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.footprint.MapConfig.html">stilt.footprint.MapConfig</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.footprint.MapStage.html">stilt.footprint.MapStage</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.footprint.MapStage.resolve.html">stilt.footprint.MapStage.resolve</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.footprint.MapStage.run.html">stilt.footprint.MapStage.run</a></li>
+</ul>
+</details></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.ExecutionConfig.html">stilt.ExecutionConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.ExecutionConfig.block.html">stilt.ExecutionConfig.block</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.ExecutionConfig.cpus.html">stilt.ExecutionConfig.cpus</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.ExecutionConfig.fetch.html">stilt.ExecutionConfig.fetch</a></li>
 </ul>
@@ -591,15 +596,19 @@
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="meteorology.html">Meteorology</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2 has-children"><a class="reference internal" href="_api/runtraj.models.hysplit.MetConfig.html">runtraj.models.hysplit.MetConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.MetConfig.download_options.html">runtraj.models.hysplit.MetConfig.download_options</a></li>
-<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.MetConfig.crop.html">runtraj.models.hysplit.MetConfig.crop</a></li>
-<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.MetConfig.model_post_init.html">runtraj.models.hysplit.MetConfig.model_post_init</a></li>
-<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.MetConfig.settings.html">runtraj.models.hysplit.MetConfig.settings</a></li>
-<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.MetConfig.source.html">runtraj.models.hysplit.MetConfig.source</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitMetConfig.html">runtraj.models.hysplit.HysplitMetConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitMetConfig.download_options.html">runtraj.models.hysplit.HysplitMetConfig.download_options</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitMetConfig.check.html">runtraj.models.hysplit.HysplitMetConfig.check</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitMetConfig.crop.html">runtraj.models.hysplit.HysplitMetConfig.crop</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitMetConfig.downloads.html">runtraj.models.hysplit.HysplitMetConfig.downloads</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitMetConfig.fetch.html">runtraj.models.hysplit.HysplitMetConfig.fetch</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitMetConfig.model_post_init.html">runtraj.models.hysplit.HysplitMetConfig.model_post_init</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitMetConfig.settings.html">runtraj.models.hysplit.HysplitMetConfig.settings</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitMetConfig.source.html">runtraj.models.hysplit.HysplitMetConfig.source</a></li>
 </ul>
 </details></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="_api/runtraj.models.hysplit.Met.html">runtraj.models.hysplit.Met</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.Met.catalog.html">runtraj.models.hysplit.Met.catalog</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.Met.crop_dir.html">runtraj.models.hysplit.Met.crop_dir</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.Met.check.html">runtraj.models.hysplit.Met.check</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.Met.check_releases.html">runtraj.models.hysplit.Met.check_releases</a></li>
@@ -625,7 +634,7 @@
 <li class="toctree-l2"><a class="reference internal" href="_api/runtraj.execution.wait.html">runtraj.execution.wait</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/runtraj.execution.task_share.html">runtraj.execution.task_share</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/runtraj.execution.runner.resolve_compute_root.html">runtraj.execution.runner.resolve_compute_root</a></li>
-<li class="toctree-l2"><a class="reference internal" href="_api/runtraj.execution.worker.run_particles.html">runtraj.execution.worker.run_particles</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/runtraj.execution.worker.run_result.html">runtraj.execution.worker.run_result</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/runtraj.execution.worker.run_stage.html">runtraj.execution.worker.run_stage</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/runtraj.execution.worker.run_stages.html">runtraj.execution.worker.run_stages</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/runtraj.execution.worker.run_release.html">runtraj.execution.worker.run_release</a></li>
@@ -633,16 +642,20 @@
 <li class="toctree-l2"><a class="reference internal" href="_api/runtraj.execution.job_script.html">runtraj.execution.job_script</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/runtraj.execution.fetch_script.html">runtraj.execution.fetch_script</a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="_api/runtraj.models.TransportModel.html">runtraj.models.TransportModel</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.TransportModel.batched.html">runtraj.models.TransportModel.batched</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.TransportModel.config_class.html">runtraj.models.TransportModel.config_class</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.TransportModel.met_config_class.html">runtraj.models.TransportModel.met_config_class</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.TransportModel.name.html">runtraj.models.TransportModel.name</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.TransportModel.needs_workdir.html">runtraj.models.TransportModel.needs_workdir</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.TransportModel.check_releases.html">runtraj.models.TransportModel.check_releases</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.TransportModel.data_files.html">runtraj.models.TransportModel.data_files</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.TransportModel.release_rows.html">runtraj.models.TransportModel.release_rows</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.TransportModel.result.html">runtraj.models.TransportModel.result</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.TransportModel.result_files.html">runtraj.models.TransportModel.result_files</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.TransportModel.run.html">runtraj.models.TransportModel.run</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.TransportModel.run_many.html">runtraj.models.TransportModel.run_many</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.TransportModel.sha256.html">runtraj.models.TransportModel.sha256</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.TransportModel.version.html">runtraj.models.TransportModel.version</a></li>
-</ul>
-</details></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="_api/runtraj.models.BatchedTransportModel.html">runtraj.models.BatchedTransportModel</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.BatchedTransportModel.run_many.html">runtraj.models.BatchedTransportModel.run_many</a></li>
 </ul>
 </details></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="_api/runtraj.models.TransportConfig.html">runtraj.models.TransportConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -656,31 +669,37 @@
 <li class="toctree-l2"><a class="reference internal" href="_api/runtraj.models.run_model.html">runtraj.models.run_model</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/runtraj.models.run_model_many.html">runtraj.models.run_model_many</a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitModel.html">runtraj.models.hysplit.HysplitModel</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitModel.batched.html">runtraj.models.hysplit.HysplitModel.batched</a></li>
-<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitModel.needs_workdir.html">runtraj.models.hysplit.HysplitModel.needs_workdir</a></li>
-<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitModel.check_met.html">runtraj.models.hysplit.HysplitModel.check_met</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitModel.name.html">runtraj.models.hysplit.HysplitModel.name</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitModel.check_releases.html">runtraj.models.hysplit.HysplitModel.check_releases</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitModel.data_files.html">runtraj.models.hysplit.HysplitModel.data_files</a></li>
-<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitModel.downloads_met.html">runtraj.models.hysplit.HysplitModel.downloads_met</a></li>
-<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitModel.fetch_met.html">runtraj.models.hysplit.HysplitModel.fetch_met</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitModel.release_rows.html">runtraj.models.hysplit.HysplitModel.release_rows</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitModel.result.html">runtraj.models.hysplit.HysplitModel.result</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitModel.result_files.html">runtraj.models.hysplit.HysplitModel.result_files</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitModel.run.html">runtraj.models.hysplit.HysplitModel.run</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitModel.sha256.html">runtraj.models.hysplit.HysplitModel.sha256</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitModel.version.html">runtraj.models.hysplit.HysplitModel.version</a></li>
 </ul>
 </details></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.migration.StiltRModel.html">stilt.migration.StiltRModel</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="_api/stilt.migration.StiltRModel.needs_workdir.html">stilt.migration.StiltRModel.needs_workdir</a></li>
-<li class="toctree-l3"><a class="reference internal" href="_api/stilt.migration.StiltRModel.data_files.html">stilt.migration.StiltRModel.data_files</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.migration.StiltRModel.run.html">stilt.migration.StiltRModel.run</a></li>
-<li class="toctree-l3"><a class="reference internal" href="_api/stilt.migration.StiltRModel.sha256.html">stilt.migration.StiltRModel.sha256</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.migration.StiltRModel.version.html">stilt.migration.StiltRModel.version</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2"><a class="reference internal" href="_api/stilt.migration.StiltRConfig.html">stilt.migration.StiltRConfig</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.migration.StiltRConfig.html">stilt.migration.StiltRConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.migration.StiltRConfig.OTHER_MODES.html">stilt.migration.StiltRConfig.OTHER_MODES</a></li>
+</ul>
+</details></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.migration.StiltRMetConfig.html">stilt.migration.StiltRMetConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.migration.StiltRMetConfig.settings.html">stilt.migration.StiltRMetConfig.settings</a></li>
 </ul>
 </details></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="_api/runtraj.stages.Stage.html">runtraj.stages.Stage</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.stages.Stage.config_class.html">runtraj.stages.Stage.config_class</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.stages.Stage.name.html">runtraj.stages.Stage.name</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.stages.Stage.reads.html">runtraj.stages.Stage.reads</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.stages.Stage.result.html">runtraj.stages.Stage.result</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.stages.Stage.suffix.html">runtraj.stages.Stage.suffix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.stages.Stage.version.html">runtraj.stages.Stage.version</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/runtraj.stages.Stage.check.html">runtraj.stages.Stage.check</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/runtraj.stages.Stage.resolve.html">runtraj.stages.Stage.resolve</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/runtraj.stages.Stage.run.html">runtraj.stages.Stage.run</a></li>
@@ -784,6 +803,7 @@
 <li class="toctree-l3"><a class="reference internal" href="_api/runtraj.output.Output.table.html">runtraj.output.Output.table</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/runtraj.output.Output.write_log.html">runtraj.output.Output.write_log</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/runtraj.output.Output.write_particles.html">runtraj.output.Output.write_particles</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.output.Output.write_result.html">runtraj.output.Output.write_result</a></li>
 </ul>
 </details></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/runtraj.output.completed.html">runtraj.output.completed</a></li>
@@ -800,6 +820,7 @@
 <li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitConfig.hourly_ziscale.html">runtraj.models.hysplit.HysplitConfig.hourly_ziscale</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitConfig.maxpar_for.html">runtraj.models.hysplit.HysplitConfig.maxpar_for</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitConfig.realizations.html">runtraj.models.hysplit.HysplitConfig.realizations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitConfig.settings.html">runtraj.models.hysplit.HysplitConfig.settings</a></li>
 </ul>
 </details></li>
 <li class="toctree-l2"><a class="reference internal" href="_api/runtraj.models.hysplit.find_hycs_std.html">runtraj.models.hysplit.find_hycs_std</a></li>
@@ -894,7 +915,7 @@ which is what <code class="docutils literal notranslate"><span class="pre">stilt
 writes a job array script (<a class="reference internal" href="_api/runtraj.execution.job_script.html#runtraj.execution.job_script" title="runtraj.execution.job_script"><code class="xref py py-func docutils literal notranslate"><span class="pre">job_script()</span></code></a>) whose
 tasks each run <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">--task</span></code>, submits it with <code class="docutils literal notranslate"><span class="pre">sbatch</span></code>, and
 returns the job id at once.</p></li>
-<li><p><a class="reference internal" href="_api/runtraj.execution.worker.run_particles.html#runtraj.execution.worker.run_particles" title="runtraj.execution.worker.run_particles"><code class="xref py py-func docutils literal notranslate"><span class="pre">run_particles()</span></code></a> runs the transport model for one
+<li><p><a class="reference internal" href="_api/runtraj.execution.worker.run_result.html#runtraj.execution.worker.run_result" title="runtraj.execution.worker.run_result"><code class="xref py py-func docutils literal notranslate"><span class="pre">run_result()</span></code></a> runs the transport model for one
 <a class="reference internal" href="_api/stilt.Simulation.html#stilt.Simulation" title="stilt.Simulation"><code class="xref py py-class docutils literal notranslate"><span class="pre">Simulation</span></code></a> and writes its particles and log.</p></li>
 <li><p><a class="reference internal" href="_api/runtraj.execution.worker.run_stages.html#runtraj.execution.worker.run_stages" title="runtraj.execution.worker.run_stages"><code class="xref py py-func docutils literal notranslate"><span class="pre">run_stages()</span></code></a> runs the stages of the variants
 that share those particles, the footprint among them: each stage file
@@ -925,7 +946,7 @@ Slurm job array by its id.</p>
 <td><p>Run every simulation of a project that has not finished, and wait for it.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="_api/runtraj.execution.submit.html#runtraj.execution.submit" title="runtraj.execution.submit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">runtraj.execution.submit</span></code></a></p></td>
-<td><p>Submit every simulation of a project that has not finished to Slurm.</p></td>
+<td><p>Submit every simulation of a project that has not finished to Slurm, Kubernetes or another backend.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="_api/runtraj.execution.pending.html#runtraj.execution.pending" title="runtraj.execution.pending"><code class="xref py py-obj docutils literal notranslate"><span class="pre">runtraj.execution.pending</span></code></a></p></td>
 <td><p>Return the ids of the releases a run would run, each once, in project order.</p></td>
@@ -948,8 +969,8 @@ Slurm job array by its id.</p>
 <tr class="row-odd"><td><p><a class="reference internal" href="_api/runtraj.execution.runner.resolve_compute_root.html#runtraj.execution.runner.resolve_compute_root" title="runtraj.execution.runner.resolve_compute_root"><code class="xref py py-obj docutils literal notranslate"><span class="pre">runtraj.execution.runner.resolve_compute_root</span></code></a></p></td>
 <td><p>Return the compute root of <em>project</em>: the directory its workdirs are made in.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="_api/runtraj.execution.worker.run_particles.html#runtraj.execution.worker.run_particles" title="runtraj.execution.worker.run_particles"><code class="xref py py-obj docutils literal notranslate"><span class="pre">runtraj.execution.worker.run_particles</span></code></a></p></td>
-<td><p>Run the transport model for a simulation and write its particles to the output directory.</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="_api/runtraj.execution.worker.run_result.html#runtraj.execution.worker.run_result" title="runtraj.execution.worker.run_result"><code class="xref py py-obj docutils literal notranslate"><span class="pre">runtraj.execution.worker.run_result</span></code></a></p></td>
+<td><p>Run the transport model for a simulation and write its result to the output directory.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="_api/runtraj.execution.worker.run_stage.html#runtraj.execution.worker.run_stage" title="runtraj.execution.worker.run_stage"><code class="xref py py-obj docutils literal notranslate"><span class="pre">runtraj.execution.worker.run_stage</span></code></a></p></td>
 <td><p>Run one stage of a simulation, which writes its file to the output directory.</p></td>
@@ -995,36 +1016,33 @@ of the run are a complete run.</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="_api/runtraj.models.TransportModel.html#runtraj.models.TransportModel" title="runtraj.models.TransportModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">runtraj.models.TransportModel</span></code></a></p></td>
-<td><p>A transport model that follows particles from a release.</p></td>
+<td><p>A transport model that follows particles from a release: the class a model subclasses.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="_api/runtraj.models.BatchedTransportModel.html#runtraj.models.BatchedTransportModel" title="runtraj.models.BatchedTransportModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">runtraj.models.BatchedTransportModel</span></code></a></p></td>
-<td><p>A transport model that runs many releases in one call, such as an emulator on a GPU.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="_api/runtraj.models.TransportConfig.html#runtraj.models.TransportConfig" title="runtraj.models.TransportConfig"><code class="xref py py-obj docutils literal notranslate"><span class="pre">runtraj.models.TransportConfig</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="_api/runtraj.models.TransportConfig.html#runtraj.models.TransportConfig" title="runtraj.models.TransportConfig"><code class="xref py py-obj docutils literal notranslate"><span class="pre">runtraj.models.TransportConfig</span></code></a></p></td>
 <td><p>The base of every transport model's config.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="_api/runtraj.models.ModelRun.html#runtraj.models.ModelRun" title="runtraj.models.ModelRun"><code class="xref py py-obj docutils literal notranslate"><span class="pre">runtraj.models.ModelRun</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="_api/runtraj.models.ModelRun.html#runtraj.models.ModelRun" title="runtraj.models.ModelRun"><code class="xref py py-obj docutils literal notranslate"><span class="pre">runtraj.models.ModelRun</span></code></a></p></td>
 <td><p>What one model run produced.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="_api/runtraj.models.get_model.html#runtraj.models.get_model" title="runtraj.models.get_model"><code class="xref py py-obj docutils literal notranslate"><span class="pre">runtraj.models.get_model</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="_api/runtraj.models.get_model.html#runtraj.models.get_model" title="runtraj.models.get_model"><code class="xref py py-obj docutils literal notranslate"><span class="pre">runtraj.models.get_model</span></code></a></p></td>
 <td><p>Return the transport model <em>name</em> names.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="_api/runtraj.models.run_model.html#runtraj.models.run_model" title="runtraj.models.run_model"><code class="xref py py-obj docutils literal notranslate"><span class="pre">runtraj.models.run_model</span></code></a></p></td>
-<td><p>Run the transport model called <em>name</em> for one release, and finish its particles.</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="_api/runtraj.models.run_model.html#runtraj.models.run_model" title="runtraj.models.run_model"><code class="xref py py-obj docutils literal notranslate"><span class="pre">runtraj.models.run_model</span></code></a></p></td>
+<td><p>Run the transport model called <em>name</em> for one release, and finish its result.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="_api/runtraj.models.run_model_many.html#runtraj.models.run_model_many" title="runtraj.models.run_model_many"><code class="xref py py-obj docutils literal notranslate"><span class="pre">runtraj.models.run_model_many</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="_api/runtraj.models.run_model_many.html#runtraj.models.run_model_many" title="runtraj.models.run_model_many"><code class="xref py py-obj docutils literal notranslate"><span class="pre">runtraj.models.run_model_many</span></code></a></p></td>
 <td><p>Run a batched transport model once for many releases, and finish each one's particles.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitModel.html#runtraj.models.hysplit.HysplitModel" title="runtraj.models.hysplit.HysplitModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">runtraj.models.hysplit.HysplitModel</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="_api/runtraj.models.hysplit.HysplitModel.html#runtraj.models.hysplit.HysplitModel" title="runtraj.models.hysplit.HysplitModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">runtraj.models.hysplit.HysplitModel</span></code></a></p></td>
 <td><p>HYSPLIT as a transport model, the object <code class="docutils literal notranslate"><span class="pre">get_model(&quot;hysplit&quot;)</span></code> returns.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="_api/stilt.migration.StiltRModel.html#stilt.migration.StiltRModel" title="stilt.migration.StiltRModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">stilt.migration.StiltRModel</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="_api/stilt.migration.StiltRModel.html#stilt.migration.StiltRModel" title="stilt.migration.StiltRModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">stilt.migration.StiltRModel</span></code></a></p></td>
 <td><p>The <code class="docutils literal notranslate"><span class="pre">stilt-r</span></code> transport model of imported runs, named by its import path (<code class="xref py py-data docutils literal notranslate"><span class="pre">STILT_R_MODEL</span></code>).</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="_api/stilt.migration.StiltRConfig.html#stilt.migration.StiltRConfig" title="stilt.migration.StiltRConfig"><code class="xref py py-obj docutils literal notranslate"><span class="pre">stilt.migration.StiltRConfig</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="_api/stilt.migration.StiltRConfig.html#stilt.migration.StiltRConfig" title="stilt.migration.StiltRConfig"><code class="xref py py-obj docutils literal notranslate"><span class="pre">stilt.migration.StiltRConfig</span></code></a></p></td>
 <td><p>The settings of imported STILT-R runs: HYSPLIT's, as STILT-R ran it, and the STILT-R version.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="_api/stilt.migration.StiltRMetConfig.html#stilt.migration.StiltRMetConfig" title="stilt.migration.StiltRMetConfig"><code class="xref py py-obj docutils literal notranslate"><span class="pre">stilt.migration.StiltRMetConfig</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="_api/stilt.migration.StiltRMetConfig.html#stilt.migration.StiltRMetConfig" title="stilt.migration.StiltRMetConfig"><code class="xref py py-obj docutils literal notranslate"><span class="pre">stilt.migration.StiltRMetConfig</span></code></a></p></td>
 <td><p>The met of imported STILT-R runs, as written under <code class="docutils literal notranslate"><span class="pre">mets:</span></code> in <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>.</p></td>
 </tr>
 </tbody>
@@ -1042,7 +1060,7 @@ write one. Use <a class="reference internal" href="_api/runtraj.stages.check_sta
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="_api/runtraj.stages.Stage.html#runtraj.stages.Stage" title="runtraj.stages.Stage"><code class="xref py py-obj docutils literal notranslate"><span class="pre">runtraj.stages.Stage</span></code></a></p></td>
-<td><p>What is made from each simulation's results: one file per release.</p></td>
+<td><p>What is made from each simulation's results, one file per release: the class a stage subclasses.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="_api/runtraj.stages.get_stage.html#runtraj.stages.get_stage" title="runtraj.stages.get_stage"><code class="xref py py-obj docutils literal notranslate"><span class="pre">runtraj.stages.get_stage</span></code></a></p></td>
 <td><p>Return the stage whose class is at the import path <em>path</em>, made with no arguments.</p></td>

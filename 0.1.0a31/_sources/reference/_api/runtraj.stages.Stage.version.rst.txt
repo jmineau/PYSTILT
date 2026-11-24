@@ -1,0 +1,6 @@
+runtraj.stages.Stage.version
+============================
+
+.. currentmodule:: runtraj.stages
+
+.. autoattribute:: Stage.version

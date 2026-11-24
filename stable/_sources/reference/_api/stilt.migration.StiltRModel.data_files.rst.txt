@@ -1,5 +1,0 @@
-stilt.migration.StiltRModel.data\_files
-=======================================
-
-.. currentmodule:: stilt.migration
-.. automethod:: StiltRModel.data_files

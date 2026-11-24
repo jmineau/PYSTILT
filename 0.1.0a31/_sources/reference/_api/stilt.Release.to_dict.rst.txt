@@ -1,0 +1,5 @@
+stilt.Release.to\_dict
+======================
+
+.. currentmodule:: stilt
+.. automethod:: Release.to_dict

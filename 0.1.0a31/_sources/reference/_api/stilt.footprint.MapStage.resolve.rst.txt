@@ -1,0 +1,5 @@
+stilt.footprint.MapStage.resolve
+================================
+
+.. currentmodule:: stilt.footprint
+.. automethod:: MapStage.resolve

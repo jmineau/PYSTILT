@@ -1,0 +1,6 @@
+﻿stilt.footprint.check\_resolution
+=================================
+
+.. currentmodule:: stilt.footprint
+
+.. autofunction:: check_resolution

@@ -1,0 +1,53 @@
+﻿runtraj.models.hysplit.HysplitModel
+===================================
+
+.. currentmodule:: runtraj.models.hysplit
+
+
+
+
+
+
+.. class-signature:: runtraj.models.hysplit.HysplitModel
+
+
+.. class-parameters:: runtraj.models.hysplit.HysplitModel
+
+
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+   :nosignatures:
+
+   ~HysplitModel.name
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~HysplitModel.check_releases
+   ~HysplitModel.data_files
+   ~HysplitModel.release_rows
+   ~HysplitModel.result
+   ~HysplitModel.result_files
+   ~HysplitModel.run
+   ~HysplitModel.sha256
+   ~HysplitModel.version
+
+
+
+
+Inherited
+---------
+
+
+From :class:`~.TransportModel`: :py:obj:`~.TransportModel.batched`, :py:obj:`~.TransportModel.needs_workdir`, :py:obj:`~.TransportModel.run_many`
+
+

@@ -1,0 +1,5 @@
+runtraj.models.TransportModel.check\_releases
+=============================================
+
+.. currentmodule:: runtraj.models
+.. automethod:: TransportModel.check_releases

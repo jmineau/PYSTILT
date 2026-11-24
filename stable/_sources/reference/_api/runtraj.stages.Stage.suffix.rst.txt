@@ -1,0 +1,6 @@
+runtraj.stages.Stage.suffix
+===========================
+
+.. currentmodule:: runtraj.stages
+
+.. autoattribute:: Stage.suffix

@@ -93,9 +93,9 @@ The settings most people change
      - ``-24`` to ``-72``
    * - ``numpar``, under ``models: hysplit:``
      - Particles released per simulation. More particles give a smoother
-       footprint and take longer. The default is 200, enough to try a
-       project; we use 1000 for results, as the config ``stilt init``
-       writes does.
+       footprint and take longer. ``stilt init`` writes 1000, STILT-R's
+       value, which we use for results; left out of the config, HYSPLIT's
+       2500 applies.
      - ``1000``
    * - ``grid``, under ``stages: footprint:``
      - The map grid for the footprint: the longitude range
@@ -522,10 +522,10 @@ which your editor can autocomplete and check:
 
 .. code-block:: python
 
-   from runtraj.models.hysplit import MetConfig
+   from runtraj.models.hysplit import HysplitMetConfig
 
    config = stilt.ProjectConfig(
-       mets={"hrrr": MetConfig(directory="/data/arl/hrrr")},
+       mets={"hrrr": HysplitMetConfig(directory="/data/arl/hrrr")},
        models={"hysplit": {"n_hours": -24, "numpar": 500}},
        stages={
            "footprint": {

@@ -1,0 +1,5 @@
+runtraj.models.TransportModel.release\_rows
+===========================================
+
+.. currentmodule:: runtraj.models
+.. automethod:: TransportModel.release_rows

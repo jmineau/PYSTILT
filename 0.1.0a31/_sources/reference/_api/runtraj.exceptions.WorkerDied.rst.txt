@@ -1,0 +1,6 @@
+﻿runtraj.exceptions.WorkerDied
+=============================
+
+.. currentmodule:: runtraj.exceptions
+
+.. autoexception:: WorkerDied

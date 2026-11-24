@@ -1,0 +1,5 @@
+stilt.footprint.FootprintAccessor.enhancement
+=============================================
+
+.. currentmodule:: stilt.footprint
+.. automethod:: FootprintAccessor.enhancement

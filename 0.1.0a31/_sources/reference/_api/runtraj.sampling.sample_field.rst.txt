@@ -1,0 +1,6 @@
+﻿runtraj.sampling.sample\_field
+==============================
+
+.. currentmodule:: runtraj.sampling
+
+.. autofunction:: sample_field

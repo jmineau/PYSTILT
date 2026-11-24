@@ -1,0 +1,43 @@
+﻿stilt.FootprintConfig
+=====================
+
+.. currentmodule:: stilt
+
+
+
+
+
+
+.. class-signature:: stilt.FootprintConfig
+
+
+Parameters
+----------
+
+.. config-model:: stilt.FootprintConfig
+
+
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+   :nosignatures:
+
+   ~FootprintConfig.layer_unit
+   ~FootprintConfig.tres_minutes
+   ~FootprintConfig.zsfc_reasons
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~FootprintConfig.override
+
+
+

@@ -1,0 +1,6 @@
+runtraj.stages.Stage.config\_class
+==================================
+
+.. currentmodule:: runtraj.stages
+
+.. autoattribute:: Stage.config_class

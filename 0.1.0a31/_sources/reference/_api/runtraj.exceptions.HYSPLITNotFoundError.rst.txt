@@ -1,0 +1,6 @@
+﻿runtraj.exceptions.HYSPLITNotFoundError
+=======================================
+
+.. currentmodule:: runtraj.exceptions
+
+.. autoexception:: HYSPLITNotFoundError

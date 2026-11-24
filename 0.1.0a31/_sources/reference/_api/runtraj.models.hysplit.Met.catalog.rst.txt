@@ -1,0 +1,6 @@
+runtraj.models.hysplit.Met.catalog
+==================================
+
+.. currentmodule:: runtraj.models.hysplit
+
+.. autoproperty:: Met.catalog

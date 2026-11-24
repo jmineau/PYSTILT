@@ -1,0 +1,5 @@
+runtraj.models.hysplit.HysplitModel.release\_rows
+=================================================
+
+.. currentmodule:: runtraj.models.hysplit
+.. automethod:: HysplitModel.release_rows

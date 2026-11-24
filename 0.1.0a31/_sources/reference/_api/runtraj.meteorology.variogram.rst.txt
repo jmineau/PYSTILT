@@ -1,0 +1,6 @@
+﻿runtraj.meteorology.variogram
+=============================
+
+.. currentmodule:: runtraj.meteorology
+
+.. autofunction:: variogram

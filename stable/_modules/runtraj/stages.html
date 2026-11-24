@@ -6,7 +6,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>runtraj.stages &#8212; PYSTILT 0.1.0a30</title>
+    <title>runtraj.stages &#8212; PYSTILT 0.1.0a31</title>
   
   
   
@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=7752668c"></script>
+    <script src="../../_static/documentation_options.js?v=d32ae295"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -51,7 +51,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a30';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a31';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30" />
+  <meta name="docsearch:version" content="0.1.0a31" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -470,9 +470,9 @@
 <span class="sd">       class: stilt.footprint.FootprintStage</span>
 <span class="sd">       grid: {xmin: -113.0, xmax: -110.5, ymin: 40.0, ymax: 42.0, xres: 0.01, yres: 0.01}</span>
 
-<span class="sd">:class:`Stage` is what such a class provides. :func:`get_stage` imports</span>
-<span class="sd">one, :func:`ordered` puts the stages of a config in the order they run, and</span>
-<span class="sd">:func:`check_stage` is for the tests of a stage of your own.</span>
+<span class="sd">:class:`Stage` is the class such a class subclasses. :func:`get_stage`</span>
+<span class="sd">imports one, :func:`ordered` puts the stages of a config in the order they</span>
+<span class="sd">run, and :func:`check_stage` is for the tests of a stage of your own.</span>
 <span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
@@ -480,14 +480,16 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">functools</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Mapping</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Protocol</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Generic</span><span class="p">,</span> <span class="n">TypeVar</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj._plugins</span><span class="w"> </span><span class="kn">import</span> <span class="n">import_class</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj._plugins</span><span class="w"> </span><span class="kn">import</span> <span class="n">import_class</span><span class="p">,</span> <span class="n">near_miss</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.identity</span><span class="w"> </span><span class="kn">import</span> <span class="n">canonical</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.results</span><span class="w"> </span><span class="kn">import</span> <span class="n">RESULT_TYPES</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
@@ -498,10 +500,13 @@
 <span class="c1">#: Pattern for a stage's name, which is a folder in the output directory and a column of ``project.status()``.</span>
 <span class="n">STAGE_NAME_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"^[a-z][a-z0-9_]*$"</span><span class="p">)</span>
 
-<span class="c1">#: Names a stage may not take: the output directory's own trees, and the columns of ``project.status()``.</span>
+<span class="c1">#: Names a stage may not take: the output directory's own trees (the result</span>
+<span class="c1">#: types of :mod:`runtraj.results`), and the columns of ``project.status()``.</span>
 <span class="n">RESERVED_NAMES</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span>
     <span class="p">{</span>
         <span class="s2">"particles"</span><span class="p">,</span>
+        <span class="s2">"concentration"</span><span class="p">,</span>
+        <span class="s2">"trajectories"</span><span class="p">,</span>
         <span class="s2">"logs"</span><span class="p">,</span>
         <span class="s2">"scratch"</span><span class="p">,</span>
         <span class="s2">"release"</span><span class="p">,</span>
@@ -516,60 +521,79 @@
 <span class="p">)</span>
 
 
+<span class="c1">#: The config class a stage takes, a pydantic model.</span>
+<span class="n">C</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s2">"C"</span><span class="p">,</span> <span class="n">bound</span><span class="o">=</span><span class="n">BaseModel</span><span class="p">)</span>
+
+<span class="c1">#: Pattern for a stage's ``version``: letters, digits, dots, dashes and underscores.</span>
+<span class="n">STAGE_VERSION_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"^[A-Za-z0-9._-]+$"</span><span class="p">)</span>
+
+
 <div class="viewcode-block" id="Stage">
 <a class="viewcode-back" href="../../reference/_api/runtraj.stages.Stage.html#runtraj.stages.Stage">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">Stage</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Stage</span><span class="p">(</span><span class="n">ABC</span><span class="p">,</span> <span class="n">Generic</span><span class="p">[</span><span class="n">C</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    What is made from each simulation's results: one file per release.</span>
+<span class="sd">    What is made from each simulation's results, one file per release: the class a stage subclasses.</span>
 
-<span class="sd">    A class with these members is a stage; it subclasses nothing. It is made</span>
-<span class="sd">    with no arguments, and holds no state: everything a stage needs is in</span>
-<span class="sd">    its config and the simulation it is handed.</span>
+<span class="sd">    A stage sets :attr:`name`, :attr:`config_class` and :attr:`suffix`, and</span>
+<span class="sd">    implements :meth:`run`; :meth:`resolve`, :meth:`settings`,</span>
+<span class="sd">    :meth:`check`, :attr:`reads`, :attr:`result` and :attr:`version` have</span>
+<span class="sd">    defaults here. runtraj calls each member directly, so a misspelled one</span>
+<span class="sd">    (``read``) is never called; :func:`check_stage` reports it. It is</span>
+<span class="sd">    generic in its config, ``class MyStage(Stage[MyConfig])``,</span>
+<span class="sd">    and is made with no arguments and holds no state: everything a stage</span>
+<span class="sd">    needs is in its config and the simulation it is handed.</span>
 
-<span class="sd">    Attributes</span>
-<span class="sd">    ----------</span>
-<span class="sd">    name : str</span>
-<span class="sd">        What the stage's results are called, such as ``footprint``: the</span>
-<span class="sd">        name of its block under ``stages:``, its tree in the output</span>
-<span class="sd">        directory, its column in ``project.status()``, the ``stage`` of a</span>
-<span class="sd">        failure record, and a part of the hash that names its settings</span>
-<span class="sd">        folders. Lowercase letters, digits and underscores.</span>
-<span class="sd">    config_class : type of pydantic.BaseModel</span>
-<span class="sd">        Checks the stage's block of ``config.yaml`` when the file loads, and</span>
-<span class="sd">        reads no file. It must also read back what :meth:`settings` wrote,</span>
-<span class="sd">        since a stored settings folder is found by validating its record</span>
-<span class="sd">        with this class and hashing :meth:`settings` again</span>
-<span class="sd">        (:func:`check_stage` holds a stage to that). Two more members are</span>
-<span class="sd">        optional. A classmethod ``override(block, own)`` returns a variant's</span>
-<span class="sd">        settings from the block's, as the class dumps them, and the</span>
-<span class="sd">        variant's own, as written; without it the variant's keys replace the</span>
-<span class="sd">        block's. A property ``zsfc_reasons`` lists what goes wrong for</span>
-<span class="sd">        releases above sea level whose particles lack the terrain height</span>
-<span class="sd">        ``zsfc``, a clause each, for ``runtraj check`` to report when the</span>
-<span class="sd">        transport model is not asked for it.</span>
-<span class="sd">    suffix : str</span>
-<span class="sd">        The extension of the stage's files, such as ``.parquet``, with its</span>
-<span class="sd">        dot. The file of a release is ``&lt;release id&gt;&lt;suffix&gt;``, and</span>
-<span class="sd">        completion looks for it in a listing.</span>
-<span class="sd">    reads : tuple of str, optional</span>
-<span class="sd">        The names of the stages whose files this one reads, none when the</span>
-<span class="sd">        stage does not say. A stage runs after the ones it reads, and again</span>
-<span class="sd">        whenever one of them was made again.</span>
+<span class="sd">    The stage's :attr:`config_class` has two optional members of its own. A</span>
+<span class="sd">    classmethod ``override(block, own)`` returns a variant's settings from</span>
+<span class="sd">    the block's, as the class dumps them, and the variant's own, as</span>
+<span class="sd">    written; without it the variant's keys replace the block's. A property</span>
+<span class="sd">    ``zsfc_reasons`` lists what goes wrong for releases above sea level</span>
+<span class="sd">    whose particles lack the terrain height ``zsfc``, a clause each, for</span>
+<span class="sd">    ``runtraj check`` to report when the transport model is not asked for</span>
+<span class="sd">    it.</span>
 <span class="sd">    """</span>
 
+    <span class="c1">#: What the stage's results are called, such as ``footprint``: the name</span>
+    <span class="c1">#: of its block under ``stages:``, its tree in the output directory, its</span>
+    <span class="c1">#: column in ``project.status()``, the ``stage`` of a failure record, and</span>
+    <span class="c1">#: a part of the hash that names its settings folders. Lowercase</span>
+    <span class="c1">#: letters, digits and underscores.</span>
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
-    <span class="n">config_class</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">BaseModel</span><span class="p">]</span>
+    <span class="c1">#: Checks the stage's block of ``config.yaml`` when the file loads, and</span>
+    <span class="c1">#: reads no file. It must also read back what :meth:`settings` wrote,</span>
+    <span class="c1">#: since a stored settings folder is found by validating its record with</span>
+    <span class="c1">#: this class and hashing :meth:`settings` again (:func:`check_stage`</span>
+    <span class="c1">#: holds a stage to that).</span>
+    <span class="n">config_class</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">C</span><span class="p">]</span>
+    <span class="c1">#: The extension of the stage's files, such as ``.parquet``, with its</span>
+    <span class="c1">#: dot. The file of a release is ``&lt;release id&gt;&lt;suffix&gt;``, and completion</span>
+    <span class="c1">#: looks for it in a listing.</span>
     <span class="n">suffix</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="c1">#: The names of the stages whose files this one reads, none here. A</span>
+    <span class="c1">#: stage runs after the ones it reads, and again whenever one of them</span>
+    <span class="c1">#: was made again.</span>
+    <span class="n">reads</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
+    <span class="c1">#: The type of transport model result the stage reads</span>
+    <span class="c1">#: (:mod:`runtraj.results`), ``particles`` here. A variant whose model</span>
+    <span class="c1">#: makes another type cannot use the stage.</span>
+    <span class="n">result</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"particles"</span>
+    <span class="c1">#: The version of what the stage makes, ``None`` here. When set, it is</span>
+    <span class="c1">#: part of the hash that names the stage's settings folders and is</span>
+    <span class="c1">#: recorded as ``stage_version`` in their ``_settings.yaml``, so a fix</span>
+    <span class="c1">#: that changes the stage's files makes new ones under a new folder</span>
+    <span class="c1">#: instead of counting the old ones complete. Raise it only for such a</span>
+    <span class="c1">#: fix; a stage that never sets it keeps the folders it has.</span>
+    <span class="n">version</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 
 <div class="viewcode-block" id="Stage.resolve">
 <a class="viewcode-back" href="../../reference/_api/runtraj.stages.Stage.resolve.html#runtraj.stages.Stage.resolve">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">resolve</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">config</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+        <span class="n">config</span><span class="p">:</span> <span class="n">C</span><span class="p">,</span>
         <span class="n">model</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">model_settings</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
         <span class="n">directory</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">C</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Return the config a variant's simulations run with, from the one ``config.yaml`` gives.</span>
 
@@ -593,28 +617,30 @@
 <span class="sd">        ValueError</span>
 <span class="sd">            If the settings do not fit the model, or name a file that</span>
 <span class="sd">            cannot be used.</span>
+
+<span class="sd">        Here *config* is returned as it is.</span>
 <span class="sd">        """</span>
-        <span class="o">...</span></div>
+        <span class="k">return</span> <span class="n">config</span></div>
 
 
 <div class="viewcode-block" id="Stage.settings">
 <a class="viewcode-back" href="../../reference/_api/runtraj.stages.Stage.settings.html#runtraj.stages.Stage.settings">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">settings</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">settings</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">C</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Return what identifies the stage's results, besides what it reads: the record of its settings folder.</span>
 
 <span class="sd">        Plain values (mappings, lists, strings, numbers), which</span>
 <span class="sd">        :attr:`config_class` reads back. The folder's hash is of this</span>
 <span class="sd">        record, the particles' hash, and the hash of each stage in</span>
-<span class="sd">        :attr:`reads`.</span>
+<span class="sd">        :attr:`reads`. Here, every field of *config* (``model_dump``).</span>
 <span class="sd">        """</span>
-        <span class="o">...</span></div>
+        <span class="k">return</span> <span class="n">config</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"json"</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="Stage.check">
 <a class="viewcode-back" href="../../reference/_api/runtraj.stages.Stage.check.html#runtraj.stages.Stage.check">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">check</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">releases</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">directory</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">C</span><span class="p">,</span> <span class="n">releases</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">directory</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
 <span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Return what would stop this stage for the project's releases, found without running anything.</span>
@@ -623,14 +649,16 @@
 <span class="sd">        row per release point (``release``, ``time``, ``longitude``,</span>
 <span class="sd">        ``latitude``, ``altitude``, ``altitude_ref``, ``kind``). Each thing</span>
 <span class="sd">        found is a tuple of a short name for the check, the release id (or</span>
-<span class="sd">        ``None`` when it is not about one release), and a message.</span>
+<span class="sd">        ``None`` when it is not about one release), and a message. Nothing</span>
+<span class="sd">        here.</span>
 <span class="sd">        """</span>
-        <span class="o">...</span></div>
+        <span class="k">return</span> <span class="p">[]</span></div>
 
 
 <div class="viewcode-block" id="Stage.run">
 <a class="viewcode-back" href="../../reference/_api/runtraj.stages.Stage.run.html#runtraj.stages.Stage.run">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">sim</span><span class="p">:</span> <span class="n">Simulation</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">C</span><span class="p">,</span> <span class="n">sim</span><span class="p">:</span> <span class="n">Simulation</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Make the stage's file for one simulation, and write it at *path*.</span>
 
@@ -671,10 +699,18 @@
 <span class="sd">            it (:attr:`runtraj.Simulation.failure`) and goes on. Raise a</span>
 <span class="sd">            :class:`~runtraj.exceptions.SimulationError` with a ``reason`` for</span>
 <span class="sd">            a failure you expect.</span>
-<span class="sd">        """</span>
-        <span class="o">...</span></div>
+<span class="sd">        """</span></div>
 </div>
 
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_stage_hooks</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Return the names of :class:`Stage`'s members: its hooks and attributes."""</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="n">name</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="o">*</span><span class="nb">vars</span><span class="p">(</span><span class="n">Stage</span><span class="p">),</span> <span class="o">*</span><span class="n">Stage</span><span class="o">.</span><span class="vm">__annotations__</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"_"</span><span class="p">)</span>
+    <span class="p">}</span>
 
 
 <div class="viewcode-block" id="get_stage">
@@ -690,22 +726,25 @@
 <span class="sd">        If the class cannot be imported on this machine.</span>
 <span class="sd">    ValueError</span>
 <span class="sd">        If *path* is not an import path, or the class is not a stage: it</span>
-<span class="sd">        lacks a member of :class:`Stage`, or its ``name``, ``suffix`` or</span>
-<span class="sd">        ``config_class`` cannot be used.</span>
+<span class="sd">        does not subclass :class:`Stage` or lacks one of its required</span>
+<span class="sd">        members, or its ``name``, ``suffix``, ``config_class``, ``result``</span>
+<span class="sd">        or ``version`` cannot be used.</span>
 <span class="sd">    """</span>
     <span class="k">if</span> <span class="s2">"."</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">path</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
             <span class="sa">f</span><span class="s2">"A stage is named by the import path of its class, such as "</span>
             <span class="sa">f</span><span class="s2">"mypkg.stages.MyStage, not </span><span class="si">{</span><span class="n">path</span><span class="si">!r}</span><span class="s2">."</span>
         <span class="p">)</span>
-    <span class="n">stage</span> <span class="o">=</span> <span class="n">import_class</span><span class="p">(</span><span class="n">path</span><span class="p">)()</span>
-    <span class="n">members</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"name"</span><span class="p">,</span> <span class="s2">"config_class"</span><span class="p">,</span> <span class="s2">"suffix"</span><span class="p">,</span> <span class="s2">"resolve"</span><span class="p">,</span> <span class="s2">"settings"</span><span class="p">,</span> <span class="s2">"check"</span><span class="p">,</span> <span class="s2">"run"</span><span class="p">)</span>
-    <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span><span class="n">member</span> <span class="k">for</span> <span class="n">member</span> <span class="ow">in</span> <span class="n">members</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">stage</span><span class="p">,</span> <span class="n">member</span><span class="p">)]</span>
-    <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+    <span class="bp">cls</span> <span class="o">=</span> <span class="n">import_class</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="nb">type</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">issubclass</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">Stage</span><span class="p">)):</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> is not a stage: it has no </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span><span class="si">}</span><span class="s2"> "</span>
-            <span class="s2">"(runtraj.stages.Stage lists what a stage provides)."</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> is not a stage: its class must subclass runtraj.stages.Stage."</span>
         <span class="p">)</span>
+    <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span><span class="n">m</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"name"</span><span class="p">,</span> <span class="s2">"config_class"</span><span class="p">,</span> <span class="s2">"suffix"</span><span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">m</span><span class="p">)]</span>
+    <span class="n">missing</span> <span class="o">+=</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">__abstractmethods__</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> is not a stage: it has no </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
+    <span class="n">stage</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">()</span>
     <span class="n">name</span> <span class="o">=</span> <span class="n">stage</span><span class="o">.</span><span class="n">name</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">STAGE_NAME_RE</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
@@ -728,13 +767,21 @@
             <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">: a stage's config_class must be a pydantic model, not "</span>
             <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">config_class</span><span class="si">!r}</span><span class="s2">."</span>
         <span class="p">)</span>
+    <span class="k">if</span> <span class="n">stage</span><span class="o">.</span><span class="n">result</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">RESULT_TYPES</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">: a stage's result must be one of </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">RESULT_TYPES</span><span class="p">)</span><span class="si">}</span><span class="s2">, "</span>
+            <span class="sa">f</span><span class="s2">"not </span><span class="si">{</span><span class="n">stage</span><span class="o">.</span><span class="n">result</span><span class="si">!r}</span><span class="s2">."</span>
+        <span class="p">)</span>
+    <span class="n">version</span> <span class="o">=</span> <span class="n">stage</span><span class="o">.</span><span class="n">version</span>
+    <span class="k">if</span> <span class="n">version</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="p">(</span>
+        <span class="nb">isinstance</span><span class="p">(</span><span class="n">version</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">STAGE_VERSION_RE</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="n">version</span><span class="p">)</span>
+    <span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">: a stage's version must be None or a string such as '2', "</span>
+            <span class="sa">f</span><span class="s2">"of </span><span class="si">{</span><span class="n">STAGE_VERSION_RE</span><span class="o">.</span><span class="n">pattern</span><span class="si">}</span><span class="s2">, not </span><span class="si">{</span><span class="n">version</span><span class="si">!r}</span><span class="s2">."</span>
+        <span class="p">)</span>
     <span class="k">return</span> <span class="n">stage</span></div>
 
-
-
-<span class="k">def</span><span class="w"> </span><span class="nf">reads</span><span class="p">(</span><span class="n">stage</span><span class="p">:</span> <span class="n">Stage</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""Return the names of the stages whose files *stage* reads, none when it does not say."""</span>
-    <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">stage</span><span class="p">,</span> <span class="s2">"reads"</span><span class="p">,</span> <span class="p">()))</span>
 
 
 <div class="viewcode-block" id="ordered">
@@ -752,7 +799,7 @@
 <span class="sd">        each other in a circle.</span>
 <span class="sd">    """</span>
     <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">stage</span> <span class="ow">in</span> <span class="n">stages</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-        <span class="k">for</span> <span class="n">read</span> <span class="ow">in</span> <span class="n">reads</span><span class="p">(</span><span class="n">stage</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">read</span> <span class="ow">in</span> <span class="n">stage</span><span class="o">.</span><span class="n">reads</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">read</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">stages</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                     <span class="sa">f</span><span class="s2">"The stage </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> reads the stage </span><span class="si">{</span><span class="n">read</span><span class="si">!r}</span><span class="s2">, which "</span>
@@ -761,7 +808,7 @@
     <span class="n">order</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">waiting</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">stages</span><span class="p">)</span>
     <span class="k">while</span> <span class="n">waiting</span><span class="p">:</span>
-        <span class="n">ready</span> <span class="o">=</span> <span class="p">[</span><span class="n">n</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">waiting</span> <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="n">r</span> <span class="ow">in</span> <span class="n">order</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">reads</span><span class="p">(</span><span class="n">stages</span><span class="p">[</span><span class="n">n</span><span class="p">]))]</span>
+        <span class="n">ready</span> <span class="o">=</span> <span class="p">[</span><span class="n">n</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">waiting</span> <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="n">r</span> <span class="ow">in</span> <span class="n">order</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">stages</span><span class="p">[</span><span class="n">n</span><span class="p">]</span><span class="o">.</span><span class="n">reads</span><span class="p">)]</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">ready</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">"The stages </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">waiting</span><span class="p">)</span><span class="si">}</span><span class="s2"> read each other in a circle, so "</span>
@@ -784,13 +831,21 @@
 <span class="sd">    stage has. It checks that the record :meth:`Stage.settings` writes is</span>
 <span class="sd">    plain data, and that :attr:`Stage.config_class` reads it back to a</span>
 <span class="sd">    config with the same record: a stored settings folder is found that</span>
-<span class="sd">    way, so a stage that breaks it finds none of its results.</span>
+<span class="sd">    way, so a stage that breaks it finds none of its results. It also</span>
+<span class="sd">    checks that no public name of the stage's class is spelled almost like</span>
+<span class="sd">    a member of :class:`Stage`, as ``read`` is, which runtraj would never</span>
+<span class="sd">    call.</span>
 
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
 <span class="sd">    AssertionError</span>
 <span class="sd">        Saying which promise is broken.</span>
 <span class="sd">    """</span>
+    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">stage</span><span class="p">,</span> <span class="n">Stage</span><span class="p">),</span> <span class="p">(</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">stage</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2"> must subclass runtraj.stages.Stage"</span>
+    <span class="p">)</span>
+    <span class="n">miss</span> <span class="o">=</span> <span class="n">near_miss</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">stage</span><span class="p">),</span> <span class="n">_stage_hooks</span><span class="p">())</span>
+    <span class="k">assert</span> <span class="n">miss</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">,</span> <span class="n">miss</span>
     <span class="k">assert</span> <span class="n">STAGE_NAME_RE</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="n">stage</span><span class="o">.</span><span class="n">name</span><span class="p">),</span> <span class="p">(</span>
         <span class="sa">f</span><span class="s2">"name </span><span class="si">{</span><span class="n">stage</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> must match </span><span class="si">{</span><span class="n">STAGE_NAME_RE</span><span class="o">.</span><span class="n">pattern</span><span class="si">}</span><span class="s2">"</span>
     <span class="p">)</span>
@@ -821,11 +876,11 @@
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
     <span class="s2">"RESERVED_NAMES"</span><span class="p">,</span>
     <span class="s2">"STAGE_NAME_RE"</span><span class="p">,</span>
+    <span class="s2">"STAGE_VERSION_RE"</span><span class="p">,</span>
     <span class="s2">"Stage"</span><span class="p">,</span>
     <span class="s2">"check_stage"</span><span class="p">,</span>
     <span class="s2">"get_stage"</span><span class="p">,</span>
     <span class="s2">"ordered"</span><span class="p">,</span>
-    <span class="s2">"reads"</span><span class="p">,</span>
 <span class="p">]</span>
 </pre></div>
 

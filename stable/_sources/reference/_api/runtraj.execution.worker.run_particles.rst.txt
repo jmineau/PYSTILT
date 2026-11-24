@@ -1,6 +1,0 @@
-﻿runtraj.execution.worker.run\_particles
-=======================================
-
-.. currentmodule:: runtraj.execution.worker
-
-.. autofunction:: run_particles

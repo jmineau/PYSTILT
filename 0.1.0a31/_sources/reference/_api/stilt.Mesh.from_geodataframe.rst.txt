@@ -1,0 +1,5 @@
+stilt.Mesh.from\_geodataframe
+=============================
+
+.. currentmodule:: stilt
+.. automethod:: Mesh.from_geodataframe

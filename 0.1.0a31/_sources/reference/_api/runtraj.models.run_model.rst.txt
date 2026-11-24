@@ -1,0 +1,6 @@
+﻿runtraj.models.run\_model
+=========================
+
+.. currentmodule:: runtraj.models
+
+.. autofunction:: run_model

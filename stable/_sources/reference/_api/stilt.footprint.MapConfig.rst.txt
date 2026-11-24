@@ -1,0 +1,24 @@
+﻿stilt.footprint.MapConfig
+=========================
+
+.. currentmodule:: stilt.footprint
+
+
+
+
+
+
+.. class-signature:: stilt.footprint.MapConfig
+
+
+Parameters
+----------
+
+.. config-model:: stilt.footprint.MapConfig
+
+
+
+
+
+
+

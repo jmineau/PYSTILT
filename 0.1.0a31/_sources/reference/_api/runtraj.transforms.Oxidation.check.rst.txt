@@ -1,0 +1,5 @@
+runtraj.transforms.Oxidation.check
+==================================
+
+.. currentmodule:: runtraj.transforms
+.. automethod:: Oxidation.check

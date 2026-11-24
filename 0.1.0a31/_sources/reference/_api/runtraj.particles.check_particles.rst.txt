@@ -1,0 +1,6 @@
+﻿runtraj.particles.check\_particles
+==================================
+
+.. currentmodule:: runtraj.particles
+
+.. autofunction:: check_particles

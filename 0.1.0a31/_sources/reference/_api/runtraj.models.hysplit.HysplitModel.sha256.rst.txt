@@ -1,0 +1,5 @@
+runtraj.models.hysplit.HysplitModel.sha256
+==========================================
+
+.. currentmodule:: runtraj.models.hysplit
+.. automethod:: HysplitModel.sha256

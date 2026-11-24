@@ -1,0 +1,5 @@
+stilt.footprint.MapStage.run
+============================
+
+.. currentmodule:: stilt.footprint
+.. automethod:: MapStage.run

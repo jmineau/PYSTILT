@@ -25,7 +25,7 @@ Configuration
    output: output
 
 ``mets`` names the meteorology (for HYSPLIT,
-:class:`~runtraj.models.hysplit.MetConfig`). ``models`` names the transport
+:class:`~runtraj.models.hysplit.HysplitMetConfig`). ``models`` names the transport
 models, each block with that model's settings
 (:class:`~runtraj.models.hysplit.HysplitConfig` for ``hysplit``).
 ``stages`` names what is made from each simulation's particles: the
@@ -158,13 +158,44 @@ given with a ``geometry`` is used as given. Each footprint file stores a
 code for the geometry it was made for, which is how
 ``foot.stilt.aggregate`` knows when a mesh no longer matches.
 
+Footprint maps
+~~~~~~~~~~~~~~
+
+To show each footprint on a web map, add a block for the map stage after
+the footprint's (:class:`~stilt.footprint.MapStage`, which needs the
+``visualization`` extra). Its keys are the color scale, the same for every
+image so that two hours compare by eye:
+
+.. code-block:: yaml
+
+   stages:
+     footprint:
+       class: stilt.footprint.FootprintStage
+       grid: {xmin: -113.0, xmax: -110.5, ymin: 40.0, ymax: 42.0, xres: 0.01, yres: 0.01}
+     map:
+       class: stilt.footprint.MapStage
+       vmin: 1.0e-5
+       vmax: 0.1
+
+Each release gets ``<release id>.json`` in the map's folder of the output
+directory, written after its footprint. It holds the footprint summed over
+time as a PNG data URL (``image``), the image's corners as
+``[[south, west], [north, east]]`` (``bounds``), the release, its time in
+UTC, the color scale and the footprint's units. The image's rows are spaced
+as on a web map, so Leaflet places it with
+``L.imageOverlay(entry.image, entry.bounds)``. An empty footprint gets a
+file with ``image`` and ``bounds`` null. A footprint grid across 180°
+cannot be drawn, and its map fails.
+
+.. config-model:: stilt.footprint.maps.MapConfig
+
 A met
 ~~~~~
 
 The keys of one entry under ``mets:``, for HYSPLIT
 (:doc:`../guides/meteorology`).
 
-.. config-model:: runtraj.models.hysplit.MetConfig
+.. config-model:: runtraj.models.hysplit.HysplitMetConfig
 
 Execution
 ~~~~~~~~~
@@ -209,6 +240,8 @@ can share one.
    ProjectConfig
    FootprintConfig
    footprint.FootprintStage
+   footprint.MapConfig
+   footprint.MapStage
    ExecutionConfig
    Bounds
    Grid

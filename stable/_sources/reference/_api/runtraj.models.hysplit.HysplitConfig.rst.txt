@@ -38,14 +38,7 @@ Methods
    ~HysplitConfig.hourly_ziscale
    ~HysplitConfig.maxpar_for
    ~HysplitConfig.realizations
+   ~HysplitConfig.settings
 
-
-
-
-Inherited
----------
-
-
-From :class:`~.TransportConfig`: :py:obj:`~.TransportConfig.settings`
 
 

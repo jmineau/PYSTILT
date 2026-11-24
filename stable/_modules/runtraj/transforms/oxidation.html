@@ -6,7 +6,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>runtraj.transforms.oxidation &#8212; PYSTILT 0.1.0a30</title>
+    <title>runtraj.transforms.oxidation &#8212; PYSTILT 0.1.0a31</title>
   
   
   
@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=7752668c"></script>
+    <script src="../../../_static/documentation_options.js?v=d32ae295"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -51,7 +51,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a30';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a31';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a30" />
+  <meta name="docsearch:version" content="0.1.0a31" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -540,12 +540,12 @@
 <span class="sd">    -----</span>
 <span class="sd">    The temperature is the particles' ``temz`` column when they have it.</span>
 <span class="sd">    Otherwise it is :math:`p / (\rho R_d)` from ``pres`` and ``dens``, which</span>
-<span class="sd">    are in the default ``varsiwant``, so particles already run need no</span>
+<span class="sd">    are in HYSPLIT's default ``varsiwant``, so particles already run need no</span>
 <span class="sd">    rerun. That is the virtual temperature, above the temperature by about</span>
 <span class="sd">    :math:`0.6 \, q T` in moist air. On a HYSPLIT run from Salt Lake City</span>
 <span class="sd">    in January (HRRR, 72,000 rows) it was 0.5 to 0.9 K above HYSPLIT's</span>
 <span class="sd">    ``temz`` (5th to 95th percentile), about 2 % in a rate with</span>
-<span class="sd">    ``e_over_r`` of 1775 K. Add ``temz`` to ``varsiwant`` when that matters.</span>
+<span class="sd">    ``e_over_r`` of 1775 K. Add ``temz`` to HYSPLIT's ``varsiwant`` when that matters.</span>
 
 <span class="sd">    A field with a ``time`` dimension is matched to each row's nearest</span>
 <span class="sd">    time, so a climatology must carry the dates of the run.</span>

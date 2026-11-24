@@ -1,0 +1,6 @@
+runtraj.transforms.PressureWeighting.reads\_zsfc
+================================================
+
+.. currentmodule:: runtraj.transforms
+
+.. autoattribute:: PressureWeighting.reads_zsfc

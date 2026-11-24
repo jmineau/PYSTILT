@@ -1,0 +1,6 @@
+stilt.Release.plot
+==================
+
+.. currentmodule:: stilt
+
+.. autoproperty:: Release.plot

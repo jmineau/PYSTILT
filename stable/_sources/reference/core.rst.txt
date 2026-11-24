@@ -205,13 +205,8 @@ a surface flux under a footprint or along particle paths
 (``foot.stilt.enhancement``, ``particles.stilt.enhancement``), or a
 mole-fraction field at particle endpoints (:func:`stilt.background`); it
 is listed with the transforms (:doc:`transforms`).
-:func:`~stilt.sampling.sample_met` reads ARL met files at particle
+:func:`runtraj.sampling.sample_met` reads the met at particle
 positions, for the particle columns a transport model can write from the
-met.
-
-.. autosummary::
-   :toctree: _api
-   :nosignatures:
-
-   sampling.sample_met
-   sampling.calc_pbl_height
+met, and :func:`runtraj.sampling.calc_pbl_height` finds the mixed-layer
+height from its profile. Both are runtraj's, and both take ARL met files or
+met in another format as one dataset (:meth:`runtraj.models.MetConfig.open`).

@@ -1,0 +1,30 @@
+﻿stilt.TransportError
+====================
+
+.. currentmodule:: stilt
+
+
+
+
+
+
+.. class-signature:: stilt.TransportError
+
+
+.. class-parameters:: stilt.TransportError
+
+
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+   :nosignatures:
+
+   ~TransportError.sd
+
+
+
+
+

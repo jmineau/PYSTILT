@@ -1,0 +1,44 @@
+﻿runtraj.models.hysplit.HysplitConfig
+====================================
+
+.. currentmodule:: runtraj.models.hysplit
+
+
+
+
+
+
+.. class-signature:: runtraj.models.hysplit.HysplitConfig
+
+
+Parameters
+----------
+
+.. config-model:: runtraj.models.hysplit.HysplitConfig
+
+
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+   :nosignatures:
+
+   ~HysplitConfig.UNRECORDED
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~HysplitConfig.hourly_ziscale
+   ~HysplitConfig.maxpar_for
+   ~HysplitConfig.realizations
+   ~HysplitConfig.settings
+
+
+

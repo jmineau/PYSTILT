@@ -1,0 +1,6 @@
+﻿runtraj.RuntrajError
+====================
+
+.. currentmodule:: runtraj
+
+.. autoexception:: RuntrajError

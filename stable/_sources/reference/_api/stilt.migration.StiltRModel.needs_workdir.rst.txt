@@ -1,6 +1,0 @@
-stilt.migration.StiltRModel.needs\_workdir
-==========================================
-
-.. currentmodule:: stilt.migration
-
-.. autoattribute:: StiltRModel.needs_workdir

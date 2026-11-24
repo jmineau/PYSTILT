@@ -25,6 +25,7 @@ Attributes
    :toctree:
    :nosignatures:
 
+   ~ExecutionConfig.block
    ~ExecutionConfig.cpus
    ~ExecutionConfig.fetch
 

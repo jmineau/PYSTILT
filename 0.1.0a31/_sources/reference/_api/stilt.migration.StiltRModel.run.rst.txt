@@ -1,0 +1,5 @@
+stilt.migration.StiltRModel.run
+===============================
+
+.. currentmodule:: stilt.migration
+.. automethod:: StiltRModel.run

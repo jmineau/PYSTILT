@@ -1,0 +1,6 @@
+﻿stilt.observations.plume\_background
+====================================
+
+.. currentmodule:: stilt.observations
+
+.. autofunction:: plume_background

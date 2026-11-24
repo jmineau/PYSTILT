@@ -1,0 +1,6 @@
+﻿stilt.footprint.footprint\_particles
+====================================
+
+.. currentmodule:: stilt.footprint
+
+.. autofunction:: footprint_particles

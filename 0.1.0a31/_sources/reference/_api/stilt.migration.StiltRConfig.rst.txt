@@ -1,0 +1,33 @@
+﻿stilt.migration.StiltRConfig
+============================
+
+.. currentmodule:: stilt.migration
+
+
+
+
+
+
+.. class-signature:: stilt.migration.StiltRConfig
+
+
+Parameters
+----------
+
+.. config-model:: stilt.migration.StiltRConfig
+
+
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+   :nosignatures:
+
+   ~StiltRConfig.OTHER_MODES
+
+
+
+
+

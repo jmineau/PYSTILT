@@ -1,0 +1,6 @@
+﻿stilt.footprint.write\_empty\_footprint
+=======================================
+
+.. currentmodule:: stilt.footprint
+
+.. autofunction:: write_empty_footprint

@@ -1,0 +1,6 @@
+runtraj.models.hysplit.HysplitMetConfig.download\_options
+=========================================================
+
+.. currentmodule:: runtraj.models.hysplit
+
+.. autoproperty:: HysplitMetConfig.download_options

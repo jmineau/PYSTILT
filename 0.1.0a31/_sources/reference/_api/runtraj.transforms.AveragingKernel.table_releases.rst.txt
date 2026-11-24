@@ -1,0 +1,5 @@
+runtraj.transforms.AveragingKernel.table\_releases
+==================================================
+
+.. currentmodule:: runtraj.transforms
+.. automethod:: AveragingKernel.table_releases

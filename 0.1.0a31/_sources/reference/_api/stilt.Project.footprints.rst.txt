@@ -1,0 +1,5 @@
+stilt.Project.footprints
+========================
+
+.. currentmodule:: stilt
+.. automethod:: Project.footprints

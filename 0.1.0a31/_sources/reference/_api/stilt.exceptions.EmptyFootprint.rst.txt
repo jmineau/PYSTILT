@@ -1,0 +1,6 @@
+﻿stilt.exceptions.EmptyFootprint
+===============================
+
+.. currentmodule:: stilt.exceptions
+
+.. autoexception:: EmptyFootprint

@@ -5,10 +5,15 @@
     "url": "https://jmineau.github.io/PYSTILT/dev/"
   },
   {
-    "name": "0.1.0a30 (latest)",
-    "version": "0.1.0a30",
+    "name": "0.1.0a31 (latest)",
+    "version": "0.1.0a31",
     "url": "https://jmineau.github.io/PYSTILT/stable/",
     "preferred": true
+  },
+  {
+    "name": "0.1.0a30",
+    "version": "0.1.0a30",
+    "url": "https://jmineau.github.io/PYSTILT/0.1.0a30/"
   },
   {
     "name": "0.1.0a29",
