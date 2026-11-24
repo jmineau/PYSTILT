@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 from runtraj.config import Variant
-from runtraj.models.hysplit import MetConfig
+from runtraj.models.hysplit import HysplitMetConfig
 from runtraj.output import Output
 from runtraj.particles import particles_metadata
 from runtraj.transforms import FirstOrderLifetime, transform_kind, weigh
@@ -21,7 +21,7 @@ GRID = Grid(xmin=-114.0, xmax=-111.0, ymin=39.0, ymax=42.0, xres=0.1, yres=0.1)
 FOOT = FootprintConfig(grid=GRID, smooth_factor=0.0)
 
 
-def _met_config(tmp_path, **kwargs) -> MetConfig:
+def _met_config(tmp_path, **kwargs) -> HysplitMetConfig:
     return make_met_config(tmp_path / "met", **kwargs)
 
 

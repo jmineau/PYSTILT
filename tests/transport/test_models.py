@@ -5,11 +5,11 @@ from __future__ import annotations
 from typing import Any, ClassVar
 
 import pytest
-from pydantic import BaseModel, ConfigDict
+from pydantic import ConfigDict
 from runtraj import models
 from runtraj.config import ProjectConfig
 from runtraj.identity import read_run_settings, settings_hash
-from runtraj.models import ModelInfo, TransportConfig, TransportModel
+from runtraj.models import MetConfig, ModelInfo, TransportConfig, TransportModel
 
 from stilt.footprint import FOOTPRINT_STAGE
 
@@ -27,7 +27,7 @@ class ToyConfig(TransportConfig):
     build_dir: str | None = None
 
 
-class ToyMet(BaseModel):
+class ToyMet(MetConfig):
     """The toy model's met: it reads no files, and accepts the keys of a HYSPLIT met it shares."""
 
     model_config = ConfigDict(extra="allow")

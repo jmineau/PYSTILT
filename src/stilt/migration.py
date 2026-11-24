@@ -36,10 +36,10 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import ConfigDict, Field, field_validator, model_validator
 from runtraj.config import VARIANT_NAME_RE, Variant
 from runtraj.exceptions import SimulationError
-from runtraj.models import ModelRun, TransportModel
+from runtraj.models import MetConfig, ModelRun, TransportModel
 from runtraj.models.hysplit import read_namelist
 from runtraj.models.hysplit.config import (
     CONCENTRATION_ONLY_SETTINGS,
@@ -166,7 +166,7 @@ class StiltRConfig(HysplitConfig):
         return data
 
 
-class StiltRMetConfig(BaseModel):
+class StiltRMetConfig(MetConfig):
     """
     The met of imported STILT-R runs, as written under ``mets:`` in ``config.yaml``.
 

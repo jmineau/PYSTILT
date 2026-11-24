@@ -9,6 +9,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 from runtraj.identity import stage_hash
+from runtraj.models import MetConfig
 from runtraj.stages import check_stage, get_stage
 
 from stilt.footprint import FootprintConfig, FootprintStage
@@ -506,7 +507,7 @@ def test_the_variants_model_opens_the_met_around_the_particles(
 ):
     from runtraj import Bounds
 
-    from stilt.footprint import footprint_particles, stage
+    from stilt.footprint import footprint_particles
 
     met = tmp_path / "met"
     met.touch()
@@ -514,17 +515,16 @@ def test_the_variants_model_opens_the_met_around_the_particles(
     opened = xr.Dataset()
     calls = []
 
-    def open_met(name, met_config, files, bounds):
-        calls.append((name, met_config, list(files), bounds))
+    def open_files(self, files, bounds=None):
+        calls.append((self, list(files), bounds))
         return opened
 
-    monkeypatch.setattr(stage, "open_met", open_met)
+    monkeypatch.setattr(type(variant.met_config), "open", open_files)
     particles = _particles(time=pd.Timestamp("2023-01-01 11:59"))
     footprint_particles(particles, FootprintConfig(), [met], variant=variant)
 
     assert calls == [
         (
-            "hysplit",
             variant.met_config,
             [met],
             Bounds(xmin=-112.0, xmax=-111.9, ymin=40.6, ymax=40.7),
@@ -580,8 +580,16 @@ def test_stored_particles_of_a_model_with_its_own_met_need_the_variant(
     met.touch()
     meta = SimpleNamespace(met_files=[met], settings={"model": {"name": "gribmodel"}})
     monkeypatch.setattr(stage, "particles_metadata", lambda path: meta)
+
+    class GribMet(MetConfig):
+        def settings(self):
+            return {}
+
+        def open(self, files, bounds=None):
+            return None
+
     monkeypatch.setattr(
-        stage, "get_model", lambda name: SimpleNamespace(open_met=lambda *a: None)
+        stage, "get_model", lambda name: SimpleNamespace(met_config_class=GribMet)
     )
     particles = _particles(time=pd.Timestamp("2023-01-01 11:59"))
 

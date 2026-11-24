@@ -25,7 +25,7 @@ Configuration
    output: output
 
 ``mets`` names the meteorology (for HYSPLIT,
-:class:`~runtraj.models.hysplit.MetConfig`). ``models`` names the transport
+:class:`~runtraj.models.hysplit.HysplitMetConfig`). ``models`` names the transport
 models, each block with that model's settings
 (:class:`~runtraj.models.hysplit.HysplitConfig` for ``hysplit``).
 ``stages`` names what is made from each simulation's particles: the
@@ -195,7 +195,7 @@ A met
 The keys of one entry under ``mets:``, for HYSPLIT
 (:doc:`../guides/meteorology`).
 
-.. config-model:: runtraj.models.hysplit.MetConfig
+.. config-model:: runtraj.models.hysplit.HysplitMetConfig
 
 Execution
 ~~~~~~~~~

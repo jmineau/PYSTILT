@@ -13,10 +13,10 @@ from typing import Any
 
 import pytest
 import yaml
-from pydantic import RootModel
+from pydantic import ConfigDict, model_validator
 from runtraj.config import ProjectConfig
 from runtraj.execution.config import ExecutionConfig
-from runtraj.models import TransportConfig, TransportModel
+from runtraj.models import MetConfig, TransportConfig, TransportModel
 
 from stilt.footprint import FOOTPRINT_STAGE
 from stilt.footprint.config import FootprintConfig
@@ -179,12 +179,27 @@ def test_the_docs_show_examples():
     assert PYCON
 
 
+class _AnyMet(MetConfig):
+    """A met that takes any keys, as the docs' placeholder model reads any met."""
+
+    model_config = ConfigDict(extra="allow")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _folder(cls, data: Any) -> Any:
+        """Take a bare string as the met's folder, as HYSPLIT's met does."""
+        return {"directory": data} if isinstance(data, str) else data
+
+    def settings(self) -> dict[str, Any]:
+        return self.model_dump(mode="json")
+
+
 class _MyModel(TransportModel):
     """The docs' placeholder transport model, ``mypkg.models.MyModel``: it reads any met and runs nothing."""
 
     name = "mine"
     config_class = TransportConfig
-    met_config_class = RootModel[Any]
+    met_config_class = _AnyMet
 
     def run(self, release, config, met, window, workdir=None, timeout=None):
         raise NotImplementedError

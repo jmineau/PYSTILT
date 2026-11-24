@@ -80,9 +80,9 @@ hours back:
 .. ipython:: python
 
    from runtraj.meteorology import run_window
-   from runtraj.models.hysplit import Met, MetConfig
+   from runtraj.models.hysplit import Met, HysplitMetConfig
 
-   hrrr = Met("hrrr", MetConfig(directory=met_dir))
+   hrrr = Met("hrrr", HysplitMetConfig(directory=met_dir))
    window = run_window("2021-01-14 19:00", n_hours=-12)
    window
 
@@ -280,7 +280,7 @@ headers, and the crop:
 
 .. ipython:: python
 
-   MetConfig(directory=met_dir).settings()
+   HysplitMetConfig(directory=met_dir).settings()
 
 It does not record where the files are or what they are named. You can
 move your archive, or switch to a copy with different names, and every run

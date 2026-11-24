@@ -522,10 +522,10 @@ which your editor can autocomplete and check:
 
 .. code-block:: python
 
-   from runtraj.models.hysplit import MetConfig
+   from runtraj.models.hysplit import HysplitMetConfig
 
    config = stilt.ProjectConfig(
-       mets={"hrrr": MetConfig(directory="/data/arl/hrrr")},
+       mets={"hrrr": HysplitMetConfig(directory="/data/arl/hrrr")},
        models={"hysplit": {"n_hours": -24, "numpar": 500}},
        stages={
            "footprint": {

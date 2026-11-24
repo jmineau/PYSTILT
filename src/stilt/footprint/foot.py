@@ -114,7 +114,7 @@ def add_foot(
     met : iterable of path-like, or xarray.Dataset
         ARL met files that cover the particles' times, such as the files
         the run read, or met in another format as one Dataset in
-        :func:`arlmet.open_dataset`'s layout (:func:`runtraj.models.open_met`
+        :func:`arlmet.open_dataset`'s layout (:meth:`runtraj.models.MetConfig.open`
         returns the met of a run either way). It is read on its own levels,
         which start at the ground.
     footprint_depth : float

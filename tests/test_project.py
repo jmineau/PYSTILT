@@ -13,7 +13,7 @@ import xarray as xr
 from runtraj.config import ProjectConfig
 from runtraj.execution.config import ExecutionConfig
 from runtraj.execution.runner import resolve_compute_root
-from runtraj.models.hysplit import MetConfig
+from runtraj.models.hysplit import HysplitMetConfig
 from runtraj.models.hysplit.driver import winderrtf
 from runtraj.output import Output
 from runtraj.releases import ColumnRelease, PointRelease
@@ -45,7 +45,7 @@ _GRID = Grid(xmin=-114.0, xmax=-113.0, ymin=39.0, ymax=40.0, xres=0.1, yres=0.1)
 # ---------------------------------------------------------------------------
 
 
-def _met(tmp_path) -> MetConfig:
+def _met(tmp_path) -> HysplitMetConfig:
     return make_met_config(tmp_path / "met")
 
 
@@ -572,7 +572,7 @@ def _with_unreadable_met(project, tmp_path, **overrides):
     """Open *project*'s directory again with a met whose directory does not exist."""
     config = ProjectConfig(
         **blocks(
-            mets={"hrrr": MetConfig(directory=tmp_path / "no-such-met")},
+            mets={"hrrr": HysplitMetConfig(directory=tmp_path / "no-such-met")},
             **{"variants": {"hrrr": {}}, "grid": _GRID, **STILT_R_HYSPLIT, **overrides},
         )
     )

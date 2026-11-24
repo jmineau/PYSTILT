@@ -270,7 +270,8 @@ cache-keys = [
     { git = { commit = true, tags = true } },
 ]
 
-# runtraj from git until it releases the Stage base class (runtraj#103); then
+# runtraj from git until it releases the Stage and MetConfig base classes
+# (runtraj#103, runtraj#106); then
 # the release, and this goes.
 [tool.uv.sources]
-runtraj = { git = "https://github.com/jmineau/runtraj", rev = "2fff92a6adacc507fe130d6546b407fe9b185cae" }
+runtraj = { git = "https://github.com/jmineau/runtraj", rev = "72b578dabbfd1ad2b6d6c362e130efa4a1633fdb" }

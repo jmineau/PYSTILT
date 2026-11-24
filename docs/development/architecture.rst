@@ -157,7 +157,7 @@ task's project takes in place of ``releases.csv``. ``submit`` returns the job
 id at once, and ``run`` waits by polling ``sacct``.
 
 When a simulation whose particles are missing uses a met that downloads
-(the transport model's ``downloads_met``), ``submit`` first submits
+(the met's ``downloads``, :meth:`runtraj.models.MetConfig.downloads`), ``submit`` first submits
 ``fetch.sh`` (``fetch_script``), one task of ``stilt fetch --releases
 releases.parquet`` with the resources of ``execution.slurm.fetch``, and gives the
 array ``--dependency=afterany:<fetch job>``. ``afterany`` because Slurm
@@ -407,7 +407,7 @@ there is refused with a message naming its block.
 - Each part owns its config. ``FootprintConfig`` is in
   ``stilt.footprint.config``, ``ExecutionConfig`` in
   ``runtraj.execution.config``, and a model's config and met config in its
-  package (``met_config_class``; HYSPLIT's ``MetConfig`` is in
+  package (``met_config_class``; HYSPLIT's ``HysplitMetConfig`` is in
   ``runtraj.models.hysplit``). ``ProjectConfig.mets`` holds each met as
   written, and ``ProjectConfig.met_config(name, model)`` checks it with the
   met config of the model that reads it (``model`` a ``models`` block's
@@ -428,7 +428,7 @@ there is refused with a message naming its block.
   left out of the settings records. A met's record is built, not dumped: its
   config's ``settings()``, which for HYSPLIT is the source id in the ARL
   headers (from the first file under ``directory``, or the archive's
-  ``source`` for ``download``) and the crop (``MetConfig.crop()``, from
+  ``source`` for ``download``) and the crop (``HysplitMetConfig.crop()``, from
   ``subgrid_bounds`` and ``subgrid_levels``). Where the files are and how
   they are named are never recorded, so moving them keeps every result, and
   two products named alike hash apart. The grid and levels are not in the

@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 from runtraj.meteorology import run_window
 from runtraj.models import MODELS, ModelRun, TransportConfig, TransportModel, get_model
-from runtraj.models.hysplit import HysplitConfig, MetConfig
+from runtraj.models.hysplit import HysplitConfig, HysplitMetConfig
 
 from ..fixtures.factories import make_met_config
 
@@ -100,7 +100,7 @@ class _EchoModel(TransportModel):
 
     name = "echo"
     config_class = HysplitConfig
-    met_config_class = MetConfig
+    met_config_class = HysplitMetConfig
     seen: dict = {}
 
     def sha256(self, config):
