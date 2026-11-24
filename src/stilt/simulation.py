@@ -201,21 +201,6 @@ class Simulation(simulation.Simulation):
         """The footprint settings of this simulation: the variant's, or the defaults with the model's depth (:func:`stilt.footprint.stage.variant_footprint`)."""
         return variant_footprint(self.variant)
 
-    @property
-    def _transforms(self) -> Sequence[Any]:
-        """The footprint's particle transforms, which weight the particles; none without a footprint."""
-        footprint = self.variant.stages.get("footprint")
-        return () if footprint is None else footprint.transforms
-
-    @property
-    def _near_field_settings(self) -> dict[str, Any]:
-        """The near-field correction a footprint of this simulation gets: ``hnf_plume`` and ``footprint_depth``."""
-        footprint = self._footprint_config
-        return {
-            "hnf_plume": footprint.hnf_plume,
-            "footprint_depth": footprint.footprint_depth,
-        }
-
     # -- what the particles give beyond the footprint ----------------------
 
     def background(self, field: xr.DataArray | pd.Series) -> Background:
@@ -241,7 +226,7 @@ class Simulation(simulation.Simulation):
         return background(
             self.particles,
             field,
-            transforms=self._transforms,
+            transforms=self._footprint_config.transforms,
             release=self.release,
             directory=self.directory,
         )
@@ -280,14 +265,18 @@ class Simulation(simulation.Simulation):
         """
         sims = [error] if isinstance(error, simulation.Simulation) else list(error)
         config = self._footprint_config
+        near_field: dict[str, Any] = {
+            "hnf_plume": config.hnf_plume,
+            "footprint_depth": config.footprint_depth,
+        }
         return transport_error(
             simulation_particles(self, config),
             [simulation_particles(e, config) for e in sims],
             flux,
-            transforms=self._transforms,
+            transforms=config.transforms,
             release=self.release,
             directory=self.directory,
-            **{**self._near_field_settings, **options},
+            **{**near_field, **options},
         )
 
 
