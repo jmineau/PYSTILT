@@ -4261,8 +4261,8 @@ requires-dist = [
     { name = "pystilt", extras = ["visualization"], marker = "extra == 'complete'" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "rdata", marker = "extra == 'stilt-r'", specifier = ">=1.0" },
-    { name = "runtraj", git = "https://github.com/jmineau/runtraj?rev=73d5306de1a1bcb1db5105ed3bdd9a5d15e00150" },
-    { name = "runtraj", extras = ["download"], marker = "extra == 'download'", git = "https://github.com/jmineau/runtraj?rev=73d5306de1a1bcb1db5105ed3bdd9a5d15e00150" },
+    { name = "runtraj", git = "https://github.com/jmineau/runtraj?rev=cd46b37f5d589bb5b85c912220781cf488fc0732" },
+    { name = "runtraj", extras = ["download"], marker = "extra == 'download'", git = "https://github.com/jmineau/runtraj?rev=cd46b37f5d589bb5b85c912220781cf488fc0732" },
     { name = "s3fs", marker = "extra == 's3'", specifier = ">=2024.12" },
     { name = "scipy", specifier = ">=1.10" },
     { name = "shapely", specifier = ">=2.0" },
@@ -4602,8 +4602,8 @@ wheels = [
 
 [[package]]
 name = "runtraj"
-version = "0.1.0a5.dev14+g73d5306de"
-source = { git = "https://github.com/jmineau/runtraj?rev=73d5306de1a1bcb1db5105ed3bdd9a5d15e00150#73d5306de1a1bcb1db5105ed3bdd9a5d15e00150" }
+version = "0.1.0a5.dev17+gcd46b37f5"
+source = { git = "https://github.com/jmineau/runtraj?rev=cd46b37f5d589bb5b85c912220781cf488fc0732#cd46b37f5d589bb5b85c912220781cf488fc0732" }
 dependencies = [
     { name = "arlmet" },
     { name = "fsspec" },
