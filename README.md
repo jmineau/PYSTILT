@@ -178,7 +178,7 @@ unfinished releases among the tasks of one Slurm job array and submits it:
 execution:
   backend: slurm
   slurm:
-    n_workers: 200        # array tasks
+    n_workers: 200        # array tasks running at once
     account: my-account
     partition: my-partition
     time: "02:00:00"
@@ -191,7 +191,7 @@ stilt status ./my_project
 ```
 
 Each task runs `stilt run --task I/N`, so a task is a command line you can read and rerun. A
-task that is preempted or nears its time limit requeues itself and skips the releases it
+task that is preempted or nears its time limit is requeued and skips the releases it
 finished. Whether a simulation is finished is always decided by its files in the output
 directory. The same `--task` runs a project as a Kubernetes indexed Job.
 

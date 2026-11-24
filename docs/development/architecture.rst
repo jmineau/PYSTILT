@@ -167,10 +167,10 @@ go. A local run with ``cpus`` above 1 calls ``Project.fetch`` before the pool
 starts, for the same reason: workers that start the same file download it
 twice. A task (``--task``) never fetches.
 
-A task that stops with work left requeues itself (``scontrol requeue``) when
-it got SIGUSR1, which the script asks for two minutes before the time limit
-(``--signal=B:USR1@120``), or when it was preempted (Slurm set the job's
-``PreemptTime``). Slurm checks ``--signal`` times only about once a minute,
+A task that stops with work left exits with 3, and the job script puts it
+back in the queue (``scontrol requeue``) when the script got SIGUSR1, which
+it asks for two minutes before the time limit (``--signal=B:USR1@120``), or
+when the task was preempted (Slurm set the job's ``PreemptTime``). Slurm checks ``--signal`` times only about once a minute,
 so a preempted task may never get SIGUSR1. A task stopped by ``scancel`` is
 not requeued, and a task stops for good after ``MAX_REQUEUES`` requeues.
 

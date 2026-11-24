@@ -34,7 +34,7 @@ dependencies = [
     "pyproj>=3.5",
     "pydantic>=2.5.3",  # runtraj's minimum: earlier ones take NaN for a setting with a lower bound, or fail on the fetch settings
     "pyyaml>=6.0",
-    "runtraj>=0.1.0a5.dev0,<0.1.0a6",  # stages subclass runtraj.stages.Stage; one runtraj alpha at a time while runtraj is in pre-release
+    "runtraj>=0.1.0a5,<0.1.0a6",  # stages subclass runtraj.stages.Stage; one runtraj alpha at a time while runtraj is in pre-release
     "scipy>=1.10",
     "shapely>=2.0",
     "typer>=0.15.4",  # older ones fail with click 8.2 and later (make_metavar)
@@ -269,9 +269,3 @@ cache-keys = [
     { file = "setup.py" },
     { git = { commit = true, tags = true } },
 ]
-
-# runtraj from git until it releases the Stage and MetConfig base classes
-# and runtraj.testing (runtraj#103, runtraj#106, runtraj#108); then
-# the release, and this goes.
-[tool.uv.sources]
-runtraj = { git = "https://github.com/jmineau/runtraj", rev = "cd46b37f5d589bb5b85c912220781cf488fc0732" }

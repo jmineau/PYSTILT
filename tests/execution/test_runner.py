@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import subprocess
 from types import SimpleNamespace
 
 import pytest
@@ -46,7 +47,7 @@ def commands(monkeypatch):
             else SimpleNamespace(returncode=0, stdout="", stderr="")
         )
 
-    monkeypatch.setattr(runner.subprocess, "run", fake_run)
+    monkeypatch.setattr(subprocess, "run", fake_run)
     # Run inside a Slurm job, the tests would see that job's cluster.
     monkeypatch.delenv("SLURM_CLUSTER_NAME", raising=False)
     return SimpleNamespace(ran=ran, answers=answers)
@@ -136,4 +137,5 @@ def test_no_fetch_job_when_the_particles_are_there(
         project, execution=ExecutionConfig(backend="slurm", slurm={"time": "01:00:00"})
     )
 
-    assert len(commands.ran) == 1
+    # One sbatch, the array; runtraj also asks scontrol for MaxArraySize.
+    assert [args[0] for args in commands.ran].count("sbatch") == 1

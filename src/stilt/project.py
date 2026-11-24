@@ -153,7 +153,7 @@ output: ./output
 #   local:
 #     cpus: 1         # releases at once
 #   slurm:
-#     n_workers: 1    # array tasks
+#     n_workers: 1    # array tasks at once
 #     cpus: 1         # releases at once in each task
 #     time: "02:00:00"
 """
