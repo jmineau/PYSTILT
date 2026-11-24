@@ -1980,6 +1980,16 @@ def test_calc_footprint_applies_the_near_field_correction_with_hnf_plume():
     assert "foot_no_hnf_dilution" not in particles.columns
 
 
+def test_calc_footprint_records_the_footprint_depth_it_used():
+    release = PointRelease(
+        time="2023-01-01 12:00", longitude=-111.85, latitude=40.77, altitude=5.0
+    )
+    foot = calc_footprint(
+        _near_field_particles(), release, _NEAR_GRID, footprint_depth=100.0
+    )
+    assert foot.stilt.config.footprint_depth == 100.0
+
+
 def test_calc_footprint_reads_footprint_depth_for_the_near_field_correction():
     release = PointRelease(
         time="2023-01-01 12:00", longitude=-111.85, latitude=40.77, altitude=5.0

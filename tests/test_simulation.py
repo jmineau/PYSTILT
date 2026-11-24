@@ -263,6 +263,22 @@ def test_calc_footprint_uses_the_variant_settings_and_writes_nothing(
         _ = sim.footprint
 
 
+def test_calc_footprint_records_the_variants_foot_settings(
+    point_release, tmp_path, monkeypatch
+):
+    config = FOOT.model_copy(
+        update={"footprint_depth": 0.3, "pbl_height": 500.0, "pbl_height_min": 50.0}
+    )
+    sim = _sim(tmp_path, point_release, footprint=config)
+    _write_particles(sim)
+    # The foot computed from the met files is the stage tests'; keep the written one.
+    monkeypatch.setattr(
+        "stilt.simulation.simulation_particles", lambda sim, config: sim.particles
+    )
+    foot = sim.calc_footprint()
+    assert foot is not None and foot.stilt.config == config
+
+
 def test_calc_footprint_requires_a_grid_and_particles(point_release, tmp_path):
     sim = _sim(tmp_path, point_release)
     with pytest.raises(FileNotFoundError, match="no particles"):

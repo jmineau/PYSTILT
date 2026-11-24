@@ -941,6 +941,7 @@ def calc_footprint(
             "smooth_factor": smooth_factor,
             "tres": tres,
             "hnf_plume": hnf_plume,
+            "footprint_depth": footprint_depth,
             "transforms": list(transforms),
             "geometry_hash": geometry_hash,
         }
