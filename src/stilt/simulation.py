@@ -10,6 +10,7 @@ particle part, and nothing on disk names this class.
 
 from __future__ import annotations
 
+import json
 from collections.abc import Sequence
 from datetime import timedelta
 from functools import cached_property
@@ -22,7 +23,7 @@ from runtraj import simulation
 from stilt.background import Background, background
 from stilt.exceptions import EmptyFootprint
 from stilt.footprint import gridding
-from stilt.footprint.config import FootprintConfig
+from stilt.footprint.config import FootprintConfig, footprint_settings
 from stilt.footprint.grid import Grid
 from stilt.footprint.io import read_footprint
 from stilt.footprint.stage import simulation_particles, variant_footprint
@@ -139,7 +140,9 @@ class Simulation(simulation.Simulation):
         settings ask for (:func:`stilt.footprint.footprint_particles`).
         Each setting given replaces the variant's own. Use it to try other settings; the
         workers write the variant's own footprint. A relative file name in
-        a transform's settings starts from the project directory.
+        a transform's settings starts from the project directory. The
+        footprint records the settings it was made with, the variant's
+        ``pbl_height`` and ``pbl_height_min`` included.
 
         Returns
         -------
@@ -169,7 +172,7 @@ class Simulation(simulation.Simulation):
             raise TypeError(f"{self} has no footprint settings; give a grid.")
         particles = simulation_particles(self, own)
         try:
-            return gridding.calc_footprint(
+            foot = gridding.calc_footprint(
                 particles,
                 self.release,
                 grid,
@@ -186,6 +189,12 @@ class Simulation(simulation.Simulation):
             )
         except EmptyFootprint:
             return None
+        # The foot was made with these too, which calc_footprint does not take.
+        mine = footprint_settings(own)
+        made = json.loads(foot.attrs["stilt_footprint"]) | {
+            key: mine[key] for key in ("pbl_height", "pbl_height_min")
+        }
+        return foot.assign_attrs(stilt_footprint=json.dumps(made))
 
     @property
     def _footprint_config(self) -> FootprintConfig:
