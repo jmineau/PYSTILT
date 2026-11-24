@@ -25,9 +25,10 @@ import xarray as xr
 from pydantic import TypeAdapter
 from runtraj import Bounds
 from runtraj.identity import file_stamp
-from runtraj.models import get_model, open_met
+from runtraj.models import MetConfig, get_model
 from runtraj.particles import particles_metadata
 from runtraj.releases import Release
+from runtraj.stages import Stage
 
 from stilt._paths import absolute
 from stilt.exceptions import EmptyFootprint
@@ -61,7 +62,7 @@ _Finding = tuple[str, str | None, str]
 _GEOMETRY_SPEC: TypeAdapter[GeometrySpec] = TypeAdapter(GeometrySpec)
 
 
-class FootprintStage:
+class FootprintStage(Stage[FootprintConfig]):
     """
     The stage that grids each simulation's particles into its footprint.
 
@@ -91,14 +92,14 @@ class FootprintStage:
         :class:`FootprintConfig`, which checks the block's settings.
     suffix : str
         ``.parquet``, the extension of a stored footprint.
-    reads : tuple of str
-        Empty: a footprint is made from the particles alone.
+
+    It reads no other stage's files, only the particles, and sets no
+    ``version``, so its settings folders are named as before.
     """
 
     name = "footprint"
     config_class = FootprintConfig
     suffix = ".parquet"
-    reads: tuple[str, ...] = ()
 
     def resolve(
         self,
@@ -283,8 +284,8 @@ def footprint_particles(
         ``pbl_height: richardson`` reads.
     variant : runtraj.config.Variant, optional
         The variant that made the particles, such as ``sim.variant``. Its
-        transport model opens the met files in the format it reads
-        (:func:`runtraj.models.open_met`), around the particles. Without it
+        met opens its files in the format its transport model reads
+        (:meth:`runtraj.models.MetConfig.open`), around the particles. Without it
         the files are read as ARL files, as HYSPLIT's are, so pass it for a
         transport model whose met is in another format.
 
@@ -332,9 +333,7 @@ def footprint_particles(
     met = (
         files
         if variant is None
-        else open_met(
-            variant.model, variant.met_config, files, _particle_bounds(particles)
-        )
+        else variant.met_config.open(files, _particle_bounds(particles))
     )
     out = add_foot(
         out,
@@ -449,12 +448,12 @@ def stored_particles(
 
 
 def _refuse_own_met(model: str, path: Path | UPath) -> None:
-    """Refuse to read the met of *model* as ARL files when the model opens its own (``open_met``)."""
+    """Refuse to read the met of *model* as ARL files when its met opens its own (:meth:`runtraj.models.MetConfig.open`)."""
     try:
         found = get_model(model)
     except (ImportError, ValueError):  # not installed here: nothing to ask it
         return
-    if getattr(found, "open_met", None) is not None:
+    if found.met_config_class.open is not MetConfig.open:
         raise ValueError(
             f"The particles in {path} were made by the transport model "
             f"{model!r}, whose met files are not ARL files. Pass the variant "

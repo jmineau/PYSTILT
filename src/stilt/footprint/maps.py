@@ -32,9 +32,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
-import pandas as pd
 import xarray as xr
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+from runtraj.stages import Stage
 
 from .io import read_footprint
 
@@ -80,7 +80,7 @@ class MapConfig(BaseModel):
         return self
 
 
-class MapStage:
+class MapStage(Stage[MapConfig]):
     """
     The stage that draws each simulation's footprint as an image for a web map.
 
@@ -104,12 +104,16 @@ class MapStage:
         ``.json``.
     reads : tuple of str
         ``("footprint",)``: a map is drawn from the footprint.
+
+    Its settings are the color scale, every field of :class:`MapConfig`,
+    and it finds nothing to check before a run: both are
+    :class:`runtraj.stages.Stage`'s defaults.
     """
 
     name = "map"
     config_class = MapConfig
     suffix = ".json"
-    reads: tuple[str, ...] = ("footprint",)
+    reads = ("footprint",)
 
     def resolve(
         self,
@@ -134,16 +138,6 @@ class MapStage:
                 "matplotlib's, such as 'viridis' or 'magma'."
             )
         return config
-
-    def settings(self, config: MapConfig) -> dict[str, Any]:
-        """Return the color scale, which identifies the maps besides the footprint they are drawn from."""
-        return config.model_dump(mode="json")
-
-    def check(
-        self, config: MapConfig, releases: pd.DataFrame, directory: Path | None
-    ) -> list[tuple[str, str | None, str]]:
-        """Return nothing: a map can be drawn for any footprint on a grid that does not cross 180°."""
-        return []
 
     def run(self, config: MapConfig, sim: Simulation, path: Path | UPath) -> None:
         """

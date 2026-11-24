@@ -9,7 +9,7 @@ import json
 import numpy as np
 import pytest
 import xarray as xr
-from runtraj.stages import check_stage, get_stage, ordered, reads
+from runtraj.stages import check_stage, get_stage, ordered
 
 from stilt.footprint import FootprintConfig, FootprintStage, MapConfig, MapStage, maps
 from stilt.footprint.grid import Grid
@@ -38,7 +38,7 @@ def footprint(values, lat0=40.0, lon0=-112.0, res=0.5, hours=2):
 def test_the_stage_is_what_the_import_path_names():
     stage = get_stage("stilt.footprint.MapStage")
     assert isinstance(stage, MapStage)
-    assert (stage.name, stage.suffix, reads(stage)) == ("map", ".json", ("footprint",))
+    assert (stage.name, stage.suffix, stage.reads) == ("map", ".json", ("footprint",))
     assert stage.config_class is MapConfig
 
 

@@ -268,7 +268,8 @@ def test_failure_met_cut_short(tmp_path, wbb_release, traj_only_config, met_dir)
     sim = project.simulation(*_sim_id(wbb_release))
     assert not sim.has_particles
     assert sim.failure is not None and sim.failure["reason"] == "MET_COVERAGE"
-    assert "for 2021-01-14 18:00 to 2021-01-15 00:00" in sim.failure["message"]
+    # The hours no file holds: the cut file still has 18:00.
+    assert "for 2021-01-14 19:00 to 2021-01-14 23:00" in sim.failure["message"]
 
 
 @integration

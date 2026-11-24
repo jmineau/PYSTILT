@@ -36,10 +36,10 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import ConfigDict, Field, field_validator, model_validator
 from runtraj.config import VARIANT_NAME_RE, Variant
 from runtraj.exceptions import SimulationError
-from runtraj.models import ModelRun
+from runtraj.models import MetConfig, ModelRun, TransportModel
 from runtraj.models.hysplit import read_namelist
 from runtraj.models.hysplit.config import (
     CONCENTRATION_ONLY_SETTINGS,
@@ -166,7 +166,7 @@ class StiltRConfig(HysplitConfig):
         return data
 
 
-class StiltRMetConfig(BaseModel):
+class StiltRMetConfig(MetConfig):
     """
     The met of imported STILT-R runs, as written under ``mets:`` in ``config.yaml``.
 
@@ -190,13 +190,15 @@ class StiltRMetConfig(BaseModel):
         return {"met_path": self.met_path}
 
 
-class StiltRModel:
+class StiltRModel(TransportModel[StiltRConfig]):
     """
     The ``stilt-r`` transport model of imported runs, named by its import path (:data:`STILT_R_MODEL`).
 
     It holds the settings of imported STILT-R runs and runs nothing.
     :meth:`run` fails, so a ``stilt run`` of a release STILT-R did not run
-    records a failure for it.
+    records a failure for it. It has no executable and no data files of
+    its own (``sha256`` and ``data_files`` are ``None``, the base class's
+    defaults): STILT-R's version in the settings fixes both.
     """
 
     name = "stilt-r"
@@ -204,19 +206,10 @@ class StiltRModel:
     met_config_class = StiltRMetConfig
     #: Nothing runs, so no files are written.
     needs_workdir = False
-    batched = False
 
     def version(self, config: StiltRConfig) -> str | None:
         """Return the STILT-R version of *config*, which its settings record too."""
         return config.version
-
-    def sha256(self, config: StiltRConfig) -> None:
-        """Return ``None``: nothing runs, and the build is fixed by the STILT-R version in the settings."""
-        return None
-
-    def data_files(self, config: StiltRConfig) -> dict[str, str] | None:
-        """Return ``None``: the data files are STILT-R's own, fixed by its version."""
-        return None
 
     def run(
         self,

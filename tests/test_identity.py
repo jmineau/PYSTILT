@@ -4,7 +4,7 @@ import pytest
 import yaml
 from runtraj.config import ProjectConfig, Variant
 from runtraj.identity import read_run_settings, settings_hash
-from runtraj.models.hysplit import MetConfig
+from runtraj.models.hysplit import HysplitMetConfig
 from runtraj.output import Output
 
 from stilt.footprint.stage import store_empty_footprint
@@ -18,11 +18,11 @@ from .fixtures.factories import (
 GRID = {"xmin": -112, "xmax": -111, "ymin": 40, "ymax": 41, "xres": 0.1, "yres": 0.1}
 
 
-def _met(tmp_path, **overrides) -> MetConfig:
+def _met(tmp_path, **overrides) -> HysplitMetConfig:
     return make_met_config(tmp_path / "met", **overrides)
 
 
-def _variant(tmp_path, met: MetConfig | None = None, **transport) -> Variant:
+def _variant(tmp_path, met: HysplitMetConfig | None = None, **transport) -> Variant:
     """The resolved ``hrrr`` variant of a one-met project with these transport fields."""
     config = ProjectConfig(
         **blocks(

@@ -580,7 +580,7 @@ def test_status_with_an_unreadable_met_and_an_empty_output_is_all_pending(
         assert "total=1  complete=0  failed=0  interrupted=0  pending=1" in (
             result.output
         )
-        assert "no settings folders yet" in result.output
+        assert "this directory does not exist" in result.output
 
 
 def test_status_with_an_unreadable_met_lists_folders_of_other_settings(tmp_path):

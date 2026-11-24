@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 from runtraj.config import ProjectConfig
-from runtraj.models.hysplit import MetConfig
+from runtraj.models.hysplit import HysplitMetConfig
 from runtraj.releases import ColumnRelease, MultiPointRelease
 
 from stilt.footprint.grid import Grid
@@ -29,7 +29,7 @@ from ..fixtures.r_stilt_reference import (
 HYSPLIT = {**STILT_R_HYSPLIT, "n_hours": -6, "numpar": 100}
 
 
-def reference_met(met_dir: Path) -> MetConfig:
+def reference_met(met_dir: Path) -> HysplitMetConfig:
     """Return the met config of the test met cache: 6-hour HRRR files."""
     return make_met_config(met_dir)
 

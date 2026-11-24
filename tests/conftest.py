@@ -219,7 +219,7 @@ def multipoint_release():
 
 @pytest.fixture
 def met_config(tmp_path):
-    """MetConfig pointing at a temporary directory."""
+    """HysplitMetConfig pointing at a temporary directory."""
     return make_met_config(tmp_path / "met")
 
 

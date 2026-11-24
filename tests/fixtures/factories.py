@@ -2,7 +2,7 @@
 Small objects many tests need, built in one place.
 
 A test that needs a met config, a project config, a resolved variant, or a
-release calls these, so a change to :class:`runtraj.models.hysplit.MetConfig`,
+release calls these, so a change to :class:`runtraj.models.hysplit.HysplitMetConfig`,
 :class:`runtraj.config.Variant`, or the release types is one edit here, not
 one in every test module.
 """
@@ -16,7 +16,7 @@ from typing import Any
 
 from runtraj.config import ProjectConfig, Variant
 from runtraj.models import TransportConfig
-from runtraj.models.hysplit import HysplitConfig, MetConfig
+from runtraj.models.hysplit import HysplitConfig, HysplitMetConfig
 from runtraj.releases import PointRelease
 
 from stilt.footprint import FOOTPRINT_STAGE
@@ -41,7 +41,7 @@ def write_arl_file(
     One time step per entry in *times* on a 20 x 20 grid of whole degrees,
     125 W to 106 W and 30 N to 49 N (so it holds the tests' releases), each with PRSS
     at the surface and TEMP above it: enough for a met's source to be read
-    from it (:meth:`runtraj.models.hysplit.MetConfig.source`) and for
+    from it (:meth:`runtraj.models.hysplit.HysplitMetConfig.source`) and for
     arlmet to check it, not for HYSPLIT to run on it. With *partial*, the
     last time step has no TEMP, as a write stopped partway leaves it.
     """
@@ -94,7 +94,7 @@ def write_arl_file(
     return path
 
 
-def make_met_config(directory: str | Path, **fields: Any) -> MetConfig:
+def make_met_config(directory: str | Path, **fields: Any) -> HysplitMetConfig:
     """
     Return a met config of the files under *directory*.
 
@@ -106,7 +106,7 @@ def make_met_config(directory: str | Path, **fields: Any) -> MetConfig:
     directory = Path(directory)
     if not (directory.is_dir() and any(directory.iterdir())):
         write_arl_file(directory / "header.arl")
-    return MetConfig(directory=directory, **fields)
+    return HysplitMetConfig(directory=directory, **fields)
 
 
 def make_met_files(directory: Path, time: Any, n_hours: int) -> list[Path]:
@@ -199,14 +199,14 @@ def make_project_config(tmp_path: Path, **settings: Any) -> ProjectConfig:
 
 
 #: A met that reads no file: an archive's, enough for a variant's settings.
-MET = MetConfig(directory="/data/hrrr", download="hrrr")
+MET = HysplitMetConfig(directory="/data/hrrr", download="hrrr")
 
 
 def make_variant(
     name: str = "hrrr",
     *,
     transport: TransportConfig | None = None,
-    met_config: MetConfig | None = None,
+    met_config: HysplitMetConfig | None = None,
     footprint: FootprintConfig | None = None,
     realizations: int | None = None,
     **fields: Any,

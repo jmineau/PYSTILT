@@ -5,8 +5,8 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 from runtraj.meteorology import run_window
-from runtraj.models import MODELS, ModelRun, TransportConfig, get_model
-from runtraj.models.hysplit import HysplitConfig, MetConfig
+from runtraj.models import MODELS, ModelRun, TransportConfig, TransportModel, get_model
+from runtraj.models.hysplit import HysplitConfig, HysplitMetConfig
 
 from ..fixtures.factories import make_met_config
 
@@ -95,12 +95,12 @@ def _fake_hysplit(monkeypatch) -> dict:
     return seen
 
 
-class _EchoModel:
+class _EchoModel(TransportModel):
     """A transport model that records what it was given and returns one particle."""
 
     name = "echo"
     config_class = HysplitConfig
-    met_config_class = MetConfig
+    met_config_class = HysplitMetConfig
     seen: dict = {}
 
     def sha256(self, config):
