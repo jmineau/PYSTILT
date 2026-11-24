@@ -9,7 +9,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 from runtraj.identity import stage_hash
-from runtraj.stages import check_stage, get_stage, reads
+from runtraj.stages import check_stage, get_stage
 
 from stilt.footprint import FootprintConfig, FootprintStage
 from stilt.footprint.grid import Grid
@@ -38,7 +38,7 @@ def _resolve(config: FootprintConfig, directory=None, **model_settings):
 def test_the_stage_is_what_the_import_path_names():
     stage = get_stage("stilt.footprint.FootprintStage")
     assert isinstance(stage, FootprintStage)
-    assert (stage.name, stage.suffix, reads(stage)) == ("footprint", ".parquet", ())
+    assert (stage.name, stage.suffix, stage.reads) == ("footprint", ".parquet", ())
     assert stage.config_class is FootprintConfig
 
 

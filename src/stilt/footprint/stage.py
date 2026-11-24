@@ -28,6 +28,7 @@ from runtraj.identity import file_stamp
 from runtraj.models import get_model, open_met
 from runtraj.particles import particles_metadata
 from runtraj.releases import Release
+from runtraj.stages import Stage
 
 from stilt._paths import absolute
 from stilt.exceptions import EmptyFootprint
@@ -61,7 +62,7 @@ _Finding = tuple[str, str | None, str]
 _GEOMETRY_SPEC: TypeAdapter[GeometrySpec] = TypeAdapter(GeometrySpec)
 
 
-class FootprintStage:
+class FootprintStage(Stage[FootprintConfig]):
     """
     The stage that grids each simulation's particles into its footprint.
 
@@ -91,14 +92,14 @@ class FootprintStage:
         :class:`FootprintConfig`, which checks the block's settings.
     suffix : str
         ``.parquet``, the extension of a stored footprint.
-    reads : tuple of str
-        Empty: a footprint is made from the particles alone.
+
+    It reads no other stage's files, only the particles, and sets no
+    ``version``, so its settings folders are named as before.
     """
 
     name = "footprint"
     config_class = FootprintConfig
     suffix = ".parquet"
-    reads: tuple[str, ...] = ()
 
     def resolve(
         self,

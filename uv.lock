@@ -4261,8 +4261,8 @@ requires-dist = [
     { name = "pystilt", extras = ["visualization"], marker = "extra == 'complete'" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "rdata", marker = "extra == 'stilt-r'", specifier = ">=1.0" },
-    { name = "runtraj", specifier = ">=0.1.0a4,<0.2" },
-    { name = "runtraj", extras = ["download"], marker = "extra == 'download'" },
+    { name = "runtraj", git = "https://github.com/jmineau/runtraj?rev=2fff92a6adacc507fe130d6546b407fe9b185cae" },
+    { name = "runtraj", extras = ["download"], marker = "extra == 'download'", git = "https://github.com/jmineau/runtraj?rev=2fff92a6adacc507fe130d6546b407fe9b185cae" },
     { name = "s3fs", marker = "extra == 's3'", specifier = ">=2024.12" },
     { name = "scipy", specifier = ">=1.10" },
     { name = "shapely", specifier = ">=2.0" },
@@ -4602,8 +4602,8 @@ wheels = [
 
 [[package]]
 name = "runtraj"
-version = "0.1.0a4"
-source = { registry = "https://pypi.org/simple" }
+version = "0.1.0a5.dev11+g2fff92a6a"
+source = { git = "https://github.com/jmineau/runtraj?rev=2fff92a6adacc507fe130d6546b407fe9b185cae#2fff92a6adacc507fe130d6546b407fe9b185cae" }
 dependencies = [
     { name = "arlmet" },
     { name = "fsspec" },
@@ -4621,10 +4621,6 @@ dependencies = [
     { name = "typer" },
     { name = "universal-pathlib" },
     { name = "xarray" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/5e/ff/529aa85871a298ddcc0dab4eb2a64cab96cb60730cdf8b32f06518dabd3f/runtraj-0.1.0a4.tar.gz", hash = "sha256:083c3026f038a596ba9634afebc69400d8387611297c691cce9a2f6eaf8acbdb", size = 1219439, upload-time = "2026-11-21T08:01:54.555Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/3b/86/672a0ab1d18624d5410969abc254985022a044ec8e7bc313108586441567/runtraj-0.1.0a4-py3-none-any.whl", hash = "sha256:7fafa58449d9c43a959f8c1a749716291958f120ed31c28fb9ede7ae005ce79d", size = 298891, upload-time = "2026-11-21T08:01:52.999Z" },
 ]
 
 [package.optional-dependencies]

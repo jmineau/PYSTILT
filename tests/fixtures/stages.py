@@ -15,6 +15,7 @@ from typing import Any
 
 import pandas as pd
 from pydantic import BaseModel, ConfigDict
+from runtraj.stages import Stage
 
 COUNT = "tests.fixtures.stages.CountStage"
 DOUBLE = "tests.fixtures.stages.DoubleStage"
@@ -39,7 +40,7 @@ class CountConfig(BaseModel):
     stale: bool = False
 
 
-class CountStage:
+class CountStage(Stage[CountConfig]):
     """Writes the number of particle rows of a simulation, times ``scale``, as text."""
 
     name = "count"
@@ -101,7 +102,7 @@ class DoubleConfig(BaseModel):
     add: int = 0
 
 
-class DoubleStage:
+class DoubleStage(Stage[DoubleConfig]):
     """Writes twice the count of the ``count`` stage, plus ``add``, as text."""
 
     name = "double"
@@ -143,7 +144,7 @@ class EchoConfig(BaseModel):
     fail: bool = False
 
 
-class EchoStage:
+class EchoStage(Stage[EchoConfig]):
     """Writes the release id as text; it reads no other stage."""
 
     name = "echo"
@@ -178,7 +179,7 @@ class EchoStage:
         path.write_text(sim.release.id)
 
 
-class Forgetful:
+class Forgetful(Stage[DoubleConfig]):
     """A stage whose config class does not read back what ``settings`` wrote."""
 
     name = "forgetful"
@@ -188,6 +189,9 @@ class Forgetful:
     def settings(self, config: DoubleConfig) -> dict[str, Any]:
         """Return a record that leaves ``add`` out, so reading it back gives the default."""
         return {"add": 0} if config.add else {"add": 1}
+
+    def run(self, config: DoubleConfig, sim: Any, path: Path) -> None:
+        """Write nothing: only ``settings`` is tested."""
 
 
 def chain(**count: Any) -> dict[str, dict[str, Any]]:

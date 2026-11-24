@@ -16,7 +16,7 @@ import yaml
 from pydantic import RootModel
 from runtraj.config import ProjectConfig
 from runtraj.execution.config import ExecutionConfig
-from runtraj.models import TransportConfig
+from runtraj.models import TransportConfig, TransportModel
 
 from stilt.footprint import FOOTPRINT_STAGE
 from stilt.footprint.config import FootprintConfig
@@ -179,12 +179,15 @@ def test_the_docs_show_examples():
     assert PYCON
 
 
-class _MyModel:
+class _MyModel(TransportModel):
     """The docs' placeholder transport model, ``mypkg.models.MyModel``: it reads any met and runs nothing."""
 
     name = "mine"
     config_class = TransportConfig
     met_config_class = RootModel[Any]
+
+    def run(self, release, config, met, window, workdir=None, timeout=None):
+        raise NotImplementedError
 
 
 @pytest.fixture

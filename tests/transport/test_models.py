@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict
 from runtraj import models
 from runtraj.config import ProjectConfig
 from runtraj.identity import read_run_settings, settings_hash
-from runtraj.models import ModelInfo, TransportConfig
+from runtraj.models import ModelInfo, TransportConfig, TransportModel
 
 from stilt.footprint import FOOTPRINT_STAGE
 
@@ -36,7 +36,7 @@ class ToyMet(BaseModel):
         return {"source": "toy"}
 
 
-class ToyModel:
+class ToyModel(TransportModel):
     name = "toy"
     config_class = ToyConfig
     met_config_class = ToyMet
