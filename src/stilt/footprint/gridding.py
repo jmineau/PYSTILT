@@ -743,7 +743,8 @@ def _accumulate_smoothed_footprint(
     does. This equals a convolution of the gridded step with the kernel, but
     costs cells x kernel cells instead of grid cells x kernel cells.
     """
-    foot_arr = np.zeros((n_lon_buf, n_lat_buf, len(layers)), dtype=float)
+    # Layer first, so the kernels are added into contiguous memory.
+    foot_arr = np.zeros((len(layers), n_lon_buf, n_lat_buf), dtype=float)
     kernel_cache: dict[float, np.ndarray] = {}
 
     layer_index = {int(layer): i for i, layer in enumerate(layers)}
@@ -774,11 +775,9 @@ def _accumulate_smoothed_footprint(
         if len(cells) == 0:
             continue
         cell_foot = np.bincount(inverse, weights=foot_vals[valid])
-        _stamp_kernel(
-            foot_arr[:, :, i], cells // n_lat_buf, cells % n_lat_buf, cell_foot, k
-        )
+        _stamp_kernel(foot_arr[i], cells // n_lat_buf, cells % n_lat_buf, cell_foot, k)
 
-    return foot_arr
+    return np.moveaxis(foot_arr, 0, -1)
 
 
 def calc_footprint(
