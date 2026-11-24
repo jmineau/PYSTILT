@@ -7,6 +7,30 @@ file alone: the entries are written at release (`just changelog` drafts them).
 
 ## [Unreleased]
 
+## [0.1.0a31] - 2026-11-24
+
+This release requires runtraj 0.1.0a5. Upgrade from 0.1.0a30: a new install of 0.1.0a30 gets runtraj 0.1.0a5, which refuses its footprint stage with "is not a stage". If you run on Slurm, read the change to `n_workers` below before you submit again.
+
+### Added
+
+- `stilt.footprint.MapStage` (the stage `map`) draws each footprint for a web map after the footprint is made. It writes one `<release id>.json` per release, with the footprint summed over time as a PNG, its corners and its color scale (`vmin`, `vmax`, `colormap`). It needs the `visualization` extra. (#459)
+- A Dockerfile that runs a project in a container, on your own machine or in Kubernetes pods. The image holds no HYSPLIT: mount a HYSPLIT folder at `/opt/hysplit`, or build an image of your own on it. The `s3` and `gcs` extras install `s3fs` and `gcsfs`. The containers guide has both uses. (#459)
+
+### Changed
+
+- **Breaking:** PYSTILT requires one runtraj pre-release at a time while runtraj is in pre-release, here `runtraj>=0.1.0a5,<0.1.0a6`, because a runtraj pre-release may change what a stage must be. `FootprintStage`, `MapStage` and the model of imported STILT-R runs subclass runtraj's base classes (`runtraj.stages.Stage`, `runtraj.models.TransportModel`), and a stage or transport model of your own must too. [runtraj's changelog](https://github.com/jmineau/runtraj/blob/main/CHANGELOG.md) lists what else changed in the particle runs from 0.1.0a3 to 0.1.0a5. (#488)
+- **Breaking:** on Slurm, `n_workers` is the most array tasks running at once, and the array has ten tasks per worker unless you set `n_tasks`. It was the number of array tasks. A task that is preempted or runs out of time is put back in the queue by its job script. (#488)
+- **Breaking:** the footprint reads its met through runtraj, so a transport model whose met files are not ARL files gets its `foot` from its own met. `stilt.sampling` is gone: `sample_met` and `calc_pbl_height` are in `runtraj.sampling`. `add_foot` takes the met as `met` (ARL files or an `xarray.Dataset`), and `footprint_particles` and `stored_particles` take the variant. `foot` on HYSPLIT runs is unchanged. (#464)
+- **Breaking:** `Variant.particles_hash` is `Variant.result_hash` and `ModelRun.particles` is `ModelRun.result`, as runtraj 0.1.0a4 renamed them. (#483)
+- HYSPLIT's met files are found through arlmet's catalog (runtraj 0.1.0a5). The first run after upgrading reads every file of a met folder once to list it, which took 12 minutes on an archive of 16,724 files. (#488)
+- arlmet is no longer a requirement of PYSTILT's own; runtraj requires it. (#479)
+
+### Fixed
+
+- Importing a STILT-R run failed with runtraj 0.1.0a4, whose HYSPLIT settings for its other modes an imported run does not record. A `stilt-r` block with `mode: concentration` or `mode: trajectory` is refused, since STILT-R ran only HYSPLIT's particles mode. (#483, #485)
+- A run's met is opened in the smallest box around its particles: particles on both sides of 180° get a box across it, not one around the globe, and particles at one longitude get a box with a width. (#464)
+- `stilt.EmptyFootprint` is exported. (#477)
+
 ## [0.1.0a30] - 2026-11-20
 
 PYSTILT now runs its particles with [runtraj](https://github.com/jmineau/runtraj), a package of its own that PYSTILT requires (0.1.0a1 or newer, below 0.2). runtraj has the projects, releases, met files, transport models, Slurm submission and particle transforms; PYSTILT keeps STILT's footprint, background, transport error and the STILT-R import. STILT's science is unchanged and PYSTILT still matches STILT-R, but a project needs changes: `config.yaml` is written in blocks, `receptors.csv` is `releases.csv`, and HYSPLIT is no longer included. Every particles and footprint folder moves to a new settings folder, so a project's stored runs are made again; keep a project on 0.1.0a29 until you can run it again.
