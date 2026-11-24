@@ -1,5 +1,0 @@
-runtraj.models.hysplit.MetConfig.source
-=======================================
-
-.. currentmodule:: runtraj.models.hysplit
-.. automethod:: MetConfig.source

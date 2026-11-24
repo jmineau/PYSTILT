@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=f2e6b648"></script>
+    <script src="../_static/documentation_options.js?v=6f8970cf"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a31.dev22+g31da0455b" />
+  <meta name="docsearch:version" content="0.1.0a31.dev23+g6217ed83f" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -625,7 +625,7 @@ The parquet file holds the submitted releases’ checked rows, which the
 task’s project takes in place of <code class="docutils literal notranslate"><span class="pre">releases.csv</span></code>. <code class="docutils literal notranslate"><span class="pre">submit</span></code> returns the job
 id at once, and <code class="docutils literal notranslate"><span class="pre">run</span></code> waits by polling <code class="docutils literal notranslate"><span class="pre">sacct</span></code>.</p>
 <p>When a simulation whose particles are missing uses a met that downloads
-(the transport model’s <code class="docutils literal notranslate"><span class="pre">downloads_met</span></code>), <code class="docutils literal notranslate"><span class="pre">submit</span></code> first submits
+(the met’s <code class="docutils literal notranslate"><span class="pre">downloads</span></code>, <code class="xref py py-meth docutils literal notranslate"><span class="pre">runtraj.models.MetConfig.downloads()</span></code>), <code class="docutils literal notranslate"><span class="pre">submit</span></code> first submits
 <code class="docutils literal notranslate"><span class="pre">fetch.sh</span></code> (<code class="docutils literal notranslate"><span class="pre">fetch_script</span></code>), one task of <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">fetch</span> <span class="pre">--releases</span>
 <span class="pre">releases.parquet</span></code> with the resources of <code class="docutils literal notranslate"><span class="pre">execution.slurm.fetch</span></code>, and gives the
 array <code class="docutils literal notranslate"><span class="pre">--dependency=afterany:&lt;fetch</span> <span class="pre">job&gt;</span></code>. <code class="docutils literal notranslate"><span class="pre">afterany</span></code> because Slurm
@@ -634,10 +634,10 @@ archive unreachable), and in both cases the runs whose met is there should
 go. A local run with <code class="docutils literal notranslate"><span class="pre">cpus</span></code> above 1 calls <code class="docutils literal notranslate"><span class="pre">Project.fetch</span></code> before the pool
 starts, for the same reason: workers that start the same file download it
 twice. A task (<code class="docutils literal notranslate"><span class="pre">--task</span></code>) never fetches.</p>
-<p>A task that stops with work left requeues itself (<code class="docutils literal notranslate"><span class="pre">scontrol</span> <span class="pre">requeue</span></code>) when
-it got SIGUSR1, which the script asks for two minutes before the time limit
-(<code class="docutils literal notranslate"><span class="pre">--signal=B:USR1&#64;120</span></code>), or when it was preempted (Slurm set the job’s
-<code class="docutils literal notranslate"><span class="pre">PreemptTime</span></code>). Slurm checks <code class="docutils literal notranslate"><span class="pre">--signal</span></code> times only about once a minute,
+<p>A task that stops with work left exits with 3, and the job script puts it
+back in the queue (<code class="docutils literal notranslate"><span class="pre">scontrol</span> <span class="pre">requeue</span></code>) when the script got SIGUSR1, which
+it asks for two minutes before the time limit (<code class="docutils literal notranslate"><span class="pre">--signal=B:USR1&#64;120</span></code>), or
+when the task was preempted (Slurm set the job’s <code class="docutils literal notranslate"><span class="pre">PreemptTime</span></code>). Slurm checks <code class="docutils literal notranslate"><span class="pre">--signal</span></code> times only about once a minute,
 so a preempted task may never get SIGUSR1. A task stopped by <code class="docutils literal notranslate"><span class="pre">scancel</span></code> is
 not requeued, and a task stops for good after <code class="docutils literal notranslate"><span class="pre">MAX_REQUEUES</span></code> requeues.</p>
 <p><code class="docutils literal notranslate"><span class="pre">run(task=(i,</span> <span class="pre">n))</span></code> (<code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">--task</span> <span class="pre">i/n</span></code>) runs one share here, whatever
@@ -851,7 +851,7 @@ grid. The transport model’s build is read on first use
 <li><p>Each part owns its config. <code class="docutils literal notranslate"><span class="pre">FootprintConfig</span></code> is in
 <code class="docutils literal notranslate"><span class="pre">stilt.footprint.config</span></code>, <code class="docutils literal notranslate"><span class="pre">ExecutionConfig</span></code> in
 <code class="docutils literal notranslate"><span class="pre">runtraj.execution.config</span></code>, and a model’s config and met config in its
-package (<code class="docutils literal notranslate"><span class="pre">met_config_class</span></code>; HYSPLIT’s <code class="docutils literal notranslate"><span class="pre">MetConfig</span></code> is in
+package (<code class="docutils literal notranslate"><span class="pre">met_config_class</span></code>; HYSPLIT’s <code class="docutils literal notranslate"><span class="pre">HysplitMetConfig</span></code> is in
 <code class="docutils literal notranslate"><span class="pre">runtraj.models.hysplit</span></code>). <code class="docutils literal notranslate"><span class="pre">ProjectConfig.mets</span></code> holds each met as
 written, and <code class="docutils literal notranslate"><span class="pre">ProjectConfig.met_config(name,</span> <span class="pre">model)</span></code> checks it with the
 met config of the model that reads it (<code class="docutils literal notranslate"><span class="pre">model</span></code> a <code class="docutils literal notranslate"><span class="pre">models</span></code> block’s
@@ -872,7 +872,7 @@ project opens on a machine without the met’s files or <code class="docutils li
 left out of the settings records. A met’s record is built, not dumped: its
 config’s <code class="docutils literal notranslate"><span class="pre">settings()</span></code>, which for HYSPLIT is the source id in the ARL
 headers (from the first file under <code class="docutils literal notranslate"><span class="pre">directory</span></code>, or the archive’s
-<code class="docutils literal notranslate"><span class="pre">source</span></code> for <code class="docutils literal notranslate"><span class="pre">download</span></code>) and the crop (<code class="docutils literal notranslate"><span class="pre">MetConfig.crop()</span></code>, from
+<code class="docutils literal notranslate"><span class="pre">source</span></code> for <code class="docutils literal notranslate"><span class="pre">download</span></code>) and the crop (<code class="docutils literal notranslate"><span class="pre">HysplitMetConfig.crop()</span></code>, from
 <code class="docutils literal notranslate"><span class="pre">subgrid_bounds</span></code> and <code class="docutils literal notranslate"><span class="pre">subgrid_levels</span></code>). Where the files are and how
 they are named are never recorded, so moving them keeps every result, and
 two products named alike hash apart. The grid and levels are not in the

@@ -1,0 +1,5 @@
+runtraj.models.hysplit.HysplitMetConfig.downloads
+=================================================
+
+.. currentmodule:: runtraj.models.hysplit
+.. automethod:: HysplitMetConfig.downloads

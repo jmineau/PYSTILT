@@ -94,7 +94,6 @@ of the run are a complete run.
    :nosignatures:
 
    runtraj.models.TransportModel
-   runtraj.models.BatchedTransportModel
    runtraj.models.TransportConfig
    runtraj.models.ModelRun
    runtraj.models.get_model

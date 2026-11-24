@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=f2e6b648"></script>
+    <script src="../../_static/documentation_options.js?v=6f8970cf"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a31.dev22+g31da0455b" />
+  <meta name="docsearch:version" content="0.1.0a31.dev23+g6217ed83f" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -471,8 +471,8 @@
 <span class="sd">:func:`calc_pbl_height` finds the mixed-layer height from the met, as the</span>
 <span class="sd">transport model of the run did (HYSPLIT's ``kmixd``, or FLEXPART's</span>
 <span class="sd">method). Both read ARL files, or met in another</span>
-<span class="sd">format converted by arlmet (:func:`runtraj.models.open_met` opens a run's</span>
-<span class="sd">met files the way its transport model reads them).</span>
+<span class="sd">format converted by arlmet (:meth:`runtraj.models.MetConfig.open` opens a</span>
+<span class="sd">run's met files the way its transport model reads them).</span>
 <span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
@@ -902,7 +902,7 @@
 <span class="sd">        run read (``met_files`` of :class:`runtraj.models.ModelRun` or of</span>
 <span class="sd">        :func:`runtraj.particles.particles_metadata`), or met in another</span>
 <span class="sd">        format as one Dataset in :func:`arlmet.open_dataset`'s layout</span>
-<span class="sd">        (:func:`runtraj.models.open_met`, or an arlmet converter's output).</span>
+<span class="sd">        (:meth:`runtraj.models.MetConfig.open`, or an arlmet converter's output).</span>
 <span class="sd">    columns : iterable of str, default ("mlht", "dens", "pres", "zsfc")</span>
 <span class="sd">        The columns to add.</span>
 <span class="sd">    z_top : float or None, default 25000</span>
@@ -1256,9 +1256,7 @@
 
 <span class="sd">    A FLEXPART run on ERA5, with the met its transport model opens:</span>
 
-<span class="sd">    &gt;&gt;&gt; met = runtraj.models.open_met(</span>
-<span class="sd">    ...     "flexpart", met_config, files, bounds</span>
-<span class="sd">    ... )  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; met = met_config.open(files, bounds)  # doctest: +SKIP</span>
 <span class="sd">    &gt;&gt;&gt; mlht = runtraj.sampling.calc_pbl_height(</span>
 <span class="sd">    ...     particles, met, method="flexpart"</span>
 <span class="sd">    ... )  # doctest: +SKIP</span>

@@ -209,4 +209,4 @@ is listed with the transforms (:doc:`transforms`).
 positions, for the particle columns a transport model can write from the
 met, and :func:`runtraj.sampling.calc_pbl_height` finds the mixed-layer
 height from its profile. Both are runtraj's, and both take ARL met files or
-met in another format as one dataset (:func:`runtraj.models.open_met`).
+met in another format as one dataset (:meth:`runtraj.models.MetConfig.open`).

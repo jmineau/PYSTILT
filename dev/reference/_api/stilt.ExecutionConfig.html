@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=f2e6b648"></script>
+    <script src="../../_static/documentation_options.js?v=6f8970cf"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -59,13 +59,13 @@
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="stilt.ExecutionConfig.cpus" href="stilt.ExecutionConfig.cpus.html" />
-    <link rel="prev" title="stilt.footprint.MapStage.settings" href="stilt.footprint.MapStage.settings.html" />
+    <link rel="next" title="stilt.ExecutionConfig.block" href="stilt.ExecutionConfig.block.html" />
+    <link rel="prev" title="stilt.footprint.MapStage.run" href="stilt.footprint.MapStage.run.html" />
   
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a31.dev22+g31da0455b" />
+  <meta name="docsearch:version" content="0.1.0a31.dev23+g6217ed83f" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -567,13 +567,12 @@
 </details></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.footprint.MapConfig.html">stilt.footprint.MapConfig</a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.footprint.MapStage.html">stilt.footprint.MapStage</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="stilt.footprint.MapStage.check.html">stilt.footprint.MapStage.check</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.footprint.MapStage.resolve.html">stilt.footprint.MapStage.resolve</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.footprint.MapStage.run.html">stilt.footprint.MapStage.run</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.footprint.MapStage.settings.html">stilt.footprint.MapStage.settings</a></li>
 </ul>
 </details></li>
 <li class="toctree-l2 current active has-children"><a aria-current="page" class="current reference internal" href="#">stilt.ExecutionConfig</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="stilt.ExecutionConfig.block.html">stilt.ExecutionConfig.block</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.ExecutionConfig.cpus.html">stilt.ExecutionConfig.cpus</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.ExecutionConfig.fetch.html">stilt.ExecutionConfig.fetch</a></li>
 </ul>
@@ -597,15 +596,19 @@
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../meteorology.html">Meteorology</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2 has-children"><a class="reference internal" href="runtraj.models.hysplit.MetConfig.html">runtraj.models.hysplit.MetConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.MetConfig.download_options.html">runtraj.models.hysplit.MetConfig.download_options</a></li>
-<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.MetConfig.crop.html">runtraj.models.hysplit.MetConfig.crop</a></li>
-<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.MetConfig.model_post_init.html">runtraj.models.hysplit.MetConfig.model_post_init</a></li>
-<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.MetConfig.settings.html">runtraj.models.hysplit.MetConfig.settings</a></li>
-<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.MetConfig.source.html">runtraj.models.hysplit.MetConfig.source</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="runtraj.models.hysplit.HysplitMetConfig.html">runtraj.models.hysplit.HysplitMetConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitMetConfig.download_options.html">runtraj.models.hysplit.HysplitMetConfig.download_options</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitMetConfig.check.html">runtraj.models.hysplit.HysplitMetConfig.check</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitMetConfig.crop.html">runtraj.models.hysplit.HysplitMetConfig.crop</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitMetConfig.downloads.html">runtraj.models.hysplit.HysplitMetConfig.downloads</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitMetConfig.fetch.html">runtraj.models.hysplit.HysplitMetConfig.fetch</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitMetConfig.model_post_init.html">runtraj.models.hysplit.HysplitMetConfig.model_post_init</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitMetConfig.settings.html">runtraj.models.hysplit.HysplitMetConfig.settings</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitMetConfig.source.html">runtraj.models.hysplit.HysplitMetConfig.source</a></li>
 </ul>
 </details></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="runtraj.models.hysplit.Met.html">runtraj.models.hysplit.Met</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.Met.catalog.html">runtraj.models.hysplit.Met.catalog</a></li>
 <li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.Met.crop_dir.html">runtraj.models.hysplit.Met.crop_dir</a></li>
 <li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.Met.check.html">runtraj.models.hysplit.Met.check</a></li>
 <li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.Met.check_releases.html">runtraj.models.hysplit.Met.check_releases</a></li>
@@ -639,16 +642,20 @@
 <li class="toctree-l2"><a class="reference internal" href="runtraj.execution.job_script.html">runtraj.execution.job_script</a></li>
 <li class="toctree-l2"><a class="reference internal" href="runtraj.execution.fetch_script.html">runtraj.execution.fetch_script</a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="runtraj.models.TransportModel.html">runtraj.models.TransportModel</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.TransportModel.batched.html">runtraj.models.TransportModel.batched</a></li>
 <li class="toctree-l3"><a class="reference internal" href="runtraj.models.TransportModel.config_class.html">runtraj.models.TransportModel.config_class</a></li>
 <li class="toctree-l3"><a class="reference internal" href="runtraj.models.TransportModel.met_config_class.html">runtraj.models.TransportModel.met_config_class</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.TransportModel.name.html">runtraj.models.TransportModel.name</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.TransportModel.needs_workdir.html">runtraj.models.TransportModel.needs_workdir</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.TransportModel.check_releases.html">runtraj.models.TransportModel.check_releases</a></li>
 <li class="toctree-l3"><a class="reference internal" href="runtraj.models.TransportModel.data_files.html">runtraj.models.TransportModel.data_files</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.TransportModel.release_rows.html">runtraj.models.TransportModel.release_rows</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.TransportModel.result.html">runtraj.models.TransportModel.result</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.TransportModel.result_files.html">runtraj.models.TransportModel.result_files</a></li>
 <li class="toctree-l3"><a class="reference internal" href="runtraj.models.TransportModel.run.html">runtraj.models.TransportModel.run</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.TransportModel.run_many.html">runtraj.models.TransportModel.run_many</a></li>
 <li class="toctree-l3"><a class="reference internal" href="runtraj.models.TransportModel.sha256.html">runtraj.models.TransportModel.sha256</a></li>
 <li class="toctree-l3"><a class="reference internal" href="runtraj.models.TransportModel.version.html">runtraj.models.TransportModel.version</a></li>
-</ul>
-</details></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="runtraj.models.BatchedTransportModel.html">runtraj.models.BatchedTransportModel</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="runtraj.models.BatchedTransportModel.run_many.html">runtraj.models.BatchedTransportModel.run_many</a></li>
 </ul>
 </details></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="runtraj.models.TransportConfig.html">runtraj.models.TransportConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -662,13 +669,9 @@
 <li class="toctree-l2"><a class="reference internal" href="runtraj.models.run_model.html">runtraj.models.run_model</a></li>
 <li class="toctree-l2"><a class="reference internal" href="runtraj.models.run_model_many.html">runtraj.models.run_model_many</a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="runtraj.models.hysplit.HysplitModel.html">runtraj.models.hysplit.HysplitModel</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitModel.batched.html">runtraj.models.hysplit.HysplitModel.batched</a></li>
-<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitModel.needs_workdir.html">runtraj.models.hysplit.HysplitModel.needs_workdir</a></li>
-<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitModel.check_met.html">runtraj.models.hysplit.HysplitModel.check_met</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitModel.name.html">runtraj.models.hysplit.HysplitModel.name</a></li>
 <li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitModel.check_releases.html">runtraj.models.hysplit.HysplitModel.check_releases</a></li>
 <li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitModel.data_files.html">runtraj.models.hysplit.HysplitModel.data_files</a></li>
-<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitModel.downloads_met.html">runtraj.models.hysplit.HysplitModel.downloads_met</a></li>
-<li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitModel.fetch_met.html">runtraj.models.hysplit.HysplitModel.fetch_met</a></li>
 <li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitModel.release_rows.html">runtraj.models.hysplit.HysplitModel.release_rows</a></li>
 <li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitModel.result.html">runtraj.models.hysplit.HysplitModel.result</a></li>
 <li class="toctree-l3"><a class="reference internal" href="runtraj.models.hysplit.HysplitModel.result_files.html">runtraj.models.hysplit.HysplitModel.result_files</a></li>
@@ -678,10 +681,7 @@
 </ul>
 </details></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.migration.StiltRModel.html">stilt.migration.StiltRModel</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="stilt.migration.StiltRModel.needs_workdir.html">stilt.migration.StiltRModel.needs_workdir</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.migration.StiltRModel.data_files.html">stilt.migration.StiltRModel.data_files</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.migration.StiltRModel.run.html">stilt.migration.StiltRModel.run</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.migration.StiltRModel.sha256.html">stilt.migration.StiltRModel.sha256</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.migration.StiltRModel.version.html">stilt.migration.StiltRModel.version</a></li>
 </ul>
 </details></li>
@@ -694,6 +694,12 @@
 </ul>
 </details></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="runtraj.stages.Stage.html">runtraj.stages.Stage</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.stages.Stage.config_class.html">runtraj.stages.Stage.config_class</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.stages.Stage.name.html">runtraj.stages.Stage.name</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.stages.Stage.reads.html">runtraj.stages.Stage.reads</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.stages.Stage.result.html">runtraj.stages.Stage.result</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.stages.Stage.suffix.html">runtraj.stages.Stage.suffix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="runtraj.stages.Stage.version.html">runtraj.stages.Stage.version</a></li>
 <li class="toctree-l3"><a class="reference internal" href="runtraj.stages.Stage.check.html">runtraj.stages.Stage.check</a></li>
 <li class="toctree-l3"><a class="reference internal" href="runtraj.stages.Stage.resolve.html">runtraj.stages.Stage.resolve</a></li>
 <li class="toctree-l3"><a class="reference internal" href="runtraj.stages.Stage.run.html">runtraj.stages.Stage.run</a></li>
@@ -902,16 +908,19 @@
 <h1>stilt.ExecutionConfig<a class="headerlink" href="#stilt-executionconfig" title="Link to this heading">#</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="stilt.ExecutionConfig">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">stilt.</span></span><span class="sig-name descname"><span class="pre">ExecutionConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">backend</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Literal['local'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'slurm'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">'kubernetes']</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'local'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">local</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">runtraj.execution.config.LocalConfig</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slurm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">runtraj.execution.config.SlurmConfig</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kubernetes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">runtraj.execution.config.KubernetesConfig</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated[int</span> <span class="pre">|</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Ge(ge</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1)]</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keep_workdir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/runtraj/execution/config.html#ExecutionConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.ExecutionConfig" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">stilt.</span></span><span class="sig-name descname"><span class="pre">ExecutionConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">backend</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'local'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">local</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">runtraj.execution.config.LocalConfig</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slurm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">runtraj.execution.config.SlurmConfig</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pbs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">runtraj.execution.config.PbsConfig</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kubernetes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">runtraj.execution.config.KubernetesConfig</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated[int</span> <span class="pre">|</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Ge(ge</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1)]</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keep_workdir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**extra_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/runtraj/execution/config.html#ExecutionConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.ExecutionConfig" title="Link to this definition">#</a></dt>
 <dd><p>Where a project’s releases run, and with what resources.</p>
 <p><code class="docutils literal notranslate"><span class="pre">backend</span></code> names the place, and every setting of that place is in the
 block of its name. With <code class="docutils literal notranslate"><span class="pre">backend:</span> <span class="pre">local</span></code> the releases run on this
 machine as one task (<code class="xref py py-class docutils literal notranslate"><span class="pre">LocalConfig</span></code>). With <code class="docutils literal notranslate"><span class="pre">backend:</span> <span class="pre">slurm</span></code>
 they are split among the tasks of one Slurm job array
-(<code class="xref py py-class docutils literal notranslate"><span class="pre">SlurmConfig</span></code>), and with <code class="docutils literal notranslate"><span class="pre">backend:</span> <span class="pre">kubernetes</span></code> among the pods
-of one indexed Job (<code class="xref py py-class docutils literal notranslate"><span class="pre">KubernetesConfig</span></code>). Only the block
-<code class="docutils literal notranslate"><span class="pre">backend</span></code> names is read, so a config can hold several and be run
-either way. <code class="docutils literal notranslate"><span class="pre">timeout</span></code> and
+(<code class="xref py py-class docutils literal notranslate"><span class="pre">SlurmConfig</span></code>), with <code class="docutils literal notranslate"><span class="pre">backend:</span> <span class="pre">pbs</span></code> among the subjobs of one
+PBS job array (<code class="xref py py-class docutils literal notranslate"><span class="pre">PbsConfig</span></code>), and with <code class="docutils literal notranslate"><span class="pre">backend:</span> <span class="pre">kubernetes</span></code>
+among the pods of one indexed Job (<code class="xref py py-class docutils literal notranslate"><span class="pre">KubernetesConfig</span></code>). A backend in another
+package is named by the import path of its class
+(<code class="xref py py-class docutils literal notranslate"><span class="pre">runtraj.execution.Backend</span></code>), and its block is under the
+class’s <code class="docutils literal notranslate"><span class="pre">name</span></code>. Only the block <code class="docutils literal notranslate"><span class="pre">backend</span></code> names is read, so a config
+can hold several and be run either way. <code class="docutils literal notranslate"><span class="pre">timeout</span></code> and
 <code class="docutils literal notranslate"><span class="pre">keep_workdir</span></code> apply wherever a run happens. None of these settings
 change a result.</p>
 </dd></dl>
@@ -932,7 +941,7 @@ change a result.</p>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">backend</span></code></p></td>
-<td><p>Where to run: on this machine (<code class="docutils literal notranslate"><span class="pre">local</span></code>), as a Slurm job array (<code class="docutils literal notranslate"><span class="pre">slurm</span></code>), or as a Kubernetes indexed Job (<code class="docutils literal notranslate"><span class="pre">kubernetes</span></code>).</p></td>
+<td><p>Where to run: on this machine (<code class="docutils literal notranslate"><span class="pre">local</span></code>), as a Slurm job array (<code class="docutils literal notranslate"><span class="pre">slurm</span></code>) or a PBS job array (<code class="docutils literal notranslate"><span class="pre">pbs</span></code>), as a Kubernetes indexed Job (<code class="docutils literal notranslate"><span class="pre">kubernetes</span></code>), or with a backend in another package, named by the import path of its class, such as <code class="docutils literal notranslate"><span class="pre">mypkg.backends.MyBackend</span></code>.</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">'local'</span></code></p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">local</span></code></p></td>
@@ -941,17 +950,21 @@ change a result.</p>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">slurm</span></code></p></td>
 <td><p>The job array of a Slurm run (<code class="xref py py-class docutils literal notranslate"><span class="pre">SlurmConfig</span></code>), and any other <code class="docutils literal notranslate"><span class="pre">sbatch</span></code> option by name. Read with <code class="docutils literal notranslate"><span class="pre">backend:</span> <span class="pre">slurm</span></code>.</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">SlurmConfig(n_workers=1,</span> <span class="pre">cpus=1,</span> <span class="pre">time=None,</span> <span class="pre">mem=None,</span> <span class="pre">partition=None,</span> <span class="pre">account=None,</span> <span class="pre">q...</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SlurmConfig(cpus=1,</span> <span class="pre">fetch=FetchConfig(partition=None,</span> <span class="pre">account=None,</span> <span class="pre">qos=None,</span> <span class="pre">time=No...</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">kubernetes</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">pbs</span></code></p></td>
+<td><p>The job array of a PBS run (<code class="xref py py-class docutils literal notranslate"><span class="pre">PbsConfig</span></code>), and any other PBS resource by name. Read with <code class="docutils literal notranslate"><span class="pre">backend:</span> <span class="pre">pbs</span></code>.</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">PbsConfig(cpus=1,</span> <span class="pre">fetch=False,</span> <span class="pre">n_workers=1,</span> <span class="pre">n_tasks=None,</span> <span class="pre">walltime=None,</span> <span class="pre">mem=None,</span> <span class="pre">qu...</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">kubernetes</span></code></p></td>
 <td><p>The indexed Job of a Kubernetes run (<code class="xref py py-class docutils literal notranslate"><span class="pre">KubernetesConfig</span></code>). Read with <code class="docutils literal notranslate"><span class="pre">backend:</span> <span class="pre">kubernetes</span></code>.</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">KubernetesConfig(image=None,</span> <span class="pre">completions=1,</span> <span class="pre">parallelism=None,</span> <span class="pre">cpus=1,</span> <span class="pre">memory=None,</span> <span class="pre">na...</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">KubernetesConfig(cpus=1,</span> <span class="pre">fetch=False,</span> <span class="pre">image=None,</span> <span class="pre">completions=1,</span> <span class="pre">parallelism=None,</span> <span class="pre">me...</span></code></p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">timeout</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">timeout</span></code></p></td>
 <td><p>Time limit for one transport model run, in seconds. A run that exceeds it is stopped and recorded as a failed simulation, and the worker moves on. Unset waits indefinitely, so a hung run can hold a worker until its job ends.</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">keep_workdir</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">keep_workdir</span></code></p></td>
 <td><p>Keep every run’s workdir, as the transport model left it, under <code class="docutils literal notranslate"><span class="pre">scratch/</span></code> in the output directory. A failed run’s is always kept, without the model’s particle file unless this is set.</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">False</span></code></p></td>
 </tr>
@@ -963,10 +976,13 @@ change a result.</p>
 <h2>Attributes<a class="headerlink" href="#attributes" title="Link to this heading">#</a></h2>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="stilt.ExecutionConfig.cpus.html#stilt.ExecutionConfig.cpus" title="stilt.ExecutionConfig.cpus"><code class="xref py py-obj docutils literal notranslate"><span class="pre">cpus</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="stilt.ExecutionConfig.block.html#stilt.ExecutionConfig.block" title="stilt.ExecutionConfig.block"><code class="xref py py-obj docutils literal notranslate"><span class="pre">block</span></code></a></p></td>
+<td><p>The block of the backend <code class="docutils literal notranslate"><span class="pre">backend</span></code> names, the one a run reads.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="stilt.ExecutionConfig.cpus.html#stilt.ExecutionConfig.cpus" title="stilt.ExecutionConfig.cpus"><code class="xref py py-obj docutils literal notranslate"><span class="pre">cpus</span></code></a></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">cpus</span></code> of the block <code class="docutils literal notranslate"><span class="pre">backend</span></code> names.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="stilt.ExecutionConfig.fetch.html#stilt.ExecutionConfig.fetch" title="stilt.ExecutionConfig.fetch"><code class="xref py py-obj docutils literal notranslate"><span class="pre">fetch</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="stilt.ExecutionConfig.fetch.html#stilt.ExecutionConfig.fetch" title="stilt.ExecutionConfig.fetch"><code class="xref py py-obj docutils literal notranslate"><span class="pre">fetch</span></code></a></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">fetch</span></code> of the block <code class="docutils literal notranslate"><span class="pre">backend</span></code> names.</p></td>
 </tr>
 </tbody>
@@ -986,20 +1002,20 @@ change a result.</p>
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="stilt.footprint.MapStage.settings.html"
+       href="stilt.footprint.MapStage.run.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">stilt.footprint.MapStage.settings</p>
+        <p class="prev-next-title">stilt.footprint.MapStage.run</p>
       </div>
     </a>
     <a class="right-next"
-       href="stilt.ExecutionConfig.cpus.html"
+       href="stilt.ExecutionConfig.block.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">stilt.ExecutionConfig.cpus</p>
+        <p class="prev-next-title">stilt.ExecutionConfig.block</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>

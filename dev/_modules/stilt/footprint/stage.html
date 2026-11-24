@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=f2e6b648"></script>
+    <script src="../../../_static/documentation_options.js?v=6f8970cf"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a31.dev22+g31da0455b" />
+  <meta name="docsearch:version" content="0.1.0a31.dev23+g6217ed83f" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -480,9 +480,10 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">TypeAdapter</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">runtraj</span><span class="w"> </span><span class="kn">import</span> <span class="n">Bounds</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.identity</span><span class="w"> </span><span class="kn">import</span> <span class="n">file_stamp</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_model</span><span class="p">,</span> <span class="n">open_met</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">MetConfig</span><span class="p">,</span> <span class="n">get_model</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.particles</span><span class="w"> </span><span class="kn">import</span> <span class="n">particles_metadata</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.releases</span><span class="w"> </span><span class="kn">import</span> <span class="n">Release</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.stages</span><span class="w"> </span><span class="kn">import</span> <span class="n">Stage</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt._paths</span><span class="w"> </span><span class="kn">import</span> <span class="n">absolute</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">EmptyFootprint</span>
@@ -518,7 +519,7 @@
 
 <div class="viewcode-block" id="FootprintStage">
 <a class="viewcode-back" href="../../../reference/_api/stilt.footprint.FootprintStage.html#stilt.footprint.FootprintStage">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">FootprintStage</span><span class="p">:</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">FootprintStage</span><span class="p">(</span><span class="n">Stage</span><span class="p">[</span><span class="n">FootprintConfig</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    The stage that grids each simulation's particles into its footprint.</span>
 
@@ -548,14 +549,14 @@
 <span class="sd">        :class:`FootprintConfig`, which checks the block's settings.</span>
 <span class="sd">    suffix : str</span>
 <span class="sd">        ``.parquet``, the extension of a stored footprint.</span>
-<span class="sd">    reads : tuple of str</span>
-<span class="sd">        Empty: a footprint is made from the particles alone.</span>
+
+<span class="sd">    It reads no other stage's files, only the particles, and sets no</span>
+<span class="sd">    ``version``, so its settings folders are named as before.</span>
 <span class="sd">    """</span>
 
     <span class="n">name</span> <span class="o">=</span> <span class="s2">"footprint"</span>
     <span class="n">config_class</span> <span class="o">=</span> <span class="n">FootprintConfig</span>
     <span class="n">suffix</span> <span class="o">=</span> <span class="s2">".parquet"</span>
-    <span class="n">reads</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
 
 <div class="viewcode-block" id="FootprintStage.resolve">
 <a class="viewcode-back" href="../../../reference/_api/stilt.footprint.FootprintStage.resolve.html#stilt.footprint.FootprintStage.resolve">[docs]</a>
@@ -755,8 +756,8 @@
 <span class="sd">        ``pbl_height: richardson`` reads.</span>
 <span class="sd">    variant : runtraj.config.Variant, optional</span>
 <span class="sd">        The variant that made the particles, such as ``sim.variant``. Its</span>
-<span class="sd">        transport model opens the met files in the format it reads</span>
-<span class="sd">        (:func:`runtraj.models.open_met`), around the particles. Without it</span>
+<span class="sd">        met opens its files in the format its transport model reads</span>
+<span class="sd">        (:meth:`runtraj.models.MetConfig.open`), around the particles. Without it</span>
 <span class="sd">        the files are read as ARL files, as HYSPLIT's are, so pass it for a</span>
 <span class="sd">        transport model whose met is in another format.</span>
 
@@ -804,9 +805,7 @@
     <span class="n">met</span> <span class="o">=</span> <span class="p">(</span>
         <span class="n">files</span>
         <span class="k">if</span> <span class="n">variant</span> <span class="ow">is</span> <span class="kc">None</span>
-        <span class="k">else</span> <span class="n">open_met</span><span class="p">(</span>
-            <span class="n">variant</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="n">variant</span><span class="o">.</span><span class="n">met_config</span><span class="p">,</span> <span class="n">files</span><span class="p">,</span> <span class="n">_particle_bounds</span><span class="p">(</span><span class="n">particles</span><span class="p">)</span>
-        <span class="p">)</span>
+        <span class="k">else</span> <span class="n">variant</span><span class="o">.</span><span class="n">met_config</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">files</span><span class="p">,</span> <span class="n">_particle_bounds</span><span class="p">(</span><span class="n">particles</span><span class="p">))</span>
     <span class="p">)</span>
     <span class="n">out</span> <span class="o">=</span> <span class="n">add_foot</span><span class="p">(</span>
         <span class="n">out</span><span class="p">,</span>
@@ -922,12 +921,12 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_refuse_own_met</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Refuse to read the met of *model* as ARL files when the model opens its own (``open_met``)."""</span>
+<span class="w">    </span><span class="sd">"""Refuse to read the met of *model* as ARL files when its met opens its own (:meth:`runtraj.models.MetConfig.open`)."""</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">found</span> <span class="o">=</span> <span class="n">get_model</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
     <span class="k">except</span> <span class="p">(</span><span class="ne">ImportError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>  <span class="c1"># not installed here: nothing to ask it</span>
         <span class="k">return</span>
-    <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">found</span><span class="p">,</span> <span class="s2">"open_met"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">found</span><span class="o">.</span><span class="n">met_config_class</span><span class="o">.</span><span class="n">open</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">MetConfig</span><span class="o">.</span><span class="n">open</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
             <span class="sa">f</span><span class="s2">"The particles in </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> were made by the transport model "</span>
             <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">model</span><span class="si">!r}</span><span class="s2">, whose met files are not ARL files. Pass the variant "</span>

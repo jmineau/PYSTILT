@@ -15,15 +15,6 @@
 
 
 
-Attributes
-----------
-
-.. autosummary::
-   :toctree:
-   :nosignatures:
-
-   ~StiltRModel.needs_workdir
-
 
 
 Methods
@@ -32,9 +23,7 @@ Methods
 .. autosummary::
    :toctree:
 
-   ~StiltRModel.data_files
    ~StiltRModel.run
-   ~StiltRModel.sha256
    ~StiltRModel.version
 
 

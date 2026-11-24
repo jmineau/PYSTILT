@@ -221,7 +221,7 @@ For a model that writes only positions, :func:`runtraj.sampling.sample_met`
 reads ``mlht``, ``dens``, ``pres`` and ``zsfc`` from the met files at each
 particle's position and time. Give it the files the run read and the top of
 its domain, which a stored run records (for met that is not in ARL files,
-:func:`runtraj.models.open_met` opens it as the transport model reads it):
+:meth:`runtraj.models.MetConfig.open` opens it as the transport model reads it):
 
 .. code-block:: python
 

@@ -1,5 +1,0 @@
-stilt.footprint.MapStage.check
-==============================
-
-.. currentmodule:: stilt.footprint
-.. automethod:: MapStage.check

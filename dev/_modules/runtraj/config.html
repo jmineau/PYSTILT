@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=f2e6b648"></script>
+    <script src="../../_static/documentation_options.js?v=6f8970cf"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a31.dev22+g31da0455b" />
+  <meta name="docsearch:version" content="0.1.0a31.dev23+g6217ed83f" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -463,7 +463,7 @@
 <span class="sd">variant that uses it, and no setting sits at the top level. Each part has</span>
 <span class="sd">its own config class, next to the code that uses it: the transport model's</span>
 <span class="sd">and its met config (such as :class:`~runtraj.models.hysplit.HysplitConfig`</span>
-<span class="sd">and :class:`~runtraj.models.hysplit.MetConfig`), a stage's, and</span>
+<span class="sd">and :class:`~runtraj.models.hysplit.HysplitMetConfig`), a stage's, and</span>
 <span class="sd">:class:`~runtraj.execution.ExecutionConfig`. A stage is named by the import</span>
 <span class="sd">path of its class (:mod:`runtraj.stages`), so this module imports none.</span>
 <span class="sd">:class:`ProjectConfig` reads the file and checks it without reading any</span>
@@ -509,8 +509,7 @@
     <span class="n">get_model</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.results</span><span class="w"> </span><span class="kn">import</span> <span class="n">model_result</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.stages</span><span class="w"> </span><span class="kn">import</span> <span class="n">Stage</span><span class="p">,</span> <span class="n">get_stage</span><span class="p">,</span> <span class="n">ordered</span><span class="p">,</span> <span class="n">reads</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.stages</span><span class="w"> </span><span class="kn">import</span> <span class="n">result</span> <span class="k">as</span> <span class="n">stage_result</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.stages</span><span class="w"> </span><span class="kn">import</span> <span class="n">Stage</span><span class="p">,</span> <span class="n">get_stage</span><span class="p">,</span> <span class="n">ordered</span>
 
 <span class="c1">#: Pattern for variant and met names, which become directory names.</span>
 <span class="n">VARIANT_NAME_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"^[a-z0-9][a-z0-9-]*$"</span><span class="p">)</span>
@@ -798,9 +797,15 @@
 <span class="sd">        """</span>
         <span class="n">hashes</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">stage_order</span><span class="p">:</span>
-            <span class="n">read</span> <span class="o">=</span> <span class="p">{</span><span class="n">r</span><span class="p">:</span> <span class="n">hashes</span><span class="p">[</span><span class="n">r</span><span class="p">]</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">reads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stage</span><span class="p">(</span><span class="n">name</span><span class="p">))}</span>
+            <span class="n">stage</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stage</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">read</span> <span class="o">=</span> <span class="p">{</span><span class="n">r</span><span class="p">:</span> <span class="n">hashes</span><span class="p">[</span><span class="n">r</span><span class="p">]</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">stage</span><span class="o">.</span><span class="n">reads</span><span class="p">}</span>
             <span class="n">hashes</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">stage_hash</span><span class="p">(</span>
-                <span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">stage_settings</span><span class="p">[</span><span class="n">name</span><span class="p">],</span> <span class="n">result_hash</span><span class="p">,</span> <span class="n">read</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">result</span>
+                <span class="n">name</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">stage_settings</span><span class="p">[</span><span class="n">name</span><span class="p">],</span>
+                <span class="n">result_hash</span><span class="p">,</span>
+                <span class="n">read</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="p">,</span>
+                <span class="n">version</span><span class="o">=</span><span class="n">stage</span><span class="o">.</span><span class="n">version</span><span class="p">,</span>
             <span class="p">)</span>
         <span class="k">return</span> <span class="n">hashes</span>
 
@@ -863,7 +868,7 @@
             <span class="s2">"Meteorology by name, such as ``hrrr``: the folder of its files, or "</span>
             <span class="s2">"a mapping of its settings. At least one is required. Each is "</span>
             <span class="s2">"checked by the met config of the transport model that reads it "</span>
-            <span class="s2">"(:class:`runtraj.models.hysplit.MetConfig` for HYSPLIT)."</span>
+            <span class="s2">"(:class:`runtraj.models.hysplit.HysplitMetConfig` for HYSPLIT)."</span>
         <span class="p">),</span>
     <span class="p">)</span>
     <span class="n">models</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
@@ -1156,7 +1161,7 @@
                 <span class="p">)</span>
             <span class="n">configs</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">config</span>
         <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">block</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stages</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="k">for</span> <span class="n">read</span> <span class="ow">in</span> <span class="n">reads</span><span class="p">(</span><span class="n">block</span><span class="o">.</span><span class="n">stage</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">read</span> <span class="ow">in</span> <span class="n">block</span><span class="o">.</span><span class="n">stage</span><span class="o">.</span><span class="n">reads</span><span class="p">:</span>
                 <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">configs</span> <span class="ow">and</span> <span class="n">read</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">configs</span><span class="p">:</span>
                     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                         <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2"> sets the stage </span><span class="si">{</span><span class="n">read</span><span class="si">!r}</span><span class="s2"> to null, and its stage "</span>
@@ -1207,9 +1212,7 @@
                 <span class="sa">f</span><span class="s2">"Variant </span><span class="si">{</span><span class="n">group</span><span class="si">!r}</span><span class="s2"> (</span><span class="si">{</span><span class="n">declared</span><span class="o">.</span><span class="n">model</span><span class="si">}</span><span class="s2">)"</span><span class="p">,</span>
             <span class="p">)</span>
             <span class="n">made</span> <span class="o">=</span> <span class="n">model_result</span><span class="p">(</span><span class="n">get_model</span><span class="p">(</span><span class="n">declared</span><span class="o">.</span><span class="n">model</span><span class="p">),</span> <span class="n">transport</span><span class="p">)</span>
-            <span class="n">unread</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="n">name</span><span class="p">:</span> <span class="n">stage_result</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_stages</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">stage</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">declared</span><span class="o">.</span><span class="n">stages</span>
-            <span class="p">}</span>
+            <span class="n">unread</span> <span class="o">=</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stages</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">stage</span><span class="o">.</span><span class="n">result</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">declared</span><span class="o">.</span><span class="n">stages</span><span class="p">}</span>
             <span class="n">unread</span> <span class="o">=</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="n">r</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">unread</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">r</span> <span class="o">!=</span> <span class="n">made</span><span class="p">}</span>
             <span class="k">if</span> <span class="n">unread</span><span class="p">:</span>
                 <span class="n">names</span> <span class="o">=</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">unread</span><span class="p">)</span>
@@ -1292,7 +1295,7 @@
         <span class="k">if</span> <span class="n">path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
             <span class="n">path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-            <span class="n">path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+            <span class="n">path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">text</span></div>
 
 
@@ -1311,7 +1314,7 @@
 <span class="sd">        """</span>
         <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="k">with</span> <span class="n">path</span><span class="o">.</span><span class="n">open</span><span class="p">()</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="k">with</span> <span class="n">path</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
                 <span class="n">raw</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">Loader</span><span class="o">=</span><span class="n">_UniqueKeyLoader</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
         <span class="k">except</span> <span class="n">yaml</span><span class="o">.</span><span class="n">YAMLError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
             <span class="c1"># PyYAML's own message spans several lines; keep where and what.</span>

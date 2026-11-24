@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=f2e6b648"></script>
+    <script src="../../../_static/documentation_options.js?v=6f8970cf"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a31.dev22+g31da0455b" />
+  <meta name="docsearch:version" content="0.1.0a31.dev23+g6217ed83f" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -487,9 +487,9 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">ConfigDict</span><span class="p">,</span> <span class="n">Field</span><span class="p">,</span> <span class="n">model_validator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.stages</span><span class="w"> </span><span class="kn">import</span> <span class="n">Stage</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">read_footprint</span>
 
@@ -540,7 +540,7 @@
 
 <div class="viewcode-block" id="MapStage">
 <a class="viewcode-back" href="../../../reference/_api/stilt.footprint.MapStage.html#stilt.footprint.MapStage">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">MapStage</span><span class="p">:</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">MapStage</span><span class="p">(</span><span class="n">Stage</span><span class="p">[</span><span class="n">MapConfig</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    The stage that draws each simulation's footprint as an image for a web map.</span>
 
@@ -564,12 +564,16 @@
 <span class="sd">        ``.json``.</span>
 <span class="sd">    reads : tuple of str</span>
 <span class="sd">        ``("footprint",)``: a map is drawn from the footprint.</span>
+
+<span class="sd">    Its settings are the color scale, every field of :class:`MapConfig`,</span>
+<span class="sd">    and it finds nothing to check before a run: both are</span>
+<span class="sd">    :class:`runtraj.stages.Stage`'s defaults.</span>
 <span class="sd">    """</span>
 
     <span class="n">name</span> <span class="o">=</span> <span class="s2">"map"</span>
     <span class="n">config_class</span> <span class="o">=</span> <span class="n">MapConfig</span>
     <span class="n">suffix</span> <span class="o">=</span> <span class="s2">".json"</span>
-    <span class="n">reads</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"footprint"</span><span class="p">,)</span>
+    <span class="n">reads</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"footprint"</span><span class="p">,)</span>
 
 <div class="viewcode-block" id="MapStage.resolve">
 <a class="viewcode-back" href="../../../reference/_api/stilt.footprint.MapStage.resolve.html#stilt.footprint.MapStage.resolve">[docs]</a>
@@ -596,22 +600,6 @@
                 <span class="s2">"matplotlib's, such as 'viridis' or 'magma'."</span>
             <span class="p">)</span>
         <span class="k">return</span> <span class="n">config</span></div>
-
-
-<div class="viewcode-block" id="MapStage.settings">
-<a class="viewcode-back" href="../../../reference/_api/stilt.footprint.MapStage.settings.html#stilt.footprint.MapStage.settings">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">settings</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">MapConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">"""Return the color scale, which identifies the maps besides the footprint they are drawn from."""</span>
-        <span class="k">return</span> <span class="n">config</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"json"</span><span class="p">)</span></div>
-
-
-<div class="viewcode-block" id="MapStage.check">
-<a class="viewcode-back" href="../../../reference/_api/stilt.footprint.MapStage.check.html#stilt.footprint.MapStage.check">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">check</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">MapConfig</span><span class="p">,</span> <span class="n">releases</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">directory</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
-<span class="w">        </span><span class="sd">"""Return nothing: a map can be drawn for any footprint on a grid that does not cross 180°."""</span>
-        <span class="k">return</span> <span class="p">[]</span></div>
 
 
 <div class="viewcode-block" id="MapStage.run">

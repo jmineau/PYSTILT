@@ -1,6 +1,0 @@
-runtraj.models.hysplit.HysplitModel.batched
-===========================================
-
-.. currentmodule:: runtraj.models.hysplit
-
-.. autoattribute:: HysplitModel.batched

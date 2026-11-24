@@ -3,4 +3,4 @@ runtraj.models.TransportModel.config\_class
 
 .. currentmodule:: runtraj.models
 
-.. autoproperty:: TransportModel.config_class
+.. autoattribute:: TransportModel.config_class

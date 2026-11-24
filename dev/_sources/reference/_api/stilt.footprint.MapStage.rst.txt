@@ -23,10 +23,8 @@ Methods
 .. autosummary::
    :toctree:
 
-   ~MapStage.check
    ~MapStage.resolve
    ~MapStage.run
-   ~MapStage.settings
 
 
 

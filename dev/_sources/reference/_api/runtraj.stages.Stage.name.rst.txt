@@ -1,0 +1,6 @@
+runtraj.stages.Stage.name
+=========================
+
+.. currentmodule:: runtraj.stages
+
+.. autoattribute:: Stage.name

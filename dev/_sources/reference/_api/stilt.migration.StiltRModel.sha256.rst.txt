@@ -1,5 +1,0 @@
-stilt.migration.StiltRModel.sha256
-==================================
-
-.. currentmodule:: stilt.migration
-.. automethod:: StiltRModel.sha256

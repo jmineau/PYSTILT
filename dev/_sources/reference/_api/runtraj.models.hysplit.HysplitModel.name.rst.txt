@@ -1,0 +1,6 @@
+runtraj.models.hysplit.HysplitModel.name
+========================================
+
+.. currentmodule:: runtraj.models.hysplit
+
+.. autoattribute:: HysplitModel.name

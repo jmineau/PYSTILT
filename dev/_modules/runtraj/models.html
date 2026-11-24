@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=f2e6b648"></script>
+    <script src="../../_static/documentation_options.js?v=6f8970cf"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a31.dev22+g31da0455b" />
+  <meta name="docsearch:version" content="0.1.0a31.dev23+g6217ed83f" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -471,16 +471,17 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Mapping</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span><span class="p">,</span> <span class="n">replace</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">ClassVar</span><span class="p">,</span> <span class="n">Protocol</span><span class="p">,</span> <span class="n">Self</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">ClassVar</span><span class="p">,</span> <span class="n">Generic</span><span class="p">,</span> <span class="n">Self</span><span class="p">,</span> <span class="n">TypeVar</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">ConfigDict</span><span class="p">,</span> <span class="n">Field</span><span class="p">,</span> <span class="n">ValidationError</span><span class="p">,</span> <span class="n">field_validator</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj._plugins</span><span class="w"> </span><span class="kn">import</span> <span class="n">import_class</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj._plugins</span><span class="w"> </span><span class="kn">import</span> <span class="n">import_class</span><span class="p">,</span> <span class="n">near_miss</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">SimulationError</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.meteorology</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_window</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.particles</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
@@ -645,154 +646,163 @@
 
 
 
-<div class="viewcode-block" id="TransportModel">
-<a class="viewcode-back" href="../../reference/_api/runtraj.models.TransportModel.html#runtraj.models.TransportModel">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">TransportModel</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    A transport model that follows particles from a release.</span>
+<span class="c1">#: The config class a transport model takes, a subclass of :class:`TransportConfig`.</span>
+<span class="n">C</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s2">"C"</span><span class="p">,</span> <span class="n">bound</span><span class="o">=</span><span class="n">TransportConfig</span><span class="p">)</span>
 
-<span class="sd">    Attributes</span>
-<span class="sd">    ----------</span>
-<span class="sd">    name : str</span>
-<span class="sd">        The model's short name, such as ``"hysplit"``.</span>
-<span class="sd">    needs_workdir : bool, optional</span>
-<span class="sd">        Whether :meth:`run` is handed an empty directory for its files. True</span>
-<span class="sd">        when the model does not say; a model that writes no files sets it</span>
-<span class="sd">        False, and gets ``None``.</span>
-<span class="sd">    result_files : callable, optional</span>
-<span class="sd">        ``result_files(config)`` returns the names of the files in its</span>
-<span class="sd">        workdir that hold a run's result, such as HYSPLIT's particle file</span>
-<span class="sd">        or its ``cdump_&lt;grid&gt;`` files. A failed run's workdir is kept</span>
-<span class="sd">        without them, since they can be large and are read into the result</span>
-<span class="sd">        anyway; ``keep_workdir: true`` keeps them. A model without it has</span>
-<span class="sd">        every file kept.</span>
-<span class="sd">    batched : bool, optional</span>
-<span class="sd">        Whether the model runs many releases in one call</span>
-<span class="sd">        (:meth:`run_many`). False when the model does not say. The worker</span>
-<span class="sd">        then hands it every release of a variant that needs particles at</span>
-<span class="sd">        once, where it otherwise calls :meth:`run` for one at a time.</span>
-<span class="sd">    check_met : callable, optional</span>
-<span class="sd">        ``check_met(met, releases, n_hours)``, for a model that reads files,</span>
-<span class="sd">        which ``runtraj check`` calls to find what would stop its runs before</span>
-<span class="sd">        any starts. *met* is the model's met config, *releases* a table</span>
-<span class="sd">        with one row per release point (``release``, ``time``,</span>
-<span class="sd">        ``longitude``, ``latitude``), and *n_hours* the length of the runs.</span>
-<span class="sd">        It returns a DataFrame with ``check`` (a short name, such as</span>
-<span class="sd">        ``met_files``), ``release`` (the id, or ``NA`` for a problem of the</span>
-<span class="sd">        met itself), and ``message`` columns, one row for each problem. It</span>
-<span class="sd">        runs and downloads nothing. A model without it has no met files to</span>
-<span class="sd">        check.</span>
-<span class="sd">    fetch_met : callable, optional</span>
-<span class="sd">        ``fetch_met(met, windows)``, for a model that reads files, which</span>
-<span class="sd">        ``runtraj fetch`` calls to get the files its runs need before any</span>
-<span class="sd">        starts. *met* is the model's met config and *windows* the time each</span>
-<span class="sd">        run covers (:func:`runtraj.meteorology.run_window`). It gets the files</span>
-<span class="sd">        a run of those windows would ask for, downloading what the met</span>
-<span class="sd">        downloads, and returns a DataFrame with ``file`` and ``message``</span>
-<span class="sd">        columns: a row for each file, then a row for each window whose files</span>
-<span class="sd">        could not be had. A model without it has no met files to get.</span>
-<span class="sd">    downloads_met : callable, optional</span>
-<span class="sd">        ``downloads_met(met)``, for a model with ``fetch_met``: whether *met*</span>
-<span class="sd">        downloads files, so that getting them once before the runs saves</span>
-<span class="sd">        each run from downloading its own. ``runtraj submit`` submits a fetch</span>
-<span class="sd">        job before the job array only when it is true for a met the</span>
-<span class="sd">        unfinished simulations use. A model without it downloads nothing.</span>
-<span class="sd">    open_met : callable, optional</span>
-<span class="sd">        ``open_met(met, files, bounds)``, for a model whose met files are</span>
-<span class="sd">        not ARL files: returns *files*, the met files a run read, as one</span>
-<span class="sd">        :class:`xarray.Dataset` in :func:`arlmet.open_dataset`'s layout,</span>
-<span class="sd">        such as an arlmet converter's output, cropped to *bounds* (a</span>
-<span class="sd">        :class:`runtraj.Bounds`, or ``None`` for the whole grid).</span>
-<span class="sd">        :func:`open_met` calls it, so that the met is read at particles</span>
-<span class="sd">        (:mod:`runtraj.sampling`) without guessing its format from the</span>
-<span class="sd">        files. A model without it reads ARL files.</span>
-<span class="sd">    check_releases : callable, optional</span>
-<span class="sd">        ``check_releases(releases, config)``, for a model that cannot run</span>
-<span class="sd">        every release runtraj accepts. *releases* is a table with one row</span>
-<span class="sd">        per release point (``release``, ``kind``, ``longitude``,</span>
-<span class="sd">        ``latitude``, ``altitude``, ``altitude_ref``) and *config* the</span>
-<span class="sd">        model's config. It returns a DataFrame with ``check``, ``release``</span>
-<span class="sd">        and ``message`` columns, in that order, one row for each release it</span>
-<span class="sd">        cannot run. ``runtraj check`` lists them, and :func:`run_model` and</span>
-<span class="sd">        :func:`run_model_many` fail them with the reason</span>
-<span class="sd">        ``RELEASE_REFUSED`` before the model runs, so :meth:`run` and</span>
-<span class="sd">        ``run_many`` never get such a release. HYSPLIT refuses a multipoint</span>
-<span class="sd">        release whose points share a horizontal location, which it would</span>
-<span class="sd">        join into a line source. A model without it runs every release.</span>
-<span class="sd">    result : callable, optional</span>
-<span class="sd">        ``result(config)``: the type of result the model makes with</span>
-<span class="sd">        *config*, a name in :data:`runtraj.results.RESULT_TYPES`, such as</span>
-<span class="sd">        ``"concentration"``. ``"particles"`` when the model does not say. A</span>
-<span class="sd">        variant's stages read particles, so a variant whose model makes</span>
-<span class="sd">        another type has none.</span>
-<span class="sd">    release_rows : callable, optional</span>
-<span class="sd">        ``release_rows(particles, release)``, for a model that writes no</span>
-<span class="sd">        row at ``age = 0``: returns where each particle of a column or</span>
-<span class="sd">        multipoint release started, one row per particle with ``particle``,</span>
-<span class="sd">        ``lon``, ``lat``, and ``height`` in the release's vertical reference</span>
-<span class="sd">        (:func:`runtraj.particles.add_release_heights`). A model that writes</span>
-<span class="sd">        release rows needs none; one that writes neither cannot run a column</span>
-<span class="sd">        or multipoint release.</span>
+<span class="c1">#: The columns of the table ``check_releases`` and :meth:`MetConfig.check` return.</span>
+<span class="n">CHECK_COLUMNS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"check"</span><span class="p">,</span> <span class="s2">"release"</span><span class="p">,</span> <span class="s2">"message"</span><span class="p">)</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">MetConfig</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    The base of every transport model's met config: one entry under ``mets:`` and what is done with its files.</span>
+
+<span class="sd">    A model names its subclass as ``met_config_class``; HYSPLIT's is</span>
+<span class="sd">    :class:`runtraj.models.hysplit.HysplitMetConfig`. The subclass's fields</span>
+<span class="sd">    are the keys of the entry, and it implements :meth:`settings`. The</span>
+<span class="sd">    other methods have defaults for a met that names no files, such as a</span>
+<span class="sd">    model's built-in weather: nothing to check or fetch, nothing</span>
+<span class="sd">    downloaded, and ARL files when the met is read at the particles. A met</span>
+<span class="sd">    of files overrides the ones its files need.</span>
 <span class="sd">    """</span>
 
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">settings</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Return what a run records of this met: which weather it is, and anything else that changes the result.</span>
+
+<span class="sd">        Never where its files are kept or how they are named, so that moving</span>
+<span class="sd">        them changes no settings folder. Plain values (mappings, lists,</span>
+<span class="sd">        strings, numbers). HYSPLIT's are the source id in the ARL headers</span>
+<span class="sd">        and the crop.</span>
+<span class="sd">        """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">check</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">releases</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">n_hours</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Return what would stop the runs of *releases* on this met, found before any starts; nothing here.</span>
+
+<span class="sd">        ``runtraj check`` calls it. *releases* is a table with one row per</span>
+<span class="sd">        release point (``release``, ``time``, ``longitude``, ``latitude``),</span>
+<span class="sd">        and *n_hours* the length of the runs. It returns a DataFrame with</span>
+<span class="sd">        ``check`` (a short name, such as ``met_files``), ``release`` (the id,</span>
+<span class="sd">        or ``NA`` for a problem of the met itself), and ``message`` columns,</span>
+<span class="sd">        one row for each problem. It runs and downloads nothing.</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">CHECK_COLUMNS</span><span class="p">))</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">fetch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">windows</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">,</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Get the files runs of *windows* need before any starts, and return what was got; nothing here.</span>
+
+<span class="sd">        ``runtraj fetch`` calls it, with the time each run covers</span>
+<span class="sd">        (:func:`runtraj.meteorology.run_window`). It gets the files a run of</span>
+<span class="sd">        those windows would ask for, downloading what the met downloads, and</span>
+<span class="sd">        returns a DataFrame with ``file`` and ``message`` columns: a row for</span>
+<span class="sd">        each file, then a row for each window whose files could not be had.</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"file"</span><span class="p">,</span> <span class="s2">"message"</span><span class="p">])</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">downloads</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Return whether this met downloads its files, False here.</span>
+
+<span class="sd">        Getting the files once before the runs then saves each run from</span>
+<span class="sd">        downloading its own, so ``runtraj submit`` submits a fetch job before</span>
+<span class="sd">        the job array when it is true for a met the unfinished simulations</span>
+<span class="sd">        use. Reads no file.</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">open</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">files</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
+        <span class="n">bounds</span><span class="p">:</span> <span class="n">Bounds</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">|</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Return *files*, the met files a run read, as :mod:`runtraj.sampling` reads them: as ARL file paths here.</span>
+
+<span class="sd">        A met whose files are not ARL files returns them as one</span>
+<span class="sd">        :class:`xarray.Dataset` in :func:`arlmet.open_dataset`'s layout,</span>
+<span class="sd">        such as an arlmet converter's output, cropped to *bounds* (a</span>
+<span class="sd">        :class:`runtraj.Bounds`, or ``None`` for the whole grid). Either can</span>
+<span class="sd">        be passed to :func:`runtraj.sampling.sample_met` and</span>
+<span class="sd">        :func:`runtraj.sampling.calc_pbl_height`. The files are a run's</span>
+<span class="sd">        ``met_files`` (:class:`ModelRun`, or</span>
+<span class="sd">        :func:`runtraj.particles.particles_metadata`).</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; meta = runtraj.particles.particles_metadata(</span>
+<span class="sd">        ...     sim.particles_path</span>
+<span class="sd">        ... )  # doctest: +SKIP</span>
+<span class="sd">        &gt;&gt;&gt; met = variant.met_config.open(meta.met_files)  # doctest: +SKIP</span>
+<span class="sd">        &gt;&gt;&gt; runtraj.sampling.sample_met(sim.particles, met)  # doctest: +SKIP</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">Path</span><span class="p">(</span><span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">files</span><span class="p">]</span>
+
+
+<div class="viewcode-block" id="TransportModel">
+<a class="viewcode-back" href="../../reference/_api/runtraj.models.TransportModel.html#runtraj.models.TransportModel">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">TransportModel</span><span class="p">(</span><span class="n">ABC</span><span class="p">,</span> <span class="n">Generic</span><span class="p">[</span><span class="n">C</span><span class="p">]):</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    A transport model that follows particles from a release: the class a model subclasses.</span>
+
+<span class="sd">    A model sets :attr:`name`, :attr:`config_class` and</span>
+<span class="sd">    :attr:`met_config_class`, and implements :meth:`run`. Every other</span>
+<span class="sd">    member has a default here that suits a model which runs one release at</span>
+<span class="sd">    a time and makes particles, so a model overrides only what it does</span>
+<span class="sd">    differently: HYSPLIT (:class:`runtraj.models.hysplit.HysplitModel`)</span>
+<span class="sd">    overrides most, a model in Python that reads no files few. runtraj calls</span>
+<span class="sd">    each member directly, so a misspelled one (``release_row``) is never</span>
+<span class="sd">    called; :func:`check_model` reports it.</span>
+
+<span class="sd">    It is generic in its config: ``class MyModel(TransportModel[MyConfig])``</span>
+<span class="sd">    gives :meth:`run` and the other members a ``MyConfig``. It is made with</span>
+<span class="sd">    no arguments and holds no state.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; from runtraj.models import MetConfig, ModelRun, TransportConfig, TransportModel</span>
+<span class="sd">    &gt;&gt;&gt; class StillConfig(TransportConfig):</span>
+<span class="sd">    ...     pass</span>
+<span class="sd">    &gt;&gt;&gt; class StillMet(MetConfig):</span>
+<span class="sd">    ...     def settings(self):</span>
+<span class="sd">    ...         return {}</span>
+<span class="sd">    &gt;&gt;&gt; class StillModel(TransportModel[StillConfig]):</span>
+<span class="sd">    ...     name = "still"</span>
+<span class="sd">    ...     config_class = StillConfig</span>
+<span class="sd">    ...     met_config_class = StillMet</span>
+<span class="sd">    ...</span>
+<span class="sd">    ...     def run(self, release, config, met, window, workdir=None, timeout=None):</span>
+<span class="sd">    ...         return ModelRun(result=...)</span>
+<span class="sd">    &gt;&gt;&gt; StillModel().result(StillConfig(n_hours=-24))</span>
+<span class="sd">    'particles'</span>
+<span class="sd">    """</span>
+
+    <span class="c1">#: The model's short name, such as ``"hysplit"``.</span>
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">config_class</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">type</span><span class="p">[</span><span class="n">TransportConfig</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">"""The model's config, a :class:`TransportConfig`, which validates its parameters."""</span>
-        <span class="o">...</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">met_config_class</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">type</span><span class="p">[</span><span class="n">BaseModel</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        The model's met config, which validates an entry under ``mets:``.</span>
-
-<span class="sd">        Its ``settings()`` returns what a run records of the met: which</span>
-<span class="sd">        weather it is, and anything else that changes the particles, but not</span>
-<span class="sd">        where its files are kept. HYSPLIT's is</span>
-<span class="sd">        :class:`runtraj.models.hysplit.MetConfig`.</span>
-<span class="sd">        """</span>
-        <span class="o">...</span>
-
-<div class="viewcode-block" id="TransportModel.sha256">
-<a class="viewcode-back" href="../../reference/_api/runtraj.models.TransportModel.sha256.html#runtraj.models.TransportModel.sha256">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">sha256</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Return the SHA-256 of the executable *config* would run, ``None`` for a model that runs none.</span>
-
-<span class="sd">        Part of the run's identity: another build gives another settings</span>
-<span class="sd">        folder. Raises ``FileNotFoundError`` when the executable cannot be</span>
-<span class="sd">        found here; a project still opens, and its status compares stored</span>
-<span class="sd">        folders without the build.</span>
-<span class="sd">        """</span>
-        <span class="o">...</span></div>
-
-
-<div class="viewcode-block" id="TransportModel.version">
-<a class="viewcode-back" href="../../reference/_api/runtraj.models.TransportModel.version.html#runtraj.models.TransportModel.version">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">version</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Return the version the build *config* would run reports, recorded with the run but not part of its identity."""</span>
-        <span class="o">...</span></div>
-
-
-<div class="viewcode-block" id="TransportModel.data_files">
-<a class="viewcode-back" href="../../reference/_api/runtraj.models.TransportModel.data_files.html#runtraj.models.TransportModel.data_files">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">data_files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Return the checksum of each data file a run with *config* reads, by file name.</span>
-
-<span class="sd">        ``None`` for a model whose build fixes its data. These are part of</span>
-<span class="sd">        the run's identity, since the data change the particles.</span>
-<span class="sd">        """</span>
-        <span class="o">...</span></div>
-
+    <span class="c1">#: The model's config, a :class:`TransportConfig`, which validates its parameters.</span>
+    <span class="n">config_class</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">C</span><span class="p">]</span>
+    <span class="c1">#: The model's met config, a :class:`MetConfig`, which validates an entry</span>
+    <span class="c1">#: under ``mets:`` and checks, gets and opens its files. HYSPLIT's is</span>
+    <span class="c1">#: :class:`runtraj.models.hysplit.HysplitMetConfig`.</span>
+    <span class="n">met_config_class</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">MetConfig</span><span class="p">]</span>
+    <span class="c1">#: Whether :meth:`run` is handed an empty directory for its files. A</span>
+    <span class="c1">#: model that writes no files sets it False, and gets ``None``.</span>
+    <span class="n">needs_workdir</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="c1">#: Whether the model runs many releases in one call (:meth:`run_many`),</span>
+    <span class="c1">#: such as an emulator on a GPU. The worker then hands it every release</span>
+    <span class="c1">#: of a variant that needs particles at once, where it otherwise calls</span>
+    <span class="c1">#: :meth:`run` for one at a time.</span>
+    <span class="n">batched</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
 
 <div class="viewcode-block" id="TransportModel.run">
 <a class="viewcode-back" href="../../reference/_api/runtraj.models.TransportModel.run.html#runtraj.models.TransportModel.run">[docs]</a>
+    <span class="nd">@abstractmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">release</span><span class="p">:</span> <span class="n">Release</span><span class="p">,</span>
-        <span class="n">config</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+        <span class="n">config</span><span class="p">:</span> <span class="n">C</span><span class="p">,</span>
         <span class="n">met</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
         <span class="n">window</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">,</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">],</span>
         <span class="n">workdir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -818,7 +828,7 @@
 <span class="sd">            (:func:`runtraj.meteorology.run_window`).</span>
 <span class="sd">        workdir : Path, optional</span>
 <span class="sd">            An empty directory for the run's files, kept when the run fails.</span>
-<span class="sd">            ``None`` for a model that needs one to make its own.</span>
+<span class="sd">            ``None`` for a model that does not need one (:attr:`needs_workdir`).</span>
 <span class="sd">        timeout : int, optional</span>
 <span class="sd">            Time limit in seconds, for a model that runs a program.</span>
 <span class="sd">            ``None`` waits indefinitely.</span>
@@ -827,37 +837,22 @@
 <span class="sd">        ------</span>
 <span class="sd">        SimulationError</span>
 <span class="sd">            When the run fails, with the model's log in ``log``.</span>
-<span class="sd">        """</span>
-        <span class="o">...</span></div>
-</div>
+<span class="sd">        """</span></div>
 
 
-
-<div class="viewcode-block" id="BatchedTransportModel">
-<a class="viewcode-back" href="../../reference/_api/runtraj.models.BatchedTransportModel.html#runtraj.models.BatchedTransportModel">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">BatchedTransportModel</span><span class="p">(</span><span class="n">TransportModel</span><span class="p">,</span> <span class="n">Protocol</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    A transport model that runs many releases in one call, such as an emulator on a GPU.</span>
-
-<span class="sd">    It sets ``batched = True`` and gives :meth:`run_many` beside</span>
-<span class="sd">    :meth:`run`.</span>
-<span class="sd">    """</span>
-
-    <span class="n">batched</span><span class="p">:</span> <span class="nb">bool</span>
-
-<div class="viewcode-block" id="BatchedTransportModel.run_many">
-<a class="viewcode-back" href="../../reference/_api/runtraj.models.BatchedTransportModel.run_many.html#runtraj.models.BatchedTransportModel.run_many">[docs]</a>
+<div class="viewcode-block" id="TransportModel.run_many">
+<a class="viewcode-back" href="../../reference/_api/runtraj.models.TransportModel.run_many.html#runtraj.models.TransportModel.run_many">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">run_many</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">releases</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Release</span><span class="p">],</span>
-        <span class="n">config</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+        <span class="n">config</span><span class="p">:</span> <span class="n">C</span><span class="p">,</span>
         <span class="n">met</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
         <span class="n">windows</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">,</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">]],</span>
         <span class="n">workdir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">timeout</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ModelRun</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Run many releases with one config, and return their particles as one table.</span>
+<span class="sd">        Run many releases with one config, and return their particles as one table, for a model with :attr:`batched` set.</span>
 
 <span class="sd">        The table has a ``release`` column holding each row's release id,</span>
 <span class="sd">        beside the particle columns :meth:`run` returns. ``windows[i]`` is</span>
@@ -868,10 +863,120 @@
 <span class="sd">        ------</span>
 <span class="sd">        SimulationError</span>
 <span class="sd">            When the whole call fails, with the model's log in ``log``.</span>
+<span class="sd">        NotImplementedError</span>
+<span class="sd">            Here, for a model that is not batched.</span>
 <span class="sd">        """</span>
-        <span class="o">...</span></div>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"Transport model </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> sets batched but has no run_many."</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="TransportModel.result">
+<a class="viewcode-back" href="../../reference/_api/runtraj.models.TransportModel.result.html#runtraj.models.TransportModel.result">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">result</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">C</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Return the type of result the model makes with *config*: ``particles`` here.</span>
+
+<span class="sd">        A name in :data:`runtraj.results.RESULT_TYPES`, such as</span>
+<span class="sd">        ``"concentration"``. A variant's stages read particles, so a variant</span>
+<span class="sd">        whose model makes another type has none.</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="s2">"particles"</span></div>
+
+
+<div class="viewcode-block" id="TransportModel.result_files">
+<a class="viewcode-back" href="../../reference/_api/runtraj.models.TransportModel.result_files.html#runtraj.models.TransportModel.result_files">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">result_files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">C</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Return the names of the files in a workdir that hold a run's result, none here.</span>
+
+<span class="sd">        Such as HYSPLIT's particle file or its ``cdump_&lt;grid&gt;`` files. A</span>
+<span class="sd">        failed run's workdir is kept without them, since they can be large</span>
+<span class="sd">        and are read into the result anyway; ``keep_workdir: true`` keeps</span>
+<span class="sd">        them. With none, every file is kept.</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="TransportModel.sha256">
+<a class="viewcode-back" href="../../reference/_api/runtraj.models.TransportModel.sha256.html#runtraj.models.TransportModel.sha256">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">sha256</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">C</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Return the SHA-256 of the executable *config* would run, ``None`` here, for a model that runs none.</span>
+
+<span class="sd">        Part of the run's identity: another build gives another settings</span>
+<span class="sd">        folder. Raises ``FileNotFoundError`` when the executable cannot be</span>
+<span class="sd">        found here; a project still opens, and its status compares stored</span>
+<span class="sd">        folders without the build.</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="TransportModel.version">
+<a class="viewcode-back" href="../../reference/_api/runtraj.models.TransportModel.version.html#runtraj.models.TransportModel.version">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">version</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">C</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Return the version the build *config* would run reports, recorded with the run but not part of its identity; ``None`` here."""</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="TransportModel.data_files">
+<a class="viewcode-back" href="../../reference/_api/runtraj.models.TransportModel.data_files.html#runtraj.models.TransportModel.data_files">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">data_files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">C</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Return the checksum of each data file a run with *config* reads, by file name; ``None`` here.</span>
+
+<span class="sd">        ``None`` for a model whose build fixes its data. These are part of</span>
+<span class="sd">        the run's identity, since the data change the particles.</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="TransportModel.check_releases">
+<a class="viewcode-back" href="../../reference/_api/runtraj.models.TransportModel.check_releases.html#runtraj.models.TransportModel.check_releases">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">check_releases</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">releases</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">C</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Return the releases the model cannot run with *config*, one row each; none here.</span>
+
+<span class="sd">        *releases* is a table with one row per release point (``release``,</span>
+<span class="sd">        ``kind``, ``longitude``, ``latitude``, ``altitude``,</span>
+<span class="sd">        ``altitude_ref``). It returns a DataFrame with ``check``,</span>
+<span class="sd">        ``release`` and ``message`` columns, in that order, one row for each</span>
+<span class="sd">        release it cannot run. ``runtraj check`` lists them, and</span>
+<span class="sd">        :func:`run_model` and :func:`run_model_many` fail them with the</span>
+<span class="sd">        reason ``RELEASE_REFUSED`` before the model runs, so :meth:`run`</span>
+<span class="sd">        and :meth:`run_many` never get such a release. HYSPLIT refuses a</span>
+<span class="sd">        multipoint release whose points share a horizontal location, which</span>
+<span class="sd">        it would join into a line source.</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">CHECK_COLUMNS</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="TransportModel.release_rows">
+<a class="viewcode-back" href="../../reference/_api/runtraj.models.TransportModel.release_rows.html#runtraj.models.TransportModel.release_rows">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">release_rows</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">release</span><span class="p">:</span> <span class="n">Release</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Return where each particle of a column or multipoint release started, ``None`` here.</span>
+
+<span class="sd">        For a model that writes no row at ``age = 0``: one row per particle</span>
+<span class="sd">        with ``particle``, ``lon``, ``lat``, and ``height`` in the release's</span>
+<span class="sd">        vertical reference (:func:`runtraj.particles.add_release_heights`).</span>
+<span class="sd">        A model that writes release rows needs none; one that writes</span>
+<span class="sd">        neither cannot run a column or multipoint release.</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
 </div>
 
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_model_hooks</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Return the names of :class:`TransportModel`'s members: its hooks and attributes."""</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="n">name</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="o">*</span><span class="nb">vars</span><span class="p">(</span><span class="n">TransportModel</span><span class="p">),</span> <span class="o">*</span><span class="n">TransportModel</span><span class="o">.</span><span class="vm">__annotations__</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"_"</span><span class="p">)</span>
+    <span class="p">}</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_hysplit</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">TransportModel</span><span class="p">:</span>
@@ -904,13 +1009,35 @@
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
 <span class="sd">    ValueError</span>
-<span class="sd">        If *name* is not a built-in model and not an import path.</span>
+<span class="sd">        If *name* is not a built-in model and not an import path, or the</span>
+<span class="sd">        class at the import path does not subclass :class:`TransportModel`</span>
+<span class="sd">        or lacks one of its required members.</span>
 <span class="sd">    MissingClass</span>
 <span class="sd">        If *name* is an import path that cannot be imported on this machine</span>
 <span class="sd">        (an :class:`ImportError`).</span>
 <span class="sd">    """</span>
     <span class="k">if</span> <span class="s2">"."</span> <span class="ow">in</span> <span class="n">name</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">import_class</span><span class="p">(</span><span class="n">name</span><span class="p">)()</span>
+        <span class="bp">cls</span> <span class="o">=</span> <span class="n">import_class</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="nb">type</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">issubclass</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">TransportModel</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> is not a transport model: its class must subclass "</span>
+                <span class="s2">"runtraj.models.TransportModel."</span>
+            <span class="p">)</span>
+        <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">member</span>
+            <span class="k">for</span> <span class="n">member</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"name"</span><span class="p">,</span> <span class="s2">"config_class"</span><span class="p">,</span> <span class="s2">"met_config_class"</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">member</span><span class="p">)</span>
+        <span class="p">]</span> <span class="o">+</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">__abstractmethods__</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> is not a transport model: it has no </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span><span class="si">}</span><span class="s2">."</span>
+            <span class="p">)</span>
+        <span class="n">met_class</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">met_config_class</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">met_class</span><span class="p">,</span> <span class="nb">type</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">met_class</span><span class="p">,</span> <span class="n">MetConfig</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">'s met_config_class must subclass runtraj.models.MetConfig."</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">()</span>
     <span class="n">factory</span> <span class="o">=</span> <span class="n">MODELS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">factory</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
@@ -920,57 +1047,6 @@
         <span class="p">)</span>
     <span class="k">return</span> <span class="n">factory</span><span class="p">()</span></div>
 
-
-
-<span class="k">def</span><span class="w"> </span><span class="nf">open_met</span><span class="p">(</span>
-    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="n">met</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
-    <span class="n">files</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
-    <span class="n">bounds</span><span class="p">:</span> <span class="n">Bounds</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">|</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Return the met files of a run of the transport model *name* as :mod:`runtraj.sampling` reads them.</span>
-
-<span class="sd">    A model whose met files are not ARL files opens them itself, with its</span>
-<span class="sd">    met config *met*, as one Dataset in :func:`arlmet.open_dataset`'s</span>
-<span class="sd">    layout (its ``open_met``, :class:`TransportModel`); for any other model,</span>
-<span class="sd">    HYSPLIT included, the files are ARL files and are returned as paths.</span>
-<span class="sd">    Either can be passed to :func:`runtraj.sampling.sample_met` and</span>
-<span class="sd">    :func:`runtraj.sampling.calc_pbl_height`.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    name : str</span>
-<span class="sd">        The transport model the run used (:func:`get_model`).</span>
-<span class="sd">    met : BaseModel</span>
-<span class="sd">        The run's met, of the model's ``met_config_class``.</span>
-<span class="sd">    files : iterable of path-like</span>
-<span class="sd">        The met files the run read (``met_files`` of :class:`ModelRun` or</span>
-<span class="sd">        of :func:`runtraj.particles.particles_metadata`).</span>
-<span class="sd">    bounds : Bounds, optional</span>
-<span class="sd">        Where the particles are. A model that opens its files reads only</span>
-<span class="sd">        this part of the grid, plus a margin of its own. ``None`` reads the</span>
-<span class="sd">        whole grid.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    list of Path or xarray.Dataset</span>
-<span class="sd">        The files, or the Dataset the model opened.</span>
-
-<span class="sd">    Examples</span>
-<span class="sd">    --------</span>
-<span class="sd">    &gt;&gt;&gt; meta = runtraj.particles.particles_metadata(</span>
-<span class="sd">    ...     sim.particles_path</span>
-<span class="sd">    ... )  # doctest: +SKIP</span>
-<span class="sd">    &gt;&gt;&gt; met = runtraj.models.open_met(</span>
-<span class="sd">    ...     "hysplit", variant.met_config, meta.met_files</span>
-<span class="sd">    ... )  # doctest: +SKIP</span>
-<span class="sd">    &gt;&gt;&gt; runtraj.sampling.sample_met(sim.particles, met)  # doctest: +SKIP</span>
-<span class="sd">    """</span>
-    <span class="n">hook</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">get_model</span><span class="p">(</span><span class="n">name</span><span class="p">),</span> <span class="s2">"open_met"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">hook</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">return</span> <span class="p">[</span><span class="n">Path</span><span class="p">(</span><span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">files</span><span class="p">]</span>
-    <span class="k">return</span> <span class="n">hook</span><span class="p">(</span><span class="n">met</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">files</span><span class="p">),</span> <span class="n">bounds</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="run_model">
@@ -1082,9 +1158,6 @@
     <span class="n">timeout</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ModelRun</span> <span class="o">|</span> <span class="n">SimulationError</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""Run batched *model* for *releases* as :func:`run_model_many` does."""</span>
-    <span class="n">run_many</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"run_many"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">run_many</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Transport model </span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> has no run_many."</span><span class="p">)</span>
     <span class="n">made</span> <span class="o">=</span> <span class="n">model_result</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">made</span> <span class="o">!=</span> <span class="s2">"particles"</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
@@ -1098,8 +1171,12 @@
     <span class="n">releases</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">releases</span> <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">id</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">results</span><span class="p">]</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">releases</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">results</span>
-    <span class="n">windows</span> <span class="o">=</span> <span class="p">[</span><span class="n">run_window</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">time</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">n_hours</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">releases</span><span class="p">]</span>
-    <span class="n">run</span> <span class="o">=</span> <span class="n">_returned</span><span class="p">(</span><span class="n">run_many</span><span class="p">(</span><span class="n">releases</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">met</span><span class="p">,</span> <span class="n">windows</span><span class="p">,</span> <span class="n">workdir</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">))</span>
+    <span class="n">windows</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">,</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">run_window</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">time</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">n_hours</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">releases</span>
+    <span class="p">]</span>
+    <span class="n">run</span> <span class="o">=</span> <span class="n">_returned</span><span class="p">(</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">run_many</span><span class="p">(</span><span class="n">releases</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">met</span><span class="p">,</span> <span class="n">windows</span><span class="p">,</span> <span class="n">workdir</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">)</span>
+    <span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">run</span><span class="o">.</span><span class="n">result</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">"release"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">run</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">SimulationError</span><span class="p">(</span>
             <span class="s2">"A batched transport model's particles need a release column."</span><span class="p">,</span>
@@ -1156,11 +1233,8 @@
     <span class="n">model</span><span class="p">:</span> <span class="n">TransportModel</span><span class="p">,</span> <span class="n">releases</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Release</span><span class="p">],</span> <span class="n">config</span><span class="p">:</span> <span class="n">TransportConfig</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">SimulationError</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""Return the error of each of *releases* the model's ``check_releases`` refuses, by release id."""</span>
-    <span class="n">check_releases</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"check_releases"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">check_releases</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">return</span> <span class="p">{}</span>
     <span class="n">ids</span> <span class="o">=</span> <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">id</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">releases</span><span class="p">}</span>
-    <span class="n">table</span> <span class="o">=</span> <span class="n">check_releases</span><span class="p">(</span><span class="n">_release_points</span><span class="p">(</span><span class="n">releases</span><span class="p">),</span> <span class="n">config</span><span class="p">)</span>
+    <span class="n">table</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">check_releases</span><span class="p">(</span><span class="n">_release_points</span><span class="p">(</span><span class="n">releases</span><span class="p">),</span> <span class="n">config</span><span class="p">)</span>
     <span class="k">return</span> <span class="p">{</span>
         <span class="nb">str</span><span class="p">(</span><span class="n">release</span><span class="p">):</span> <span class="n">SimulationError</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">message</span><span class="p">),</span> <span class="n">reason</span><span class="o">=</span><span class="s2">"RELEASE_REFUSED"</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">_check</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">message</span> <span class="ow">in</span> <span class="n">table</span><span class="o">.</span><span class="n">itertuples</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
@@ -1205,9 +1279,7 @@
         <span class="p">)</span>
     <span class="n">check_particles</span><span class="p">(</span><span class="n">run</span><span class="o">.</span><span class="n">result</span><span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">particles</span> <span class="o">=</span> <span class="n">add_release_heights</span><span class="p">(</span>
-            <span class="n">run</span><span class="o">.</span><span class="n">result</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"release_rows"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-        <span class="p">)</span>
+        <span class="n">particles</span> <span class="o">=</span> <span class="n">add_release_heights</span><span class="p">(</span><span class="n">run</span><span class="o">.</span><span class="n">result</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">release_rows</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">SimulationError</span><span class="p">(</span>
             <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">),</span> <span class="n">reason</span><span class="o">=</span><span class="s2">"NO_RELEASE_ROWS"</span><span class="p">,</span> <span class="n">log</span><span class="o">=</span><span class="n">run</span><span class="o">.</span><span class="n">log</span>
@@ -1242,7 +1314,7 @@
 <span class="sd">    met : str, dict or BaseModel</span>
 <span class="sd">        The meteorology, as one entry under ``mets:`` in ``config.yaml``,</span>
 <span class="sd">        checked by the model's met config</span>
-<span class="sd">        (:class:`runtraj.models.hysplit.MetConfig` for HYSPLIT). A string is</span>
+<span class="sd">        (:class:`runtraj.models.hysplit.HysplitMetConfig` for HYSPLIT). A string is</span>
 <span class="sd">        the folder of its files, and a relative folder starts from the</span>
 <span class="sd">        working directory.</span>
 <span class="sd">    model : str, default "hysplit"</span>
@@ -1338,9 +1410,11 @@
 <span class="sd">    Call it from the tests of a transport model of your own, as</span>
 <span class="sd">    :func:`runtraj.stages.check_stage` is for a stage. It checks that:</span>
 
+<span class="sd">    - *model* subclasses :class:`TransportModel` and sets ``name``, and no</span>
+<span class="sd">      public name of its class is spelled almost like a member of the base</span>
+<span class="sd">      class, as ``release_row`` is, which runtraj would never call;</span>
 <span class="sd">    - ``config_class`` is a :class:`TransportConfig` whose fields use none</span>
-<span class="sd">      of :data:`RESERVED_SETTINGS`, and ``met_config_class`` a pydantic</span>
-<span class="sd">      model;</span>
+<span class="sd">      of :data:`RESERVED_SETTINGS`, and ``met_config_class`` a :class:`MetConfig`;</span>
 <span class="sd">    - the record ``config.settings()`` writes is plain data, and</span>
 <span class="sd">      ``config_class`` reads it back to a config with the same record: a</span>
 <span class="sd">      stored settings folder is found that way; and so for each config</span>
@@ -1377,7 +1451,12 @@
 <span class="sd">    &gt;&gt;&gt; check_model(HysplitModel(), HysplitConfig(n_hours=-24))</span>
 <span class="sd">    """</span>
     <span class="n">name</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">model</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span>
+    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">TransportModel</span><span class="p">),</span> <span class="p">(</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> must subclass runtraj.models.TransportModel"</span>
+    <span class="p">)</span>
     <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">model</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">.name must be a string"</span>
+    <span class="n">miss</span> <span class="o">=</span> <span class="n">near_miss</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">model</span><span class="p">),</span> <span class="n">_model_hooks</span><span class="p">())</span>
+    <span class="k">assert</span> <span class="n">miss</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">,</span> <span class="n">miss</span>
     <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">config_class</span><span class="p">,</span> <span class="nb">type</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">issubclass</span><span class="p">(</span>
         <span class="n">model</span><span class="o">.</span><span class="n">config_class</span><span class="p">,</span> <span class="n">TransportConfig</span>
     <span class="p">),</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">.config_class must subclass runtraj.models.TransportConfig"</span>
@@ -1387,8 +1466,8 @@
         <span class="s2">"records or reads those keys beside the model's settings"</span>
     <span class="p">)</span>
     <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">met_config_class</span><span class="p">,</span> <span class="nb">type</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">issubclass</span><span class="p">(</span>
-        <span class="n">model</span><span class="o">.</span><span class="n">met_config_class</span><span class="p">,</span> <span class="n">BaseModel</span>
-    <span class="p">),</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">.met_config_class must be a pydantic model"</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">met_config_class</span><span class="p">,</span> <span class="n">MetConfig</span>
+    <span class="p">),</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">.met_config_class must subclass runtraj.models.MetConfig"</span>
     <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">config_class</span><span class="p">),</span> <span class="p">(</span>
         <span class="sa">f</span><span class="s2">"config must be a </span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">config_class</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">"</span>
     <span class="p">)</span>
@@ -1410,11 +1489,7 @@
     <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">met</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">met_config_class</span><span class="p">),</span> <span class="p">(</span>
         <span class="sa">f</span><span class="s2">"met must be a </span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">met_config_class</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2"> to run the model"</span>
     <span class="p">)</span>
-    <span class="n">met_settings</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">met</span><span class="p">,</span> <span class="s2">"settings"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-    <span class="k">assert</span> <span class="nb">callable</span><span class="p">(</span><span class="n">met_settings</span><span class="p">),</span> <span class="p">(</span>
-        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">met_config_class</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2"> needs settings(), what a run records of the met"</span>
-    <span class="p">)</span>
-    <span class="n">_plain</span><span class="p">(</span><span class="n">met_settings</span><span class="p">(),</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">'s met settings()"</span><span class="p">)</span>
+    <span class="n">_plain</span><span class="p">(</span><span class="n">met</span><span class="o">.</span><span class="n">settings</span><span class="p">(),</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">'s met settings()"</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">_check_refusal</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">met</span><span class="p">,</span> <span class="n">release</span><span class="p">):</span>
         <span class="n">_check_run</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">met</span><span class="p">,</span> <span class="n">release</span><span class="p">)</span>
 
@@ -1478,11 +1553,8 @@
     <span class="n">model</span><span class="p">:</span> <span class="n">TransportModel</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">TransportConfig</span><span class="p">,</span> <span class="n">met</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">release</span><span class="p">:</span> <span class="n">Release</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Check the model's ``check_releases`` table, and return whether it refuses *release*."""</span>
-    <span class="n">check_releases</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"check_releases"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">check_releases</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">return</span> <span class="kc">False</span>
     <span class="n">name</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">model</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span>
-    <span class="n">table</span> <span class="o">=</span> <span class="n">check_releases</span><span class="p">(</span><span class="n">_release_points</span><span class="p">([</span><span class="n">release</span><span class="p">]),</span> <span class="n">config</span><span class="p">)</span>
+    <span class="n">table</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">check_releases</span><span class="p">(</span><span class="n">_release_points</span><span class="p">([</span><span class="n">release</span><span class="p">]),</span> <span class="n">config</span><span class="p">)</span>
     <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">list</span><span class="p">(</span><span class="n">table</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span> <span class="o">==</span> <span class="p">[</span>
         <span class="s2">"check"</span><span class="p">,</span>
         <span class="s2">"release"</span><span class="p">,</span>
@@ -1505,13 +1577,13 @@
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Run *model* once for *release* as a project's run does, and check its particles."""</span>
     <span class="n">name</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">model</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span>
-    <span class="n">batched</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"batched"</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
-    <span class="k">assert</span> <span class="ow">not</span> <span class="n">batched</span> <span class="ow">or</span> <span class="nb">callable</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"run_many"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)),</span> <span class="p">(</span>
+    <span class="n">batched</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">batched</span>
+    <span class="k">assert</span> <span class="ow">not</span> <span class="n">batched</span> <span class="ow">or</span> <span class="nb">type</span><span class="p">(</span><span class="n">model</span><span class="p">)</span><span class="o">.</span><span class="n">run_many</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">TransportModel</span><span class="o">.</span><span class="n">run_many</span><span class="p">,</span> <span class="p">(</span>
         <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> is batched, so it needs run_many"</span>
     <span class="p">)</span>
     <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s2">"runtraj-check-"</span><span class="p">)</span> <span class="k">as</span> <span class="n">tmp</span><span class="p">:</span>
         <span class="n">workdir</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"needs_workdir"</span><span class="p">,</span> <span class="kc">True</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">model</span><span class="o">.</span><span class="n">needs_workdir</span><span class="p">:</span>
             <span class="n">workdir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"work"</span>
             <span class="n">workdir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">()</span>
         <span class="n">runs</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"run"</span><span class="p">:</span> <span class="n">_promised</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">_run_one</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">release</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">met</span><span class="p">,</span> <span class="n">workdir</span><span class="p">)}</span>
@@ -1590,15 +1662,14 @@
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
     <span class="s2">"MODELS"</span><span class="p">,</span>
-    <span class="s2">"BatchedTransportModel"</span><span class="p">,</span>
     <span class="s2">"ModelInfo"</span><span class="p">,</span>
+    <span class="s2">"MetConfig"</span><span class="p">,</span>
     <span class="s2">"ModelRun"</span><span class="p">,</span>
     <span class="s2">"TransportConfig"</span><span class="p">,</span>
     <span class="s2">"TransportModel"</span><span class="p">,</span>
     <span class="s2">"RESERVED_SETTINGS"</span><span class="p">,</span>
     <span class="s2">"check_model"</span><span class="p">,</span>
     <span class="s2">"get_model"</span><span class="p">,</span>
-    <span class="s2">"open_met"</span><span class="p">,</span>
     <span class="s2">"run_model"</span><span class="p">,</span>
     <span class="s2">"run_model_many"</span><span class="p">,</span>
     <span class="s2">"run_trajectories"</span><span class="p">,</span>

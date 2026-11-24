@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=f2e6b648"></script>
+    <script src="../../../_static/documentation_options.js?v=6f8970cf"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a31.dev22+g31da0455b" />
+  <meta name="docsearch:version" content="0.1.0a31.dev23+g6217ed83f" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -481,6 +481,8 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">signal</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">socket</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">threading</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">traceback</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">uuid</span>
@@ -497,7 +499,6 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.execution.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExecutionConfig</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_model</span><span class="p">,</span> <span class="n">run_model</span><span class="p">,</span> <span class="n">run_model_many</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.simulation</span><span class="w"> </span><span class="kn">import</span> <span class="n">Simulation</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.stages</span><span class="w"> </span><span class="kn">import</span> <span class="n">reads</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">upath</span><span class="w"> </span><span class="kn">import</span> <span class="n">UPath</span>
@@ -679,7 +680,7 @@
 <span class="sd">    """</span>
     <span class="n">output</span><span class="p">,</span> <span class="n">rid</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">output</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">release</span><span class="o">.</span><span class="n">id</span>
     <span class="n">model</span> <span class="o">=</span> <span class="n">get_model</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">variant</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>
-    <span class="n">needs_workdir</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"needs_workdir"</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+    <span class="n">needs_workdir</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">needs_workdir</span>
     <span class="k">if</span> <span class="n">needs_workdir</span><span class="p">:</span>
         <span class="c1"># The model runs in an empty directory. The runner gives each run a</span>
         <span class="c1"># new one, but a caller can hand over a directory that a stopped run</span>
@@ -726,8 +727,7 @@
             <span class="k">if</span> <span class="p">(</span><span class="n">keep_workdir</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">succeeded</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">any</span><span class="p">(</span><span class="n">workdir</span><span class="o">.</span><span class="n">iterdir</span><span class="p">()):</span>
                 <span class="c1"># A failed run's particle files can be large, and the</span>
                 <span class="c1"># model's inputs and logs say why it failed.</span>
-                <span class="n">files</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"result_files"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-                <span class="n">leave_out</span> <span class="o">=</span> <span class="n">files</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">transport</span><span class="p">)</span> <span class="k">if</span> <span class="n">files</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">keep_workdir</span> <span class="k">else</span> <span class="p">()</span>
+                <span class="n">leave_out</span> <span class="o">=</span> <span class="p">()</span> <span class="k">if</span> <span class="n">keep_workdir</span> <span class="k">else</span> <span class="n">model</span><span class="o">.</span><span class="n">result_files</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">transport</span><span class="p">)</span>
                 <span class="n">output</span><span class="o">.</span><span class="n">keep_workdir</span><span class="p">(</span>
                     <span class="n">sim</span><span class="o">.</span><span class="n">variant</span><span class="p">,</span> <span class="n">rid</span><span class="p">,</span> <span class="n">workdir</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">realization</span><span class="p">,</span> <span class="n">leave_out</span><span class="o">=</span><span class="n">leave_out</span>
                 <span class="p">)</span>
@@ -945,7 +945,7 @@
             <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">seen</span><span class="p">:</span>
                 <span class="k">continue</span>
             <span class="n">seen</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
-            <span class="n">read</span> <span class="o">=</span> <span class="p">[(</span><span class="n">r</span><span class="p">,</span> <span class="n">variant</span><span class="o">.</span><span class="n">stage_hashes</span><span class="p">[</span><span class="n">r</span><span class="p">])</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">reads</span><span class="p">(</span><span class="n">variant</span><span class="o">.</span><span class="n">stage</span><span class="p">(</span><span class="n">name</span><span class="p">))]</span>
+            <span class="n">read</span> <span class="o">=</span> <span class="p">[(</span><span class="n">r</span><span class="p">,</span> <span class="n">variant</span><span class="o">.</span><span class="n">stage_hashes</span><span class="p">[</span><span class="n">r</span><span class="p">])</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">variant</span><span class="o">.</span><span class="n">stage</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">reads</span><span class="p">]</span>
             <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">r</span> <span class="ow">in</span> <span class="n">failed</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">read</span><span class="p">):</span>
                 <span class="n">failed</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>  <span class="c1"># nothing to read; the failure above is recorded</span>
                 <span class="k">continue</span>
@@ -1059,7 +1059,7 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">_is_batched</span><span class="p">(</span><span class="n">project</span><span class="p">:</span> <span class="n">Project</span><span class="p">,</span> <span class="n">variant</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Whether a variant's transport model runs many releases in one call."""</span>
     <span class="n">model</span> <span class="o">=</span> <span class="n">get_model</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">variants</span><span class="p">[</span><span class="n">variant</span><span class="p">]</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>
-    <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"batched"</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">model</span><span class="o">.</span><span class="n">batched</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_run_batched</span><span class="p">(</span>
@@ -1169,7 +1169,7 @@
 
 <span class="sd">    The transport model and the programs it starts read it, so *workers*</span>
 <span class="sd">    processes on as many CPUs do not each start a thread per CPU. A Slurm</span>
-<span class="sd">    task's script sets it (:func:`~runtraj.execution.runner.job_script`), and</span>
+<span class="sd">    task's script sets it (:func:`~runtraj.execution.slurm.job_script`), and</span>
 <span class="sd">    a value set before the run is kept.</span>
 <span class="sd">    """</span>
     <span class="k">if</span> <span class="s2">"OMP_NUM_THREADS"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
@@ -1281,9 +1281,28 @@
     <span class="n">workers</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">executor</span><span class="o">.</span><span class="n">_processes</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
     <span class="n">executor</span><span class="o">.</span><span class="n">shutdown</span><span class="p">(</span><span class="n">wait</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">cancel_futures</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">process</span> <span class="ow">in</span> <span class="n">workers</span><span class="p">:</span>
-        <span class="n">process</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
+        <span class="n">_end_worker</span><span class="p">(</span><span class="n">process</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">process</span> <span class="ow">in</span> <span class="n">workers</span><span class="p">:</span>
         <span class="n">process</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_end_worker</span><span class="p">(</span><span class="n">process</span><span class="p">:</span> <span class="n">multiprocessing</span><span class="o">.</span><span class="n">Process</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Send a pool worker SIGTERM; on Windows, end it and every process it started.</span>
+
+<span class="sd">    Windows has no SIGTERM to send: ``terminate`` ends the worker at once,</span>
+<span class="sd">    so its ``finally`` blocks do not run and the transport model it started</span>
+<span class="sd">    runs on (Windows does not end a process's children with it).</span>
+<span class="sd">    ``taskkill /T`` ends the worker and its transport model together. The</span>
+<span class="sd">    workdir of the run it held is left in the compute root.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">platform</span> <span class="o">==</span> <span class="s2">"win32"</span> <span class="ow">and</span> <span class="n">process</span><span class="o">.</span><span class="n">pid</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+            <span class="p">[</span><span class="s2">"taskkill"</span><span class="p">,</span> <span class="s2">"/F"</span><span class="p">,</span> <span class="s2">"/T"</span><span class="p">,</span> <span class="s2">"/PID"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">process</span><span class="o">.</span><span class="n">pid</span><span class="p">)],</span>
+            <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">check</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>  <span class="c1"># the worker may have ended already</span>
+        <span class="p">)</span>
+    <span class="n">process</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>  <span class="c1"># on Windows, a worker taskkill could not end</span>
 
 
 <span class="c1">#: Seconds the pool loop waits for a release to finish before it looks at the workers.</span>

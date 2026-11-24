@@ -2,7 +2,7 @@ Meteorology
 ===========
 
 Each transport model reads its meteorology from a met config of its own.
-HYSPLIT's, :class:`~runtraj.models.hysplit.MetConfig`, holds the settings
+HYSPLIT's, :class:`~runtraj.models.hysplit.HysplitMetConfig`, holds the settings
 for one met in ``config.yaml``: ARL files in a directory, or an archive to
 download. :class:`~runtraj.models.hysplit.Met` finds the files a
 simulation needs, downloads them when ``download`` is set, and crops them
@@ -12,7 +12,7 @@ when asked. See :doc:`../guides/meteorology` for how to set it up.
    :toctree: _api
    :nosignatures:
 
-   runtraj.models.hysplit.MetConfig
+   runtraj.models.hysplit.HysplitMetConfig
    runtraj.models.hysplit.Met
    runtraj.meteorology.run_window
 
@@ -88,7 +88,7 @@ The weather product is read from the header of the
 first file in ``directory`` (a download's comes from its archive) when the
 project's settings folders are first needed, to run or to read results. So
 ``directory`` must hold the files on the machine that opens the project
-(:meth:`MetConfig.settings <runtraj.models.hysplit.MetConfig.settings>`).
+(:meth:`HysplitMetConfig.settings <runtraj.models.hysplit.HysplitMetConfig.settings>`).
 
 Wind-error statistics
 ---------------------

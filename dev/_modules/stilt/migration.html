@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=f2e6b648"></script>
+    <script src="../../_static/documentation_options.js?v=6f8970cf"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a31.dev22+g31da0455b" />
+  <meta name="docsearch:version" content="0.1.0a31.dev23+g6217ed83f" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -491,10 +491,10 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">yaml</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">ConfigDict</span><span class="p">,</span> <span class="n">Field</span><span class="p">,</span> <span class="n">field_validator</span><span class="p">,</span> <span class="n">model_validator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">ConfigDict</span><span class="p">,</span> <span class="n">Field</span><span class="p">,</span> <span class="n">field_validator</span><span class="p">,</span> <span class="n">model_validator</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">VARIANT_NAME_RE</span><span class="p">,</span> <span class="n">Variant</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">SimulationError</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">ModelRun</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">MetConfig</span><span class="p">,</span> <span class="n">ModelRun</span><span class="p">,</span> <span class="n">TransportModel</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.models.hysplit</span><span class="w"> </span><span class="kn">import</span> <span class="n">read_namelist</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.models.hysplit.config</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">CONCENTRATION_ONLY_SETTINGS</span><span class="p">,</span>
@@ -626,7 +626,7 @@
 
 <div class="viewcode-block" id="StiltRMetConfig">
 <a class="viewcode-back" href="../../reference/_api/stilt.migration.StiltRMetConfig.html#stilt.migration.StiltRMetConfig">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">StiltRMetConfig</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">StiltRMetConfig</span><span class="p">(</span><span class="n">MetConfig</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    The met of imported STILT-R runs, as written under ``mets:`` in ``config.yaml``.</span>
 
@@ -656,13 +656,15 @@
 
 <div class="viewcode-block" id="StiltRModel">
 <a class="viewcode-back" href="../../reference/_api/stilt.migration.StiltRModel.html#stilt.migration.StiltRModel">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">StiltRModel</span><span class="p">:</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">StiltRModel</span><span class="p">(</span><span class="n">TransportModel</span><span class="p">[</span><span class="n">StiltRConfig</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    The ``stilt-r`` transport model of imported runs, named by its import path (:data:`STILT_R_MODEL`).</span>
 
 <span class="sd">    It holds the settings of imported STILT-R runs and runs nothing.</span>
 <span class="sd">    :meth:`run` fails, so a ``stilt run`` of a release STILT-R did not run</span>
-<span class="sd">    records a failure for it.</span>
+<span class="sd">    records a failure for it. It has no executable and no data files of</span>
+<span class="sd">    its own (``sha256`` and ``data_files`` are ``None``, the base class's</span>
+<span class="sd">    defaults): STILT-R's version in the settings fixes both.</span>
 <span class="sd">    """</span>
 
     <span class="n">name</span> <span class="o">=</span> <span class="s2">"stilt-r"</span>
@@ -670,27 +672,12 @@
     <span class="n">met_config_class</span> <span class="o">=</span> <span class="n">StiltRMetConfig</span>
     <span class="c1">#: Nothing runs, so no files are written.</span>
     <span class="n">needs_workdir</span> <span class="o">=</span> <span class="kc">False</span>
-    <span class="n">batched</span> <span class="o">=</span> <span class="kc">False</span>
 
 <div class="viewcode-block" id="StiltRModel.version">
 <a class="viewcode-back" href="../../reference/_api/stilt.migration.StiltRModel.version.html#stilt.migration.StiltRModel.version">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">version</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">StiltRConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Return the STILT-R version of *config*, which its settings record too."""</span>
         <span class="k">return</span> <span class="n">config</span><span class="o">.</span><span class="n">version</span></div>
-
-
-<div class="viewcode-block" id="StiltRModel.sha256">
-<a class="viewcode-back" href="../../reference/_api/stilt.migration.StiltRModel.sha256.html#stilt.migration.StiltRModel.sha256">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">sha256</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">StiltRConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Return ``None``: nothing runs, and the build is fixed by the STILT-R version in the settings."""</span>
-        <span class="k">return</span> <span class="kc">None</span></div>
-
-
-<div class="viewcode-block" id="StiltRModel.data_files">
-<a class="viewcode-back" href="../../reference/_api/stilt.migration.StiltRModel.data_files.html#stilt.migration.StiltRModel.data_files">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">data_files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">StiltRConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Return ``None``: the data files are STILT-R's own, fixed by its version."""</span>
-        <span class="k">return</span> <span class="kc">None</span></div>
 
 
 <div class="viewcode-block" id="StiltRModel.run">

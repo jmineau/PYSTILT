@@ -21,7 +21,7 @@ name, here ``slurm``:
    execution:
      backend: slurm
      slurm:
-       n_workers: 200              # number of array tasks
+       n_workers: 200              # array tasks running at once
        account: my-account
        partition: my-partition
        time: "02:00:00"            # time limit per array task
@@ -52,13 +52,19 @@ Options
 The keys of the ``slurm`` block:
 
 ``n_workers``
-   How many array tasks to split the releases into. With 10,000 releases
-   and ``n_workers: 200``, each task runs 50 releases one after another.
-   Each release runs once per variant, so set ``time`` long enough for one
-   task's share. If fewer releases are left than ``n_workers``, PYSTILT
-   submits one task per release. We size the tasks to run an hour or two,
-   because each task first loads Python and the project, and a shorter
-   task spends more of its time on that.
+   The most array tasks running at once: how many workers the project
+   gets, each with ``cpus`` CPUs. When one task ends, Slurm starts the
+   next.
+
+``n_tasks``
+   How many array tasks to split the releases into. Unset, it is ten per
+   worker, so with 10,000 releases and ``n_workers: 100`` the array has
+   1000 tasks of 10 releases each, 100 running at once. We recommend
+   leaving it unset: a worker whose tasks run fast takes on more of them,
+   and a task that runs out of time has less left to do when it starts
+   again. Each release runs once per variant, so set ``time`` long enough
+   for one task's share. There is never more than one task per release,
+   nor more than the cluster's ``MaxArraySize`` (``scontrol show config``).
 
 ``cpus``
    CPUs per array task (default 1). With more than one, each task runs that
@@ -182,10 +188,10 @@ A task that is preempted, or reaches its time limit, is put back in the
 queue and picks up where it stopped. Releases it already finished are
 skipped. Slurm warns each task two minutes before its time limit with the
 signal ``USR1``, and stops a preempted task with ``SIGTERM``. Either way
-the task stops its runs and requeues itself with ``scontrol requeue``. The
-cluster may hold a requeued task in the queue for some minutes before it
-starts again. A task requeues itself at most 10 times, so give ``time``
-some room. ``scancel`` stops a task without requeuing it.
+the task stops its runs, and its job script (``job.sh`` in the submission
+folder) puts it back with ``scontrol requeue``. The cluster may hold a
+requeued task in the queue for some minutes before it starts again. A task
+is requeued at most 10 times, so give ``time`` some room. ``scancel`` stops a task without requeuing it.
 
 Watch progress and rerun
 ------------------------

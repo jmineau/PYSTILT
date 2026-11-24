@@ -1,0 +1,55 @@
+﻿runtraj.models.hysplit.HysplitMetConfig
+=======================================
+
+.. currentmodule:: runtraj.models.hysplit
+
+
+
+
+
+
+.. class-signature:: runtraj.models.hysplit.HysplitMetConfig
+
+
+Parameters
+----------
+
+.. config-model:: runtraj.models.hysplit.HysplitMetConfig
+
+
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+   :nosignatures:
+
+   ~HysplitMetConfig.download_options
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~HysplitMetConfig.check
+   ~HysplitMetConfig.crop
+   ~HysplitMetConfig.downloads
+   ~HysplitMetConfig.fetch
+   ~HysplitMetConfig.model_post_init
+   ~HysplitMetConfig.settings
+   ~HysplitMetConfig.source
+
+
+
+
+Inherited
+---------
+
+
+From :class:`~.MetConfig`: :py:obj:`~.MetConfig.open`
+
+
