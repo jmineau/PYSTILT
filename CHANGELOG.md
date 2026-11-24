@@ -456,7 +456,7 @@ layout; `docs/migration/` covers moving from STILT-R, X-STILT, and stiltctl.
   `download:` and `backend:` is `download_from:`. `n_min` and
   `subgrid_buffer` are gone: every file a run needs must be there, and the
   crop is `subgrid_bounds` exactly. The met config is HYSPLIT's,
-  `stilt.transport.hysplit.HysplitMetConfig`. `~` and `$VARIABLES` expand in a
+  `stilt.transport.hysplit.MetConfig`. `~` and `$VARIABLES` expand in a
   met's directories, and a relative one starts from the project.
 - A run records its met as the weather product and the crop. The
   product is the source id in the ARL file headers (`HRRR`, `NAM`, ...),
@@ -645,7 +645,7 @@ name or signature.
   `Footprint.from_netcdf` still reads a footprint that recorded such a
   transform: it warns and keeps that entry of `config.transforms` as its
   settings mapping.
-- **`MetStream` takes its `HysplitMetConfig`.** Breaking. `MetStream(name, config)`
+- **`MetStream` takes its `MetConfig`.** Breaking. `MetStream(name, config)`
   replaces the thirteen keyword arguments and `MetStream.from_config`, and
   the settings are read from `stream.config`. `MetID` is removed; met names
   are plain strings, checked by `ModelConfig`.
@@ -693,8 +693,8 @@ public.
   `n_workers` when it is built. `LocalHandle.done`.
 - `LocalStore.path`, which returned the same path as `local_path`. `Store`
   is no longer `runtime_checkable`.
-- `VariantConfig.differences()`, `HysplitMetConfig.differences()`, and
-  `HysplitMetConfig.record()`. `Model.check_config` compares the record itself.
+- `VariantConfig.differences()`, `MetConfig.differences()`, and
+  `MetConfig.record()`. `Model.check_config` compares the record itself.
 - `FootprintParams.FIELDS`, `PostgresQueue.db_url`, the
   `SIMULATION_LOG_FILENAME` and `SIMULATION_MET_DIRNAME` constants of
   `stilt.project`, and `stilt.__author__` and `stilt.__email__`.
@@ -1624,7 +1624,7 @@ Time-Inverted Lagrangian Transport modeling.
   (e.g. `hnf_plume` cross-checks `varsiwant` columns at construction)
 - `FootprintConfig` — grid, projection, smoothing, and time-integration spec
   with a content-addressed hash for output naming
-- `HysplitMetConfig` — ARL met archive configuration with optional subgrid extraction
+- `MetConfig` — ARL met archive configuration with optional subgrid extraction
 
 ### HYSPLIT interface
 
