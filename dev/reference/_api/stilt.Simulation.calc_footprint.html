@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>stilt.Simulation.calc_footprint &#8212; PYSTILT 0.1.0a31</title>
+    <title>stilt.Simulation.calc_footprint &#8212; PYSTILT dev</title>
   
   
   
@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=d32ae295"></script>
+    <script src="../../_static/documentation_options.js?v=302524fc"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.23.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0a31';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
             true;
         </script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a31" />
+  <meta name="docsearch:version" content="0.1.0a32.dev1+gb20fc16de" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -919,7 +919,9 @@ footprint stage makes it: the particles get the <code class="docutils literal no
 settings ask for (<a class="reference internal" href="stilt.footprint.footprint_particles.html#stilt.footprint.footprint_particles" title="stilt.footprint.footprint_particles"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.footprint.footprint_particles()</span></code></a>).
 Each setting given replaces the variant’s own. Use it to try other settings; the
 workers write the variant’s own footprint. A relative file name in
-a transform’s settings starts from the project directory.</p>
+a transform’s settings starts from the project directory. The
+footprint records the settings it was made with, the variant’s
+<code class="docutils literal notranslate"><span class="pre">pbl_height</span></code> and <code class="docutils literal notranslate"><span class="pre">pbl_height_min</span></code> included.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>The footprint, or <code class="docutils literal notranslate"><span class="pre">None</span></code> when no particle reaches the grid.</p>
