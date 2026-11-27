@@ -92,8 +92,12 @@ jobs:
     if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     needs: build
     runs-on: ubuntu-latest
+    # One deploy per ref at a time. A single queue for every ref would let a newer
+    # waiting run cancel the waiting one (GitHub keeps one pending run per group),
+    # dropping a release's docs. Two refs deploying at once: the later push is
+    # rejected and the run fails; re-run it.
     concurrency:
-      group: docs-deploy  # one update of the gh-pages branch at a time
+      group: docs-deploy-${{ github.ref }}
       cancel-in-progress: false
     permissions:
       contents: write  # push the gh-pages branch

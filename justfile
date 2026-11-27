@@ -56,7 +56,7 @@ sync-floors extras="--all-extras":
 
 # Run the unit tests with coverage (coverage.xml, junit.xml for Codecov)
 cov *args:
-    uv run pytest -n auto --maxprocesses=8 -m "{{ unit }}" --cov --cov-report=term --cov-report=xml --junitxml=junit.xml -o junit_family=legacy "$@"
+    just test --cov --cov-report=term --cov-report=xml --junitxml=junit.xml -o junit_family=legacy "$@"
 
 # Build the HTML docs, running every example, failing on warnings
 build-docs:
