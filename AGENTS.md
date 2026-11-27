@@ -166,6 +166,13 @@ in `tests.yml`, `-m fidelity` and `-m r_only` in `stilt-r.yml` (the paths at its
   `STILT_R_DIR` (a STILT-R checkout built as `stilt-r.yml` builds it), `Rscript`.
 - `r_only`: STILT-R comparisons with no met or HYSPLIT (`STILT_R_DIR`, `Rscript`).
 
+The unit tests run on Linux, macOS and Windows (`tests.yml`); `integration`,
+`fidelity` and `r_only` run on Linux only, where STILT-R's `hycs_std` runs.
+On Windows the stand-in HYSPLIT (`make_hysplit_dir`) is a `hycs_std.cmd` that
+prints the version and stops, keeping the `body` as comments, so a test whose
+stand-in must run its `body` needs `skipif(sys.platform == "win32")`, as one that
+needs POSIX signals or `bash` does.
+
 The tests here are of STILT's side, and of a project that makes footprints;
 a test that needs nothing of STILT's side belongs in runtraj.
 
