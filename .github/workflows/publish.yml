@@ -4,6 +4,11 @@ name: Publish
 # publishes it to PyPI with trusted publishing, and creates a GitHub Release
 # from the tag's CHANGELOG.md section. Zenodo archives each GitHub Release.
 #
+# Every action here is pinned to a commit SHA, not a tag: this workflow can change
+# what users install (the release job has `id-token: write`), and a moved tag would
+# run new code with no pull request. Dependabot updates the SHA and the version
+# comment together. Other workflows keep tag pins (.github/zizmor.yml).
+#
 # Keep this file's name: the PyPI trusted publisher is registered for it.
 on:
   push:
@@ -18,12 +23,12 @@ jobs:
     env:
       UV_NO_SYNC: "1"  # `just` recipes run in the environment synced below
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           fetch-depth: 0  # setuptools-scm reads the version from tags
 
-      - uses: astral-sh/setup-uv@v10.3.2
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
         with:
           version: "0.12.23"
           python-version: "3.14"
@@ -42,10 +47,26 @@ jobs:
             exit 1
           fi
 
-      - uses: actions/upload-artifact@v7
+      # Here, before the upload to PyPI: a release without notes must not publish.
+      - name: Extract the CHANGELOG section
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          awk -v v="$version" '
+            index($0, "## [" v "]") == 1 { found = 1; next }
+            /^## \[/ { if (found) exit }
+            found { print }
+          ' CHANGELOG.md > release-notes.md
+          test -s release-notes.md || { echo "::error::CHANGELOG.md has no '## [$version]' section"; exit 1; }
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: dist
           path: dist/
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-notes
+          path: release-notes.md
 
   publish-pypi:
     needs: build
@@ -56,12 +77,12 @@ jobs:
     permissions:
       id-token: write  # trusted publishing (OIDC); also signs attestations
     steps:
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: dist
           path: dist/
 
-      - uses: pypa/gh-action-pypi-publish@release/v1
+      - uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
         with:
           # Re-running a tag (a retried job) must not fail on a version PyPI
           # already has.
@@ -73,24 +94,18 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: dist
           path: dist/
 
-      - name: Extract the CHANGELOG section
-        run: |
-          version="${GITHUB_REF_NAME#v}"
-          awk -v v="$version" '
-            index($0, "## [" v "]") == 1 { found = 1; next }
-            /^## \[/ { if (found) exit }
-            found { print }
-          ' CHANGELOG.md > release-notes.md
-          test -s release-notes.md || { echo "::error::CHANGELOG.md has no '## [$version]' section"; exit 1; }
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-notes
 
       - name: Create the GitHub Release
         env:

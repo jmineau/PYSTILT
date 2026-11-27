@@ -6,5 +6,7 @@ rules:
         # Pin actions to version tags (kept current by Dependabot) rather than
         # commit hashes: hash pins are the stricter supply-chain defense, but
         # Dependabot and `copier update` would both keep rewriting the same
-        # lines. Delete this rule to require hash pins.
+        # lines. publish.yml is the exception and pins hashes by hand: it is
+        # the one workflow that can change what users install. Delete this
+        # rule to require hash pins everywhere.
         "*": ref-pin
