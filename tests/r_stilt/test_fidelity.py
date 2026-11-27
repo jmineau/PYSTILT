@@ -36,6 +36,7 @@ from runtraj.models.hysplit.driver import find_hycs_std, setup_seed
 from ..fixtures.r_stilt_reference import (
     STILT_R_NAMES,
     ReferenceScenario,
+    stilt_r_bounds,
 )
 
 pytestmark = [pytest.mark.fidelity]
@@ -232,10 +233,7 @@ def _r_footprint_from_traj(
             str(_R_HELPERS / "calc_footprint.r"),
             str(r_traj_path),
             str(nc_path),
-            str(scenario.xmin),
-            str(scenario.xmax),
-            str(scenario.ymin),
-            str(scenario.ymax),
+            *(str(v) for v in stilt_r_bounds(scenario.make_grid())),
             str(scenario.xres),
             str(scenario.yres),
             str(scenario.smooth_factor),

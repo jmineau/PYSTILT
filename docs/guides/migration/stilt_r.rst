@@ -14,8 +14,9 @@ and why:
 
 - the near-field correction of a release above sea level, whose plume
   PYSTILT grows from the ground
-- projected grids, where PYSTILT smooths as widely as on a
-  longitude/latitude grid and runs the early-time interpolation
+- projected grids, which PYSTILT lays out to cover the whole box, and
+  where it smooths as widely as on a longitude/latitude grid and runs the
+  early-time interpolation
 - grids near or across 180°, which PYSTILT treats as one stretch of
   longitude, and global grids written from 0° to 360°, which keep those
   longitudes

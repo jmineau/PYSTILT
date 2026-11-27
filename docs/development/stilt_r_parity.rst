@@ -116,6 +116,21 @@ What does not match
   fill value of ``-1``. PYSTILT writes CF-1.8 NetCDF with dimensions
   ``(time, lat, lon)``. Read PYSTILT files as ordinary CF NetCDF. Tools that
   expect STILT-R's layout will not read them.
+- **The cells of a projected grid.** STILT-R projects the two corners
+  (``xmin``, ``ymin``) and (``xmax``, ``ymax``) of the box and lays the
+  cells out between them, dropping a partial cell at the east and north
+  edges. A box in longitude and latitude has curved edges in most
+  projections, so that rectangle leaves part of the box out: 2 % of the
+  UTM box -113° to -110.5°, 40° to 42°, 18 % of the contiguous US (-125°
+  to -66°, 24° to 50°) on a Lambert conformal grid, and three quarters of
+  the cap north of 60° on a polar stereographic grid. Particles over the
+  part left out are dropped. PYSTILT projects the box's outline and starts
+  the cells at its smallest ``x`` and ``y``, with as many whole cells east
+  and north as reach its largest, so the grid covers the whole box. Its
+  cells then sit elsewhere than STILT-R's, so the fidelity and ``r_only``
+  tests on a projected grid give STILT-R the corners of PYSTILT's cells,
+  and the two lay out the same cells. Longitude/latitude grids are not
+  affected.
 - **Smoothing on a projected grid.** The kernel width,
   ``0.06 * (var(x) + var(y))**0.25 * sqrt(|rtime| / 1440)``, is made for
   coordinates in degrees. STILT-R applies it to the projected coordinates,
