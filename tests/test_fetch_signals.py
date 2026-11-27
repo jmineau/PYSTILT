@@ -76,6 +76,10 @@ def _wait_for_partial(met: Path, process: subprocess.Popen) -> None:
     raise AssertionError("the download never started")
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="Windows ends a process on SIGTERM; it cannot catch it",
+)
 @pytest.mark.parametrize(
     "signals",
     [

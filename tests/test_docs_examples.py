@@ -232,7 +232,9 @@ def test_interactive_examples_in_the_docs_compile(block):
     compile(_statements(block), "<docs>", "exec")
 
 
-@pytest.mark.skipif(shutil.which("bash") is None, reason="needs bash")
+@pytest.mark.skipif(
+    shutil.which("bash") is None or sys.platform == "win32", reason="needs bash"
+)
 @pytest.mark.parametrize("block", [b for _, b in BASH], ids=[n for n, _ in BASH])
 def test_shell_examples_in_the_docs_are_valid_bash(block):
     checked = subprocess.run(

@@ -21,11 +21,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # HYSPLIT runs on Linux and macOS. The unit tests need no hycs_std.
-        os: [ubuntu-latest, macos-latest]
+        # HYSPLIT runs on Linux, macOS and Windows. The unit tests need no hycs_std.
+        os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ["3.11", "3.12", "3.13", "3.14"]
     env:
       UV_NO_SYNC: "1"  # `just` recipes run in the environment synced below
+    defaults:
+      run:
+        shell: bash  # Git for Windows' bash, so the steps and `just` read alike on every OS
 
     steps:
       - uses: actions/checkout@v7

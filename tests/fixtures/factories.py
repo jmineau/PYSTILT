@@ -10,6 +10,7 @@ one in every test module.
 from __future__ import annotations
 
 import datetime as dt
+import sys
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
@@ -287,14 +288,26 @@ def make_hysplit_dir(
     Make a HYSPLIT folder as its download unpacks, with a stand-in ``exec/hycs_std``, and return it.
 
     The stand-in prints ``HYSPLIT version: <version>`` as ``hycs_std`` does
-    when it starts (nothing for ``None``), then runs the shell lines *body*.
+    when it starts (nothing for ``None``), then runs the shell lines *body*. On Windows it is a ``hycs_std.cmd`` that
+    prints the version and stops, with *body* kept as comments.
     With *tables*, ``bdyfiles/`` holds :data:`STAND_IN_TABLES`.
     """
     exe = directory / "exec" / "hycs_std"
     exe.parent.mkdir(parents=True, exist_ok=True)
-    said = "" if version is None else f"echo ' HYSPLIT version: {version}'\n"
-    exe.write_text(f"#!/bin/sh\n{said}{body}")
-    exe.chmod(0o755 if executable else 0o644)
+    if sys.platform == "win32":
+        # A .cmd is the program Windows can run without a compiler: it prints
+        # the version and stops, and keeps *body* as comments, so stand-ins
+        # with different bodies are different files. *executable* does not
+        # apply: Windows runs a .cmd by its name.
+        said = "" if version is None else f"echo  HYSPLIT version: {version}\r\n"
+        comments = "".join(f"rem {line}\r\n" for line in body.splitlines())
+        exe.with_suffix(".cmd").write_text(
+            f"@echo off\r\n{said}{comments}exit /b 2\r\n", newline=""
+        )
+    else:
+        said = "" if version is None else f"echo ' HYSPLIT version: {version}'\n"
+        exe.write_text(f"#!/bin/sh\n{said}{body}")
+        exe.chmod(0o755 if executable else 0o644)
     if tables:
         (directory / "bdyfiles").mkdir(exist_ok=True)
         for name, text in STAND_IN_TABLES.items():
