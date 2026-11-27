@@ -46,6 +46,54 @@ def test_grid_to_xarray_longlat_centers():
     assert ds["lat"].attrs["units"] == "degrees_north"
 
 
+_LCC = "+proj=lcc +lat_1=38.5 +lat_2=38.5 +lat_0=38.5 +lon_0=-97.5 +R=6371229 +units=m"
+_NORTH_POLAR = "+proj=stere +lat_0=90 +lat_ts=70 +lon_0=-45"
+_ALASKA = "+proj=lcc +lat_1=50 +lat_2=60 +lat_0=55 +lon_0=180 +units=m"
+
+
+def _outline(xmin, xmax, ymin, ymax, n=2001):
+    """Points along a longitude/latitude box's four edges, east of ``xmin`` up to its east edge."""
+    east = xmax + 360.0 if xmax < xmin else xmax
+    lon = np.linspace(xmin, east, n)
+    lat = np.linspace(ymin, ymax, n)
+    lons = np.concatenate([lon, lon, np.full(n, xmin), np.full(n, east)])
+    lats = np.concatenate([np.full(n, ymin), np.full(n, ymax), lat, lat])
+    return lons, lats
+
+
+@pytest.mark.parametrize(
+    ("bounds", "res", "crs"),
+    [
+        # The contiguous US on a Lambert conformal grid: the two projected
+        # corners left out 18 % of it.
+        ((-125.0, -66.0, 24.0, 50.0), 10_000.0, _LCC),
+        # The cap north of 60 N: the two corners gave one quadrant.
+        ((-180.0, 180.0, 60.0, 90.0), 25_000.0, _NORTH_POLAR),
+        # Across 180 degrees, written both ways.
+        ((170.0, -170.0, 50.0, 60.0), 10_000.0, _ALASKA),
+        ((170.0, 190.0, 50.0, 60.0), 10_000.0, _ALASKA),
+        # The docs' UTM example.
+        ((-113.0, -110.5, 40.0, 42.0), 1_000.0, "EPSG:32612"),
+    ],
+)
+def test_projected_grid_covers_the_box(bounds, res, crs):
+    """A projected grid's cells hold every point of its longitude/latitude box's outline (#504)."""
+    from pyproj import Transformer
+
+    xmin, xmax, ymin, ymax = bounds
+    grid = Grid(xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, xres=res, yres=res, crs=crs)
+    x, y = grid.axes
+    lons, lats = _outline(*bounds)
+    px, py = Transformer.from_crs("EPSG:4326", crs, always_xy=True).transform(
+        lons, lats
+    )
+    assert px.min() >= x[0] - res / 2 and px.max() <= x[-1] + res / 2
+    assert py.min() >= y[0] - res / 2 and py.max() <= y[-1] + res / 2
+    # and starts at the outline's west and south extremes, not a cell before
+    assert px.min() - (x[0] - res / 2) < res / 100
+    assert py.min() - (y[0] - res / 2) < res / 100
+
+
 # ---------------------------------------------------------------------------
 # Bounds.contains: longitudes count modulo 360
 # ---------------------------------------------------------------------------

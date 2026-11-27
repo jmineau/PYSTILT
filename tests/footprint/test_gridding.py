@@ -803,6 +803,8 @@ def test_project_particles_to_crs_raises_on_missing_pyproj(monkeypatch):
             xmax=-111.0,
             ymin=39.0,
             ymax=41.0,
+            xres=1000.0,
+            yres=1000.0,
         )
 
 
@@ -819,6 +821,8 @@ def test_project_particles_to_crs_rejects_invalid_proj_string():
             xmax=-111.0,
             ymin=39.0,
             ymax=41.0,
+            xres=1000.0,
+            yres=1000.0,
         )
 
 

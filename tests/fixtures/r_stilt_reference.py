@@ -607,3 +607,28 @@ def reference_release():
 
 def reference_grid():
     return POINT.make_grid()
+
+
+def stilt_r_bounds(grid) -> tuple[float, float, float, float]:
+    """
+    Return the ``(xmin, xmax, ymin, ymax)`` that give STILT-R's ``calc_footprint`` *grid*'s cells.
+
+    STILT-R lays a projected grid out between its two projected corners
+    (``xmin``, ``ymin``) and (``xmax``, ``ymax``); PYSTILT covers the box's
+    projected outline, a listed difference. Given the longitude/latitude of
+    PYSTILT's lower-left cell corner and of a point a quarter cell past its
+    upper-right one, STILT-R lays out the same cells: its
+    ``head(seq(xmn, xmx, by = xres), -1)`` drops the quarter cell. A
+    longitude/latitude grid is returned as written.
+    """
+    if grid.is_longlat:
+        return grid.xmin, grid.xmax, grid.ymin, grid.ymax
+    from pyproj import Transformer
+
+    x, y = grid.axes
+    tr = Transformer.from_crs(grid.crs, "EPSG:4326", always_xy=True)
+    (west, east), (south, north) = tr.transform(
+        [x[0] - grid.xres / 2, x[-1] + 0.75 * grid.xres],
+        [y[0] - grid.yres / 2, y[-1] + 0.75 * grid.yres],
+    )
+    return west, east, south, north

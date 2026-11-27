@@ -33,7 +33,12 @@ from runtraj.spatial import haversine_km, is_longlat
 from stilt.exceptions import EmptyFootprint
 from stilt.footprint.config import FootprintConfig
 from stilt.footprint.foot import _near_field, _weighted
-from stilt.footprint.grid import Grid, _east_edge, _grid_cell_starts
+from stilt.footprint.grid import (
+    Grid,
+    _east_edge,
+    _grid_cell_starts,
+    _projected_extent,
+)
 from stilt.particles import _need_foot
 
 from .io import _footprint_array
@@ -396,26 +401,22 @@ def _project_particles_to_crs(
     xmax: float,
     ymin: float,
     ymax: float,
+    xres: float,
+    yres: float,
 ) -> tuple[pd.DataFrame, float, float, float, float]:
     """
-    Project particle positions and the grid bounds to the grid's CRS.
+    Project particle positions to the grid's CRS, and return them with the grid's projected extent.
 
-    Grid bounds are given in degrees and projected along with the
-    particles.
+    Grid bounds are given in degrees. The extent is that of :class:`~stilt.Grid`'s
+    axes: the whole cells that cover the box's projected outline
+    (``_projected_extent``).
     """
     from pyproj import Transformer
 
     tr = Transformer.from_crs("EPSG:4326", crs, always_xy=True)
     p = p.copy()
     p["lon"], p["lat"] = tr.transform(p["lon"].values, p["lat"].values)
-    corners_x, corners_y = tr.transform([xmin, xmax], [ymin, ymax])
-    return (
-        p,
-        float(np.min(corners_x)),
-        float(np.max(corners_x)),
-        float(np.min(corners_y)),
-        float(np.max(corners_y)),
-    )
+    return p, *_projected_extent(crs, xmin, xmax, ymin, ymax, xres, yres)
 
 
 def _compute_kernel_bandwidths(
@@ -991,6 +992,8 @@ def calc_footprint(
             xmax=xmax,
             ymin=ymin,
             ymax=ymax,
+            xres=xres,
+            yres=yres,
         )
 
     # Output grid lower-left corners for half-open extents [min, max).

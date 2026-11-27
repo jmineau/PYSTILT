@@ -54,6 +54,7 @@ from stilt.footprint.gridding import (
 from ..fixtures.footprint_reference.make_reference import GRID as REFERENCE_GRID
 from ..fixtures.footprint_reference.make_reference import HERE as REFERENCE_DIR
 from ..fixtures.particles import point_at
+from ..fixtures.r_stilt_reference import stilt_r_bounds
 
 # The fast half of fidelity: hand-built particles, no met and no HYSPLIT, so
 # `-m r_only` runs it anywhere R is installed.
@@ -121,10 +122,7 @@ def _r_footprint(
             str(_R_HELPERS / "calc_footprint.r"),
             str(p_path),
             str(nc_path),
-            str(grid.xmin),
-            str(grid.xmax),
-            str(grid.ymin),
-            str(grid.ymax),
+            *(str(v) for v in stilt_r_bounds(grid)),
             str(grid.xres),
             str(grid.yres),
             str(smooth_factor),
@@ -186,10 +184,7 @@ def _r_footprint_stages(
             str(_R_HELPERS / "calc_footprint_stages.r"),
             str(p_path),
             str(out_dir),
-            str(grid.xmin),
-            str(grid.xmax),
-            str(grid.ymin),
-            str(grid.ymax),
+            *(str(v) for v in stilt_r_bounds(grid)),
             str(grid.xres),
             str(grid.yres),
             str(smooth_factor),
@@ -339,6 +334,8 @@ def _py_footprint_stages(
             xmax=xmax,
             ymin=ymin,
             ymax=ymax,
+            xres=xres,
+            yres=yres,
         )
 
     glong = _grid_cell_starts(xmin, xmax, xres)

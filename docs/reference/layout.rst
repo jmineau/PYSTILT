@@ -325,9 +325,10 @@ The grid
 - Column ``i`` is centered on ``xmin + (i + 0.5) * xres``, and row ``j`` on
   ``ymin + (j + 0.5) * yres``. Row 0 is the southern edge.
 - On a projected grid (``crs`` other than ``+proj=longlat``) the bounds are
-  degrees and the resolution is in the projection's units. Only the
-  corners ``(xmin, ymin)`` and ``(xmax, ymax)`` are transformed to the
-  projection, and the cells are laid out between them.
+  degrees and the resolution is in the projection's units. The box's
+  outline is transformed to the projection, and the cells start at its
+  smallest ``x`` and ``y`` and run east and north, in whole cells, until
+  they cover its largest. There the last cell can reach past the box.
 
 For example, in pyarrow:
 
