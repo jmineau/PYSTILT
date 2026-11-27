@@ -40,6 +40,7 @@ FROM python:3.13-slim-bookworm
 # image's pip goes: nothing here uses it, and the old copies of urllib3,
 # msgpack and setuptools it carries inside it are what a scan finds.
 RUN apt-get update \
+    && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends tini \
     && rm -rf /var/lib/apt/lists/* \
     && python -m pip uninstall -y pip
