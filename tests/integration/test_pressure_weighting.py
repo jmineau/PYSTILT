@@ -102,12 +102,15 @@ def test_pwf_fit_absorbs_first_step_particle_scatter(met_dir, tmp_path):
     particles several slab widths, leaving raw pressures non-monotone in
     release height.  Weighting on those raw pressures directly
     would hand neighbouring particles wildly different weights; the fit is
-    what keeps the profile physical.
+    what keeps the profile physical.  HYSPLIT 5.5 also writes the release
+    itself as a row at age 0, so the first step is the first row after it.
     """
     _, particles = _column_trajectory(met_dir, tmp_path, "pwf_scatter", numpar=1000)
 
-    release_height = release_coordinate(particles, "release_height").to_numpy()
-    raw_pres = release_coordinate(particles, "pres").to_numpy()
+    release_height = release_coordinate(particles, "release_height")
+    first_step = particles[particles["age"] != 0]
+    raw_pres = release_coordinate(first_step, "pres").reindex(release_height.index)
+    release_height, raw_pres = release_height.to_numpy(), raw_pres.to_numpy()
 
     # Establish the premise: raw pressure really is non-monotone in height.
     ascending = np.argsort(release_height)
