@@ -12,6 +12,7 @@ particles, with the ``params.RDS`` rslurm keeps beside ``out/``:
 from __future__ import annotations
 
 import datetime as dt
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -138,7 +139,9 @@ def test_a_folder_without_control_raises_naming_it(copy):
 
 def test_a_control_that_cannot_be_read_raises(copy):
     (copy / POINT / "CONTROL").write_text("15 07 05 00 00\n1\n")
-    with pytest.raises(ValueError, match=f"{POINT}/CONTROL cannot be read"):
+    with pytest.raises(
+        ValueError, match=re.escape(f"{Path(POINT, 'CONTROL')} cannot be read")
+    ):
         _read(copy)
 
 
@@ -571,9 +574,9 @@ def test_the_settings_are_what_the_files_record(tmp_path, capsys):
     assert foot["tres"] == "1h"
     assert foot["grid"]["yres"] == 0.025
     path = next((output / "particles").rglob(f"{POINT}.parquet"))
-    assert [str(p) for p in particles_metadata(path).met_files] == [
-        "met/20150704_18-23_hrrr",
-        "met/20150705_00-05_hrrr",
+    assert [Path(p) for p in particles_metadata(path).met_files] == [
+        Path("met/20150704_18-23_hrrr"),
+        Path("met/20150705_00-05_hrrr"),
     ]
 
 
@@ -672,7 +675,8 @@ def test_several_met_directories_need_the_folder_that_holds_them(tmp_path, capsy
     with pytest.raises(ValueError, match="is not in met_path /data/nam"):
         import_stilt_r(by_id, tmp_path / "output", VERSION, met_path="/data/nam")
     _, config = _import(by_id, tmp_path / "output", capsys, met_path="/data/hrrr/")
-    assert config["mets"] == {"stilt-r": {"met_path": "/data/hrrr"}}
+    # met_path is a path on this machine, in its own separators.
+    assert config["mets"] == {"stilt-r": {"met_path": str(Path("/data/hrrr"))}}
 
 
 def test_a_run_whose_log_says_no_particle_reached_the_grid_is_empty(tmp_path, capsys):

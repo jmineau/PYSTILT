@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import re
 
 import pandas as pd
 import pytest
@@ -629,7 +630,7 @@ def test_a_foot_to_compute_needs_the_met_files_where_the_run_read_them(
     gone = tmp_path / "hrrr_20230101"
     with pytest.raises(
         FileNotFoundError,
-        match=rf"{gone} is not there any more \(nor 1 more\). Put the met files back",
+        match=rf"{re.escape(str(gone))} is not there any more \(nor 1 more\). Put the met files back",
     ):
         footprint_particles(_particles(), FootprintConfig(), [gone, tmp_path / "b"])
     assert add_foot == {}

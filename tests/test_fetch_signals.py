@@ -12,6 +12,9 @@ import pytest
 from .fixtures.factories import write_arl_file
 from .test_fetch import _project, _release
 
+# On Windows SIGTERM ends a process at once: it cannot be caught.
+pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="needs POSIX signals")
+
 #: Runs ``stilt fetch`` in a process of its own, against an HRRR archive that
 #: "downloads" a local file (arlmet's own download code runs, with its partial
 #: file) and, unless told ``fast``, takes about ten seconds to copy it.
