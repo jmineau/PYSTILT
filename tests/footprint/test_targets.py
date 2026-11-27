@@ -331,6 +331,61 @@ def test_mesh_to_grid_projected_mesh_keeps_lonlat_bounds():
     assert (np.abs(ax - cx) <= 1250).sum() >= 4 and (np.abs(ay - cy) <= 1250).sum() >= 4
 
 
+def _boxes(xs, ys):
+    """Rectangles between consecutive ``xs`` and ``ys``."""
+    return [
+        shapely.box(xs[i], ys[j], xs[i + 1], ys[j + 1])
+        for i in range(len(xs) - 1)
+        for j in range(len(ys) - 1)
+    ]
+
+
+@pytest.mark.parametrize(
+    ("crs", "xs", "ys"),
+    [
+        # The contiguous US in Lambert conformal: the grid used to miss a
+        # fifth of the two southern cells (#503).
+        (
+            "+proj=lcc +lat_1=38.5 +lat_2=38.5 +lat_0=38.5 +lon_0=-97.5 "
+            "+R=6371229 +units=m",
+            [-2400e3, 0, 2400e3],
+            [-1500e3, 0, 1500e3],
+        ),
+        # Around the North Pole, centered and not.
+        (
+            "+proj=stere +lat_0=90 +lat_ts=70 +lon_0=-45",
+            [-2000e3, 0, 2000e3],
+            [-2000e3, 0, 2000e3],
+        ),
+        (
+            "+proj=stere +lat_0=90 +lat_ts=70 +lon_0=-45",
+            [-500e3, 1000e3, 2500e3],
+            [-3000e3, -1000e3, 200e3],
+        ),
+        # Antarctica
+        ("EPSG:3031", [-3000e3, 0, 3000e3], [-3000e3, 0, 3000e3]),
+        # Across 180 degrees
+        (
+            "+proj=lcc +lat_1=50 +lat_2=60 +lat_0=55 +lon_0=180 +units=m",
+            [-500e3, 0, 500e3],
+            [-500e3, 0, 500e3],
+        ),
+    ],
+)
+def test_mesh_to_grid_covers_a_projected_mesh(crs, xs, ys):
+    """Every cell of a projected mesh is on the grid derived from it (#503)."""
+    pytest.importorskip("pyproj")
+    cells = _boxes(xs, ys)
+    mesh = Mesh(
+        ids=tuple(str(i) for i in range(len(cells))), geometries=tuple(cells), crs=crs
+    )
+    grid = mesh.to_grid(cells_per_target=100)
+    x, y = grid.axes
+    w = overlap_weights(mesh, x, y, grid.xres, grid.yres, grid.crs)
+    on_grid = np.asarray(w.sum(axis=1)).ravel() * grid.xres * grid.yres
+    np.testing.assert_allclose(on_grid, [c.area for c in cells], rtol=1e-8)
+
+
 def test_mesh_from_file_reads_geojson(tmp_path):
     gpd = pytest.importorskip("geopandas")
     gdf = gpd.GeoDataFrame(

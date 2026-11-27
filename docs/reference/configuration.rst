@@ -136,7 +136,8 @@ Projected grids (a ``crs`` such as ``EPSG:32612``) keep their bounds in
 degrees and take ``xres`` and ``yres`` in the projection's units. The
 grid covers the whole box in the projection, so on a wide or polar box it
 reaches past the box's projected corners, where the curved edges bow out.
-A grid
+A grid that :meth:`stilt.Mesh.to_grid` picks for a projected
+``geometry`` covers every one of its areas. A grid
 of more than a billion cells is refused, which catches a resolution in
 degrees on a grid in meters. The two
 steps that depend on the cell size work in the grid's units. The smoothing

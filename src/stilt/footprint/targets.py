@@ -45,7 +45,7 @@ from scipy import sparse
 from shapely.geometry.base import BaseGeometry
 
 from stilt.footprint.config import FileGeometrySpec, GeometrySpec, H3GeometrySpec
-from stilt.footprint.grid import Grid, _east_edge
+from stilt.footprint.grid import _MAX_OUTLINE_POINTS, Grid, _east_edge
 
 
 def _transform_geometries(
@@ -295,6 +295,12 @@ class Mesh(BaseModel):
         The cell size is the smallest cell width divided by
         ``cells_per_target``, rounded down to one significant figure.
 
+        A mesh in a projected CRS gets a grid in that CRS with the
+        longitude/latitude bounds of the box around its extent's outline.
+        The grid covers every cell of the mesh, on any projection: on a
+        wide or polar mesh it reaches past the mesh, because a
+        longitude/latitude box projects to a curved outline.
+
         Parameters
         ----------
         cells_per_target : float, default 4
@@ -344,17 +350,20 @@ class Mesh(BaseModel):
             )
 
         if not mesh.is_longlat:
-            # Bounds are always lon/lat: back-transform the snapped envelope.
-            # Pad by one cell first; ``axes`` re-projects the lon/lat corners
-            # and takes their extremes, which can shave an edge cell off a
-            # rotated projection otherwise.
-            xmin, xmax, ymin, ymax = xmin - res, xmax + res, ymin - res, ymax + res
+            # Bounds are always lon/lat: the box around the envelope's
+            # outline, sampled half a cell apart. ``transform_bounds`` gives a
+            # box across 180 degrees as xmin east of xmax, and one around a
+            # pole as -180 to 180. The grid then covers that box's projected
+            # outline (``Grid``), and so the envelope.
             from pyproj import Transformer
 
             tr = Transformer.from_crs(mesh.crs, "EPSG:4326", always_xy=True)
-            xs, ys = tr.transform([xmin, xmax, xmin, xmax], [ymin, ymin, ymax, ymax])
-            xmin, xmax = float(min(xs)), float(max(xs))
-            ymin, ymax = float(min(ys)), float(max(ys))
+            points = math.ceil(2 * max(xmax - xmin, ymax - ymin) / res)
+            points = min(max(21, points), _MAX_OUTLINE_POINTS)
+            box = tr.transform_bounds(xmin, ymin, xmax, ymax, densify_pts=points)
+            # Rounding can put a box around a pole a hair past -180 or 180.
+            xmin, xmax = (min(max(v, -180.0), 180.0) for v in (box[0], box[2]))
+            ymin, ymax = (min(max(v, -90.0), 90.0) for v in (box[1], box[3]))
 
         return Grid(
             xmin=float(xmin),
