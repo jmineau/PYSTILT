@@ -273,14 +273,17 @@ def test_failure_met_cut_short(tmp_path, wbb_release, traj_only_config, met_dir)
 
 
 @integration
-def test_hysplit_fails_a_run_whose_met_runs_out(
+def test_a_run_whose_met_runs_out_fails_on_any_hysplit_build(
     tmp_path, wbb_release, traj_only_config, met_dir, monkeypatch
 ):
     """
-    Without the checks before the run, HYSPLIT's own warning fails it (#189).
+    Without the checks before the run, a run whose met runs out fails (#189, #213).
 
-    Whether HYSPLIT warns depends on the turbulence draws, so the seed is
-    fixed. Seeds 1 to 9 warn here; seed 10 does not (the test below).
+    Depending on the HYSPLIT build and the turbulence draws, HYSPLIT either
+    warns ``no more meteorology`` or stops every particle and reports a
+    complete run, which the driver fails by where the particles ended. Which
+    one a seed gives differs between builds, so the test asks only for what
+    both give. The unit tests of runtraj's driver hold the two messages.
     """
     config = _with(traj_only_config, hysplit={"krand": 2, "seed": 7})
     project = _project_on_met_cut_short(tmp_path, wbb_release, config, met_dir)
@@ -290,36 +293,10 @@ def test_hysplit_fails_a_run_whose_met_runs_out(
     sim = project.simulation(*_sim_id(wbb_release))
     assert not sim.has_particles
     assert sim.failure is not None and sim.failure["reason"] == "MET_COVERAGE"
-    assert "no more meteorology" in sim.failure["message"]
+    message = sim.failure["message"]
+    assert "no more meteorology" in message or "the met ran out" in message
     assert sim.log_path is not None
     assert "Only one time period of meteo data" in sim.log_path.read_text()
-
-
-@integration
-def test_a_run_the_met_stopped_without_a_warning_fails_by_where_its_particles_ended(
-    tmp_path, wbb_release, traj_only_config, met_dir, monkeypatch
-):
-    """
-    HYSPLIT may stop every particle where the met runs out and still say it completed (#213).
-
-    With ``krand: 4`` about one run in six does this. The run fails anyway,
-    since its particles stopped far inside the met's domain, not at its
-    edge as particles that leave it do.
-    """
-    config = _with(traj_only_config, hysplit={"krand": 2, "seed": 10})
-    project = _project_on_met_cut_short(tmp_path, wbb_release, config, met_dir)
-    _skip_the_met_checks(monkeypatch, tmp_path)
-    project.run()
-
-    sim = project.simulation(*_sim_id(wbb_release))
-    assert not sim.has_particles
-    assert sim.failure is not None and sim.failure["reason"] == "MET_COVERAGE"
-    # Where the cut file starts.
-    assert "stopped 6.0 h into the 12 h run" in sim.failure["message"]
-    assert sim.log_path is not None
-    log = sim.log_path.read_text()
-    assert "Complete Hysplit" in log
-    assert "no more meteorology" not in log
 
 
 # ---------------------------------------------------------------------------
