@@ -1048,11 +1048,11 @@ def test_hnf_dilution_veght_in_meters(rscript, r_stilt_dir, tmp_path):
     HNF correction with veght above 1: a height in meters above ground.
 
     With veght = 100 the correction applies while the plume is below 100 m, so
-    the 3 h row, whose plume is deeper, keeps its foot. Read as a fraction of
+    the 6 min row, whose plume is deeper, keeps its foot. Read as a fraction of
     the mixed-layer height (100 * 2000 m) it would be corrected too.
     """
     r_zagl = 5.0
-    p = _one_track([-0.05, -0.5, -3.0])
+    p = _one_track([-0.05, -0.5, -6.0])
 
     py_result = correct_near_field(_as_py(p), point_at(r_zagl), 100.0)
     r_result = _r_plume_dilution(
