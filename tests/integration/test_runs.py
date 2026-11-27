@@ -202,13 +202,13 @@ def test_particles_that_leave_the_met_domain_complete_the_run(
     """A January night at WBB empties the test met's 4 by 3 degree crop in about 11 hours (#189)."""
     from runtraj.releases import PointRelease
 
-    # The last particle left after 10 to 12 hours in 24 runs. From the
-    # reference release, 30 km south-west, one of the 100 particles stayed
-    # all 24 hours in about a third of runs.
+    # Unseeded, the last particle left after 10 to 12 hours in most runs, but
+    # one of the 100 stayed all 24 hours in some (#529), so the turbulence is
+    # seeded: the same particles every run, and every one leaves.
     release = PointRelease(
         time="2021-01-15 06:00", longitude=-111.848, latitude=40.766, altitude=10
     )
-    config = _with(traj_only_config, hysplit={"n_hours": -24})
+    config = _with(traj_only_config, hysplit={"n_hours": -24, "krand": 2, "seed": 7})
     project = Project.init(tmp_path / "domain_exit", config=config, releases=[release])
     project.run()
 
