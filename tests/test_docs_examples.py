@@ -84,7 +84,7 @@ def _pages() -> list[Path]:
 
 def _blocks(path: Path, language: str) -> list[str]:
     """Return the code blocks in one language of a reStructuredText or Markdown file."""
-    text = path.read_text()
+    text = path.read_text(encoding="utf-8")
     if path.suffix == ".md":
         return re.findall(rf"```{language}\n(.*?)```", text, flags=re.S)
     blocks = []
