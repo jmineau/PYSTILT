@@ -228,7 +228,7 @@ def _step_minutes(particles: pd.DataFrame) -> np.ndarray:
 def correct_near_field(
     particles: pd.DataFrame, release: Release, footprint_depth: float
 ) -> pd.DataFrame:
-    """
+    r"""
     Correct ``foot`` for plume dilution in the hyper-near field, as STILT-R's ``calc_plume_dilution`` does.
 
     ``foot`` assumes surface fluxes are mixed through the air below
@@ -242,6 +242,18 @@ def correct_near_field(
     model's particles when ``hnf_plume`` is set, so a stored particle file
     holds the uncorrected ``foot``; call it yourself before gridding the
     particles another way, or before ``particles.stilt.enhancement``.
+
+    Each output row adds ``samt`` times Taylor's (1922) spread after the
+    particle's age :math:`t`, as Eq. 2 of Fasoli et al. (2018) writes it,
+
+    .. math::
+
+        \sigma_z = \sqrt{2}\,\sigma_w
+        \sqrt{T_L t + T_L^2 e^{-t/T_L} - T_L^2},
+
+    with :math:`\sigma_w` the particle's ``sigw`` and :math:`T_L` its
+    ``tlgr``. It is 0 at the release and grows as :math:`\sigma_w t` at
+    first.
 
     Needs the columns :data:`HNF_PLUME_COLUMNS`, and the release height:
     ``release_height`` (:func:`runtraj.particles.add_release_heights`) or the altitude of a point
@@ -293,7 +305,7 @@ def correct_near_field(
         * np.sqrt(
             p["tlgr"] * abs_time_s
             + p["tlgr"] ** 2 * np.exp(-abs_time_s / p["tlgr"])
-            - 1
+            - p["tlgr"] ** 2
         )
     )
     p["pbl_mixing"] = _mixing_depth(p["mlht"], footprint_depth)

@@ -63,6 +63,29 @@ def test_correct_near_field_reads_footprint_depth_above_one_as_meters():
     assert as_meters["foot"].iloc[1] == pytest.approx(p["foot"].iloc[1])
 
 
+def test_correct_near_field_grows_the_plume_by_taylors_spread():
+    """One minute out the plume has grown by Taylor's spread, never more than sigw t (#507)."""
+    p = pd.DataFrame(
+        {
+            "age": [-1.0],
+            "particle": [1],
+            "foot": [1e-3],
+            "dens": [1.2],
+            "samt": [1.0],
+            "sigw": [0.5],
+            "tlgr": [100.0],
+            "mlht": [1000.0],
+            "release_height": [5.0],
+        }
+    )
+    out = correct_near_field(p, _NO_POINT, 0.5)
+    plume = 0.02897 / (out["foot"].iloc[0] * 1.2) * 60
+    t, tl, sw = 60.0, 100.0, 0.5
+    taylor = np.sqrt(2) * sw * np.sqrt(tl * t + tl**2 * np.exp(-t / tl) - tl**2)
+    assert plume - 5.0 == pytest.approx(taylor)
+    assert plume - 5.0 <= sw * t
+
+
 def test_correct_near_field_grows_outward_from_release_when_forward():
     """A forward run accumulates sigma from the release point, not the far end."""
     backward = (
@@ -195,7 +218,7 @@ def test_hnf_correction_invariants():
         particles["samt"]
         * np.sqrt(2)
         * particles["sigw"]
-        * np.sqrt(tlgr * abs_time_s + tlgr**2 * np.exp(-abs_time_s / tlgr) - 1)
+        * np.sqrt(tlgr * abs_time_s + tlgr**2 * np.exp(-abs_time_s / tlgr) - tlgr**2)
     )
     plume = 5.0 + sigma  # r_zagl=5 + sigma (single timestep, cumsum is sigma itself)
     pbl_mixing = 0.5 * particles["mlht"]
