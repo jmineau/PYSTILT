@@ -129,26 +129,33 @@ jobs:
             git -C site checkout --quiet --orphan gh-pages
           fi
 
-      - name: Add this build to the site
-        run: |
-          if [ "$GITHUB_REF_TYPE" = tag ]; then target="${GITHUB_REF_NAME#v}"; else target=dev; fi
-          echo "target=$target" >> "$GITHUB_ENV"
-          uv run --no-project --with packaging python src/.github/scripts/docs_versions.py \
-            site html "$target" \
-            --base-url "https://jmineau.github.io/PYSTILT/" \
-            --prereleases "$DOCS_PRERELEASES"
-
-      # GitHub Pages serves the branch, so this push publishes the site: its
+      # GitHub Pages serves the branch, so the push publishes the site: its
       # "pages build and deployment" run (in the Actions tab) finishes within a
       # minute. A push by the workflow's own token does trigger that run.
-      - name: Push the gh-pages branch
+      # A push to main and a release tag deploy at the same time (different
+      # concurrency groups), so the later push can be rejected: then start again
+      # from the branch as it now is, which adds this build to the other's.
+      - name: Add this build to the site and push the gh-pages branch
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          if [ "$GITHUB_REF_TYPE" = tag ]; then target="${GITHUB_REF_NAME#v}"; else target=dev; fi
+          echo "target=$target" >> "$GITHUB_ENV"
           cd site
-          git add --all
-          if git diff --cached --quiet; then echo "No changes."; exit 0; fi
-          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
-            commit --quiet -m "docs: publish $target"
           if ! git remote | grep -q origin; then git remote add origin "https://github.com/$GITHUB_REPOSITORY"; fi
-          git push --quiet origin gh-pages
+          for attempt in 1 2 3; do
+            uv run --no-project --with packaging python ../src/.github/scripts/docs_versions.py \
+              . ../html "$target" \
+              --base-url "https://jmineau.github.io/PYSTILT/" \
+              --prereleases "$DOCS_PRERELEASES"
+            git add --all
+            if git diff --cached --quiet; then echo "No changes."; exit 0; fi
+            git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit --quiet -m "docs: publish $target"
+            git push --quiet origin gh-pages && exit 0
+            echo "Push rejected (attempt $attempt); starting again from the branch."
+            git fetch --quiet origin gh-pages
+            git reset --quiet --hard origin/gh-pages
+          done
+          echo "Could not push the gh-pages branch." >&2
+          exit 1
