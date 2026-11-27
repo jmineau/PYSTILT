@@ -243,8 +243,9 @@ def correct_near_field(
     holds the uncorrected ``foot``; call it yourself before gridding the
     particles another way, or before ``particles.stilt.enhancement``.
 
-    Each output row adds ``samt`` times Taylor's (1922) spread after the
-    particle's age :math:`t`, as Eq. 2 of Fasoli et al. (2018) writes it,
+    Each output row adds ``samt`` times the vertical spread after the
+    particle's age :math:`t` from Taylor's (1922) result with an exponential
+    velocity correlation, as Eq. 2 of Fasoli et al. (2018) writes it,
 
     .. math::
 

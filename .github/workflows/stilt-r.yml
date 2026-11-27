@@ -79,7 +79,7 @@ jobs:
       # new upstream commit touches any of those.
       #
       # IGNORE: stilt_cli.r, docs, R package scaffolding.
-      STILT_R_SHA: 14723ded6c5354ffb5952d47cec5367752cbe211
+      STILT_R_SHA: 50712383c04cb955ca3d0f5fa2a95fedacbd1c42
 
     steps:
       - uses: actions/checkout@v7
