@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=1b7344ba"></script>
+    <script src="../_static/documentation_options.js?v=0bd70e96"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a32.dev22+gddcf21807" />
+  <meta name="docsearch:version" content="0.1.0a32.dev24+ge701d8c63" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -708,7 +708,7 @@ of any selection of runs as one table:</p>
 </section>
 <section id="where-each-control-and-setup-cfg-line-comes-from">
 <h2>Where each <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code> and <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> line comes from<a class="headerlink" href="#where-each-control-and-setup-cfg-line-comes-from" title="Link to this heading">#</a></h2>
-<p>Every <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> entry but <code class="docutils literal notranslate"><span class="pre">ICHEM</span></code> and <code class="docutils literal notranslate"><span class="pre">IDSP</span></code> is a setting of the
+<p>Every <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> entry but <code class="docutils literal notranslate"><span class="pre">IDSP</span></code> is a setting of the
 same name in lowercase, such as <code class="docutils literal notranslate"><span class="pre">numpar</span></code>, <code class="docutils literal notranslate"><span class="pre">kmixd</span></code> or <code class="docutils literal notranslate"><span class="pre">tlfrac</span></code>
 (<a class="reference internal" href="../reference/configuration.html"><span class="doc">Configuration</span></a> lists them). Each defaults to HYSPLIT’s
 own value in STILT mode. A setting HYSPLIT decides only after reading the
@@ -762,8 +762,10 @@ writes the rest itself:</p>
 <td><p>The wind and mixed-layer error settings, and <code class="docutils literal notranslate"><span class="pre">ziscale</span></code></p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code> <code class="docutils literal notranslate"><span class="pre">ICHEM</span></code>, <code class="docutils literal notranslate"><span class="pre">IDSP</span></code></p></td>
-<td><p>Fixed at 8 and 2, the only values with which HYSPLIT writes particles
-(<code class="xref py py-data docutils literal notranslate"><span class="pre">FIXED_SETUP</span></code>)</p></td>
+<td><p>In a run that makes particles, 8 and 2, the only values with which
+HYSPLIT writes them (<code class="xref py py-data docutils literal notranslate"><span class="pre">FIXED_SETUP</span></code>):
+<code class="docutils literal notranslate"><span class="pre">idsp</span></code> is not a setting and <code class="docutils literal notranslate"><span class="pre">ichem</span></code> may only be 8. <code class="docutils literal notranslate"><span class="pre">ichem</span></code> is
+free in a concentration run</p></td>
 </tr>
 </tbody>
 </table>
@@ -774,11 +776,16 @@ writes the rest itself:</p>
 </section>
 <section id="what-pystilt-leaves-to-other-tools">
 <h2>What PYSTILT leaves to other tools<a class="headerlink" href="#what-pystilt-leaves-to-other-tools" title="Link to this heading">#</a></h2>
-<p>PYSTILT runs <code class="docutils literal notranslate"><span class="pre">hycs_std</span></code> in its STILT mode (<code class="docutils literal notranslate"><span class="pre">ICHEM=8</span></code>), which writes
-particle positions and the met along them. Concentration grids
-(<code class="docutils literal notranslate"><span class="pre">cdump</span></code>), puffs and <code class="docutils literal notranslate"><span class="pre">tdump</span></code> trajectory files come from HYSPLIT run on
-its own, and NOAA’s <a class="reference external" href="https://github.com/noaa-oar-arl/monetio">monetio</a>
-reads those files in Python. A footprint of a species that decays,
+<p>By default PYSTILT runs <code class="docutils literal notranslate"><span class="pre">hycs_std</span></code> in its STILT mode (<code class="docutils literal notranslate"><span class="pre">ICHEM=8</span></code>), which
+writes particle positions and the met along them, and a footprint is made
+from those. The <code class="docutils literal notranslate"><span class="pre">mode</span></code> setting in the <code class="docutils literal notranslate"><span class="pre">hysplit</span></code> block makes HYSPLIT
+write something else: <code class="docutils literal notranslate"><span class="pre">mode:</span> <span class="pre">concentration</span></code> runs it for concentration
+grids (<code class="docutils literal notranslate"><span class="pre">cdump</span></code>), which <code class="docutils literal notranslate"><span class="pre">project.concentration()</span></code> reads, and
+<code class="docutils literal notranslate"><span class="pre">mode:</span> <span class="pre">trajectory</span></code> runs <code class="docutils literal notranslate"><span class="pre">hyts_std</span></code> for trajectories (<code class="docutils literal notranslate"><span class="pre">tdump</span></code>), which
+<code class="docutils literal notranslate"><span class="pre">project.trajectories()</span></code> reads. A footprint comes only from particles.
+Puff files come from HYSPLIT run on its own, and NOAA’s
+<a class="reference external" href="https://github.com/noaa-oar-arl/monetio">monetio</a> reads those files in
+Python. A footprint of a species that decays,
 deposits or reacts with OH does not need HYSPLIT’s deposition: PYSTILT
 scales each particle by the fraction that survives (<a class="reference internal" href="transforms.html"><span class="doc">Particle Weighting (Transforms)</span></a>), so
 one run serves every species.</p>

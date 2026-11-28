@@ -2,10 +2,10 @@ Coming From stiltctl
 ====================
 
 This page is for stiltctl users who run STILT on cloud infrastructure.
-PYSTILT does not run a service: there is no work queue, no long-lived
-worker, and no Kubernetes deployment. It runs a project's unfinished
-releases on one machine or as a Slurm job array, and decides what is
-finished from the output files.
+PYSTILT does not run a service: there is no work queue and no long-lived
+worker. It runs a project's unfinished releases on one machine, as a Slurm
+job array or as a Kubernetes indexed Job, and decides what is finished from
+the output files.
 
 .. list-table::
    :header-rows: 1
@@ -29,8 +29,8 @@ finished from the output files.
      - PostgreSQL queue tables
      - the output files (:ref:`finished-work`)
 
-An earlier PYSTILT had a PostgreSQL work queue, pull workers, and
-Kubernetes manifests. They were removed. If you need a queue-backed
+An earlier PYSTILT had a PostgreSQL work queue and pull workers. They were
+removed. If you need a queue-backed
 deployment, the unit of work to build it on is a command line:
 ``stilt run <project> --releases ids.txt`` or ``--task I/N``, which any
 worker with the project's filesystem can run. Its exit code says whether

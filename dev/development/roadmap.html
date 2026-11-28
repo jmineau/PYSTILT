@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=1b7344ba"></script>
+    <script src="../_static/documentation_options.js?v=0bd70e96"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a32.dev22+gddcf21807" />
+  <meta name="docsearch:version" content="0.1.0a32.dev24+ge701d8c63" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -522,10 +522,10 @@ ground-based instruments (see <em>Future plans</em> below).</p>
 <h2>Execution (call path from stiltctl)<a class="headerlink" href="#execution-call-path-from-stiltctl" title="Link to this heading">#</a></h2>
 <p><a class="reference external" href="https://github.com/jmineau/air-tracker-stiltctl">stiltctl</a> runs STILT on
 cloud infrastructure. PYSTILT keeps its call path. The CLI opens a <code class="docutils literal notranslate"><span class="pre">Project</span></code>,
-and the project hands releases to workers. Its queue-backed and Kubernetes
+and the project hands releases to workers. Its queue-backed
 execution was implemented and then removed. Releases now run on this
-machine, or as tasks of a Slurm job array or another scheduler’s array,
-each a <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">--task</span></code> command line.</p>
+machine, or as tasks of a Slurm job array, a Kubernetes indexed Job or
+another scheduler’s array, each a <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">--task</span></code> command line.</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <colgroup>
 <col style="width: 75.0%" />
@@ -555,11 +555,17 @@ each a <code class="docutils literal notranslate"><span class="pre">stilt</span>
 <tr class="row-odd"><td><p>One task of a job array or a Kubernetes indexed Job (<code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">--task</span> <span class="pre">I/N</span></code>)</p></td>
 <td><p>Implemented</p></td>
 </tr>
-<tr class="row-even"><td><p>Queue-backed workers (PostgreSQL), Kubernetes deployment</p></td>
+<tr class="row-even"><td><p>Queue-backed workers (PostgreSQL)</p></td>
 <td><p>Removed</p></td>
 </tr>
-<tr class="row-odd"><td><p>Cloud object store outputs (GCS, S3)</p></td>
+<tr class="row-odd"><td><p>A Kubernetes indexed Job made by <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">submit</span></code> (<code class="docutils literal notranslate"><span class="pre">backend:</span> <span class="pre">kubernetes</span></code>), and an hourly run for a <code class="docutils literal notranslate"><span class="pre">sites.csv</span></code> (<code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">schedule</span></code>)</p></td>
 <td><p>Implemented</p></td>
+</tr>
+<tr class="row-even"><td><p>Cloud object store outputs (GCS, S3)</p></td>
+<td><p>Implemented</p></td>
+</tr>
+<tr class="row-odd"><td><p>A web-map image of each footprint, as a second stage (<code class="docutils literal notranslate"><span class="pre">stilt.footprint.MapStage</span></code>, <code class="docutils literal notranslate"><span class="pre">map</span></code> under <code class="docutils literal notranslate"><span class="pre">stages</span></code>; needs the <code class="docutils literal notranslate"><span class="pre">visualization</span></code> extra)</p></td>
+<td><p>Implemented (longitude/latitude footprints only)</p></td>
 </tr>
 <tr class="row-even"><td><p>Transport models other than HYSPLIT, named by import path (<code class="docutils literal notranslate"><span class="pre">class:</span> <span class="pre">mypkg.MyModel</span></code> in a <code class="docutils literal notranslate"><span class="pre">models</span></code> block), including models that run many releases per call</p></td>
 <td><p>Implemented (the interface; HYSPLIT is the one model)</p></td>
@@ -649,10 +655,10 @@ feature.</p>
 <td><p>Implemented</p></td>
 </tr>
 <tr class="row-even"><td><p>Satellite-derived plume background (forward trajectories)</p></td>
-<td><p>Implemented (see the <em>Plume Background</em> guide)</p></td>
+<td><p>Implemented (see <a class="reference internal" href="../guides/background.html#plume-background"><span class="std std-ref">A background from a satellite swath</span></a>)</p></td>
 </tr>
 <tr class="row-odd"><td><p>Forward runs (positive <code class="docutils literal notranslate"><span class="pre">n_hours</span></code>) for plume and dispersion studies</p></td>
-<td><p>Implemented (see the <em>Plume Background</em> guide)</p></td>
+<td><p>Implemented (see <a class="reference internal" href="../guides/background.html#plume-background"><span class="std std-ref">A background from a satellite swath</span></a>)</p></td>
 </tr>
 <tr class="row-even"><td><p>Emission-error propagation to the modeled enhancement</p></td>
 <td><p>A recipe on <code class="docutils literal notranslate"><span class="pre">foot.stilt.enhancement</span></code> (see the <em>Transport Error</em> guide); the
@@ -689,8 +695,7 @@ correlated case is fips’s <code class="docutils literal notranslate"><span cla
 <h2>Future plans<a class="headerlink" href="#future-plans" title="Link to this heading">#</a></h2>
 <p>In priority order:</p>
 <ol class="arabic simple">
-<li><p>Readers for the instruments people bring, such as EM27/SUN output
-from PROFFAST and MethaneAIR/MethaneSAT. Which ones come first depends on who is using
+<li><p>Readers for the instruments people bring, such as MethaneAIR/MethaneSAT. Which ones come first depends on who is using
 column releases.</p></li>
 <li><p>A YAML form for <a class="reference internal" href="../reference/_api/stilt.Zones.html#stilt.Zones" title="stilt.Zones"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.Zones</span></code></a>, so the <code class="docutils literal notranslate"><span class="pre">geometry</span></code> footprint
 setting can name groups of cells.</p></li>

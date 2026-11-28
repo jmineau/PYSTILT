@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=1b7344ba"></script>
+    <script src="../_static/documentation_options.js?v=0bd70e96"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a32.dev22+gddcf21807" />
+  <meta name="docsearch:version" content="0.1.0a32.dev24+ge701d8c63" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -595,10 +595,6 @@ the releases per task and the variants, and add a margin. A task that
 runs out of time loses nothing (below).</p>
 </dd>
 <dt><code class="docutils literal notranslate"><span class="pre">mem</span></code>, <code class="docutils literal notranslate"><span class="pre">partition</span></code>, <code class="docutils literal notranslate"><span class="pre">account</span></code>, <code class="docutils literal notranslate"><span class="pre">qos</span></code></dt><dd><p>The <code class="docutils literal notranslate"><span class="pre">sbatch</span></code> options of the same names.</p>
-</dd>
-<dt><code class="docutils literal notranslate"><span class="pre">array_parallelism</span></code></dt><dd><p>The most tasks allowed to run at once, to stay within your group’s
-limits. <code class="docutils literal notranslate"><span class="pre">array_parallelism:</span> <span class="pre">50</span></code> becomes <code class="docutils literal notranslate"><span class="pre">--array=0-199%50</span></code>. Unset,
-Slurm’s own limits apply.</p>
 </dd>
 <dt><code class="docutils literal notranslate"><span class="pre">setup</span></code></dt><dd><p>Shell commands to run at the start of each task, before PYSTILT. Use it
 to load modules or set environment variables. They run after the script

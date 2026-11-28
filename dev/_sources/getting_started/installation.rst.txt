@@ -37,11 +37,14 @@ Extras add optional features. List them in the brackets, for example
      - The Jacobian as a sparse xarray array (``H.to_xarray()``).
    * - ``stilt-r``
      - Reading and importing STILT-R and X-STILT output (:func:`stilt.migration.read_stilt_r`, :func:`stilt.migration.import_stilt_r`), whose ``.rds`` files rdata reads without R.
+   * - ``s3``
+     - An output directory or met files in an S3 bucket (``s3://``), with s3fs.
+   * - ``gcs``
+     - An output directory or met files in a Google Cloud bucket (``gs://``), with gcsfs.
    * - ``complete``
-     - Everything above.
+     - ``visualization``, ``geometry``, ``download``, ``sparse`` and ``stilt-r`` together, not ``s3`` or ``gcs``.
 
-An output directory on an object store needs the fsspec package for it,
-such as ``s3fs`` for ``s3://`` or ``gcsfs`` for ``gs://``
+An output directory on another object store needs the fsspec package for it
 (:doc:`../guides/projects`).
 
 Get HYSPLIT
@@ -60,6 +63,9 @@ project's ``config.yaml``:
    models:
      hysplit:
        directory: /path/to/hysplit
+
+or as ``directory="/path/to/hysplit"`` in a call to
+:func:`stilt.run_trajectories`, which runs without a project.
 
 PYSTILT runs ``exec/hycs_std`` under that folder and reads HYSPLIT's data
 tables from its ``bdyfiles/``. Without ``directory`` it runs the first

@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=1b7344ba"></script>
+    <script src="../../_static/documentation_options.js?v=0bd70e96"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a32.dev22+gddcf21807" />
+  <meta name="docsearch:version" content="0.1.0a32.dev24+ge701d8c63" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -648,8 +648,10 @@ for <code class="docutils literal notranslate"><span class="pre">n_hours</span> 
 <code class="docutils literal notranslate"><span class="pre">veght</span></code> for the near-field correction, as STILT-R does.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ichem</span></code>, <code class="docutils literal notranslate"><span class="pre">idsp</span></code></p></td>
-<td><p>no setting: every run writes STILT-R’s <code class="docutils literal notranslate"><span class="pre">ICHEM=8</span></code> and <code class="docutils literal notranslate"><span class="pre">IDSP=2</span></code>,
-the only values with which HYSPLIT writes particles</p></td>
+<td><p>no setting for <code class="docutils literal notranslate"><span class="pre">idsp</span></code>, and <code class="docutils literal notranslate"><span class="pre">ichem</span></code> may only be 8: a run that makes
+particles writes STILT-R’s <code class="docutils literal notranslate"><span class="pre">ICHEM=8</span></code> and <code class="docutils literal notranslate"><span class="pre">IDSP=2</span></code>, the only values
+with which HYSPLIT writes particles. A concentration run
+(<code class="docutils literal notranslate"><span class="pre">mode:</span> <span class="pre">concentration</span></code>) sets <code class="docutils literal notranslate"><span class="pre">ichem</span></code></p></td>
 </tr>
 <tr class="row-even"><td><p>wind and mixing-depth error settings (<code class="docutils literal notranslate"><span class="pre">siguverr</span></code>, <code class="docutils literal notranslate"><span class="pre">tluverr</span></code>,
 <code class="docutils literal notranslate"><span class="pre">sigzierr</span></code>, …)</p></td>

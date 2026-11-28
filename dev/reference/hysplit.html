@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=1b7344ba"></script>
+    <script src="../_static/documentation_options.js?v=0bd70e96"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a32.dev22+gddcf21807" />
+  <meta name="docsearch:version" content="0.1.0a32.dev24+ge701d8c63" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -1075,6 +1075,16 @@ met.</p></td>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">NO_PARTICLE_DATA</span></code></p></td>
 <td><p>The transport model ran but wrote no particles. Read the log
 (<code class="docutils literal notranslate"><span class="pre">sim.log</span></code>): it usually says why.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">NO_CONCENTRATION_DATA</span></code></p></td>
+<td><p>A run with <code class="docutils literal notranslate"><span class="pre">mode:</span> <span class="pre">concentration</span></code> wrote no file for a grid, or a file
+without samples, or with fewer samples than a whole run writes. Read
+the log (<code class="docutils literal notranslate"><span class="pre">sim.log</span></code>).</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">NO_TRAJECTORIES_DATA</span></code></p></td>
+<td><p>A run with <code class="docutils literal notranslate"><span class="pre">mode:</span> <span class="pre">trajectory</span></code> wrote no <code class="docutils literal notranslate"><span class="pre">tdump</span></code>, or one without a
+trajectory, or whose trajectories cannot be read. Read the log
+(<code class="docutils literal notranslate"><span class="pre">sim.log</span></code>).</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">FORTRAN_RUNTIME_ERROR</span></code></p></td>
 <td><p>HYSPLIT stopped with a Fortran error, which the message names. Read

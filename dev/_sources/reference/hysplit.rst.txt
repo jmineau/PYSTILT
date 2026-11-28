@@ -158,6 +158,14 @@ Each reason, what happened, and what to do:
    * - ``NO_PARTICLE_DATA``
      - The transport model ran but wrote no particles. Read the log
        (``sim.log``): it usually says why.
+   * - ``NO_CONCENTRATION_DATA``
+     - A run with ``mode: concentration`` wrote no file for a grid, or a file
+       without samples, or with fewer samples than a whole run writes. Read
+       the log (``sim.log``).
+   * - ``NO_TRAJECTORIES_DATA``
+     - A run with ``mode: trajectory`` wrote no ``tdump``, or one without a
+       trajectory, or whose trajectories cannot be read. Read the log
+       (``sim.log``).
    * - ``FORTRAN_RUNTIME_ERROR``
      - HYSPLIT stopped with a Fortran error, which the message names. Read
        the log and the kept workdir's ``MESSAGE`` file.

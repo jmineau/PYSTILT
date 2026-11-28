@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=1b7344ba"></script>
+    <script src="../../_static/documentation_options.js?v=0bd70e96"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a32.dev22+gddcf21807" />
+  <meta name="docsearch:version" content="0.1.0a32.dev24+ge701d8c63" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -912,7 +912,7 @@
 <dt class="sig sig-object py" id="stilt.footprint.write_footprint">
 <span class="sig-prename descclassname"><span class="pre">stilt.footprint.</span></span><span class="sig-name descname"><span class="pre">write_footprint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">foot</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/stilt/footprint/io.html#write_footprint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.footprint.write_footprint" title="Link to this definition">#</a></dt>
 <dd><p>Write a footprint to a Parquet file that <code class="xref py py-func docutils literal notranslate"><span class="pre">read_footprint()</span></code> reads alone.</p>
-<p>Only the non-zero cells are stored, as <code class="docutils literal notranslate"><span class="pre">hour</span></code> (the offset of the time
+<p>Only the non-zero cells are stored, as <code class="docutils literal notranslate"><span class="pre">layer</span></code> (the offset of the time
 layer from the release time, in layers of <code class="docutils literal notranslate"><span class="pre">tres</span></code>: hours by
 default), <code class="docutils literal notranslate"><span class="pre">y</span></code> and <code class="docutils literal notranslate"><span class="pre">x</span></code> (the cell’s place on the grid), and <code class="docutils literal notranslate"><span class="pre">foot</span></code>
 in float32. Every layer is recorded in the metadata, so the dense array
@@ -938,7 +938,7 @@ the footprint’s own, <code class="docutils literal notranslate"><span class="p
 <dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If the footprint is not on the grid, the grid has more cells along
     an axis than <code class="docutils literal notranslate"><span class="pre">x</span></code> and <code class="docutils literal notranslate"><span class="pre">y</span></code> can hold (32,767), a time layer is
     not a whole number of layers (<code class="docutils literal notranslate"><span class="pre">tres</span></code>) from the release
-    time, or more layers from the release time than <code class="docutils literal notranslate"><span class="pre">hour</span></code> can hold
+    time, or more layers from the release time than <code class="docutils literal notranslate"><span class="pre">layer</span></code> can hold
     (32,767).</p>
 </dd>
 </dl>
