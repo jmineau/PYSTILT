@@ -237,10 +237,10 @@ def test_footprint_facet_single_time(release, grid):
 def projected_footprint(release):
     """A two-step footprint on a 10 km UTM grid (x and y, not lon and lat)."""
     grid = Grid(
-        xmin=-112.3,
-        xmax=-111.4,
-        ymin=40.4,
-        ymax=41.1,
+        xmin=390000.0,
+        xmax=470000.0,
+        ymin=4470000.0,
+        ymax=4550000.0,
         xres=10000.0,
         yres=10000.0,
         crs="EPSG:32612",
@@ -259,8 +259,11 @@ def projected_footprint(release):
 
 
 def test_footprint_map_on_a_projected_grid(projected_footprint):
-    ax = projected_footprint.stilt.plot.map()
-    assert ax is not None
+    ax = projected_footprint.stilt.plot.map(show_grid=True)
+    # The domain is drawn in degrees, around Salt Lake City, not at x and y.
+    lon, lat = ax.lines[-1].get_data()
+    assert -113 < np.min(lon) < np.max(lon) < -111
+    assert 40 < np.min(lat) < np.max(lat) < 41.2
     plt.close("all")
 
 

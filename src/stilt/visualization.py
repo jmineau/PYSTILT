@@ -53,6 +53,25 @@ def _cell_lonlat(foot: xr.DataArray) -> tuple[np.ndarray, np.ndarray]:
     return np.asarray(lon), np.asarray(lat)
 
 
+def _grid_outline(grid) -> tuple[np.ndarray, np.ndarray]:
+    """Return the longitudes and latitudes along a projected grid's edge, as a closed ring."""
+    from pyproj import Transformer
+
+    # shortcut: an outline across 180 degrees is drawn with a jump; fine for the regional grids footprints use.
+    # The four edges, corner to corner, 50 points each.
+    along = np.linspace(0.0, 4.0, 201)
+    x = np.interp(
+        along, range(5), [grid.xmin, grid.xmax, grid.xmax, grid.xmin, grid.xmin]
+    )
+    y = np.interp(
+        along, range(5), [grid.ymin, grid.ymin, grid.ymax, grid.ymax, grid.ymin]
+    )
+    lon, lat = Transformer.from_crs(grid.crs, "EPSG:4326", always_xy=True).transform(
+        x, y
+    )
+    return np.asarray(lon), np.asarray(lat)
+
+
 def _log10_safe(vals: np.ndarray) -> np.ndarray:
     """Return log10 of ``vals``, with NaN where a value is zero or negative."""
     with np.errstate(divide="ignore", invalid="ignore"):
@@ -137,8 +156,17 @@ class FootprintPlotAccessor:
         )
         fig.colorbar(mesh, ax=ax, label=cbar_label, shrink=0.7, pad=0.02)
 
-        if show_grid:
+        if show_grid and foot.stilt.grid.is_longlat:
             _draw_bounds_box(ax, foot.stilt.grid, label="Domain")
+        elif show_grid:
+            ax.plot(
+                *_grid_outline(foot.stilt.grid),
+                color="black",
+                linestyle="--",
+                linewidth=1.5,
+                label="Domain",
+                **_data_crs(ax),
+            )
         if met_bounds is not None:
             _draw_met_box(ax, met_bounds)
 
@@ -286,7 +314,12 @@ class SimulationPlotAccessor:
 
         # Map extent: the footprint grid, else the particles, else the release
         if foot is not None:
-            extent = _bounds_extent(foot.stilt.grid, pad=0.1)
+            grid = foot.stilt.grid
+            extent = (
+                _bounds_extent(grid, pad=0.1)
+                if grid.is_longlat
+                else _extent(*_grid_outline(grid), pad=0.1)
+            )
         elif particles is not None:
             extent = _extent(particles["lon"], particles["lat"], pad=0.5)
         else:

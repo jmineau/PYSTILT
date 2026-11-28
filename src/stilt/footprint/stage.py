@@ -590,11 +590,14 @@ def _read_mesh(spec: str, modified: int | None) -> Mesh:
 
 
 def _outside(rows: pd.DataFrame, grid: Grid) -> list[_Finding]:
-    """List the releases with a release point outside *grid*, which is bounded in longitude and latitude."""
+    """List the releases with a release point outside *grid*'s bounds."""
     outside = rows[~grid.contains(rows["longitude"], rows["latitude"])]
     box = (
         f"{grid.xmin:g} to {grid.xmax:g} longitude, "
         f"{grid.ymin:g} to {grid.ymax:g} latitude"
+        if grid.is_longlat
+        else f"x {grid.xmin:.10g} to {grid.xmax:.10g}, y {grid.ymin:.10g} to {grid.ymax:.10g} "
+        f"in {grid.crs}"
     )
     return [
         (

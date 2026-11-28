@@ -27,6 +27,8 @@ from stilt.footprint.gridding import (
 )
 from stilt.footprint.io import read_footprint, write_footprint
 
+from ..fixtures.factories import projected_grid
+
 
 def _particles_in_domain(n: int = 30, seed: int = 42) -> pd.DataFrame:
     """Create synthetic particle data within [-114, -113] x [39, 40]."""
@@ -549,7 +551,7 @@ def test_projected_footprint_fills_the_cells_between_steps_like_the_longlat_one(
         name: _whole_run(p, point_release, grid, smooth_factor=0.0).to_numpy()
         for name, grid in {
             "longlat": Grid(**bounds, xres=0.001, yres=0.001),
-            "utm": Grid(**bounds, xres=100.0, yres=100.0, crs=_UTM12),
+            "utm": projected_grid(**bounds, xres=100.0, yres=100.0, crs=_UTM12),
         }.items()
     }
     cells = {name: np.count_nonzero(np.nan_to_num(a)) for name, a in feet.items()}
@@ -799,12 +801,6 @@ def test_project_particles_to_crs_raises_on_missing_pyproj(monkeypatch):
         _project_particles_to_crs(
             p,
             crs="+proj=utm +zone=12 +datum=WGS84 +units=m +no_defs",
-            xmin=-113.0,
-            xmax=-111.0,
-            ymin=39.0,
-            ymax=41.0,
-            xres=1000.0,
-            yres=1000.0,
         )
 
 
@@ -817,12 +813,6 @@ def test_project_particles_to_crs_rejects_invalid_proj_string():
         _project_particles_to_crs(
             p,
             crs="+proj=nope-not-a-projection",
-            xmin=-113.0,
-            xmax=-111.0,
-            ymin=39.0,
-            ymax=41.0,
-            xres=1000.0,
-            yres=1000.0,
         )
 
 
@@ -994,14 +984,8 @@ def test_projected_footprint_of_a_cloud_across_180_degrees_keeps_its_total(
     pytest.importorskip("pyproj")
     feet = []
     for lon0, west, east in ((179.9, 177.9, -178.1), (0.0, -2.0, 2.0)):
-        grid = Grid(
-            xmin=west,
-            xmax=east,
-            ymin=48.0,
-            ymax=52.0,
-            xres=3000,
-            yres=3000,
-            crs=_lambert_at(lon0),
+        grid = projected_grid(
+            west, east, 48.0, 52.0, xres=3000, yres=3000, crs=_lambert_at(lon0)
         )
         release = _moved(point_release, ((lon0 + 180.0) % 360.0) - 180.0, 50.0)
         feet.append(_whole_run(_cloud_at(lon0), release, grid))
@@ -1165,9 +1149,7 @@ def test_projected_footprint_is_made_when_a_far_step_is_where_the_projection_has
     release = PointRelease(
         time=dt.datetime(2023, 1, 1, 12), longitude=103.85, latitude=1.35, altitude=5.0
     )
-    grid = Grid(
-        xmin=103.3, xmax=104.4, ymin=1.0, ymax=1.8, xres=1000, yres=1000, crs=crs
-    )
+    grid = projected_grid(103.3, 104.4, 1.0, 1.8, xres=1000, yres=1000, crs=crs)
     foot = _whole_run(p, release, grid)
     without_far = _whole_run(p[p["age"] > -14400], release, grid)
     assert float(foot.sum()) > 0
@@ -1375,11 +1357,11 @@ def test_projected_footprint_does_not_depend_on_where_the_release_was(
     nonzero cells.
     """
     pytest.importorskip("pyproj")
-    grid = Grid(
-        xmin=cloud_lon - 8,
-        xmax=cloud_lon + 8,
-        ymin=40.0,
-        ymax=50.0,
+    grid = projected_grid(
+        cloud_lon - 8,
+        cloud_lon + 8,
+        40.0,
+        50.0,
         xres=5000,
         yres=5000,
         crs=_lambert_at(cloud_lon, 45.0),
@@ -1702,16 +1684,12 @@ def _crossing_footprint(
     point_release: PointRelease, lon0: float, bounds: tuple[float, float], crs: str
 ) -> xr.DataArray:
     """The unsmoothed, time-integrated footprint of ``_crossing_cloud(lon0)``."""
-    res = 0.01 if crs == "+proj=longlat" else 500.0
-    grid = Grid(
-        xmin=bounds[0],
-        xmax=bounds[1],
-        ymin=49.5,
-        ymax=50.5,
-        xres=res,
-        yres=res,
-        crs=crs,
-    )
+    if crs == "+proj=longlat":
+        grid = Grid(
+            xmin=bounds[0], xmax=bounds[1], ymin=49.5, ymax=50.5, xres=0.01, yres=0.01
+        )
+    else:
+        grid = projected_grid(*bounds, 49.5, 50.5, xres=500.0, yres=500.0, crs=crs)
     release = point_release.model_copy(
         update={"longitude": float(((lon0 + 180.0) % 360.0) - 180.0), "latitude": 50.0}
     )
@@ -1856,7 +1834,7 @@ def test_projected_footprint_is_smoothed_like_the_longlat_footprint(point_releas
     added = {}
     for name, grid in {
         "lonlat": Grid(**bounds, xres=0.01, yres=0.01),
-        "utm": Grid(**bounds, xres=1000, yres=1000, crs=_UTM12),
+        "utm": projected_grid(**bounds, xres=1000, yres=1000, crs=_UTM12),
     }.items():
         foot = _whole_run(p, point_release, grid)
         unsmoothed = _whole_run(p, point_release, grid, smooth_factor=0)
@@ -1880,9 +1858,7 @@ def test_projected_footprint_on_cells_that_are_not_square_keeps_its_total(
     pytest.importorskip("pyproj")
     p = _spread_particles()
     point_release = _moved(point_release, -112.0, 40.5)
-    grid = Grid(
-        xmin=-112.5, xmax=-111.5, ymin=40.0, ymax=41.0, xres=1000, yres=500, crs=_UTM12
-    )
+    grid = projected_grid(-112.5, -111.5, 40.0, 41.0, xres=1000, yres=500, crs=_UTM12)
     smoothed = _whole_run(p, point_release, grid)
     unsmoothed = _whole_run(p, point_release, grid, smooth_factor=0)
     assert np.count_nonzero(smoothed.to_numpy()) > 2 * np.count_nonzero(

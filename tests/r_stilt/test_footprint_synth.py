@@ -51,6 +51,7 @@ from stilt.footprint.gridding import (
     _project_particles_to_crs,
 )
 
+from ..fixtures.factories import projected_grid
 from ..fixtures.footprint_reference.make_reference import GRID as REFERENCE_GRID
 from ..fixtures.footprint_reference.make_reference import HERE as REFERENCE_DIR
 from ..fixtures.particles import point_at
@@ -327,16 +328,7 @@ def _py_footprint_stages(
     )
 
     if not is_longlat:
-        p_with_rtime, xmin, xmax, ymin, ymax = _project_particles_to_crs(
-            p_with_rtime,
-            crs=projection,
-            xmin=xmin,
-            xmax=xmax,
-            ymin=ymin,
-            ymax=ymax,
-            xres=xres,
-            yres=yres,
-        )
+        p_with_rtime = _project_particles_to_crs(p_with_rtime, crs=projection)
 
     glong = _grid_cell_starts(xmin, xmax, xres)
     glati = _grid_cell_starts(ymin, ymax, yres)
@@ -715,10 +707,10 @@ def test_irregular_grid_extent_matches_r_cell_centers(rscript, r_stilt_dir, tmp_
 
 
 _UTM_GRID = Grid(
-    xmin=-112.3,
-    xmax=-111.7,
-    ymin=40.2,
-    ymax=40.8,
+    xmin=388_000.0,
+    xmax=442_000.0,
+    ymin=4_450_000.0,
+    ymax=4_518_000.0,
     xres=1_000.0,
     yres=1_000.0,
     crs="+proj=utm +zone=12 +datum=WGS84 +units=m +no_defs",
@@ -1293,7 +1285,7 @@ def test_utm_early_interpolation_intentionally_differs_from_r(
     _skip_without_utm(rscript)
     p = _northward_r_particles()
     bounds = {"xmin": -112.05, "xmax": -111.95, "ymin": 40.45, "ymax": 41.05}
-    utm = Grid(**bounds, xres=100.0, yres=100.0, crs=_UTM_GRID.crs)
+    utm = projected_grid(**bounds, xres=100.0, yres=100.0, crs=_UTM_GRID.crs)
     longlat = Grid(**bounds, xres=0.001, yres=0.001)
     cols = ["time", "indx", "long", "lati", "foot"]
 

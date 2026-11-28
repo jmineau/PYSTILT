@@ -33,12 +33,7 @@ from runtraj.spatial import haversine_km, is_longlat
 from stilt.exceptions import EmptyFootprint
 from stilt.footprint.config import FootprintConfig
 from stilt.footprint.foot import _near_field, _weighted
-from stilt.footprint.grid import (
-    Grid,
-    _east_edge,
-    _grid_cell_starts,
-    _projected_extent,
-)
+from stilt.footprint.grid import Grid, _east_edge, _grid_cell_starts
 from stilt.particles import _need_foot
 
 from .io import _footprint_array
@@ -393,30 +388,14 @@ def _interpolate_longitudes(
     return out
 
 
-def _project_particles_to_crs(
-    p: pd.DataFrame,
-    *,
-    crs: str,
-    xmin: float,
-    xmax: float,
-    ymin: float,
-    ymax: float,
-    xres: float,
-    yres: float,
-) -> tuple[pd.DataFrame, float, float, float, float]:
-    """
-    Project particle positions to the grid's CRS, and return them with the grid's projected extent.
-
-    Grid bounds are given in degrees. The extent is that of :class:`~stilt.Grid`'s
-    axes: the whole cells that cover the box's projected outline
-    (``_projected_extent``).
-    """
+def _project_particles_to_crs(p: pd.DataFrame, *, crs: str) -> pd.DataFrame:
+    """Return the particles with their ``lon`` and ``lat`` projected to the grid's CRS."""
     from pyproj import Transformer
 
     tr = Transformer.from_crs("EPSG:4326", crs, always_xy=True)
     p = p.copy()
     p["lon"], p["lat"] = tr.transform(p["lon"].values, p["lat"].values)
-    return p, *_projected_extent(crs, xmin, xmax, ymin, ymax, xres, yres)
+    return p
 
 
 def _compute_kernel_bandwidths(
@@ -992,16 +971,7 @@ def calc_footprint(
     kernel_df, w = _compute_kernel_bandwidths(p, smooth_factor=smooth_factor, crs=crs)
 
     if not grid.is_longlat:
-        p, xmin, xmax, ymin, ymax = _project_particles_to_crs(
-            p,
-            crs=crs,
-            xmin=xmin,
-            xmax=xmax,
-            ymin=ymin,
-            ymax=ymax,
-            xres=xres,
-            yres=yres,
-        )
+        p = _project_particles_to_crs(p, crs=crs)
 
     # Output grid lower-left corners for half-open extents [min, max).
     glong = _grid_cell_starts(xmin, xmax, xres)

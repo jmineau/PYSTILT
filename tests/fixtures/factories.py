@@ -313,3 +313,36 @@ def make_hysplit_dir(
         for name, text in STAND_IN_TABLES.items():
             (directory / "bdyfiles" / name).write_text(text)
     return directory
+
+
+def projected_grid(
+    xmin: float,
+    xmax: float,
+    ymin: float,
+    ymax: float,
+    *,
+    xres: float,
+    yres: float,
+    crs: str,
+):
+    """Return the grid in *crs* over a longitude/latitude box: its projected extent, rounded out to whole cells."""
+    import math
+
+    from pyproj import Transformer
+
+    from stilt.footprint.grid import Grid
+
+    east = xmax + 360.0 if xmax < xmin else xmax
+    tr = Transformer.from_crs("EPSG:4326", crs, always_xy=True)
+    left, bottom, right, top = tr.transform_bounds(
+        xmin, ymin, east, ymax, densify_pts=101
+    )
+    return Grid(
+        xmin=math.floor(left / xres) * xres,
+        xmax=math.ceil(right / xres) * xres,
+        ymin=math.floor(bottom / yres) * yres,
+        ymax=math.ceil(top / yres) * yres,
+        xres=xres,
+        yres=yres,
+        crs=crs,
+    )

@@ -51,47 +51,72 @@ _NORTH_POLAR = "+proj=stere +lat_0=90 +lat_ts=70 +lon_0=-45"
 _ALASKA = "+proj=lcc +lat_1=50 +lat_2=60 +lat_0=55 +lon_0=180 +units=m"
 
 
-def _outline(xmin, xmax, ymin, ymax, n=2001):
-    """Points along a longitude/latitude box's four edges, east of ``xmin`` up to its east edge."""
-    east = xmax + 360.0 if xmax < xmin else xmax
-    lon = np.linspace(xmin, east, n)
-    lat = np.linspace(ymin, ymax, n)
-    lons = np.concatenate([lon, lon, np.full(n, xmin), np.full(n, east)])
-    lats = np.concatenate([np.full(n, ymin), np.full(n, ymax), lat, lat])
-    return lons, lats
+@pytest.mark.parametrize(
+    ("bounds", "res", "crs"),
+    [
+        # The contiguous US on a Lambert conformal grid
+        ((-2840e3, 3240e3, -1630e3, 1680e3), 10_000.0, _LCC),
+        # The cap north of 60 N, across the pole
+        ((-3325e3, 3325e3, -3325e3, 3325e3), 25_000.0, _NORTH_POLAR),
+        # Across 180 degrees
+        ((-400e3, 400e3, -500e3, 600e3), 10_000.0, _ALASKA),
+        # UTM, with a partial cell at the east and north edges
+        ((329_000.0, 543_500.0, 4_427_000.0, 4_652_700.0), 1_000.0, "EPSG:32612"),
+    ],
+)
+def test_projected_grid_has_the_cells_of_its_bounds(bounds, res, crs):
+    """A projected grid's bounds are x and y in its crs, and its cells fill them (#543)."""
+    xmin, xmax, ymin, ymax = bounds
+    grid = Grid(xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, xres=res, yres=res, crs=crs)
+    x, y = grid.axes
+    assert x[0] == xmin + res / 2 and y[0] == ymin + res / 2
+    # whole cells only, as on a longitude/latitude grid
+    assert len(x) == int((xmax - xmin) // res) and len(y) == int((ymax - ymin) // res)
 
 
 @pytest.mark.parametrize(
     ("bounds", "res", "crs"),
     [
-        # The contiguous US on a Lambert conformal grid: the two projected
-        # corners left out 18 % of it.
         ((-125.0, -66.0, 24.0, 50.0), 10_000.0, _LCC),
-        # The cap north of 60 N: the two corners gave one quadrant.
         ((-180.0, 180.0, 60.0, 90.0), 25_000.0, _NORTH_POLAR),
-        # Across 180 degrees, written both ways.
         ((170.0, -170.0, 50.0, 60.0), 10_000.0, _ALASKA),
-        ((170.0, 190.0, 50.0, 60.0), 10_000.0, _ALASKA),
-        # The docs' UTM example.
         ((-113.0, -110.5, 40.0, 42.0), 1_000.0, "EPSG:32612"),
+        ((-112.2, -111.7, 40.4, 40.9), 0.001, "EPSG:32612"),
     ],
 )
-def test_projected_grid_covers_the_box(bounds, res, crs):
-    """A projected grid's cells hold every point of its longitude/latitude box's outline (#504)."""
-    from pyproj import Transformer
-
+def test_projected_grid_refuses_longitude_latitude_bounds(bounds, res, crs):
+    """A longitude/latitude box given with a projected crs is refused, not read as x and y (#543)."""
     xmin, xmax, ymin, ymax = bounds
-    grid = Grid(xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, xres=res, yres=res, crs=crs)
-    x, y = grid.axes
-    lons, lats = _outline(*bounds)
-    px, py = Transformer.from_crs("EPSG:4326", crs, always_xy=True).transform(
-        lons, lats
+    with pytest.raises(ValueError, match="look like longitude and latitude"):
+        Grid(xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, xres=res, yres=res, crs=crs)
+
+
+def test_projected_grid_refuses_swapped_bounds():
+    with pytest.raises(ValueError, match="xmin < xmax and ymin < ymax"):
+        Grid(
+            xmin=5e5,
+            xmax=4e5,
+            ymin=4.4e6,
+            ymax=4.5e6,
+            xres=1e3,
+            yres=1e3,
+            crs="EPSG:32612",
+        )
+
+
+def test_projected_grid_contains_projects_the_points():
+    grid = Grid(
+        xmin=4e5,
+        xmax=4.5e5,
+        ymin=4.48e6,
+        ymax=4.53e6,
+        xres=1e3,
+        yres=1e3,
+        crs="EPSG:32612",
     )
-    assert px.min() >= x[0] - res / 2 and px.max() <= x[-1] + res / 2
-    assert py.min() >= y[0] - res / 2 and py.max() <= y[-1] + res / 2
-    # and starts at the outline's west and south extremes, not a cell before
-    assert px.min() - (x[0] - res / 2) < res / 100
-    assert py.min() - (y[0] - res / 2) < res / 100
+    # Salt Lake City is inside; the same numbers read as x and y would not be.
+    inside = grid.contains([-111.9, -100.0, np.nan], [40.7, 40.7, 40.7])
+    assert inside.tolist() == [True, False, False]
 
 
 # ---------------------------------------------------------------------------
@@ -133,4 +158,4 @@ def test_grid_refuses_an_unknown_key_in_the_config(tmp_path):
 def test_a_grid_refuses_a_crs_pyproj_cannot_read():
     """A misspelled crs fails when the grid is made, not when a footprint is (#439)."""
     with pytest.raises(ValueError, match="not a coordinate reference system"):
-        Grid(xmin=-113, xmax=-110, ymin=40, ymax=42, xres=1000, yres=1000, crs="nope")
+        Grid(xmin=4e5, xmax=5e5, ymin=4.4e6, ymax=4.5e6, xres=1e3, yres=1e3, crs="nope")

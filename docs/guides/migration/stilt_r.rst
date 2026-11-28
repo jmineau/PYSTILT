@@ -14,8 +14,7 @@ and why:
 
 - the near-field correction of a release above sea level, whose plume
   PYSTILT grows from the ground
-- projected grids, which PYSTILT lays out to cover the whole box, and
-  where it smooths as widely as on a longitude/latitude grid and runs the
+- projected grids, where it smooths as widely as on a longitude/latitude grid and runs the
   early-time interpolation
 - grids near or across 180°, which PYSTILT treats as one stretch of
   longitude, and global grids written from 0° to 360°, which keep those
@@ -80,7 +79,9 @@ The workflow side by side
        0.2, ``xmin: -114.6``, ``xmax: -110.4``.
    * - ``xmn``, ``xmx``, ``ymn``, ``ymx``
      - ``grid: xmin``, ``xmax``, ``ymin``, ``ymax``, in the footprint's
-       block under ``stages:``
+       block under ``stages:``. With a ``projection``, these are in its
+       units: give the projected corners, (``xmn``, ``ymn``) and
+       (``xmx``, ``ymx``), and the grid has STILT-R's cells
    * - ``xres``, ``yres``, ``projection``
      - ``grid: xres``, ``yres``, ``crs`` (``projection`` is read too)
    * - ``smooth_factor``, ``hnf_plume``
