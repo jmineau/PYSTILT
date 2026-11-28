@@ -365,6 +365,17 @@ def test_a_release_with_no_kernel_is_listed(tmp_path):
     assert list(table["variant"]) == ["hrrr-ak"]
 
 
+def test_a_second_check_sees_the_kernel_table_that_was_fixed_in_between(tmp_path):
+    a, b = _release(11), _release(12)
+    project = _project(tmp_path, [a, b], variants=_KERNELS)
+    _kernels(project, [a])
+    assert list(project.check()["check"]) == ["kernel_missing"]
+
+    _kernels(project, [a, b])
+
+    assert project.check().empty
+
+
 def test_a_kernel_with_no_release_is_listed(tmp_path):
     a, b = _release(11), _release(12)
     project = _project(tmp_path, [a], variants=_KERNELS)

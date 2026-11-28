@@ -7,6 +7,10 @@ file alone: the entries are written at release (`just changelog` drafts them).
 
 ## [Unreleased]
 
+### Fixed
+
+- `project.check()` no longer repeats a transform's finding (an averaging kernel missing from its table, say) after the input is fixed: a second check on the same `Project` reads the fixed table, as opening the project again does. The footprint stage kept its findings between calls. (#505)
+
 ## [0.1.0a31] - 2026-11-24
 
 This release requires runtraj 0.1.0a5. Upgrade from 0.1.0a30: a new install of 0.1.0a30 gets runtraj 0.1.0a5, which refuses its footprint stage with "is not a stage". If you run on Slurm, read the change to `n_workers` below before you submit again.
