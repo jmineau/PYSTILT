@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=9ff5cbf3"></script>
+    <script src="../../_static/documentation_options.js?v=90a4492f"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a32.dev20+g667d5bc5f" />
+  <meta name="docsearch:version" content="0.1.0a32.dev21+g068b08039" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -915,10 +915,13 @@ STILT-R project folder:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.migration</span><span class="w"> </span><span class="kn">import</span> <span class="n">import_stilt_r</span>
 
-<span class="n">releases</span> <span class="o">=</span> <span class="n">import_stilt_r</span><span class="p">(</span><span class="s2">"my_project/out/by-id"</span><span class="p">,</span> <span class="s2">"output"</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="s2">"1d936c1"</span><span class="p">)</span>
+<span class="n">releases</span><span class="p">,</span> <span class="n">config</span> <span class="o">=</span> <span class="n">import_stilt_r</span><span class="p">(</span>
+    <span class="s2">"my_project/out/by-id"</span><span class="p">,</span> <span class="s2">"output"</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="s2">"1d936c1"</span>
+<span class="p">)</span>
 </pre></div>
 </div>
-<p>It prints the blocks that name the imported folders, for <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>:
+<p>It returns the releases and <code class="docutils literal notranslate"><span class="pre">config</span></code>, the blocks that name the imported
+folders, and prints the blocks as YAML for <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>:
 the met, the <code class="docutils literal notranslate"><span class="pre">stilt-r</span></code> model (PYSTILT’s model of imported runs, named by
 its import path, <a class="reference internal" href="../../reference/_api/stilt.migration.StiltRModel.html#stilt.migration.StiltRModel" title="stilt.migration.StiltRModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.migration.StiltRModel</span></code></a>), the footprint stage,
 and the variant.</p>
@@ -950,14 +953,20 @@ and the variant.</p>
 <span class="w">        </span><span class="nt">transforms</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span>
 </pre></div>
 </div>
-<p>and returns the releases, for <code class="docutils literal notranslate"><span class="pre">releases.csv</span></code>. Paste the printed lines into
-the <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> of a project whose <code class="docutils literal notranslate"><span class="pre">output</span></code> is that directory. In a
-project that already has blocks of those names, add the printed entries to
-them; with a <code class="docutils literal notranslate"><span class="pre">hysplit</span></code> block beside <code class="docutils literal notranslate"><span class="pre">stilt-r</span></code>, each variant then names
-its <code class="docutils literal notranslate"><span class="pre">model</span></code>. Then add the releases:</p>
+<p><code class="docutils literal notranslate"><span class="pre">Project.init</span></code> takes the blocks as keywords, so a new project whose
+<code class="docutils literal notranslate"><span class="pre">output</span></code> is that directory is made from what the import returned:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="o">.</span><span class="n">init</span><span class="p">(</span>
+    <span class="s2">"my_project_py"</span><span class="p">,</span> <span class="n">releases</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="s2">"output"</span><span class="p">,</span> <span class="o">**</span><span class="n">config</span>
+<span class="p">)</span>
+<span class="n">project</span><span class="o">.</span><span class="n">status</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>To use a project that already exists, paste the printed lines into its
+<code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>. If it already has blocks of those names, add the printed
+entries to them; with a <code class="docutils literal notranslate"><span class="pre">hysplit</span></code> block beside <code class="docutils literal notranslate"><span class="pre">stilt-r</span></code>, each variant
+then names its <code class="docutils literal notranslate"><span class="pre">model</span></code>. Then add the releases:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">"my_project_py"</span><span class="p">)</span>
 <span class="n">project</span><span class="o">.</span><span class="n">add_releases</span><span class="p">(</span><span class="n">releases</span><span class="p">)</span>
-<span class="n">project</span><span class="o">.</span><span class="n">status</span><span class="p">()</span>
 </pre></div>
 </div>
 <p>A <code class="docutils literal notranslate"><span class="pre">stilt-r</span></code> variant reads what the import wrote and runs nothing: a run of

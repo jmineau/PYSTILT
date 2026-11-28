@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=9ff5cbf3"></script>
+    <script src="../../_static/documentation_options.js?v=90a4492f"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a32.dev20+g667d5bc5f" />
+  <meta name="docsearch:version" content="0.1.0a32.dev21+g068b08039" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -917,8 +917,10 @@ block with <code class="docutils literal notranslate"><span class="pre">class:</
 (<a class="reference internal" href="stilt.migration.StiltRModel.html#stilt.migration.StiltRModel" title="stilt.migration.StiltRModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">StiltRModel</span></code></a>). A project whose
 <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> has that variant reads them as its own results:
 <code class="docutils literal notranslate"><span class="pre">project.status</span></code>, <code class="docutils literal notranslate"><span class="pre">project.particles</span></code>, <code class="docutils literal notranslate"><span class="pre">project.footprints</span></code>, and
-<code class="docutils literal notranslate"><span class="pre">project.jacobian</span></code>. The import prints the variant and its met, to paste
-into <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>, and returns the releases, for <code class="docutils literal notranslate"><span class="pre">releases.csv</span></code>.</p>
+<code class="docutils literal notranslate"><span class="pre">project.jacobian</span></code>. The import returns the releases, and the variant
+and its met as the blocks of a config (<code class="docutils literal notranslate"><span class="pre">mets</span></code>, <code class="docutils literal notranslate"><span class="pre">models</span></code>, <code class="docutils literal notranslate"><span class="pre">stages</span></code>,
+<code class="docutils literal notranslate"><span class="pre">variants</span></code>), for <a class="reference internal" href="stilt.Project.init.html#stilt.Project.init" title="stilt.Project.init"><code class="xref py py-meth docutils literal notranslate"><span class="pre">stilt.Project.init()</span></code></a> or <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>; it
+prints them as YAML too, to paste.</p>
 <p>Every folder of an output directory is named by the hash of its
 settings, and an imported run’s settings are only what STILT-R’s files
 record, never a default standing in for a value they do not give:</p>
@@ -964,12 +966,18 @@ one, such as STILT-R’s <code class="docutils literal notranslate"><span class=
 folders. Every directory they name must be in it.</p></li>
 </ul>
 </dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The releases of the runs, in folder order, for
-<code class="xref py py-meth docutils literal notranslate"><span class="pre">stilt.Project.add_releases()</span></code>.</p>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[runtraj.releases.Release], <a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code></a>]]</span></p>
 </dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[runtraj.releases.Release]</span></p>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><ul class="simple">
+<li><p><strong>releases</strong> (<em>list of Release</em>) – The releases of the runs, in folder order, for
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">stilt.Project.add_releases()</span></code>.</p></li>
+<li><p><strong>config</strong> (<em>dict</em>) – The blocks that name the imported folders, as the YAML printed:
+<code class="docutils literal notranslate"><span class="pre">Project.init(path,</span> <span class="pre">releases,</span> <span class="pre">output=output_dir,</span> <span class="pre">**config)</span></code> makes a
+project that reads them.</p></li>
+</ul>
+</p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><ul class="simple">
@@ -988,7 +996,7 @@ folders. Every directory they name must be in it.</p></li>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">releases</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">migration</span><span class="o">.</span><span class="n">import_stilt_r</span><span class="p">(</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">releases</span><span class="p">,</span> <span class="n">config</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">migration</span><span class="o">.</span><span class="n">import_stilt_r</span><span class="p">(</span>
 <span class="gp">... </span>    <span class="s2">"my_project/out/by-id"</span><span class="p">,</span> <span class="s2">"output"</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="s2">"1d936c1"</span>
 <span class="gp">... </span><span class="p">)</span>
 <span class="go">mets:</span>
@@ -1004,7 +1012,9 @@ folders. Every directory they name must be in it.</p></li>
 <span class="go">    version: 1d936c1</span>
 <span class="go">    capemin: -1</span>
 <span class="go">    ...</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="s2">"my_project_py"</span><span class="p">,</span> <span class="n">releases</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="s2">"output"</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="o">.</span><span class="n">init</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="s2">"my_project_py"</span><span class="p">,</span> <span class="n">releases</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="s2">"output"</span><span class="p">,</span> <span class="o">**</span><span class="n">config</span>
+<span class="gp">... </span><span class="p">)</span>
 </pre></div>
 </div>
 </dd></dl>
