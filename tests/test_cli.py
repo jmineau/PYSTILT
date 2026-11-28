@@ -1081,7 +1081,7 @@ def test_run_task_runs_its_share_here(tmp_path, calls):
     # The banner names the task, not the local backend the task runs on.
     assert "task 1 of 3  cpus=1" in result.output
     assert "backend=" not in result.output
-    assert "Releases of this task: 1, 4, 7, ..." in result.output
+    assert "Releases of this task: share 1 of 3" in result.output
     # A task sums up what it ran, not the whole project.
     assert (
         "This run:  total=2  complete=1  failed=1  interrupted=0  pending=0"
