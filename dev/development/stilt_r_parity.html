@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=90a4492f"></script>
+    <script src="../_static/documentation_options.js?v=1b7344ba"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a32.dev21+g068b08039" />
+  <meta name="docsearch:version" content="0.1.0a32.dev22+gddcf21807" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -607,21 +607,17 @@ no HYSPLIT. The fidelity scenarios give their configs the same values.</p>
 fill value of <code class="docutils literal notranslate"><span class="pre">-1</span></code>. PYSTILT writes CF-1.8 NetCDF with dimensions
 <code class="docutils literal notranslate"><span class="pre">(time,</span> <span class="pre">lat,</span> <span class="pre">lon)</span></code>. Read PYSTILT files as ordinary CF NetCDF. Tools that
 expect STILT-R’s layout will not read them.</p></li>
-<li><p><strong>The cells of a projected grid.</strong> STILT-R projects the two corners
-(<code class="docutils literal notranslate"><span class="pre">xmin</span></code>, <code class="docutils literal notranslate"><span class="pre">ymin</span></code>) and (<code class="docutils literal notranslate"><span class="pre">xmax</span></code>, <code class="docutils literal notranslate"><span class="pre">ymax</span></code>) of the box and lays the
-cells out between them, dropping a partial cell at the east and north
-edges. A box in longitude and latitude has curved edges in most
-projections, so that rectangle leaves part of the box out: 2 % of the
-UTM box -113° to -110.5°, 40° to 42°, 18 % of the contiguous US (-125°
-to -66°, 24° to 50°) on a Lambert conformal grid, and three quarters of
-the cap north of 60° on a polar stereographic grid. Particles over the
-part left out are dropped. PYSTILT projects the box’s outline and starts
-the cells at its smallest <code class="docutils literal notranslate"><span class="pre">x</span></code> and <code class="docutils literal notranslate"><span class="pre">y</span></code>, with as many whole cells east
-and north as reach its largest, so the grid covers the whole box. Its
-cells then sit elsewhere than STILT-R’s, so the fidelity and <code class="docutils literal notranslate"><span class="pre">r_only</span></code>
-tests on a projected grid give STILT-R the corners of PYSTILT’s cells,
-and the two lay out the same cells. Longitude/latitude grids are not
-affected.</p></li>
+<li><p><strong>The bounds of a projected grid.</strong> STILT-R takes them in degrees,
+projects the two corners (<code class="docutils literal notranslate"><span class="pre">xmin</span></code>, <code class="docutils literal notranslate"><span class="pre">ymin</span></code>) and (<code class="docutils literal notranslate"><span class="pre">xmax</span></code>, <code class="docutils literal notranslate"><span class="pre">ymax</span></code>),
+and lays the cells out between them. PYSTILT takes them in the grid’s
+own units, so the projected corners of a STILT-R grid give PYSTILT the
+same cells. A longitude/latitude box has curved edges in most
+projections, so STILT-R’s rectangle leaves part of the box out (2 % of
+the UTM box -113° to -110.5°, 40° to 42°, three quarters of the cap north
+of 60° on a polar stereographic grid); in PYSTILT you choose the
+rectangle. The fidelity and <code class="docutils literal notranslate"><span class="pre">r_only</span></code> tests on a projected grid give
+STILT-R the longitude/latitude of PYSTILT’s corners. Longitude/latitude
+grids are not affected.</p></li>
 <li><p><strong>The layer of a forward run’s last row.</strong> A particle row at <code class="docutils literal notranslate"><span class="pre">age</span></code>
 minutes holds the step that ends there. STILT-R puts it in layer
 <code class="docutils literal notranslate"><span class="pre">floor(age</span> <span class="pre">/</span> <span class="pre">tres)</span></code>, which is right backward (the row at -60 closes the

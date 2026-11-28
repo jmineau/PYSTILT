@@ -39,6 +39,7 @@ Methods
 .. autosummary::
    :toctree:
 
+   ~Grid.contains
    ~Grid.to_xarray
 
 

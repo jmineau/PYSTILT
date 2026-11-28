@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=90a4492f"></script>
+    <script src="../_static/documentation_options.js?v=1b7344ba"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a32.dev21+g068b08039" />
+  <meta name="docsearch:version" content="0.1.0a32.dev22+gddcf21807" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -588,6 +588,7 @@
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.Grid.dims.html">stilt.Grid.dims</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.Grid.index.html">stilt.Grid.index</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.Grid.is_longlat.html">stilt.Grid.is_longlat</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Grid.contains.html">stilt.Grid.contains</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_api/stilt.Grid.to_xarray.html">stilt.Grid.to_xarray</a></li>
 </ul>
 </details></li>
@@ -1510,12 +1511,20 @@ smoothing. A grid that goes all the way around (<code class="docutils literal no
 passes the east edge returns at the west edge. On a grid that ends at or
 near 180°, particles just across 180° smooth onto the grid, as particles
 just past any other edge do.</p>
-<p>Projected grids (a <code class="docutils literal notranslate"><span class="pre">crs</span></code> such as <code class="docutils literal notranslate"><span class="pre">EPSG:32612</span></code>) keep their bounds in
-degrees and take <code class="docutils literal notranslate"><span class="pre">xres</span></code> and <code class="docutils literal notranslate"><span class="pre">yres</span></code> in the projection’s units. The
-grid covers the whole box in the projection, so on a wide or polar box it
-reaches past the box’s projected corners, where the curved edges bow out.
-A grid that <a class="reference internal" href="_api/stilt.Mesh.to_grid.html#stilt.Mesh.to_grid" title="stilt.Mesh.to_grid"><code class="xref py py-meth docutils literal notranslate"><span class="pre">stilt.Mesh.to_grid()</span></code></a> picks for a projected
-<code class="docutils literal notranslate"><span class="pre">geometry</span></code> covers every one of its areas. A grid
+<p>Projected grids (a <code class="docutils literal notranslate"><span class="pre">crs</span></code> such as <code class="docutils literal notranslate"><span class="pre">EPSG:32612</span></code>) take their bounds and
+their <code class="docutils literal notranslate"><span class="pre">xres</span></code> and <code class="docutils literal notranslate"><span class="pre">yres</span></code> in the projection’s units, meters for UTM, so
+the grid is the rectangle you write and no larger:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">grid</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">xmin</span><span class="p">:</span><span class="w"> </span><span class="nv">329000</span><span class="p p-Indicator">,</span><span class="nt"> xmax</span><span class="p">:</span><span class="w"> </span><span class="nv">543000</span><span class="p p-Indicator">,</span><span class="nt"> ymin</span><span class="p">:</span><span class="w"> </span><span class="nv">4427000</span><span class="p p-Indicator">,</span><span class="nt"> ymax</span><span class="p">:</span><span class="w"> </span><span class="nv">4652000</span><span class="p p-Indicator">,</span>
+<span class="nt">       xres</span><span class="p">:</span><span class="w"> </span><span class="nv">1000</span><span class="p p-Indicator">,</span><span class="nt"> yres</span><span class="p">:</span><span class="w"> </span><span class="nv">1000</span><span class="p p-Indicator">,</span><span class="nt"> crs</span><span class="p">:</span><span class="w"> </span><span class="nv">EPSG</span><span class="p p-Indicator">:</span><span class="nv">32612</span><span class="p p-Indicator">}</span>
+</pre></div>
+</div>
+<p>To cover a longitude/latitude box, give its extent in the projection, as
+pyproj’s <code class="docutils literal notranslate"><span class="pre">Transformer.transform_bounds</span></code> returns it. Bounds that could all
+be degrees (<code class="docutils literal notranslate"><span class="pre">xmin</span></code> and <code class="docutils literal notranslate"><span class="pre">xmax</span></code> within 360 of 0, <code class="docutils literal notranslate"><span class="pre">ymin</span></code> and <code class="docutils literal notranslate"><span class="pre">ymax</span></code>
+within 90) are refused on a projected grid, since they are almost always a
+longitude/latitude box. A grid that <a class="reference internal" href="_api/stilt.Mesh.to_grid.html#stilt.Mesh.to_grid" title="stilt.Mesh.to_grid"><code class="xref py py-meth docutils literal notranslate"><span class="pre">stilt.Mesh.to_grid()</span></code></a> picks for a
+projected <code class="docutils literal notranslate"><span class="pre">geometry</span></code> is the geometry’s extent in its own projection,
+rounded out to whole cells. A grid
 of more than a billion cells is refused, which catches a resolution in
 degrees on a grid in meters. The two
 steps that depend on the cell size work in the grid’s units. The smoothing
@@ -1853,7 +1862,7 @@ can share one.</p>
 <td><p>Longitude/latitude bounding box, in degrees.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="_api/stilt.Grid.html#stilt.Grid" title="stilt.Grid"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Grid</span></code></a></p></td>
-<td><p>A rectilinear grid: longitude/latitude bounds, cell size, and CRS.</p></td>
+<td><p>A rectilinear grid: bounds, cell size, and CRS.</p></td>
 </tr>
 </tbody>
 </table>

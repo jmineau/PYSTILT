@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=90a4492f"></script>
+    <script src="../../_static/documentation_options.js?v=1b7344ba"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a32.dev21+g068b08039" />
+  <meta name="docsearch:version" content="0.1.0a32.dev22+gddcf21807" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -531,8 +531,7 @@ and why:</p>
 <ul class="simple">
 <li><p>the near-field correction of a release above sea level, whose plume
 PYSTILT grows from the ground</p></li>
-<li><p>projected grids, which PYSTILT lays out to cover the whole box, and
-where it smooths as widely as on a longitude/latitude grid and runs the
+<li><p>projected grids, where it smooths as widely as on a longitude/latitude grid and runs the
 early-time interpolation</p></li>
 <li><p>grids near or across 180°, which PYSTILT treats as one stretch of
 longitude, and global grids written from 0° to 360°, which keep those
@@ -618,7 +617,9 @@ as <code class="docutils literal notranslate"><span class="pre">subgrid_bounds</
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">xmn</span></code>, <code class="docutils literal notranslate"><span class="pre">xmx</span></code>, <code class="docutils literal notranslate"><span class="pre">ymn</span></code>, <code class="docutils literal notranslate"><span class="pre">ymx</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">grid:</span> <span class="pre">xmin</span></code>, <code class="docutils literal notranslate"><span class="pre">xmax</span></code>, <code class="docutils literal notranslate"><span class="pre">ymin</span></code>, <code class="docutils literal notranslate"><span class="pre">ymax</span></code>, in the footprint’s
-block under <code class="docutils literal notranslate"><span class="pre">stages:</span></code></p></td>
+block under <code class="docutils literal notranslate"><span class="pre">stages:</span></code>. With a <code class="docutils literal notranslate"><span class="pre">projection</span></code>, these are in its
+units: give the projected corners, (<code class="docutils literal notranslate"><span class="pre">xmn</span></code>, <code class="docutils literal notranslate"><span class="pre">ymn</span></code>) and
+(<code class="docutils literal notranslate"><span class="pre">xmx</span></code>, <code class="docutils literal notranslate"><span class="pre">ymx</span></code>), and the grid has STILT-R’s cells</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">xres</span></code>, <code class="docutils literal notranslate"><span class="pre">yres</span></code>, <code class="docutils literal notranslate"><span class="pre">projection</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">grid:</span> <span class="pre">xres</span></code>, <code class="docutils literal notranslate"><span class="pre">yres</span></code>, <code class="docutils literal notranslate"><span class="pre">crs</span></code> (<code class="docutils literal notranslate"><span class="pre">projection</span></code> is read too)</p></td>

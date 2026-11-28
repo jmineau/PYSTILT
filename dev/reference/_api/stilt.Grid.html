@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=90a4492f"></script>
+    <script src="../../_static/documentation_options.js?v=1b7344ba"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a32.dev21+g068b08039" />
+  <meta name="docsearch:version" content="0.1.0a32.dev22+gddcf21807" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -588,6 +588,7 @@
 <li class="toctree-l3"><a class="reference internal" href="stilt.Grid.dims.html">stilt.Grid.dims</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Grid.index.html">stilt.Grid.index</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Grid.is_longlat.html">stilt.Grid.is_longlat</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.Grid.contains.html">stilt.Grid.contains</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.Grid.to_xarray.html">stilt.Grid.to_xarray</a></li>
 </ul>
 </details></li>
@@ -910,13 +911,13 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="stilt.Grid">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">stilt.</span></span><span class="sig-name descname"><span class="pre">Grid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">xmin</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">xmax</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">ymin</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">ymax</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">xres</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Gt</span><span class="p"><span class="pre">(</span></span><span class="n"><span class="pre">gt</span></span><span class="o"><span class="pre">=</span></span><span class="m"><span class="pre">0</span></span><span class="p"><span class="pre">)</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">yres</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Gt</span><span class="p"><span class="pre">(</span></span><span class="n"><span class="pre">gt</span></span><span class="o"><span class="pre">=</span></span><span class="m"><span class="pre">0</span></span><span class="p"><span class="pre">)</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">crs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'+proj=longlat'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/stilt/footprint/grid.html#Grid"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.Grid" title="Link to this definition">#</a></dt>
-<dd><p>A rectilinear grid: longitude/latitude bounds, cell size, and CRS.</p>
-<p>The bounds are always longitude/latitude. With a projected <code class="docutils literal notranslate"><span class="pre">crs</span></code>,
-<code class="docutils literal notranslate"><span class="pre">xres</span></code> and <code class="docutils literal notranslate"><span class="pre">yres</span></code> are in its units, and the grid covers the whole
-box in that projection. Longitudes count modulo 360, so a grid
-across 180 degrees is written <code class="docutils literal notranslate"><span class="pre">xmin=170,</span> <span class="pre">xmax=190</span></code> or <code class="docutils literal notranslate"><span class="pre">xmin=170,</span>
-<span class="pre">xmax=-170</span></code>. Either has longitudes 170 to 190. A grid
-spans at most 360 degrees of longitude.</p>
+<dd><p>A rectilinear grid: bounds, cell size, and CRS.</p>
+<p>The bounds and the cell size are in the units of <code class="docutils literal notranslate"><span class="pre">crs</span></code>: degrees of
+longitude and latitude on the default <code class="docutils literal notranslate"><span class="pre">+proj=longlat</span></code>, and <code class="docutils literal notranslate"><span class="pre">x</span></code> and
+<code class="docutils literal notranslate"><span class="pre">y</span></code> (meters for <code class="docutils literal notranslate"><span class="pre">EPSG:32612</span></code>) on a projected grid. Longitudes count
+modulo 360, so a grid across 180 degrees is written <code class="docutils literal notranslate"><span class="pre">xmin=170,</span>
+<span class="pre">xmax=190</span></code> or <code class="docutils literal notranslate"><span class="pre">xmin=170,</span> <span class="pre">xmax=-170</span></code>. Either has longitudes 170 to
+190. A grid spans at most 360 degrees of longitude.</p>
 </dd></dl>
 
 <section id="parameters">
@@ -935,19 +936,19 @@ spans at most 360 degrees of longitude.</p>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">xmin</span></code></p></td>
-<td><p>Western edge, in degrees longitude.</p></td>
+<td><p>Western edge: degrees longitude, or x in <code class="docutils literal notranslate"><span class="pre">crs</span></code> units.</p></td>
 <td><p>Required</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">xmax</span></code></p></td>
-<td><p>Eastern edge, in degrees longitude.</p></td>
+<td><p>Eastern edge: degrees longitude, or x in <code class="docutils literal notranslate"><span class="pre">crs</span></code> units.</p></td>
 <td><p>Required</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ymin</span></code></p></td>
-<td><p>Southern edge, in degrees latitude.</p></td>
+<td><p>Southern edge: degrees latitude, or y in <code class="docutils literal notranslate"><span class="pre">crs</span></code> units.</p></td>
 <td><p>Required</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ymax</span></code></p></td>
-<td><p>Northern edge, in degrees latitude.</p></td>
+<td><p>Northern edge: degrees latitude, or y in <code class="docutils literal notranslate"><span class="pre">crs</span></code> units.</p></td>
 <td><p>Required</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">xres</span></code></p></td>
@@ -959,7 +960,7 @@ spans at most 360 degrees of longitude.</p>
 <td><p>Required</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">crs</span></code></p></td>
-<td><p>Coordinate reference system of the grid, such as a PROJ string or <code class="docutils literal notranslate"><span class="pre">EPSG:32612</span></code>. Particles and bounds are projected to it before gridding. Also read as <code class="docutils literal notranslate"><span class="pre">projection</span></code>.</p></td>
+<td><p>Coordinate reference system of the grid, such as a PROJ string or <code class="docutils literal notranslate"><span class="pre">EPSG:32612</span></code>. The bounds and resolution are in its units, and particles are projected to it before gridding. Also read as <code class="docutils literal notranslate"><span class="pre">projection</span></code>.</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">'+proj=longlat'</span></code></p></td>
 </tr>
 </tbody>
@@ -993,7 +994,10 @@ spans at most 360 degrees of longitude.</p>
 <h2>Methods<a class="headerlink" href="#methods" title="Link to this heading">#</a></h2>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="stilt.Grid.to_xarray.html#stilt.Grid.to_xarray" title="stilt.Grid.to_xarray"><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_xarray</span></code></a>()</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="stilt.Grid.contains.html#stilt.Grid.contains" title="stilt.Grid.contains"><code class="xref py py-obj docutils literal notranslate"><span class="pre">contains</span></code></a>(longitude, latitude)</p></td>
+<td><p>Return whether each longitude/latitude point is inside the grid's bounds.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="stilt.Grid.to_xarray.html#stilt.Grid.to_xarray" title="stilt.Grid.to_xarray"><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_xarray</span></code></a>()</p></td>
 <td><p>Return the grid as a CF-1.8 dataset of cell centers.</p></td>
 </tr>
 </tbody>

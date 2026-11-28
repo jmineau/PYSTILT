@@ -1,0 +1,5 @@
+stilt.Grid.contains
+===================
+
+.. currentmodule:: stilt
+.. automethod:: Grid.contains

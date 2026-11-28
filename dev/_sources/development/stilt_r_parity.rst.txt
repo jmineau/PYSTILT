@@ -116,21 +116,17 @@ What does not match
   fill value of ``-1``. PYSTILT writes CF-1.8 NetCDF with dimensions
   ``(time, lat, lon)``. Read PYSTILT files as ordinary CF NetCDF. Tools that
   expect STILT-R's layout will not read them.
-- **The cells of a projected grid.** STILT-R projects the two corners
-  (``xmin``, ``ymin``) and (``xmax``, ``ymax``) of the box and lays the
-  cells out between them, dropping a partial cell at the east and north
-  edges. A box in longitude and latitude has curved edges in most
-  projections, so that rectangle leaves part of the box out: 2 % of the
-  UTM box -113° to -110.5°, 40° to 42°, 18 % of the contiguous US (-125°
-  to -66°, 24° to 50°) on a Lambert conformal grid, and three quarters of
-  the cap north of 60° on a polar stereographic grid. Particles over the
-  part left out are dropped. PYSTILT projects the box's outline and starts
-  the cells at its smallest ``x`` and ``y``, with as many whole cells east
-  and north as reach its largest, so the grid covers the whole box. Its
-  cells then sit elsewhere than STILT-R's, so the fidelity and ``r_only``
-  tests on a projected grid give STILT-R the corners of PYSTILT's cells,
-  and the two lay out the same cells. Longitude/latitude grids are not
-  affected.
+- **The bounds of a projected grid.** STILT-R takes them in degrees,
+  projects the two corners (``xmin``, ``ymin``) and (``xmax``, ``ymax``),
+  and lays the cells out between them. PYSTILT takes them in the grid's
+  own units, so the projected corners of a STILT-R grid give PYSTILT the
+  same cells. A longitude/latitude box has curved edges in most
+  projections, so STILT-R's rectangle leaves part of the box out (2 % of
+  the UTM box -113° to -110.5°, 40° to 42°, three quarters of the cap north
+  of 60° on a polar stereographic grid); in PYSTILT you choose the
+  rectangle. The fidelity and ``r_only`` tests on a projected grid give
+  STILT-R the longitude/latitude of PYSTILT's corners. Longitude/latitude
+  grids are not affected.
 - **The layer of a forward run's last row.** A particle row at ``age``
   minutes holds the step that ends there. STILT-R puts it in layer
   ``floor(age / tres)``, which is right backward (the row at -60 closes the

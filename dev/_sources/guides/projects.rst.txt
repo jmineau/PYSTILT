@@ -146,8 +146,8 @@ These footprint settings sit next to ``grid``, in the footprint's block:
    loss of a species that decays, deposits, or reacts on the way. See
    :doc:`transforms`.
 
-A ``grid`` can be projected, with a ``crs`` such as ``EPSG:32612`` and
-``xres`` and ``yres`` in the projection's units (meters for UTM), and it can
+A ``grid`` can be projected, with a ``crs`` such as ``EPSG:32612`` and its
+bounds, ``xres`` and ``yres`` in the projection's units (meters for UTM), and it can
 cross 180° (``xmin: 170``, ``xmax: -170``).
 :doc:`../reference/configuration` ("Footprint grids") says how the smoothing
 and the time layers work on such grids.

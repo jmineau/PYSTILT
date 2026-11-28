@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=90a4492f"></script>
+    <script src="../../../_static/documentation_options.js?v=1b7344ba"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a32.dev21+g068b08039" />
+  <meta name="docsearch:version" content="0.1.0a32.dev22+gddcf21807" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -488,12 +488,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">EmptyFootprint</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">FootprintConfig</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.foot</span><span class="w"> </span><span class="kn">import</span> <span class="n">_near_field</span><span class="p">,</span> <span class="n">_weighted</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.grid</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
-    <span class="n">Grid</span><span class="p">,</span>
-    <span class="n">_east_edge</span><span class="p">,</span>
-    <span class="n">_grid_cell_starts</span><span class="p">,</span>
-    <span class="n">_projected_extent</span><span class="p">,</span>
-<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.grid</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grid</span><span class="p">,</span> <span class="n">_east_edge</span><span class="p">,</span> <span class="n">_grid_cell_starts</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.particles</span><span class="w"> </span><span class="kn">import</span> <span class="n">_need_foot</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">_footprint_array</span>
@@ -848,30 +843,14 @@
     <span class="k">return</span> <span class="n">out</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_project_particles_to_crs</span><span class="p">(</span>
-    <span class="n">p</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
-    <span class="o">*</span><span class="p">,</span>
-    <span class="n">crs</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="n">xmin</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
-    <span class="n">xmax</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
-    <span class="n">ymin</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
-    <span class="n">ymax</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
-    <span class="n">xres</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
-    <span class="n">yres</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Project particle positions to the grid's CRS, and return them with the grid's projected extent.</span>
-
-<span class="sd">    Grid bounds are given in degrees. The extent is that of :class:`~stilt.Grid`'s</span>
-<span class="sd">    axes: the whole cells that cover the box's projected outline</span>
-<span class="sd">    (``_projected_extent``).</span>
-<span class="sd">    """</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_project_particles_to_crs</span><span class="p">(</span><span class="n">p</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">crs</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the particles with their ``lon`` and ``lat`` projected to the grid's CRS."""</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">pyproj</span><span class="w"> </span><span class="kn">import</span> <span class="n">Transformer</span>
 
     <span class="n">tr</span> <span class="o">=</span> <span class="n">Transformer</span><span class="o">.</span><span class="n">from_crs</span><span class="p">(</span><span class="s2">"EPSG:4326"</span><span class="p">,</span> <span class="n">crs</span><span class="p">,</span> <span class="n">always_xy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="n">p</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
     <span class="n">p</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">],</span> <span class="n">p</span><span class="p">[</span><span class="s2">"lat"</span><span class="p">]</span> <span class="o">=</span> <span class="n">tr</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">p</span><span class="p">[</span><span class="s2">"lat"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">p</span><span class="p">,</span> <span class="o">*</span><span class="n">_projected_extent</span><span class="p">(</span><span class="n">crs</span><span class="p">,</span> <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span><span class="p">,</span> <span class="n">xres</span><span class="p">,</span> <span class="n">yres</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">p</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_compute_kernel_bandwidths</span><span class="p">(</span>
@@ -1449,16 +1428,7 @@
     <span class="n">kernel_df</span><span class="p">,</span> <span class="n">w</span> <span class="o">=</span> <span class="n">_compute_kernel_bandwidths</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">smooth_factor</span><span class="o">=</span><span class="n">smooth_factor</span><span class="p">,</span> <span class="n">crs</span><span class="o">=</span><span class="n">crs</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="ow">not</span> <span class="n">grid</span><span class="o">.</span><span class="n">is_longlat</span><span class="p">:</span>
-        <span class="n">p</span><span class="p">,</span> <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">=</span> <span class="n">_project_particles_to_crs</span><span class="p">(</span>
-            <span class="n">p</span><span class="p">,</span>
-            <span class="n">crs</span><span class="o">=</span><span class="n">crs</span><span class="p">,</span>
-            <span class="n">xmin</span><span class="o">=</span><span class="n">xmin</span><span class="p">,</span>
-            <span class="n">xmax</span><span class="o">=</span><span class="n">xmax</span><span class="p">,</span>
-            <span class="n">ymin</span><span class="o">=</span><span class="n">ymin</span><span class="p">,</span>
-            <span class="n">ymax</span><span class="o">=</span><span class="n">ymax</span><span class="p">,</span>
-            <span class="n">xres</span><span class="o">=</span><span class="n">xres</span><span class="p">,</span>
-            <span class="n">yres</span><span class="o">=</span><span class="n">yres</span><span class="p">,</span>
-        <span class="p">)</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">_project_particles_to_crs</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">crs</span><span class="o">=</span><span class="n">crs</span><span class="p">)</span>
 
     <span class="c1"># Output grid lower-left corners for half-open extents [min, max).</span>
     <span class="n">glong</span> <span class="o">=</span> <span class="n">_grid_cell_starts</span><span class="p">(</span><span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">xres</span><span class="p">)</span>
