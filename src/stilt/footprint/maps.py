@@ -146,7 +146,7 @@ class MapStage(Stage[MapConfig]):
         Raises
         ------
         ValueError
-            If the footprint's grid crosses the antimeridian (:func:`bounds`).
+            If the footprint is on a projected grid (:func:`bounds`).
         """
         footprint = sim.path("footprint")
         if footprint is None:  # the worker runs a stage after the ones it reads
@@ -168,30 +168,35 @@ def mercator_y(lat: Any) -> Any:
     return np.log(np.tan(np.pi / 4 + np.radians(lat) / 2))
 
 
+def _check_lonlat(foot: xr.DataArray) -> None:
+    """Raise a ValueError if *foot* is not on a longitude/latitude grid."""
+    if not {"lat", "lon"} <= set(foot.dims):
+        raise ValueError(
+            "the map stage draws footprints on a longitude/latitude grid, "
+            f"and this footprint is on a projected one (dimensions {tuple(foot.dims)})."
+        )
+
+
 def bounds(foot: xr.DataArray) -> list[list[float]]:
     """
     Return the footprint grid's outer corners, ``[[south, west], [north, east]]``, the order Leaflet takes.
 
     The grid's ``lat`` and ``lon`` are cell centers, so the corners are half
-    a cell beyond the outer ones.
+    a cell beyond the outer ones. A grid across 180° keeps the longitudes it
+    is written with, so its east edge is past 180 (``190`` for a grid from
+    170 to -170), which a web map draws in the right place.
 
     Raises
     ------
     ValueError
-        If the grid crosses the antimeridian (180°). PYSTILT wraps such a
-        grid's longitudes into -180 to 180 and sorts them, so their smallest
-        and largest are not the grid's west and east edges.
+        If the footprint is on a projected grid (``y`` and ``x`` rather than
+        ``lat`` and ``lon``): the image's rows follow web Mercator in
+        latitude, so the map stage does not draw a projected footprint.
     """
+    _check_lonlat(foot)
     lat, lon = foot["lat"].values, foot["lon"].values
     dlat = abs(float(lat[1] - lat[0])) if lat.size > 1 else 0.0
-    # The smallest gap, not the first: on a grid wrapped across 180° the
-    # sorted longitudes are evenly spaced but for one large gap.
-    dlon = float(np.min(np.abs(np.diff(lon)))) if lon.size > 1 else 0.0
-    if lon.size > 2 and float(np.max(np.abs(np.diff(lon)))) > 1.5 * dlon:
-        raise ValueError(
-            "the footprint's grid crosses the antimeridian (180°), which a "
-            "map image cannot be drawn across."
-        )
+    dlon = abs(float(lon[1] - lon[0])) if lon.size > 1 else 0.0
     return [
         [float(lat.min()) - dlat / 2, float(lon.min()) - dlon / 2],
         [float(lat.max()) + dlat / 2, float(lon.max()) + dlon / 2],
@@ -235,10 +240,11 @@ def image(foot: xr.DataArray, config: MapConfig | None = None) -> np.ndarray:
     Raises
     ------
     ValueError
-        If the footprint's grid crosses the antimeridian (:func:`bounds`).
+        If the footprint is on a projected grid (:func:`bounds`).
     """
     import matplotlib
 
+    _check_lonlat(foot)
     config = config or MapConfig()
     total = foot.sum("time") if "time" in foot.dims else foot
     total = total.transpose("lat", "lon").sortby("lat", ascending=False)
@@ -306,7 +312,7 @@ def map_entry(
     Raises
     ------
     ValueError
-        If the footprint's grid crosses the antimeridian (:func:`bounds`).
+        If the footprint is on a projected grid (:func:`bounds`).
     """
     config = config or MapConfig()
     location = {k: v for k, v in release.to_dict().items() if k != "time"}

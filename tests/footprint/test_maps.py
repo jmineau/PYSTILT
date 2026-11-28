@@ -141,22 +141,43 @@ def test_bounds_are_the_outer_cell_edges():
     assert maps.bounds(foot) == [[39.75, -112.25], [41.25, -111.25]]
 
 
-def _dateline_footprint():
-    """A footprint whose grid crosses 180°, as PYSTILT wraps and sorts its longitudes."""
-    lon = np.array([-177.5, -172.5, 172.5, 177.5])
-    lat = np.array([10.0, 12.0])
-    return xr.DataArray(
-        np.ones((1, lat.size, lon.size)),
-        dims=("time", "lat", "lon"),
-        coords={"time": [0], "lat": lat, "lon": lon},
-        attrs={"units": "ppm (umol m-2 s-1)-1"},
+def _on(grid, values=None):
+    """A footprint labeled as calc_footprint labels one on *grid*."""
+    x, y = grid.axes
+    values = np.ones((y.size, x.size)) if values is None else values
+    y_dim, x_dim = grid.dims
+    return xr.DataArray(values, dims=(y_dim, x_dim), coords={y_dim: y, x_dim: x})
+
+
+def test_a_grid_across_the_antimeridian_is_drawn_east_past_180():
+    grid = Grid(xmin=170, xmax=-170, ymin=-5, ymax=5, xres=0.5, yres=0.5)
+    values = np.zeros((20, 40))
+    values[3, 30] = (
+        1e-2  # one strong cell, 4th row from the south, 31st column from 170
     )
+    foot = _on(grid, values)
+    assert foot["lon"].values[[0, -1]].tolist() == [170.25, 189.75]
+    assert maps.bounds(foot) == [[-5.0, 170.0], [5.0, 190.0]]
+    rgba = maps.image(foot)
+    assert rgba.shape[:2] == (20, 40)
+    # The image's last row is the south, so row 3 from the south is 16 from the top.
+    assert np.argwhere(rgba[..., 3] > 0).tolist() == [[16, 30]]
 
 
-@pytest.mark.parametrize("draw", [maps.bounds, maps.image])
-def test_a_grid_that_crosses_the_antimeridian_is_refused(draw):
-    with pytest.raises(ValueError, match="antimeridian"):
-        draw(_dateline_footprint())
+@pytest.mark.parametrize("draw", [maps.bounds, maps.image, maps.map_entry])
+def test_a_projected_footprint_is_refused_in_words(draw):
+    grid = Grid(
+        xmin=-112.5,
+        xmax=-111.0,
+        ymin=40.0,
+        ymax=41.5,
+        xres=10_000,
+        yres=10_000,
+        crs="EPSG:32612",
+    )
+    args = (make_release(), _on(grid)) if draw is maps.map_entry else (_on(grid),)
+    with pytest.raises(ValueError, match="longitude/latitude grid"):
+        draw(*args)
 
 
 def test_image_puts_north_at_the_top_and_hides_small_values():
