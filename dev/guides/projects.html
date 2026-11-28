@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=bf4ed07c"></script>
+    <script src="../_static/documentation_options.js?v=9ff5cbf3"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a32.dev19+gd9aef07ff" />
+  <meta name="docsearch:version" content="0.1.0a32.dev20+g667d5bc5f" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -538,7 +538,10 @@ below, and <a class="reference internal" href="../reference/configuration.html">
 <code class="docutils literal notranslate"><span class="pre">stilt.Project.init(path,</span> <span class="pre">starter=True)</span></code> in Python. If you pass settings to
 <a class="reference internal" href="../reference/_api/stilt.Project.init.html#stilt.Project.init" title="stilt.Project.init"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Project.init</span></code></a> instead, they are written to
 <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> once, so it reads the same either way. <code class="docutils literal notranslate"><span class="pre">Project.init</span></code>
-stops if the folder already has a <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>.</p>
+stops if the folder already has a <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>.
+The starter’s footprint grid is a placeholder over northern Utah. Replace
+it with the area your releases’ footprints cover (<code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">check</span></code> reports
+releases outside it).</p>
 <p>Both files are yours to edit. PYSTILT never rewrites <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>, and it
 only appends to <code class="docutils literal notranslate"><span class="pre">releases.csv</span></code>. <code class="docutils literal notranslate"><span class="pre">project.add_table(&quot;kernels&quot;,</span> <span class="pre">table)</span></code>
 adds rows to <code class="docutils literal notranslate"><span class="pre">tables/kernels.parquet</span></code> the same way, and a transform names
@@ -696,6 +699,8 @@ unchanged. Add more entries to run the same releases under other settings:</p>
 <span class="w">    </span><span class="nt">stages</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">footprint</span><span class="p">:</span><span class="w"> </span><span class="nv">null</span><span class="p p-Indicator">}</span><span class="w">  </span><span class="c1"># particles only</span>
 </pre></div>
 </div>
+<p>The wind-error values are for HRRR over the Salt Lake Valley and only show
+the syntax. <a class="reference internal" href="transport_error.html"><span class="doc">Transport Error</span></a> says how to derive your own.</p>
 <p>Each variant of each release is one simulation, so 100 releases and
 three variants make 300 simulations. A variant may set:</p>
 <dl class="simple">

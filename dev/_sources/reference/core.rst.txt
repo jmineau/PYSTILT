@@ -166,8 +166,8 @@ pandas, then pass the selection to the project's :meth:`~Project.status`,
 .. code-block:: python
 
    sims = project.simulations
-   wbb = sims[(sims.variant == "hrrr") & (sims.site == "WBB")]
-   feet = project.footprints(wbb)
+   tower = sims[(sims.variant == "hrrr") & (sims.site == "tower_a")]
+   feet = project.footprints(tower)
 
 .. currentmodule:: stilt
 

@@ -24,6 +24,9 @@ The project folder
 :meth:`Project.init <stilt.Project.init>` instead, they are written to
 ``config.yaml`` once, so it reads the same either way. ``Project.init``
 stops if the folder already has a ``config.yaml``.
+The starter's footprint grid is a placeholder over northern Utah. Replace
+it with the area your releases' footprints cover (``stilt check`` reports
+releases outside it).
 
 Both files are yours to edit. PYSTILT never rewrites ``config.yaml``, and it
 only appends to ``releases.csv``. ``project.add_table("kernels", table)``
@@ -176,6 +179,9 @@ unchanged. Add more entries to run the same releases under other settings:
        zcoruverr: 450
        horcoruverr: 14
        stages: {footprint: null}  # particles only
+
+The wind-error values are for HRRR over the Salt Lake Valley and only show
+the syntax. :doc:`transport_error` says how to derive your own.
 
 Each variant of each release is one simulation, so 100 releases and
 three variants make 300 simulations. A variant may set:

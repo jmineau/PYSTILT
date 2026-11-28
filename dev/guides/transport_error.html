@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=bf4ed07c"></script>
+    <script src="../_static/documentation_options.js?v=9ff5cbf3"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -66,7 +66,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a32.dev19+gd9aef07ff" />
+  <meta name="docsearch:version" content="0.1.0a32.dev20+g667d5bc5f" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -544,6 +544,9 @@ The names are the same as in STILT-R.</p>
 <span class="w">    </span><span class="nt">stages</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">footprint</span><span class="p">:</span><span class="w"> </span><span class="nv">null</span><span class="p p-Indicator">}</span><span class="w">   </span><span class="c1"># particles only</span>
 </pre></div>
 </div>
+<p>These values are for HRRR over the Salt Lake Valley. They show the syntax;
+<a class="reference internal" href="#choosing-the-settings">Choosing the settings</a> and <a class="reference internal" href="#wind-error-statistics"><span class="std std-ref">Wind-error statistics</span></a> say how to get
+values for your own met and region.</p>
 <p>Every release then has a second simulation,
 <code class="docutils literal notranslate"><span class="pre">project.simulation(rid,</span> <span class="pre">&quot;hrrr-err&quot;)</span></code>, whose particles saw the perturbed
 winds. You can add the error variant to a finished project, and only the
@@ -671,12 +674,12 @@ and retrieval errors to get the total error of a modeled value.</p>
 <p><code class="docutils literal notranslate"><span class="pre">project.transport_error</span></code> takes a selection of the unperturbed run, the
 name of the wind-error variant, and the flux field:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sims</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulations</span>
-<span class="n">wbb</span> <span class="o">=</span> <span class="n">sims</span><span class="p">[(</span><span class="n">sims</span><span class="o">.</span><span class="n">variant</span> <span class="o">==</span> <span class="s2">"hrrr"</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">sims</span><span class="o">.</span><span class="n">site</span> <span class="o">==</span> <span class="s2">"WBB"</span><span class="p">)]</span>
-<span class="n">errors</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">transport_error</span><span class="p">(</span><span class="n">wbb</span><span class="p">,</span> <span class="s2">"hrrr-err"</span><span class="p">,</span> <span class="n">flux</span><span class="p">)</span>
+<span class="n">tower</span> <span class="o">=</span> <span class="n">sims</span><span class="p">[(</span><span class="n">sims</span><span class="o">.</span><span class="n">variant</span> <span class="o">==</span> <span class="s2">"hrrr"</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">sims</span><span class="o">.</span><span class="n">site</span> <span class="o">==</span> <span class="s2">"tower_a"</span><span class="p">)]</span>
+<span class="n">errors</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">transport_error</span><span class="p">(</span><span class="n">tower</span><span class="p">,</span> <span class="s2">"hrrr-err"</span><span class="p">,</span> <span class="n">flux</span><span class="p">)</span>
 <span class="n">errors</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">errors</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">month</span><span class="p">)</span><span class="o">.</span><span class="n">variance</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
 </pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">errors</span></code> is <code class="docutils literal notranslate"><span class="pre">wbb</span></code> with six more columns. <code class="docutils literal notranslate"><span class="pre">variance</span></code> is the
+<p><code class="docutils literal notranslate"><span class="pre">errors</span></code> is <code class="docutils literal notranslate"><span class="pre">tower</span></code> with six more columns. <code class="docutils literal notranslate"><span class="pre">variance</span></code> is the
 transport-error variance of the modeled enhancement, in the enhancement’s
 units squared, and <code class="docutils literal notranslate"><span class="pre">noise</span></code> is its standard error
 (<a class="reference internal" href="#is-the-estimate-meaningful">Is the estimate meaningful?</a>).
