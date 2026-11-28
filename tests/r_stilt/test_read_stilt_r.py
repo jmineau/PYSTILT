@@ -55,6 +55,11 @@ _PYSTILT_NAMES = {
 }
 
 
+def _in_seconds(particles: pd.DataFrame) -> pd.DataFrame:
+    """STILT-R's particles with ``age`` and ``samt`` in seconds, as PYSTILT reads them."""
+    return particles.assign(age=particles["age"] * 60, samt=particles["samt"] * 60)
+
+
 def _read_dump(path: Path) -> pd.DataFrame:
     """
     Read a CSV R dumped, every digit exact.
@@ -94,15 +99,16 @@ def test_release_time_and_particles_are_what_r_reads(written):
     assert len(sims) == len(names) == 2
     for name, (release, particles, _) in zip(names, sims, strict=True):
         seconds = float((dumped / f"{name}_time.txt").read_text())
-        assert pd.Timestamp(release.time) == pd.Timestamp(seconds, unit="s")
+        # Floored to the minute, as CONTROL gives it.
+        assert release.time == pd.Timestamp(seconds, unit="s").floor("min")
         lines = (by_id / name / "CONTROL").read_text().splitlines()
         points = [
             tuple(map(float, line.split())) for line in lines[2 : 2 + int(lines[1])]
         ]
         # CONTROL lists latitude first; coords() gives longitude first.
         assert release.coords() == [(lon, lat, alt) for lat, lon, alt in points]
-        from_r = _read_dump(dumped / f"{name}_particles.csv").rename(
-            columns=_PYSTILT_NAMES
+        from_r = _in_seconds(
+            _read_dump(dumped / f"{name}_particles.csv").rename(columns=_PYSTILT_NAMES)
         )
         mine = particles.drop(columns="time")
         assert list(mine.columns) == list(from_r.columns)
@@ -116,7 +122,8 @@ def test_footprint_is_the_file_written(written):
         path = by_id / name / f"{name}_foot.nc"
         with xr.open_dataset(path, decode_times=False) as ds:
             raw = ds["foot"].load().transpose("time", "lat", "lon")
-        stamps = pd.to_datetime(raw["time"].to_numpy(), unit="s")
+        # Floored to the minute with the release time.
+        stamps = pd.to_datetime(raw["time"].to_numpy(), unit="s").floor("min")
         if foot.stilt.config.tres != "1h":
             # STILT-R summed it over time and stamped it at the release
             # time; it is one layer as long as the run, stamped at its start.
@@ -133,7 +140,7 @@ def test_error_particles_are_what_r_reads(written):
     (path,) = dumped.glob("*_error.csv")
     release, particles, foot = next(read_stilt_r(by_id, error=True))
     assert f"{release.id}_error.csv" == path.name
-    from_r = _read_dump(path).rename(columns=_PYSTILT_NAMES)
+    from_r = _in_seconds(_read_dump(path).rename(columns=_PYSTILT_NAMES))
     mine = particles.drop(columns="time")
     assert list(mine.columns) == list(from_r.columns)
     np.testing.assert_array_equal(mine.to_numpy(), from_r.to_numpy())

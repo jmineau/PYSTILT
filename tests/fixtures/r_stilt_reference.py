@@ -12,6 +12,8 @@ import datetime as dt
 from dataclasses import dataclass, field
 from typing import Literal
 
+import pandas as pd
+
 # ---------------------------------------------------------------------------
 # Shared reference constants
 # ---------------------------------------------------------------------------
@@ -55,6 +57,24 @@ REFERENCE_VARSIWANT = [
 STILT_R_NAMES = {"particle": "indx", "age": "time", "lon": "long", "lat": "lati"}
 #: PYSTILT's names for STILT-R's particle columns.
 PYSTILT_NAMES = {r: py for py, r in STILT_R_NAMES.items()}
+#: Particle columns STILT-R writes in minutes and PYSTILT in seconds.
+_MINUTE_COLUMNS = ("time", "samt")
+
+
+def as_pystilt(r_particles: pd.DataFrame) -> pd.DataFrame:
+    """STILT-R's particle table in PYSTILT's names and units (seconds)."""
+    minutes = [c for c in _MINUTE_COLUMNS if c in r_particles.columns]
+    return r_particles.assign(**{c: r_particles[c] * 60 for c in minutes}).rename(
+        columns=PYSTILT_NAMES
+    )
+
+
+def as_stilt_r(particles: pd.DataFrame) -> pd.DataFrame:
+    """PYSTILT's particle table in STILT-R's names and units (minutes)."""
+    r = particles.rename(columns=STILT_R_NAMES)
+    minutes = [c for c in _MINUTE_COLUMNS if c in r.columns]
+    return r.assign(**{c: r[c] / 60 for c in minutes})
+
 
 # Trajectory columns present when hnf_plume=True, in PYSTILT's names
 _TRAJ_COLS_WITH_HNF: tuple[str, ...] = (

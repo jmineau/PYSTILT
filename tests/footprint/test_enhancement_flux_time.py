@@ -15,7 +15,7 @@ T0 = pd.Timestamp("2023-07-20 12:00")
 def particles():
     """Return 30 synthetic particles going 24 hours back from ``T0``."""
     rng = np.random.default_rng(0)
-    ages = -np.arange(1, 24 * 60 + 1, dtype=float)
+    ages = -60.0 * np.arange(1, 24 * 60 + 1, dtype=float)
     rows = []
     for k in range(1, 31):
         lon = -112.0 + np.cumsum(rng.normal(0, 0.002, ages.size))
@@ -33,7 +33,7 @@ def particles():
             )
         )
     p = pd.concat(rows, ignore_index=True)
-    p["time"] = T0 + pd.to_timedelta(p["age"], unit="min")
+    p["time"] = T0 + pd.to_timedelta(p["age"], unit="s")
     return p
 
 

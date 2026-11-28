@@ -132,7 +132,7 @@ surface source:
    top = None   # meters above ground; None for any height
 
    particles = project.particles(july, columns=["particle", "age", "time", "lon", "lat", "zagl"])
-   particles["hours"] = particles["age"].abs() / 60
+   particles["hours"] = particles["age"].abs() / 3600
 
    inside = shapely.contains_xy(source, particles["lon"], particles["lat"])
    if top is not None:
@@ -159,7 +159,7 @@ step:
        route["lon"].to_numpy(),
    )
    route["sunlit"] = sun["elevation"].to_numpy() > 0
-   step = particles["age"].abs().drop_duplicates().sort_values().diff().median() / 60   # hours per row
+   step = particles["age"].abs().drop_duplicates().sort_values().diff().median() / 3600   # hours per row
    sunlit = route.groupby(["release", "particle"])["sunlit"].sum().mul(step).rename("sunlit")
 
 Then, for each release, the fraction of particles that came from the

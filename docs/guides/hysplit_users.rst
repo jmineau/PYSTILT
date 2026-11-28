@@ -61,7 +61,7 @@ hour and are followed 6 hours forward:
        time="2021-07-15 01:00", longitude=-111.85, latitude=40.77, altitude=500
    )
    cloud = stilt.run_trajectories(
-       start, met_dir, n_hours=6, numpar=1000, emisshrs=1.0,
+       start, met_dir, model="hysplit", n_hours=6, numpar=1000, emisshrs=1.0,
        krand=2, seed=42,
    )
    cloud[["time", "particle", "lon", "lat", "zagl"]].tail()
@@ -89,7 +89,7 @@ particle with turbulence off follows the same path, so ``numpar=1`` and
 .. ipython:: python
 
    path = stilt.run_trajectories(
-       start, met_dir, n_hours=6, numpar=1, nturb=1
+       start, met_dir, model="hysplit", n_hours=6, numpar=1, nturb=1
    )
    path[["time", "lon", "lat", "zagl"]].iloc[[0, 59, 179, 359]]
 

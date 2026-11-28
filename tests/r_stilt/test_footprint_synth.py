@@ -87,14 +87,18 @@ _VEGHT = 0.5  # default STILT veght
 
 
 #: PYSTILT's particle columns, by STILT-R's names. The tables here are built
-#: with STILT-R's names, which its helpers read; PYSTILT gets them renamed.
+#: with STILT-R's names and units (minutes), which its helpers read; PYSTILT
+#: gets them renamed, with ``age`` and ``samt`` in seconds.
 _PY_NAMES = {"indx": "particle", "time": "age", "long": "lon", "lati": "lat"}
 _R_NAMES = {py: r for r, py in _PY_NAMES.items()}
 
 
 def _as_py(particles: pd.DataFrame) -> pd.DataFrame:
-    """Return a STILT-R particle table with PYSTILT's column names."""
-    return particles.rename(columns=_PY_NAMES)
+    """Return a STILT-R particle table with PYSTILT's column names and units."""
+    minutes = [c for c in ("time", "samt") if c in particles.columns]
+    return particles.assign(**{c: particles[c] * 60 for c in minutes}).rename(
+        columns=_PY_NAMES
+    )
 
 
 def _as_r(particles: pd.DataFrame) -> pd.DataFrame:
@@ -303,7 +307,8 @@ def _py_footprint_stages(
     ymin, ymax, yres = grid.ymin, grid.ymax, grid.yres
     is_longlat = "+proj=longlat" in projection
 
-    p = _as_py(particles).copy(deep=False)
+    # The footprint's own steps, in minutes as STILT-R's.
+    p = particles.rename(columns=_PY_NAMES)
     time_sign = int(np.sign(p["age"].median()))
     if is_longlat:
         xmax = _east_edge(xmin, xmax)

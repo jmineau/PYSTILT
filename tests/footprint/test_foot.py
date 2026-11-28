@@ -20,14 +20,14 @@ _NO_POINT = ColumnRelease(
 def _particles_basic() -> pd.DataFrame:
     return pd.DataFrame(
         {
-            "age": [-60, -120],
+            "age": [-3600, -7200],
             "particle": [1, 1],
             "lon": [-111.9, -112.0],
             "lat": [40.7, 40.6],
             "zagl": [10.0, 20.0],
             "foot": [1e-5, 2e-5],
             "dens": [1.2, 1.2],
-            "samt": [1.0, 1.0],
+            "samt": [60.0, 60.0],
             "sigw": [0.1, 0.1],
             "tlgr": [10.0, 10.0],
             "mlht": [500.0, 500.0],
@@ -140,7 +140,7 @@ def test_hnf_correction_invariants():
     Mathematical invariants of the HNF near-field plume-dilution correction.
 
     The HNF correction replaces the HYSPLIT-raw foot with a Gaussian near-field
-    value (0.02897 / (plume * dens) * samt * 60) when the plume has not yet
+    value (0.02897 / (plume * dens) * samt, samt in seconds) when the plume has not yet
     grown to fill the mixing layer.  This can be larger or smaller than the raw
     value.  The invariants that must always hold:
 
@@ -163,8 +163,8 @@ def test_hnf_correction_invariants():
         {
             "age": np.concatenate(
                 [
-                    rng.uniform(-0.5, -0.1, n // 2),  # short time → small plume
-                    rng.uniform(-6.0, -5.0, n // 2),  # long time → large plume
+                    rng.uniform(-30.0, -6.0, n // 2),  # short time → small plume
+                    rng.uniform(-360.0, -300.0, n // 2),  # long time → large plume
                 ]
             ),
             "particle": [float(i + 1) for i in range(n)],
@@ -174,7 +174,7 @@ def test_hnf_correction_invariants():
             "foot": raw_foot,
             "mlht": [500.0] * n,  # pbl_mixing = 0.5 * 500 = 250 m
             "dens": [1.2] * n,
-            "samt": [60.0] * n,
+            "samt": [3600.0] * n,
             "sigw": sigw,
             "tlgr": [100.0] * n,
         }
@@ -189,10 +189,11 @@ def test_hnf_correction_invariants():
 
     # Invariant 2: identity path — particles where plume >= pbl_mixing
     # are unchanged.  Reconstruct plume = r_zagl + sigma to find them.
-    abs_time_s = np.abs(particles["age"] * 60)
+    abs_time_s = np.abs(particles["age"])
     tlgr = particles["tlgr"]
     sigma = (
         particles["samt"]
+        / 60  # STILT-R's plume growth takes samt in minutes
         * np.sqrt(2)
         * particles["sigw"]
         * np.sqrt(tlgr * abs_time_s + tlgr**2 * np.exp(-abs_time_s / tlgr) - 1)
@@ -224,7 +225,7 @@ def _positions(**columns) -> pd.DataFrame:
     base = pd.DataFrame(
         {
             "particle": [1, 1, 2, 2],
-            "age": [-1, -2, -1, -2],
+            "age": [-60, -120, -60, -120],
             "lon": -112.0,
             "lat": 40.5,
             "zagl": [50.0, 80.0, 50.0, 900.0],
@@ -304,7 +305,7 @@ def test_add_foot_takes_each_step_from_the_particle_s_own_rows(met):
     particles = pd.DataFrame(
         {
             "particle": [2, 1, 1, 2, 1, 2],
-            "age": [10, 5, 0, 0, 15, 30],
+            "age": [600, 300, 0, 0, 900, 1800],
             "lon": -112.0,
             "lat": 40.5,
             "zagl": 10.0,
@@ -322,7 +323,7 @@ def test_add_foot_takes_each_step_from_the_particle_s_own_rows(met):
 
 def test_add_foot_uses_the_time_below_the_layer_a_model_writes(met):
     foot = add_foot(
-        _positions(samt=[0.5, 1.0, 0.0, 0.25]), ["met"], footprint_depth=0.5
+        _positions(samt=[30.0, 60.0, 0.0, 15.0]), ["met"], footprint_depth=0.5
     )["foot"]
 
     np.testing.assert_allclose(
@@ -343,11 +344,11 @@ def test_add_foot_refuses_a_table_that_has_foot(met):
 
 
 def test_add_foot_with_a_fixed_pbl_height_replaces_mlht_and_ignores_samt(met):
-    particles = _positions(samt=[0.5, 1.0, 0.0, 0.25])
+    particles = _positions(samt=[30.0, 60.0, 0.0, 15.0])
     out = add_foot(particles, ["met"], footprint_depth=1.0, pbl_height=500.0)
 
     assert out["mlht"].tolist() == [500.0] * 4
-    # samt counts the minutes below the model's own layer, so it is not used.
+    # samt counts the time below the model's own layer, so it is not used.
     np.testing.assert_allclose(out["foot"], [_ONE_MINUTE_IN_500_M] * 3 + [0.0])
     assert [call[0] for call in met["calls"]] == [["pres"]]
 

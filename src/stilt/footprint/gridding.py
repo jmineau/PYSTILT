@@ -74,7 +74,7 @@ def _check_particles_for_footprint(particles: pd.DataFrame, release: Release) ->
     Refused: an infinite ``foot``; two rows of one particle at one ``age``
     (a table concatenated twice, or several releases' particles); a
     ``time`` column that does not equal the release time plus ``age``
-    (another release's time, or ``age`` in hours or seconds); and first
+    (another release's time, or ``age`` in minutes or hours); and first
     positions farther from every release point than the particles could
     have gone by then (another release's place). Rows with no ``particle``,
     ``age``, ``lon``, ``lat`` or ``foot`` are left out of the footprint, with a
@@ -121,7 +121,7 @@ def _check_release_time(particles: pd.DataFrame, release: Release) -> None:
     time = particles["time"]
     if time.dt.tz is not None:
         time = time.dt.tz_convert("UTC").dt.tz_localize(None)
-    released = (time - pd.to_timedelta(particles["age"], unit="min")).dropna()
+    released = (time - pd.to_timedelta(particles["age"], unit="s")).dropna()
     if released.empty:
         return
     release_time = pd.Timestamp(release.time)
@@ -138,7 +138,7 @@ def _check_release_time(particles: pd.DataFrame, release: Release) -> None:
     raise ValueError(
         f"age does not agree with time on {int(off.sum()):,} of {len(off):,} "
         "particle rows: time is the release time plus age, and age is in "
-        "minutes since release. Is age in hours or seconds?"
+        "seconds since release. Is age in minutes or hours?"
     )
 
 
@@ -157,7 +157,7 @@ def _check_release_point(p: pd.DataFrame, release: Release) -> None:
         points[None, :, 1],
     ).min(axis=1)
     median = float(np.median(distance))
-    minutes = float(np.median(first["_age"]))
+    minutes = float(np.median(first["_age"])) / 60
     if median > _RELEASE_MARGIN_KM + _MAX_KM_PER_MINUTE * minutes:
         where = "release point" if len(points) == 1 else "nearest release point"
         raise ValueError(
@@ -827,7 +827,7 @@ def calc_footprint(
     table concatenated with itself, or several releases' particles) is
     refused, as is an infinite ``foot``. When the table has a ``time``
     column, ``time`` minus ``age`` must be the release time, which catches
-    another release's particles and an ``age`` in hours or seconds; without
+    another release's particles and an ``age`` in minutes or hours; without
     one, the time is not checked. Each particle's first row must be within
     10 km of a release point, plus 6 km (100 m/s) for each minute since
     release. Rows with no ``particle``, ``age``, ``lon``, ``lat`` or
@@ -837,7 +837,7 @@ def calc_footprint(
     ----------
     particles : pandas.DataFrame
         Particle table, such as :func:`stilt.run_trajectories` returns or
-        ``sim.particles``, with columns ``particle``, ``age`` (minutes since
+        ``sim.particles``, with columns ``particle``, ``age`` (seconds since
         release), ``lon``, ``lat``, and ``foot``.
     release : Release
         Release the particles were released from.
@@ -852,8 +852,8 @@ def calc_footprint(
     tres : str or timedelta, default "1h"
         Length of each time layer from the release time, a duration in
         whole minutes such as ``"15min"``, ``"1h"`` or ``"1D"``. A particle
-        row at ``age`` minutes falls in layer ``floor(age / minutes)`` on a
-        backward run and ``ceil(age / minutes) - 1`` on a forward one, so a
+        row ``age`` from release falls in layer ``floor(age / tres)`` on a
+        backward run and ``ceil(age / tres) - 1`` on a forward one, so a
         row on the far edge of a layer is in it.
     hnf_plume : bool, default True
         Correct ``foot`` for the thin plume near the release first
@@ -950,6 +950,8 @@ def calc_footprint(
 
     # Only the columns the footprint is made from, as STILT-R passes them.
     p = particles.loc[:, list(_FOOTPRINT_INPUTS)]
+    # The footprint works in minutes since release, as STILT-R does.
+    p = p.assign(age=p["age"] / 60)
     n_particles = p["particle"].nunique()
     # time_sign: -1 for backward runs, +1 for forward.
     time_sign = int(np.sign(p["age"].median()))

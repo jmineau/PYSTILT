@@ -39,7 +39,7 @@ def model_runs(monkeypatch):
         ran.append(sim.variant.name)
         particles = pd.DataFrame(
             {
-                "age": [-60.0, -120.0, -180.0],
+                "age": [-3600.0, -7200.0, -10800.0],
                 "particle": [1.0, 1.0, 1.0],
                 "lon": [-111.9] * 3,
                 "lat": [40.7] * 3,
@@ -48,7 +48,7 @@ def model_runs(monkeypatch):
             }
         )
         particles["time"] = pd.Timestamp(sim.release.time) + pd.to_timedelta(
-            particles["age"], unit="min"
+            particles["age"], unit="s"
         )
         sim.output.write_particles(sim.variant, sim.release, particles, [])
         return particles

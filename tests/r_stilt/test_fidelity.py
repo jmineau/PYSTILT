@@ -34,8 +34,8 @@ import xarray as xr
 from runtraj.models.hysplit.driver import find_hycs_std, setup_seed
 
 from ..fixtures.r_stilt_reference import (
-    STILT_R_NAMES,
     ReferenceScenario,
+    as_stilt_r,
     stilt_r_bounds,
 )
 
@@ -203,6 +203,13 @@ def _trajectory_compare_columns(scenario: ReferenceScenario) -> tuple[str, ...]:
         # foot_no_hnf_dilution still matches.
         # test_msl_hnf_foot_intentionally_differs_from_r pins the gap.
         return tuple(c for c in scenario.compare_columns if c != "foot")
+    if scenario.release_type == "column" and scenario.hnf_plume:
+        # runtraj gives a column's particle k slab k of the slabs
+        # HYSPLIT releases in a step; STILT-R's xhgt cuts numpar slabs. The
+        # near-field plume grows from those heights, so the corrected foot
+        # differs by about 1e-3 (the parity page lists it);
+        # foot_no_hnf_dilution still matches.
+        return tuple(c for c in scenario.compare_columns if c != "foot")
     return scenario.compare_columns
 
 
@@ -230,7 +237,7 @@ def _r_footprint_from_traj(
     nc_path = tmp_path / "r_foot.nc"
     # The R helper reads STILT-R's column names.
     r_traj_path = tmp_path / "traj_r_names.parquet"
-    r_traj = pd.read_parquet(traj_path).rename(columns=STILT_R_NAMES)
+    r_traj = as_stilt_r(pd.read_parquet(traj_path))
     if scenario.n_hours > 0 and not as_written:
         r_traj["time"] -= 1e-6 / 60
     r_traj.to_parquet(r_traj_path)
@@ -342,7 +349,7 @@ def test_msl_hnf_foot_intentionally_differs_from_r(
         atol=1e-10,
         err_msg=f"[{s.name}] uncorrected foot should still match STILT-R.",
     )
-    first_hour = (py["age"].abs() <= 60).to_numpy()
+    first_hour = (py["age"].abs() <= 3600).to_numpy()
     assert py["foot"][first_hour].sum() > r["foot"][first_hour].sum(), (
         f"[{s.name}] PYSTILT's near-field correction of an MSL release no "
         "longer raises the first hour's foot above STILT-R's."

@@ -273,7 +273,7 @@ def test_write_footprint_refuses_a_grid_wider_than_int16(tmp_path):
     particles = pd.DataFrame(
         {
             "particle": [1.0],
-            "age": [-1.0],
+            "age": [-60.0],
             "lon": [-110.25],
             "lat": [40.0005],
             "zagl": 5.0,
@@ -289,11 +289,11 @@ def test_write_footprint_refuses_a_grid_wider_than_int16(tmp_path):
 
 
 def _two_particle_rows(age: float) -> pd.DataFrame:
-    """One particle on the grid at the release's first minute and at *age*."""
+    """One particle on the grid at the release's first minute and at *age* minutes."""
     return pd.DataFrame(
         {
             "particle": [1.0, 1.0],
-            "age": [-1.0, age],
+            "age": [-60.0, 60 * age],
             "lon": [-111.85, -111.85],
             "lat": [40.77, 40.77],
             "zagl": 5.0,

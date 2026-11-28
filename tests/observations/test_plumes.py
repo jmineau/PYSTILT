@@ -209,12 +209,12 @@ def test_plume_recipe_from_particle_tables():
         table = pd.DataFrame(
             {
                 "particle": np.repeat(np.arange(1, 51), minutes.size),
-                "age": np.tile(minutes, 50),
+                "age": np.tile(minutes * 60, 50),
                 "lon": np.repeat(lon, minutes.size),
                 "lat": np.repeat(lat, minutes.size),
             }
         )
-        table["time"] = release + pd.to_timedelta(table["age"], unit="min")
+        table["time"] = release + pd.to_timedelta(table["age"], unit="s")
         rows.append(table[table["time"].between(overpass[0], overpass[1])])
     particles = pd.concat(rows, ignore_index=True)
     assert particles["time"].between(*overpass).all()

@@ -363,7 +363,7 @@ Each particle is one trajectory. The coordinates are:
 ``zagl``
    Height above ground in meters (``standard_name: height``).
 
-``age``, the minutes since release, is a data variable, and so is every other
+``age``, the seconds since release, is a data variable, and so is every other
 numeric column of the table (``foot``, ``mlht``, ...). The columns PYSTILT
 and HYSPLIT write have units and long names; another column is kept without
 units. A table with several realizations is refused: select one first,
@@ -386,7 +386,7 @@ trajan reads the file through its ``traj`` accessor:
    ds = xr.open_dataset("trajectories.nc", decode_timedelta=False)
    ds.traj.plot()
 
-``decode_timedelta=False`` keeps ``age`` in minutes rather than reading it
+``decode_timedelta=False`` keeps ``age`` in seconds rather than reading it
 as a duration.
 
 Footprints for openghg

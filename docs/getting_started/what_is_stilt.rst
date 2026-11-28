@@ -46,7 +46,7 @@ How STILT works, in three steps
        time="2021-01-14 19:00", longitude=-111.848, latitude=40.766, altitude=10
    )
    particles = stilt.run_trajectories(
-       release, docs_examples.met(), n_hours=-12, numpar=200, krand=2, seed=42
+       release, docs_examples.met(), model="hysplit", n_hours=-12, numpar=200, krand=2, seed=42
    )
    grid = stilt.Grid(xmin=-113.0, xmax=-110.5, ymin=40.0, ymax=42.0, xres=0.01, yres=0.01)
    foot = stilt.calc_footprint(particles, release, grid)

@@ -427,7 +427,7 @@ def stored_particles(
     if added_time:
         particles = particles.assign(
             time=pd.Timestamp(start)
-            + pd.to_timedelta(particles["age"].to_numpy(), unit="min")
+            + pd.to_timedelta(particles["age"].to_numpy(), unit="s")
         )
     out = footprint_particles(
         particles, config, met_files, z_top=z_top, variant=variant

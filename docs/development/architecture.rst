@@ -26,8 +26,8 @@ it hashes to a new folder. :doc:`../reference/layout` describes the files.
 
 Whether a simulation is complete is decided by the files in the output
 directory, by ``runtraj.output.completed``: the particles exist, and the
-footprint when the variant has a grid. ``Output.complete``,
-``Simulation.is_complete``, and ``Project.status`` all apply it.
+footprint when the variant has a grid. ``Simulation.is_complete`` and
+``Project.status`` both apply it.
 :ref:`finished-work` explains the consequences.
 
 ``Project`` reads, and the workers write results. ``Project(path)`` opens a
@@ -205,10 +205,8 @@ file is remade with it. ``Stage.run(config, sim, path)`` writes the file
 itself, under a temporary name the worker moves into place, and the worker
 never looks inside. The stage's earlier file is removed before it runs, so
 a stage that fails leaves none, old or half-written. A stage whose input
-failed is left for the next run. A batched model (``batched = True``,
-with ``run_many``) is the exception: ``run_releases`` first runs each of its
-variant groups once for all the releases that need particles, then the
-per-release loop does the rest. HYSPLIT is not batched.
+failed is left for the next run. A transport model runs one release per
+call.
 
 HYSPLIT has to run in a local folder that holds its input files, the run's
 workdir. Each run's workdir is a new path in the compute root

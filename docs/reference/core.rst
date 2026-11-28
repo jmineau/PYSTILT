@@ -20,7 +20,7 @@ stores the results.
 
 .. code-block:: python
 
-   particles = stilt.run_trajectories(release, met, n_hours=-24, numpar=200)
+   particles = stilt.run_trajectories(release, met, model="hysplit", n_hours=-24, numpar=200)
    foot = stilt.calc_footprint(particles, release, grid)
 
 .. autosummary::

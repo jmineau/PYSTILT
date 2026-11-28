@@ -8,7 +8,7 @@ import pytest
 import xarray as xr
 import yaml
 from runtraj.identity import settings_hash, stage_hash
-from runtraj.output import Output
+from runtraj.output import Output, completed
 from scipy import sparse
 
 from stilt.footprint import Jacobian, jacobian, open_footprints
@@ -282,8 +282,9 @@ def test_complete_is_particles_and_a_footprint_when_the_variant_has_a_grid(tmp_p
     store_footprint(out, FEET, fake_footprint(a))
     store_empty_footprint(out, FEET, c)  # a footprint, no particles
     ids = [a.id, b.id, c.id]
-    assert out.complete(FEET, ids) == {a.id}
-    assert out.complete(VARIANT, ids) == {a.id, b.id}  # particles alone
+    particles = out.present("particles", FEET, ids)
+    assert completed(particles, out.present("footprint", FEET, ids)) == {a.id}
+    assert completed(particles) == {a.id, b.id}  # particles alone
 
 
 # ---------------------------------------------------------------------------

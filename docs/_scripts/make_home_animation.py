@@ -186,7 +186,8 @@ def render(project: Path) -> None:
         )
         ax.set_axis_off()
 
-    ages = np.arange(0, -24 * 60 - STEP_MIN, -STEP_MIN)
+    # age is in seconds.
+    ages = np.arange(0, -24 * 3600 - STEP_MIN * 60, -STEP_MIN * 60)
     # Each layer is labeled by its start: 19:00 holds 19:00 to 20:00.
     layer_end = pd.to_datetime(foot["time"].values) + pd.Timedelta(hours=1)
     frames = Path(tempfile.mkdtemp(prefix="home-animation-"))
@@ -282,7 +283,7 @@ def render(project: Path) -> None:
         )
         # The footprint so far: every hourly layer the particles have reached,
         # the one they are in included, so it grows from the first frame.
-        reached = layer_end > release_time + pd.Timedelta(minutes=int(age))
+        reached = layer_end > release_time + pd.Timedelta(seconds=int(age))
         if age == 0 or not reached.any():
             so_far = None
         else:
@@ -302,7 +303,7 @@ def render(project: Path) -> None:
                     zorder=4,
                 )
             )
-        hours = -age / 60
+        hours = -age / 3600
         clock.set_text("Now" if age == 0 else f"{hours:.1f} hours back")
         fig.savefig(frames / f"{k:04d}.png", facecolor="white")
         print(f"frame {k + 1}/{len(ages)}", end="\r")

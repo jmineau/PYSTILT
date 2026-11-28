@@ -291,9 +291,9 @@ after the release time, and is stamped at its start. A layer is
 unless the settings give another length; it is always the layer number.
 :meth:`stilt.Project.footprints` turns it into the unit ``tres`` is written
 in, and names its dimension for it: layer -1 of ``15min`` layers is
-``minute`` -15 there. A particle row at ``age`` minutes
-falls in layer ``floor(age / m)`` on a backward run and ``ceil(age / m) - 1``
-on a forward one, where ``m`` is ``tres`` in minutes: a row on a layer's far
+``minute`` -15 there. A particle row at ``age`` seconds
+falls in layer ``floor(age / s)`` on a backward run and ``ceil(age / s) - 1``
+on a forward one, where ``s`` is ``tres`` in seconds: a row on a layer's far
 edge is in that layer. For a release at 18:30 on a backward run with hourly
 layers:
 
@@ -301,13 +301,13 @@ layers:
    :header-rows: 1
    :widths: 30 20 50
 
-   * - Particle ``age`` (minutes)
+   * - Particle ``age`` (seconds)
      - Layer
      - Covers
-   * - -1 to -60
+   * - -60 to -3600
      - -1
      - 17:30 to 18:30, stamped 17:30
-   * - -61 to -120
+   * - -3660 to -7200
      - -2
      - 16:30 to 17:30, stamped 16:30
 
@@ -317,8 +317,8 @@ to 18:30 and layer -2 covers 18:00 to 18:15. With ``tres`` as long as the
 run (``1D`` for a 24-hour run) there is one layer, -1, stamped at the
 start of the run, which holds the whole run.
 
-On a forward run the rows at +1 to +60 minutes are layer 0 (18:30 to 19:30,
-stamped 18:30), +61 to +120 layer 1, and a two-hour run has layers 0 and 1.
+On a forward run the rows at +60 to +3600 seconds are layer 0 (18:30 to 19:30,
+stamped 18:30), +3660 to +7200 layer 1, and a two-hour run has layers 0 and 1.
 
 The grid
 ~~~~~~~~

@@ -423,7 +423,7 @@ def test_enhancement_uses_the_foot_the_footprint_uses(
     particles = pd.DataFrame(
         {
             "particle": [1, 1, 1, 2, 2, 2],
-            "age": [-1, -2, -3] * 2,
+            "age": [-60, -120, -180] * 2,
             "lon": -111.9,
             "lat": 40.7,
             "zagl": 50.0,

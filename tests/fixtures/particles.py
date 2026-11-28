@@ -43,7 +43,7 @@ def random_walk(
     rows = []
     for particle in range(1, n_particles + 1):
         steps = n_steps - particle
-        age = -step_minutes * np.arange(1, steps + 1, dtype=float)
+        age = -60.0 * step_minutes * np.arange(1, steps + 1, dtype=float)
         lon = -111.85 + np.cumsum(rng.normal(-0.004, 0.01, steps))
         lat = 40.77 + np.cumsum(rng.normal(0.002, 0.01, steps))
         zagl = np.abs(5 + np.cumsum(rng.normal(2, 20, steps)))
@@ -62,7 +62,5 @@ def random_walk(
             )
         )
     table = pd.concat(rows, ignore_index=True)
-    table["time"] = pd.Timestamp(release_time) + pd.to_timedelta(
-        table["age"], unit="min"
-    )
+    table["time"] = pd.Timestamp(release_time) + pd.to_timedelta(table["age"], unit="s")
     return table

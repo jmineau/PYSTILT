@@ -37,6 +37,7 @@ def _pystilt_footprint() -> xr.DataArray:
     particles = pd.read_csv(HERE / "particles.csv").rename(
         columns={"indx": "particle", "time": "age", "long": "lon", "lati": "lat"}
     )
+    particles["age"] *= 60  # STILT-R's minutes; PYSTILT's age is in seconds
     release = PointRelease(
         time=RELEASE_TIME, longitude=LONGITUDE, latitude=LATITUDE, altitude=5.0
     )

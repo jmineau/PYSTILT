@@ -241,6 +241,19 @@ What does not match
   over high terrain its correction does nothing. The ``msl_altitude``
   scenario compares the uncorrected ``foot_no_hnf_dilution``, and
   ``test_msl_hnf_foot_intentionally_differs_from_r`` guards the difference.
+- **The release heights of a column's particles.** HYSPLIT releases a
+  column in slabs of equal depth, one per particle of a time step, and
+  puts each particle at a random height in its slab; a release of a
+  minute or less with ``numpar = 1000`` is one step of 1001 particles,
+  the last cut by ``MAXPAR``. runtraj gives particle ``k`` the middle of
+  slab ``k`` of those 1001, where HYSPLIT released it. STILT-R's ``xhgt``
+  cuts the column into ``numpar`` slabs, so for the 0–1000 m ``column``
+  scenario its heights are higher by ``(k - 0.5) / 1001`` m, up to 1 m at
+  the top. The near-field correction grows the plume from these heights,
+  so the corrected ``foot`` differs by up to 9e-4 (relative) in the 227
+  rows it changes, all from the lowest 64 particles. The ``column``
+  scenario compares the uncorrected ``foot_no_hnf_dilution``, which
+  matches.
 - **Untested inputs.** Runs longer than 24 h backward, latitudes above 80°,
   and grids finer than 0.001° have not been compared.
 - **Other STILT-R commits.** The fidelity tests run only against the pinned

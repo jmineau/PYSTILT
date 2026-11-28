@@ -139,6 +139,7 @@ def test_grid_refuses_an_unknown_key_in_the_config(tmp_path):
     with pytest.raises(ValueError, match="'csr' is not a grid setting"):
         stilt.ProjectConfig(
             mets={"a": met},
+            models={"hysplit": {}},
             stages={
                 "footprint": {"class": stage, "grid": {**grid, "csr": "EPSG:32612"}}
             },
@@ -147,6 +148,7 @@ def test_grid_refuses_an_unknown_key_in_the_config(tmp_path):
     with pytest.raises(ValueError, match="'xresolution' is not a grid setting"):
         stilt.ProjectConfig(
             mets={"a": met},
+            models={"hysplit": {}},
             stages={"footprint": {"class": stage}},
             variants={
                 "a": {"stages": {"footprint": {"grid": {**grid, "xresolution": 3}}}}
