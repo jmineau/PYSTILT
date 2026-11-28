@@ -203,6 +203,13 @@ def _trajectory_compare_columns(scenario: ReferenceScenario) -> tuple[str, ...]:
         # foot_no_hnf_dilution still matches.
         # test_msl_hnf_foot_intentionally_differs_from_r pins the gap.
         return tuple(c for c in scenario.compare_columns if c != "foot")
+    if scenario.release_type == "column" and scenario.hnf_plume:
+        # runtraj gives a column's particle k slab k of the slabs
+        # HYSPLIT releases in a step; STILT-R's xhgt cuts numpar slabs. The
+        # near-field plume grows from those heights, so the corrected foot
+        # differs by about 1e-3 (the parity page lists it);
+        # foot_no_hnf_dilution still matches.
+        return tuple(c for c in scenario.compare_columns if c != "foot")
     return scenario.compare_columns
 
 
