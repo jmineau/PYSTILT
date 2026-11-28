@@ -474,6 +474,79 @@ def test_a_stored_record_with_time_integrate_true_is_refused():
     assert FootprintConfig.model_validate({"time_integrate": False}).tres == "1h"
 
 
+def test_a_misspelled_footprint_setting_is_refused():
+    """A misspelling is named with the nearest setting, not dropped."""
+    box = {
+        "xmin": -113,
+        "xmax": -110.5,
+        "ymin": 40,
+        "ymax": 42,
+        "xres": 0.01,
+        "yres": 0.01,
+    }
+    with pytest.raises(
+        ValueError, match="'smooth_facter'.*Did you mean 'smooth_factor'"
+    ):
+        FootprintConfig(grid=box, smooth_facter=5)
+    with pytest.raises(ValueError, match="'hnf_plum'.*Did you mean 'hnf_plume'"):
+        FootprintConfig(grid=box, hnf_plum=False)
+    with pytest.raises(ValueError, match="time_integrate was removed"):
+        FootprintConfig(time_integrate=True)
+
+
+@pytest.mark.parametrize(
+    ("geometry", "bad", "good"),
+    [
+        (
+            {
+                "kind": "windows",
+                "coords": [[-111.9, 40.7]],
+                "size": 0.2,
+                "idz": ["slc"],
+            },
+            "idz",
+            "ids",
+        ),
+        (
+            {
+                "kind": "windows",
+                "coords": [[-111.9, 40.7]],
+                "size": 0.2,
+                "crss": "EPSG:4326",
+            },
+            "crss",
+            "crs",
+        ),
+        ({"kind": "file", "path": "a.gpkg", "idz": "name"}, "idz", "ids"),
+        (
+            {
+                "kind": "h3",
+                "resolution": 8,
+                "bounds": [-112, 40, -111, 41],
+                "resolutoin": 9,
+            },
+            "resolutoin",
+            "resolution",
+        ),
+    ],
+)
+def test_a_misspelled_geometry_setting_is_refused(geometry, bad, good):
+    """A misspelled ``ids`` or ``crs`` is not dropped, in Python or in a project's config."""
+    with pytest.raises(ValueError, match=f"'{bad}'.*Did you mean '{good}'"):
+        FootprintConfig(geometry=geometry)
+
+
+def test_a_misspelled_geometry_setting_in_config_is_refused(tmp_path):
+    geometry = {
+        "kind": "windows",
+        "coords": [[-111.9, 40.7]],
+        "size": 0.2,
+        "idz": ["slc"],
+    }
+    with pytest.raises(ValueError, match="'idz'.*Did you mean 'ids'"):
+        _variant_config(tmp_path, geometry=geometry)
+
+
 def _met_config(tmp_path):
     return {
         "hrrr": make_met_config(
