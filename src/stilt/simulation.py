@@ -145,6 +145,23 @@ class Simulation(simulation.Simulation):
         footprint records the settings it was made with, the variant's
         ``pbl_height`` and ``pbl_height_min`` included.
 
+        Parameters
+        ----------
+        grid : Grid, optional
+            Domain and resolution of the footprint. Defaults to the variant's.
+        smooth_factor : float, optional
+            Factor on the width of the smoothing kernel, 0 for none.
+            Defaults to the variant's.
+        tres : str or timedelta, optional
+            Length of each time layer, such as ``"15min"``. Defaults to the
+            variant's.
+        hnf_plume : bool, optional
+            Whether to correct ``foot`` for the thin plume near the release.
+            Defaults to the variant's.
+        transforms : sequence, optional
+            Particle transforms applied before the footprint is calculated,
+            in place of the variant's. ``[]`` applies none.
+
         Returns
         -------
         xarray.DataArray or None

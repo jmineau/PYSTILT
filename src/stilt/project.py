@@ -305,6 +305,16 @@ class Project(project.Project):
         release and the variant, as the subclass that reads the footprint,
         the background, and the transport error. The two compare equal.
 
+        Parameters
+        ----------
+        release_id : str
+            The release's id, as in ``project.releases``.
+        variant : str
+            The variant's name.
+        realization : int, optional
+            Which realization of an ensemble variant (``realizations: N``),
+            ``0`` to ``N - 1``. Leave it out for a variant that runs once.
+
         Raises
         ------
         KeyError
@@ -500,17 +510,10 @@ class Project(project.Project):
             closed on the left (``closed="left"``): each bin holds the
             footprint layers that start in it. A layer goes whole into the
             bin where it starts, so the bins must be as long as the
-            footprints' layers (``tres``) or longer; a layer that crosses a
-            bin edge still goes into the bin where it starts. You build these yourself;
-            ``jacobian`` does not read them from an inventory's own CF time
-            bounds, unlike ``foot.stilt.enhancement`` with a flux that has
-            them. Building the bins from an inventory's own time labels
-            (its left edges) reads each label as the start of its step, the
-            same reading ``foot.stilt.enhancement`` gives a flux with no
-            bounds. A flux not labeled at the start of its steps must be
-            relabeled first, or its bins built from the relabeled starts;
-            one with bounds can have its bins built from them directly
-            instead (see :ref:`flux-step-labels`).
+            footprints' layers (``tres``) or longer. You build these
+            yourself, from the inventory's steps read as
+            ``foot.stilt.enhancement`` reads them (see
+            :ref:`flux-step-labels`).
         workers : int, optional
             Threads that read and sum batches. Defaults to the CPUs this
             process may use (in a Slurm job, the job's), at most 8: more
@@ -597,7 +600,7 @@ class Project(project.Project):
         -------
         pandas.DataFrame
             The selection with six more columns, from
-            :class:`~runtraj.particles.TransportError`: ``enhancement``,
+            :class:`~stilt.TransportError`: ``enhancement``,
             ``enhancement_perturbed``, ``background``, ``variance``,
             ``noise``, and ``realizations`` (how many realizations of
             *error* were averaged). A release without particles in the
@@ -617,7 +620,7 @@ class Project(project.Project):
         Each release's particles are read whole. A table of 1.4 million
         rows takes about a second to read, so a selection of hundreds of
         releases takes minutes. The per-level tables of
-        :class:`~runtraj.particles.TransportError` are not kept; get them for
+        :class:`~stilt.TransportError` are not kept; get them for
         one release with ``sim.transport_error``.
 
         Examples
@@ -627,7 +630,7 @@ class Project(project.Project):
         ...     (sims.variant == "hrrr") & (sims.site == "tower_a")
         ... ]  # doctest: +SKIP
         >>> errors = project.transport_error(tower, "hrrr-err", flux)  # doctest: +SKIP
-        >>> errors.groupby(errors.time.dt.month).variance.median()  # doctest: +SKIP
+        >>> errors.groupby(errors.time.dt.month).variance.mean()  # doctest: +SKIP
         """
         frame = self._selected(sel)
         name, _ = _one_group(frame, "A transport error")
