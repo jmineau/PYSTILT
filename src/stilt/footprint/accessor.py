@@ -394,12 +394,11 @@ class FootprintAccessor:
             footprint grid.
         time_bins : pandas.IntervalIndex
             Time intervals to sum over, such as the time steps of a flux
-            inventory. They must be closed on the left
-            (``closed="left"``): each bin holds the footprint layers that
-            start in it. A layer goes whole into the bin where it starts, so
-            the bins must be as long as the footprint's layers (``tres``) or
-            longer. Layers start at the release's time, so one that crosses
-            a bin edge still goes into the bin where it starts.
+            inventory, read as ``foot.stilt.enhancement`` reads a flux's
+            steps (see :ref:`flux-step-labels`). They must be closed on the
+            left (``closed="left"``): each bin holds the footprint layers
+            that start in it, whole, so the bins must be as long as the
+            footprint's layers (``tres``) or longer.
 
         Returns
         -------
