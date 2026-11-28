@@ -521,7 +521,8 @@ def test_simulation_handles_carry_the_variant_settings(tmp_path, point_release):
 
     assert winderrtf(base.variant.transport) == 0
     assert winderrtf(err.transport) == 1
-    assert err.transport.seed == err.variant.transport.seed  # krand 4: no seed
+    # krand 4: the variant has no seed, and realization k runs with seed k.
+    assert (err.variant.transport.seed, err.transport.seed) == (None, 1)
     with pytest.raises(ValueError, match="realizations"):
         project.simulation(rid, "err")
     with pytest.raises(ValueError, match="realizations"):
