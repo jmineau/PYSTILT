@@ -82,7 +82,9 @@ def test_the_functions_make_what_a_project_stores(tmp_path, wbb_release, wbb_con
 
     # Project.init wrote STILT-R's HYSPLIT values; run_trajectories takes HYSPLIT's own.
     settings = {**STILT_R_HYSPLIT, "n_hours": -6, "numpar": 100, "krand": 2, "seed": 7}
-    particles = stilt.run_trajectories(wbb_release, config.mets["hrrr"], **settings)
+    particles = stilt.run_trajectories(
+        wbb_release, config.mets["hrrr"], model="hysplit", **settings
+    )
     stored = sim.particles
     columns = [c for c in particles.columns if c in stored.columns]
     pd.testing.assert_frame_equal(

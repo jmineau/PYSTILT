@@ -187,19 +187,6 @@ def test_init_writes_stilt_rs_hysplit_values_where_none_are_given(tmp_path):
     assert (transport.numpar, transport.kmixd, transport.krand) == (200, None, 4)
 
 
-def test_init_writes_stilt_rs_values_when_no_model_is_given(tmp_path):
-    # Without models:, the project runs HYSPLIT, so the values go in its block.
-    config = ProjectConfig(
-        mets={"hrrr": _met(tmp_path)},
-        variants={"hrrr": {"n_hours": -24}},
-    )
-
-    project = Project.init(tmp_path / "proj", config=config)
-
-    assert project.config.models == {"hysplit": STILT_R_HYSPLIT}
-    assert project.variants["hrrr"].transport.capemin == -1.0
-
-
 def test_init_refuses_a_project_that_has_a_config(tmp_path):
     _project(tmp_path)
     text = (tmp_path / "proj" / "config.yaml").read_text()

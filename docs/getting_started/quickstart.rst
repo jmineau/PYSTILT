@@ -86,6 +86,7 @@ follows them back in time through the meteorology:
    particles = stilt.run_trajectories(
        release,
        met,
+       model="hysplit", # the transport model that moves the particles
        n_hours=-12,     # follow the air 12 hours back in time
        numpar=200,      # number of particles to release
        krand=2,         # the random numbers a seed can fix

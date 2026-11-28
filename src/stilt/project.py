@@ -204,7 +204,7 @@ def _with_stilt_r_values(config: ProjectConfig) -> ProjectConfig:
     A config that does not run the built-in HYSPLIT is returned as it is.
     """
     data = yaml.safe_load(config.to_yaml())
-    models = data.get("models") or {"hysplit": {}}
+    models = data["models"]
     if "hysplit" not in models or "class" in (models["hysplit"] or {}):
         return config
     block = models["hysplit"] or {}

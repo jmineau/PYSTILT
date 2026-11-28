@@ -1234,7 +1234,7 @@ def test_partial_grid_over_a_derived_grid_is_an_error(tmp_path):
     ],
 )
 def test_an_unknown_key_names_the_nearest_setting(tmp_path, settings, message):
-    settings = {"variants": {"hrrr": {}}, **settings}
+    settings = {"models": {"hysplit": {}}, "variants": {"hrrr": {}}, **settings}
     with pytest.raises(ValueError, match=re.escape(message)):
         ProjectConfig(mets=_met_config(tmp_path), **settings)
 

@@ -77,7 +77,7 @@ release = stilt.PointRelease(
 met = "/data/hrrr"             # a folder of ARL files; change it to yours (see below)
 grid = stilt.Grid(xmin=-113.0, xmax=-110.5, ymin=40.0, ymax=42.0, xres=0.01, yres=0.01)
 
-particles = stilt.run_trajectories(release, met, n_hours=-24, numpar=100)
+particles = stilt.run_trajectories(release, met, model="hysplit", n_hours=-24, numpar=100)
 foot = stilt.calc_footprint(particles, release, grid)
 ```
 
