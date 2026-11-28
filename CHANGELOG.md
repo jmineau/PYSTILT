@@ -9,7 +9,6 @@ file alone: the entries are written at release (`just changelog` drafts them).
 
 ### Fixed
 
-- `Mesh.from_grid` labels each cell by its full center when six digits would round it, so it no longer refuses a fine grid (0.0002 degrees, or 5 m in UTM) with "ids must be unique". Summing a footprint onto such a `Grid` in another CRS, and `Zones.to_grid(crs=...)` on a grid base, reached the same error. A center that six digits write exactly keeps its label. (#512)
 - `project.check()` no longer repeats a transform's finding (an averaging kernel missing from its table, say) after the input is fixed: a second check on the same `Project` reads the fixed table, as opening the project again does. The footprint stage kept its findings between calls. (#505)
 
 ## [0.1.0a31] - 2026-11-24
