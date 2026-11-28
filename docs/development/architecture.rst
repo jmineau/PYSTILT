@@ -218,7 +218,7 @@ realization in an ensemble, and a random part, as in
 compute root and two runs never clear each other's files. A simulation that
 runs twice at once keeps its own files in each. The compute root comes from
 ``--compute-root``, the ``RUNTRAJ_COMPUTE_ROOT`` environment variable, or
-``$TMPDIR/pystilt/<project>`` (``resolve_compute_root`` in the runner;
+``$TMPDIR/runtraj/<project>`` (``resolve_compute_root`` in the runner;
 ``Project`` does not read it). It changes where PYSTILT runs and never what it
 calculates, so it is not in ``config.yaml``.
 
@@ -441,8 +441,9 @@ there is refused with a message naming its block.
 - Every field is a plain pydantic ``Field(default, description=...)``, and
   the settings inside a block stay flat (``models={"hysplit": {"numpar": ...,
   "seed": ...}}``).
-  ``CONTRIBUTING.md`` explains how a HYSPLIT field is routed to
-  ``SETUP.CFG``, ``CONTROL``, ``WINDERR``, or ``ZIERR``.
+  runtraj's ``CONTRIBUTING.md`` ("Adding configuration fields") explains how
+  a HYSPLIT field is routed to ``SETUP.CFG``, ``CONTROL``, ``WINDERR``, or
+  ``ZIERR``.
 - ``ExecutionConfig`` (``execution:`` in ``config.yaml``) says where
   releases run. ``backend`` names the place, and each backend's settings
   are in the block of its name (``LocalConfig``, ``SlurmConfig``), ``cpus``

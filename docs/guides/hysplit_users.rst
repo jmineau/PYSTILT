@@ -173,7 +173,7 @@ For an ensemble of the same run with different turbulence, give a variant
 Where each ``CONTROL`` and ``SETUP.CFG`` line comes from
 --------------------------------------------------------
 
-Every ``SETUP.CFG`` entry but ``ICHEM`` and ``IDSP`` is a setting of the
+Every ``SETUP.CFG`` entry but ``IDSP`` is a setting of the
 same name in lowercase, such as ``numpar``, ``kmixd`` or ``tlfrac``
 (:doc:`../reference/configuration` lists them). Each defaults to HYSPLIT's
 own value in STILT mode. A setting HYSPLIT decides only after reading the
@@ -212,8 +212,10 @@ writes the rest itself:
    * - ``SETUP.CFG`` ``WINDERRTF``, ``ZICONTROLTF``
      - The wind and mixed-layer error settings, and ``ziscale``
    * - ``SETUP.CFG`` ``ICHEM``, ``IDSP``
-     - Fixed at 8 and 2, the only values with which HYSPLIT writes particles
-       (:data:`~runtraj.models.hysplit.config.FIXED_SETUP`)
+     - In a run that makes particles, 8 and 2, the only values with which
+       HYSPLIT writes them (:data:`~runtraj.models.hysplit.config.FIXED_SETUP`):
+       ``idsp`` is not a setting and ``ichem`` may only be 8. ``ichem`` is
+       free in a concentration run
 
 To read the files of one run, pass ``workdir="run"`` to
 :func:`~stilt.run_trajectories`: the folder keeps ``CONTROL``,
@@ -222,11 +224,16 @@ To read the files of one run, pass ``workdir="run"`` to
 What PYSTILT leaves to other tools
 ----------------------------------
 
-PYSTILT runs ``hycs_std`` in its STILT mode (``ICHEM=8``), which writes
-particle positions and the met along them. Concentration grids
-(``cdump``), puffs and ``tdump`` trajectory files come from HYSPLIT run on
-its own, and NOAA's `monetio <https://github.com/noaa-oar-arl/monetio>`_
-reads those files in Python. A footprint of a species that decays,
+By default PYSTILT runs ``hycs_std`` in its STILT mode (``ICHEM=8``), which
+writes particle positions and the met along them, and a footprint is made
+from those. The ``mode`` setting in the ``hysplit`` block makes HYSPLIT
+write something else: ``mode: concentration`` runs it for concentration
+grids (``cdump``), which ``project.concentration()`` reads, and
+``mode: trajectory`` runs ``hyts_std`` for trajectories (``tdump``), which
+``project.trajectories()`` reads. A footprint comes only from particles.
+Puff files come from HYSPLIT run on its own, and NOAA's
+`monetio <https://github.com/noaa-oar-arl/monetio>`_ reads those files in
+Python. A footprint of a species that decays,
 deposits or reacts with OH does not need HYSPLIT's deposition: PYSTILT
 scales each particle by the fraction that survives (:doc:`transforms`), so
 one run serves every species.

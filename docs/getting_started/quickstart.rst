@@ -110,6 +110,10 @@ follows them back in time through the meteorology:
    ``krand: 4``, STILT-R's value, under which every run draws its own, and the
    particles and the footprint change a little from run to run.
 
+``directory``
+   Where you unpacked HYSPLIT, when ``hycs_std`` is not on your ``PATH``
+   (:doc:`installation`). Add ``directory="/path/to/hysplit"`` to the call.
+
 Every other HYSPLIT setting takes HYSPLIT's own default here. A few of those
 differ from the values STILT-R runs HYSPLIT with, such as whether particles
 mix by convection. A project, below, writes STILT-R's values into its config.

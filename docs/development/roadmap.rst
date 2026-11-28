@@ -45,10 +45,10 @@ Execution (call path from stiltctl)
 
 `stiltctl <https://github.com/jmineau/air-tracker-stiltctl>`_ runs STILT on
 cloud infrastructure. PYSTILT keeps its call path. The CLI opens a ``Project``,
-and the project hands releases to workers. Its queue-backed and Kubernetes
+and the project hands releases to workers. Its queue-backed
 execution was implemented and then removed. Releases now run on this
-machine, or as tasks of a Slurm job array or another scheduler's array,
-each a ``stilt run --task`` command line.
+machine, or as tasks of a Slurm job array, a Kubernetes indexed Job or
+another scheduler's array, each a ``stilt run --task`` command line.
 
 .. list-table::
    :header-rows: 1
@@ -68,10 +68,14 @@ each a ``stilt run --task`` command line.
      - Implemented
    * - One task of a job array or a Kubernetes indexed Job (``stilt run --task I/N``)
      - Implemented
-   * - Queue-backed workers (PostgreSQL), Kubernetes deployment
+   * - Queue-backed workers (PostgreSQL)
      - Removed
+   * - A Kubernetes indexed Job made by ``stilt submit`` (``backend: kubernetes``), and an hourly run for a ``sites.csv`` (``stilt schedule``)
+     - Implemented
    * - Cloud object store outputs (GCS, S3)
      - Implemented
+   * - A web-map image of each footprint, as a second stage (``stilt.footprint.MapStage``, ``map`` under ``stages``; needs the ``visualization`` extra)
+     - Implemented (longitude/latitude footprints only)
    * - Transport models other than HYSPLIT, named by import path (``class: mypkg.MyModel`` in a ``models`` block), including models that run many releases per call
      - Implemented (the interface; HYSPLIT is the one model)
    * - Met columns (``mlht``, ``dens``, ``pres``, ``zsfc``) sampled at particle positions, for a model that writes only positions (``runtraj.sampling.sample_met``)
@@ -132,9 +136,9 @@ feature.
    * - The retrieval's prior term in a modeled column (``modelled_column``)
      - Implemented
    * - Satellite-derived plume background (forward trajectories)
-     - Implemented (see the *Plume Background* guide)
+     - Implemented (see :ref:`plume-background`)
    * - Forward runs (positive ``n_hours``) for plume and dispersion studies
-     - Implemented (see the *Plume Background* guide)
+     - Implemented (see :ref:`plume-background`)
    * - Emission-error propagation to the modeled enhancement
      - A recipe on ``foot.stilt.enhancement`` (see the *Transport Error* guide); the
        correlated case is fips's ``prior_obs_error``
@@ -158,8 +162,7 @@ Future plans
 
 In priority order:
 
-1. Readers for the instruments people bring, such as EM27/SUN output
-   from PROFFAST and MethaneAIR/MethaneSAT. Which ones come first depends on who is using
+1. Readers for the instruments people bring, such as MethaneAIR/MethaneSAT. Which ones come first depends on who is using
    column releases.
 2. A YAML form for :class:`stilt.Zones`, so the ``geometry`` footprint
    setting can name groups of cells.

@@ -278,22 +278,12 @@ directory=None)`: it takes a particle `DataFrame`, the release, and the
 project directory, and returns a new `DataFrame`, leaving the input
 unchanged.
 
-A built-in transform is one new file in `src/stilt/transforms/`, such as
-`lifetime.py`: one pydantic class whose fields are the YAML keys, whose
-`kind` is a `Literal` that names it, and whose `apply()` does the work.
-Import it in `transforms/__init__.py` and add it to the `BuiltinTransform`
-union, and it is ready to use. A transform changes the footprint through
-`foot` and may add columns; the built-ins only scale `foot`, which
-`sim.background` and `sim.transport_error` rely on (see the transforms
-guide). Users can also point `kind` at their own class by import path
-(`kind: my.module.Class`), so only transforms that many users need belong in
-PYSTILT.
-
-Test:
-
-- parsing the config and writing it back to YAML
-- the numbers the transform produces on a small particle table
-- a footprint made with the transform configured
+The transforms are [runtraj](https://github.com/jmineau/runtraj)'s, so a
+built-in transform is a change to runtraj, in `src/runtraj/transforms/`. Users
+can also point `kind` at their own class by import path (`kind:
+my.module.Class`). A transform changes the footprint by multiplying the
+`weight` column and may add columns; the built-ins only scale `weight`, which
+`sim.background` and `sim.transport_error` rely on (see the transforms guide).
 
 ## Building distributions
 

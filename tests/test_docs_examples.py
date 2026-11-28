@@ -248,6 +248,17 @@ def test_config_examples_in_the_docs_are_valid(data, mypkg):
     ProjectConfig.model_validate(_whole(data))
 
 
+def test_readme_footprint_settings_sit_under_stages():
+    """``_whole`` puts footprint settings alone under ``stages``, which would hide a README that writes them at the top."""
+    alone = [
+        name
+        for name, data in CONFIGS
+        if name.startswith("README.md")
+        and data.keys() <= set(FootprintConfig.model_fields)
+    ]
+    assert not alone
+
+
 @pytest.mark.parametrize(
     "execution", [e for _, e in EXECUTION], ids=[n for n, _ in EXECUTION]
 )

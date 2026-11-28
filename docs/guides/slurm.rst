@@ -89,11 +89,6 @@ The keys of the ``slurm`` block:
 ``mem``, ``partition``, ``account``, ``qos``
    The ``sbatch`` options of the same names.
 
-``array_parallelism``
-   The most tasks allowed to run at once, to stay within your group's
-   limits. ``array_parallelism: 50`` becomes ``--array=0-199%50``. Unset,
-   Slurm's own limits apply.
-
 ``setup``
    Shell commands to run at the start of each task, before PYSTILT. Use it
    to load modules or set environment variables. They run after the script

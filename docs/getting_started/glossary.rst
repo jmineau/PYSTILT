@@ -96,7 +96,7 @@ Glossary
    compute root
       The folder the workdirs are made in, usually fast local disk: the
       ``--compute-root`` option, else ``RUNTRAJ_COMPUTE_ROOT``, else
-      ``$TMPDIR/pystilt/<project>``. Projects can share one.
+      ``$TMPDIR/runtraj/<project>``. Projects can share one.
 
    HYSPLIT
       NOAA's particle transport program, written in Fortran. PYSTILT runs it
