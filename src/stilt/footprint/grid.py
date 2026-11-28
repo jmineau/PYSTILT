@@ -1,5 +1,5 @@
 """
-The grid a footprint is made on: longitude/latitude bounds, cell size and CRS.
+The grid a footprint is made on: bounds, cell size and CRS.
 
 :class:`Grid` is a rectilinear raster, such as the grid the footprint stage
 sums particles onto. Its bounds are a :class:`runtraj.spatial.Bounds`.
@@ -8,7 +8,6 @@ sums particles onto. Its bounds are a :class:`runtraj.spatial.Bounds`.
 from __future__ import annotations
 
 import difflib
-import functools
 from typing import TYPE_CHECKING, Self
 
 import numpy as np
@@ -96,125 +95,6 @@ def _east_edge(xmin: float, xmax: float) -> float:
 _MAX_GRID_CELLS = 10**9
 
 
-#: The most points sampled along each edge of a box's outline when it is
-#: projected (:func:`_outline_extent`).
-_MAX_OUTLINE_POINTS = 100_000
-
-
-def _cells_to_cover(minimum: float, maximum: float, resolution: float) -> int:
-    """
-    Return the number of whole cells from ``minimum`` that reach ``maximum``.
-
-    The same tolerance as :func:`_grid_cell_count`, so an extent that is
-    already whole cells gets no extra cell from a rounding error.
-    """
-    quotient = (maximum - minimum) / resolution
-    scale = max(abs(minimum), abs(maximum), abs(maximum - minimum))
-    tol = 16 * np.finfo(float).eps * scale / resolution
-    return max(1, int(np.ceil(quotient - tol)))
-
-
-def _outline_extent(
-    transform, west: float, east: float, south: float, north: float, spacing: float
-) -> tuple[float, float, float, float]:
-    """
-    Return ``(xmin, xmax, ymin, ymax)`` of a longitude/latitude box's outline, projected by *transform*.
-
-    Each edge is sampled about a quarter of *spacing* apart (at most
-    ``_MAX_OUTLINE_POINTS`` points), and each extreme is then found between
-    the samples next to it, so a curved edge's farthest point is not missed
-    between two samples. ``east`` may be past 180 degrees for a box across
-    180. Points the projection cannot place are left out.
-    """
-    from scipy.optimize import minimize_scalar
-
-    edges = (
-        ((west, south), (east, south)),
-        ((west, north), (east, north)),
-        ((west, south), (west, north)),
-        ((east, south), (east, north)),
-    )
-    low, high = [np.inf, np.inf], [-np.inf, -np.inf]
-    for (lon0, lat0), (lon1, lat1) in edges:
-
-        def along(t, lon0=lon0, lat0=lat0, lon1=lon1, lat1=lat1):
-            """Return the projected point a fraction *t* of the way along this edge."""
-            return transform(lon0 + t * (lon1 - lon0), lat0 + t * (lat1 - lat0))
-
-        x, y = along(np.linspace(0.0, 1.0, 65))
-        steps = np.hypot(np.diff(x), np.diff(y))
-        length = steps[np.isfinite(steps)].sum()
-        n = int(np.clip(np.ceil(4 * length / spacing), 64, _MAX_OUTLINE_POINTS)) + 1
-        t = np.linspace(0.0, 1.0, n)
-        for axis, values in enumerate(along(t)):
-            for sign in (1.0, -1.0):
-                v = np.where(np.isfinite(values), sign * np.asarray(values), np.inf)
-                i = int(np.argmin(v))
-                if not np.isfinite(v[i]):
-                    continue
-                best = minimize_scalar(
-                    lambda s, axis=axis, sign=sign: sign * along(s)[axis],
-                    bounds=(t[max(i - 1, 0)], t[min(i + 1, n - 1)]),
-                    method="bounded",
-                    options={"xatol": 1e-12},
-                )
-                extreme = min(v[i], best.fun) if np.isfinite(best.fun) else v[i]
-                if sign > 0:
-                    low[axis] = min(low[axis], extreme)
-                else:
-                    high[axis] = max(high[axis], -extreme)
-    return low[0], high[0], low[1], high[1]
-
-
-@functools.lru_cache(maxsize=64)
-def _projected_extent(
-    crs: str,
-    xmin: float,
-    xmax: float,
-    ymin: float,
-    ymax: float,
-    xres: float,
-    yres: float,
-) -> tuple[float, float, float, float]:
-    """
-    Return ``(xmin, xmax, ymin, ymax)``, in *crs* units, of the cells that cover a longitude/latitude box.
-
-    The extent starts at the smallest ``x`` and ``y`` of the box's projected
-    outline (:func:`_outline_extent`) and runs east and north by whole cells
-    until it reaches the largest.
-
-    Raises
-    ------
-    ValueError
-        If pyproj cannot read *crs*, or cannot place any of the box in it.
-    """
-    from pyproj import CRS, Transformer
-    from pyproj.exceptions import CRSError
-
-    try:
-        CRS.from_user_input(crs)
-    except CRSError as error:
-        raise ValueError(
-            f"crs={crs!r} is not a coordinate reference system pyproj can read "
-            f"({error})."
-        ) from None
-    tr = Transformer.from_crs("EPSG:4326", crs, always_xy=True)
-    left, right, bottom, top = _outline_extent(
-        tr.transform, xmin, _east_edge(xmin, xmax), ymin, ymax, min(xres, yres)
-    )
-    if not np.isfinite([left, right, bottom, top]).all():
-        raise ValueError(
-            f"crs={crs!r} cannot place the box from xmin={xmin:g}, ymin={ymin:g} "
-            f"to xmax={xmax:g}, ymax={ymax:g}."
-        )
-    return (
-        float(left),
-        float(left + _cells_to_cover(left, right, xres) * xres),
-        float(bottom),
-        float(bottom + _cells_to_cover(bottom, top, yres) * yres),
-    )
-
-
 def _crs_unit(crs: str) -> str:
     """Return the name of the unit of *crs*'s first axis, such as ``metre`` or ``degree``."""
     from pyproj import CRS
@@ -224,14 +104,14 @@ def _crs_unit(crs: str) -> str:
 
 class Grid(Bounds):
     """
-    A rectilinear grid: longitude/latitude bounds, cell size, and CRS.
+    A rectilinear grid: bounds, cell size, and CRS.
 
-    The bounds are always longitude/latitude. With a projected ``crs``,
-    ``xres`` and ``yres`` are in its units, and the grid covers the whole
-    box in that projection. Longitudes count modulo 360, so a grid
-    across 180 degrees is written ``xmin=170, xmax=190`` or ``xmin=170,
-    xmax=-170``. Either has longitudes 170 to 190. A grid
-    spans at most 360 degrees of longitude.
+    The bounds and the cell size are in the units of ``crs``: degrees of
+    longitude and latitude on the default ``+proj=longlat``, and ``x`` and
+    ``y`` (meters for ``EPSG:32612``) on a projected grid. Longitudes count
+    modulo 360, so a grid across 180 degrees is written ``xmin=170,
+    xmax=190`` or ``xmin=170, xmax=-170``. Either has longitudes 170 to
+    190. A grid spans at most 360 degrees of longitude.
 
     Notes
     -----
@@ -246,15 +126,18 @@ class Grid(Bounds):
     357.5 degrees wide. To have a grid that wide, write its east edge past
     its west edge: ``xmin=-110.5, xmax=247``.
 
-    A projected grid starts at the smallest ``x`` and ``y`` of the box's
-    outline in the projection and has as many whole cells east and north
-    as reach its largest. A longitude/latitude box projects to a curved
-    outline, so on a wide or polar box the grid is more than the rectangle
-    between the projected corners ``(xmin, ymin)`` and ``(xmax, ymax)``
-    (STILT-R's grid): for the contiguous US (-125 to -66, 24 to 50) on a
-    Lambert conformal grid that rectangle misses 18 % of the box, and for
-    the cap north of 60 degrees on a polar stereographic grid it is one
-    quadrant.
+    A projected grid has the cells from ``(xmin, ymin)`` east and north
+    that fit inside ``(xmax, ymax)``, as a longitude/latitude grid does, and
+    as STILT-R lays out a grid between its two projected corners. To put a
+    longitude/latitude box on a projected grid, give the box's extent in the
+    projection, such as pyproj's ``Transformer.transform_bounds`` returns, or
+    let :meth:`stilt.Mesh.to_grid` pick the grid for a mesh.
+
+    A projected grid whose four bounds could all be degrees (``xmin`` and
+    ``xmax`` within 360 of 0, ``ymin`` and ``ymax`` within 90) is refused,
+    because a grid that small is almost always a longitude/latitude box
+    given with a projected ``crs``. A grid that close to the projection's origin can be given
+    a false easting or northing in ``crs`` (``+x_0``, ``+y_0``).
 
     A grid is refused when pyproj cannot read its ``crs``, when no whole
     cell fits in it, or when it has more than a billion cells (8 GB for
@@ -265,6 +148,18 @@ class Grid(Bounds):
 
     model_config = ConfigDict(frozen=True)
 
+    xmin: float = Field(
+        ..., description="Western edge: degrees longitude, or x in ``crs`` units."
+    )
+    xmax: float = Field(
+        ..., description="Eastern edge: degrees longitude, or x in ``crs`` units."
+    )
+    ymin: float = Field(
+        ..., description="Southern edge: degrees latitude, or y in ``crs`` units."
+    )
+    ymax: float = Field(
+        ..., description="Northern edge: degrees latitude, or y in ``crs`` units."
+    )
     xres: float = Field(
         ...,
         gt=0,
@@ -280,8 +175,9 @@ class Grid(Bounds):
         validation_alias=AliasChoices("crs", "projection"),
         description=(
             "Coordinate reference system of the grid, such as a PROJ "
-            "string or ``EPSG:32612``. Particles and bounds are projected to it "
-            "before gridding. Also read as ``projection``."
+            "string or ``EPSG:32612``. The bounds and resolution are in its "
+            "units, and particles are projected to it before gridding. Also "
+            "read as ``projection``."
         ),
     )
 
@@ -299,9 +195,51 @@ class Grid(Bounds):
         return data
 
     @model_validator(mode="after")
+    def _on_the_globe(self) -> Self:
+        """Check the bounds as :class:`Bounds` does on a longitude/latitude grid; on a projected one, refuse edges out of order or that look like degrees."""
+        if self.is_longlat:
+            # pydantic types a decorated validator as its descriptor, which is
+            # a plain method once the class is built.
+            # pyrefly: ignore[not-callable]
+            return super()._on_the_globe()
+        from pyproj import CRS
+        from pyproj.exceptions import CRSError
+
+        try:
+            CRS.from_user_input(self.crs)
+        except CRSError as error:
+            raise ValueError(
+                f"crs={self.crs!r} is not a coordinate reference system pyproj "
+                f"can read ({error})."
+            ) from None
+        edges = (self.xmin, self.xmax, self.ymin, self.ymax)
+        written = (
+            f"xmin={self.xmin:g}, xmax={self.xmax:g}, ymin={self.ymin:g}, "
+            f"ymax={self.ymax:g}"
+        )
+        if not np.isfinite(edges).all():
+            raise ValueError(f"Bounds need four finite numbers; got {written}.")
+        if (
+            max(abs(self.xmin), abs(self.xmax)) <= 360.0
+            and max(abs(self.ymin), abs(self.ymax)) <= 90.0
+        ):
+            raise ValueError(
+                f"The bounds of a grid with crs={self.crs!r} are x and y in its "
+                f"units ({_crs_unit(self.crs)}), and {written} look like "
+                "longitude and latitude. Give the box's extent in the projection, "
+                "such as pyproj's Transformer.transform_bounds returns, or derive "
+                "the grid from a mesh with stilt.Mesh.to_grid."
+            )
+        if not (self.xmin < self.xmax and self.ymin < self.ymax):
+            raise ValueError(
+                f"A projected grid needs xmin < xmax and ymin < ymax; got {written}."
+            )
+        return self
+
+    @model_validator(mode="after")
     def _at_most_one_turn(self) -> Self:
         """Refuse a grid wider than 360 degrees of longitude: it would hold some longitudes twice."""
-        if not -360.0 < self.xmax - self.xmin <= 360.0:
+        if self.is_longlat and not -360.0 < self.xmax - self.xmin <= 360.0:
             raise ValueError(
                 f"A grid spans at most 360 degrees of longitude; xmin={self.xmin:g} "
                 f"to xmax={self.xmax:g} does not. A grid "
@@ -312,14 +250,19 @@ class Grid(Bounds):
 
     @model_validator(mode="after")
     def _latitudes_and_cells(self) -> Self:
-        """Refuse equal or swapped longitudes, an unreadable CRS, and a box with no whole cell or too many (:class:`Bounds` checks the latitudes)."""
-        if self.xmax == self.xmin:
+        """Refuse equal or swapped longitudes, and a grid with no whole cell or too many (:meth:`_on_the_globe` checks the rest)."""
+        if self.is_longlat and self.xmax == self.xmin:
             raise ValueError(
                 f"A grid needs xmin and xmax to differ; both are {self.xmin:g}."
             )
         one_hemisphere = not self.xmax < 0.0 < self.xmin
         written_as_a_wrap = max(abs(self.xmin), abs(self.xmax)) > 180.0
-        if self.xmax < self.xmin and one_hemisphere and not written_as_a_wrap:
+        if (
+            self.is_longlat
+            and self.xmax < self.xmin
+            and one_hemisphere
+            and not written_as_a_wrap
+        ):
             east = _east_edge(self.xmin, self.xmax)
             raise ValueError(
                 f"xmax={self.xmax:g} is west of xmin={self.xmin:g}, and both are "
@@ -328,18 +271,8 @@ class Grid(Bounds):
                 "xmax are swapped, swap them back. For a grid that wide, write its "
                 f"east edge past its west edge: xmax={east:g}."
             )
-        if self.is_longlat:
-            extent = (self.xmin, _east_edge(self.xmin, self.xmax), self.ymin, self.ymax)
-        else:
-            extent = _projected_extent(
-                self.crs,
-                self.xmin,
-                self.xmax,
-                self.ymin,
-                self.ymax,
-                self.xres,
-                self.yres,
-            )
+        xmax = _east_edge(self.xmin, self.xmax) if self.is_longlat else self.xmax
+        extent = (self.xmin, xmax, self.ymin, self.ymax)
         # The grid's own message, with the axis it is about.
         cells = 1
         for axis, low, high, res in (
@@ -370,6 +303,26 @@ class Grid(Bounds):
         """Whether the grid is in longitude/latitude degrees."""
         return is_longlat(self.crs)
 
+    def contains(self, longitude, latitude) -> np.ndarray:
+        """
+        Return whether each longitude/latitude point is inside the grid's bounds.
+
+        On a longitude/latitude grid this is :meth:`Bounds.contains`, which
+        counts longitudes modulo 360. On a projected grid the points are
+        projected to ``crs`` first (which needs ``pyproj``); a point the
+        projection cannot place is outside.
+        """
+        if self.is_longlat:
+            return super().contains(longitude, latitude)
+        from pyproj import Transformer
+
+        tr = Transformer.from_crs("EPSG:4326", self.crs, always_xy=True)
+        x, y = tr.transform(
+            np.asarray(longitude, dtype=float), np.asarray(latitude, dtype=float)
+        )
+        x, y = np.asarray(x), np.asarray(y)
+        return (x >= self.xmin) & (x <= self.xmax) & (y >= self.ymin) & (y <= self.ymax)
+
     @property
     def dims(self) -> tuple[str, str]:
         """The names of the horizontal dimensions of an array on this grid, ``("lat", "lon")`` or ``("y", "x")``."""
@@ -385,18 +338,10 @@ class Grid(Bounds):
         grid does: a grid from 170 to -170 has longitudes 170 to 190. They are rounded
         to 10 decimals (``40.35`` rather than ``40.349999999999994``) so they
         match labels built elsewhere from the same bounds and resolution.
-        Projected grids need ``pyproj``.
         """
-        xmin, xmax, ymin, ymax = self.xmin, self.xmax, self.ymin, self.ymax
-        if self.is_longlat:
-            xmax = _east_edge(xmin, xmax)
-        else:
-            xmin, xmax, ymin, ymax = _projected_extent(
-                self.crs, xmin, xmax, ymin, ymax, self.xres, self.yres
-            )
-
-        x_centers = _grid_cell_starts(xmin, xmax, self.xres) + self.xres / 2
-        y_centers = _grid_cell_starts(ymin, ymax, self.yres) + self.yres / 2
+        xmax = _east_edge(self.xmin, self.xmax) if self.is_longlat else self.xmax
+        x_centers = _grid_cell_starts(self.xmin, xmax, self.xres) + self.xres / 2
+        y_centers = _grid_cell_starts(self.ymin, self.ymax, self.yres) + self.yres / 2
         return np.round(x_centers, 10), np.round(y_centers, 10)
 
     @property

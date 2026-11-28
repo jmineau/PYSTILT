@@ -256,6 +256,20 @@ def test_check_lists_the_releases_outside_the_grid():
     ]
 
 
+def test_check_lists_the_releases_outside_a_projected_grid():
+    """The release points are projected to the grid's crs before they are compared with its x and y."""
+    utm = Grid(
+        xmin=329_000, xmax=543_000, ymin=4_427_000, ymax=4_652_000, xres=1e3, yres=1e3,
+        crs="EPSG:32612",
+    )  # fmt: skip
+    config = _resolve(FootprintConfig(grid=utm), varsiwant=ALL_COLUMNS)
+    found = FootprintStage().check(config, _rows(), None)
+    assert [(kind, release) for kind, release, _ in found] == [
+        ("grid", "202407010000_-100_40.77_5")
+    ]
+    assert "(x 329000 to 543000, y 4427000 to 4652000 in EPSG:32612)" in found[0][2]
+
+
 def test_the_settings_say_what_needs_zsfc_above_sea_level():
     assert FootprintConfig(grid=GRID).zsfc_reasons == [
         "the near-field correction (hnf_plume) is skipped for them"

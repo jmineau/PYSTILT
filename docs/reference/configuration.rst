@@ -132,12 +132,22 @@ passes the east edge returns at the west edge. On a grid that ends at or
 near 180°, particles just across 180° smooth onto the grid, as particles
 just past any other edge do.
 
-Projected grids (a ``crs`` such as ``EPSG:32612``) keep their bounds in
-degrees and take ``xres`` and ``yres`` in the projection's units. The
-grid covers the whole box in the projection, so on a wide or polar box it
-reaches past the box's projected corners, where the curved edges bow out.
-A grid that :meth:`stilt.Mesh.to_grid` picks for a projected
-``geometry`` covers every one of its areas. A grid
+Projected grids (a ``crs`` such as ``EPSG:32612``) take their bounds and
+their ``xres`` and ``yres`` in the projection's units, meters for UTM, so
+the grid is the rectangle you write and no larger:
+
+.. code-block:: yaml
+
+   grid: {xmin: 329000, xmax: 543000, ymin: 4427000, ymax: 4652000,
+          xres: 1000, yres: 1000, crs: EPSG:32612}
+
+To cover a longitude/latitude box, give its extent in the projection, as
+pyproj's ``Transformer.transform_bounds`` returns it. Bounds that could all
+be degrees (``xmin`` and ``xmax`` within 360 of 0, ``ymin`` and ``ymax``
+within 90) are refused on a projected grid, since they are almost always a
+longitude/latitude box. A grid that :meth:`stilt.Mesh.to_grid` picks for a
+projected ``geometry`` is the geometry's extent in its own projection,
+rounded out to whole cells. A grid
 of more than a billion cells is refused, which catches a resolution in
 degrees on a grid in meters. The two
 steps that depend on the cell size work in the grid's units. The smoothing

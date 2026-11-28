@@ -167,10 +167,10 @@ def test_a_grid_across_the_antimeridian_is_drawn_east_past_180():
 @pytest.mark.parametrize("draw", [maps.bounds, maps.image, maps.map_entry])
 def test_a_projected_footprint_is_refused_in_words(draw):
     grid = Grid(
-        xmin=-112.5,
-        xmax=-111.0,
-        ymin=40.0,
-        ymax=41.5,
+        xmin=380_000,
+        xmax=500_000,
+        ymin=4_430_000,
+        ymax=4_600_000,
         xres=10_000,
         yres=10_000,
         crs="EPSG:32612",

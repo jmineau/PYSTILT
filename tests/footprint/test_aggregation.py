@@ -452,10 +452,10 @@ def test_aggregate_grid_in_other_crs_is_reprojected():
     bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
     # Coarse 20 km UTM cells covering the seeded footprint cells
     grid = Grid(
-        xmin=-114.2,
-        xmax=-113.6,
-        ymin=38.8,
-        ymax=39.4,
+        xmin=220000.0,
+        xmax=280000.0,
+        ymin=4280000.0,
+        ymax=4380000.0,
         xres=20000.0,
         yres=20000.0,
         crs="EPSG:32612",

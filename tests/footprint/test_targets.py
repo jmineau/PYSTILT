@@ -58,7 +58,7 @@ def test_mesh_to_grid_in_another_crs():
     grid = mesh.to_grid(crs="EPSG:32612")
     assert grid.crs == "EPSG:32612"
     assert grid.xres == grid.yres == pytest.approx(1000.0)  # 4.3 km / 4, rounded down
-    assert grid.xmin < -111.9 < grid.xmax and grid.ymin < 40.7 < grid.ymax
+    assert grid.xmin < 423966 < grid.xmax and grid.ymin < 4505845 < grid.ymax
 
 
 def test_mesh_from_windows_ids_index_bounds():
@@ -134,10 +134,10 @@ def test_mesh_from_grid_labels_ordinary_grid_by_center():
             xmin=-111.9, xmax=-111.89, ymin=40.7, ymax=40.71, xres=0.0002, yres=0.0002
         ),
         Grid(
-            xmin=-112,
-            xmax=-111.99,
-            ymin=40.7,
-            ymax=40.705,
+            xmin=415500,
+            xmax=416350,
+            ymin=4505900,
+            ymax=4506450,
             xres=5,
             yres=5,
             crs="EPSG:32612",
@@ -192,10 +192,10 @@ def test_zones_to_grid_over_a_grid_is_that_grid():
         xmin=-112.05, xmax=-111.55, ymin=40.35, ymax=40.85, xres=0.1, yres=0.1
     )
     utm = Grid(
-        xmin=-112.05,
-        xmax=-111.55,
-        ymin=40.35,
-        ymax=40.85,
+        xmin=410000.0,
+        xmax=454000.0,
+        ymin=4466000.0,
+        ymax=4523000.0,
         xres=1000.0,
         yres=1000.0,
         crs="EPSG:32612",
@@ -209,10 +209,10 @@ def test_zones_to_grid_over_a_grid_is_that_grid():
 def test_zones_to_grid_over_a_grid_in_another_crs():
     pytest.importorskip("pyproj")
     utm = Grid(
-        xmin=-112.05,
-        xmax=-111.55,
-        ymin=40.35,
-        ymax=40.85,
+        xmin=410000.0,
+        xmax=454000.0,
+        ymin=4466000.0,
+        ymax=4523000.0,
         xres=1000.0,
         yres=1000.0,
         crs="EPSG:32612",
@@ -343,22 +343,15 @@ def test_zones_over_mesh_merge_polygon_rows():
     np.testing.assert_allclose(np.asarray(w.sum(axis=0)).ravel(), 1.0)
 
 
-def test_mesh_to_grid_projected_mesh_keeps_lonlat_bounds():
-    pytest.importorskip("pyproj")
-    from pyproj import Transformer
-
-    tr = Transformer.from_crs("EPSG:4326", "EPSG:32612", always_xy=True)
-    cx, cy = tr.transform(-111.9, 40.7)
-    mesh = Mesh.from_windows([(cx, cy)], 2500.0, crs="EPSG:32612")  # 2.5 km box
+def test_mesh_to_grid_projected_mesh_gets_bounds_in_its_crs():
+    mesh = Mesh.from_windows([(424000.0, 4506000.0)], 2500.0, crs="EPSG:32612")
     grid = mesh.to_grid()
     assert grid.crs == "EPSG:32612"
     assert grid.xres == grid.yres == pytest.approx(600.0)  # 2500/4 = 625 -> 600
-    # bounds are lon/lat and enclose the window
-    assert grid.xmin < -111.9 < grid.xmax and grid.ymin < 40.7 < grid.ymax
-    assert grid.xmin > -113 and grid.xmax < -111 and 40 < grid.ymin < grid.ymax < 41.5
-    # the projected axes cover the window with >= 4 cells
-    ax, ay = grid.axes
-    assert (np.abs(ax - cx) <= 1250).sum() >= 4 and (np.abs(ay - cy) <= 1250).sum() >= 4
+    # The window, 422750 to 425250 and 4504750 to 4507250, rounded out to 600 m.
+    assert (grid.xmin, grid.xmax) == (422400.0, 425400.0)
+    assert (grid.ymin, grid.ymax) == (4504200.0, 4507800.0)
+    assert [len(a) for a in grid.axes] == [5, 6]
 
 
 def _boxes(xs, ys):
@@ -400,17 +393,27 @@ def _boxes(xs, ys):
             [-500e3, 0, 500e3],
             [-500e3, 0, 500e3],
         ),
+        # UTM, around Salt Lake City
+        ("EPSG:32612", [400e3, 420e3, 440e3], [4480e3, 4500e3, 4520e3]),
     ],
 )
 def test_mesh_to_grid_covers_a_projected_mesh(crs, xs, ys):
-    """Every cell of a projected mesh is on the grid derived from it (#503)."""
+    """A projected mesh's grid is its envelope, and every cell is on it (#503, #543)."""
     pytest.importorskip("pyproj")
     cells = _boxes(xs, ys)
     mesh = Mesh(
         ids=tuple(str(i) for i in range(len(cells))), geometries=tuple(cells), crs=crs
     )
     grid = mesh.to_grid(cells_per_target=100)
+    # Exactly the mesh's envelope: its edges here are whole cells.
+    assert (grid.xmin, grid.xmax, grid.ymin, grid.ymax) == (
+        xs[0],
+        xs[-1],
+        ys[0],
+        ys[-1],
+    )
     x, y = grid.axes
+    assert len(x) * grid.xres == xs[-1] - xs[0] and len(y) * grid.yres == ys[-1] - ys[0]
     w = overlap_weights(mesh, x, y, grid.xres, grid.yres, grid.crs)
     on_grid = np.asarray(w.sum(axis=1)).ravel() * grid.xres * grid.yres
     np.testing.assert_allclose(on_grid, [c.area for c in cells], rtol=1e-8)

@@ -488,6 +488,11 @@ PROJECTED_CRS = ReferenceScenario(
         "projected CRS footprint"
     ),
     smooth_factor=0.0,
+    # The reference box in UTM 12N, rounded out to whole cells.
+    xmin=328_000.0,
+    xmax=500_000.0,
+    ymin=4_372_000.0,
+    ymax=4_598_000.0,
     xres=2000.0,
     yres=2000.0,
     projection="+proj=utm +zone=12 +datum=WGS84 +units=m +no_defs",
@@ -613,13 +618,12 @@ def stilt_r_bounds(grid) -> tuple[float, float, float, float]:
     """
     Return the ``(xmin, xmax, ymin, ymax)`` that give STILT-R's ``calc_footprint`` *grid*'s cells.
 
-    STILT-R lays a projected grid out between its two projected corners
-    (``xmin``, ``ymin``) and (``xmax``, ``ymax``); PYSTILT covers the box's
-    projected outline, a listed difference. Given the longitude/latitude of
-    PYSTILT's lower-left cell corner and of a point a quarter cell past its
-    upper-right one, STILT-R lays out the same cells: its
-    ``head(seq(xmn, xmx, by = xres), -1)`` drops the quarter cell. A
-    longitude/latitude grid is returned as written.
+    STILT-R takes a projected grid's bounds in degrees and lays the cells
+    out between its two projected corners; PYSTILT takes them in the grid's
+    units. Given the longitude/latitude of PYSTILT's lower-left cell corner
+    and of a point a quarter cell past its upper-right one, STILT-R lays out
+    the same cells: its ``head(seq(xmn, xmx, by = xres), -1)`` drops the
+    quarter cell. A longitude/latitude grid is returned as written.
     """
     if grid.is_longlat:
         return grid.xmin, grid.xmax, grid.ymin, grid.ymax
