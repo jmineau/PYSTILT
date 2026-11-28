@@ -8,15 +8,81 @@ sums particles onto. Its bounds are a :class:`runtraj.spatial.Bounds`.
 from __future__ import annotations
 
 import difflib
+import functools
 from typing import TYPE_CHECKING, Self
 
 import numpy as np
 import pandas as pd
 from pydantic import AliasChoices, ConfigDict, Field, model_validator
-from runtraj.spatial import Bounds, cf_axis_attrs, is_longlat
+from runtraj.spatial import Bounds
 
 if TYPE_CHECKING:
     import xarray as xr
+
+
+@functools.lru_cache(maxsize=64)
+def _is_longlat(crs: str) -> bool:
+    """
+    Return whether ``crs`` is geographic (longitude/latitude degrees).
+
+    This is the one test for grids, meshes, and plots alike.
+    ``+proj=longlat`` and the common names are read by eye; every other form,
+    such as ``+proj=latlong`` or ``EPSG:4326``, is left to pyproj.
+    """
+    if "+proj=longlat" in crs:
+        return True
+    if crs.upper() in {"EPSG:4326", "WGS84", "OGC:CRS84"}:
+        return True
+    try:
+        from pyproj import CRS
+
+        return bool(CRS.from_user_input(crs).is_geographic)
+    except Exception:  # not a CRS pyproj can read
+        return False
+
+
+def _same_crs(a: str, b: str) -> bool:
+    """Return whether two CRS strings describe the same CRS, however they are spelled."""
+    if a == b:
+        return True
+    if _is_longlat(a) and _is_longlat(b):
+        return True
+    try:
+        from pyproj import CRS
+
+        return CRS.from_user_input(a) == CRS.from_user_input(b)
+    except Exception:  # not a CRS pyproj can read
+        return False
+
+
+def _cf_axis_attrs(dim: str) -> dict[str, str]:
+    """Return the CF attributes for one coordinate axis: ``lon``, ``lat``, ``x`` or ``y``."""
+    return {
+        "lon": {
+            "standard_name": "longitude",
+            "long_name": "longitude",
+            "units": "degrees_east",
+            "axis": "X",
+        },
+        "lat": {
+            "standard_name": "latitude",
+            "long_name": "latitude",
+            "units": "degrees_north",
+            "axis": "Y",
+        },
+        "x": {
+            "standard_name": "projection_x_coordinate",
+            "long_name": "x coordinate of projection",
+            "units": "m",
+            "axis": "X",
+        },
+        "y": {
+            "standard_name": "projection_y_coordinate",
+            "long_name": "y coordinate of projection",
+            "units": "m",
+            "axis": "Y",
+        },
+    }[dim]
 
 
 def _grid_cell_count(minimum: float, maximum: float, resolution: float) -> int:
@@ -80,7 +146,7 @@ def _with_cf_grid(ds: xr.Dataset, crs: str) -> xr.Dataset:
     ds["crs"] = xr.DataArray(0, attrs=_cf_grid_mapping_attrs(crs))
     for dim in ("lon", "lat", "x", "y"):
         if dim in ds.coords:
-            ds[dim].attrs.update(cf_axis_attrs(dim))
+            ds[dim].attrs.update(_cf_axis_attrs(dim))
     return ds
 
 
@@ -301,7 +367,7 @@ class Grid(Bounds):
     @property
     def is_longlat(self) -> bool:
         """Whether the grid is in longitude/latitude degrees."""
-        return is_longlat(self.crs)
+        return _is_longlat(self.crs)
 
     def contains(self, longitude, latitude) -> np.ndarray:
         """

@@ -28,12 +28,12 @@ import pandas as pd
 import xarray as xr
 from runtraj.particles import check_particles
 from runtraj.releases import Release
-from runtraj.spatial import haversine_km, is_longlat
+from runtraj.spatial import haversine_km
 
 from stilt.exceptions import EmptyFootprint
 from stilt.footprint.config import FootprintConfig
 from stilt.footprint.foot import _near_field, _weighted
-from stilt.footprint.grid import Grid, _east_edge, _grid_cell_starts
+from stilt.footprint.grid import Grid, _east_edge, _grid_cell_starts, _is_longlat
 from stilt.particles import _need_foot
 
 from .io import _footprint_array
@@ -251,7 +251,7 @@ def _interpolate_early_timesteps(
     # Match R: per-particle median(abs(diff(lon/lat))), then median across particles.
     # should_interpolate = median(dx) > xres OR median(dy) > yres
     sorted_early = early.sort_values(by=["particle", "age"])
-    if not is_longlat(crs):
+    if not _is_longlat(crs):
         # The steps along the grid's axes, in its units.
         from pyproj import Transformer
 
@@ -264,7 +264,7 @@ def _interpolate_early_timesteps(
         pd.DataFrame,
         sorted_early.groupby("particle", sort=False)[["lon", "lat"]].diff().abs(),
     )
-    if is_longlat(crs):
+    if _is_longlat(crs):
         # A step across the seam is the short way round, not nearly 360 degrees.
         diffs["lon"] = diffs["lon"].where(diffs["lon"] <= 180.0, 360.0 - diffs["lon"])
     per_particle_med = cast(
@@ -455,7 +455,7 @@ def _compute_kernel_bandwidths(
     ti = (np.abs(kernel_df["rtime"].to_numpy()) / 1440) ** 0.5
     grid_conv = np.cos(kernel_df["lat_mean"].to_numpy() * np.pi / 180)
     w = smooth_factor * 0.06 * di * ti / grid_conv
-    if not is_longlat(crs):
+    if not _is_longlat(crs):
         # The mean of unwrapped longitudes can pass 180; only those go back.
         lon_mean = kernel_df["lon_mean"].to_numpy()
         outside = (lon_mean < -180.0) | (lon_mean >= 180.0)

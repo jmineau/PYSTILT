@@ -189,7 +189,6 @@ A :class:`Grid` works as well. It is documented under :doc:`configuration`.
 :mod:`stilt.footprint` also has the helpers that compute how much of each
 footprint cell falls in each target cell. These overlap weights are cached,
 so each geometry's weights are computed once per footprint grid.
-:mod:`runtraj.spatial` has the CRS helpers.
 
 .. autosummary::
    :toctree: _api

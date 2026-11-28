@@ -5,9 +5,9 @@ import warnings
 import numpy as np
 import pytest
 import shapely
-from runtraj.spatial import same_crs
 
 from stilt import Grid, Mesh, Zones
+from stilt.footprint.grid import _same_crs
 from stilt.footprint.targets import (
     _mesh_weights,
     _mesh_weights_exactextract,
@@ -109,7 +109,7 @@ def test_mesh_from_geodataframe_uses_column_and_crs():
     mesh = Mesh.from_geodataframe(gdf, ids="name")
     assert mesh.ids == ("a", "b")
     assert mesh.is_longlat
-    assert same_crs(mesh.crs, "+proj=longlat")
+    assert _same_crs(mesh.crs, "+proj=longlat")
 
 
 def test_mesh_from_grid_matches_grid_index_order():

@@ -40,19 +40,18 @@ import numpy as np
 import pandas as pd
 import shapely
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-from runtraj.spatial import is_longlat, same_crs
 from scipy import sparse
 from shapely.geometry.base import BaseGeometry
 
 from stilt.footprint.config import FileGeometrySpec, GeometrySpec, H3GeometrySpec
-from stilt.footprint.grid import Grid, _east_edge
+from stilt.footprint.grid import Grid, _east_edge, _is_longlat, _same_crs
 
 
 def _transform_geometries(
     geoms: Sequence[BaseGeometry], src: str, dst: str
 ) -> tuple[BaseGeometry, ...]:
     """Return shapely geometries reprojected from ``src`` to ``dst``. Requires pyproj."""
-    if same_crs(src, dst):
+    if _same_crs(src, dst):
         return tuple(geoms)
     from pyproj import Transformer
 
@@ -259,7 +258,7 @@ class Mesh(BaseModel):
     @property
     def is_longlat(self) -> bool:
         """Whether the polygon coordinates are longitude/latitude degrees."""
-        return is_longlat(self.crs)
+        return _is_longlat(self.crs)
 
     @property
     def bounds(self) -> tuple[float, float, float, float]:
@@ -286,7 +285,7 @@ class Mesh(BaseModel):
 
     def to_crs(self, crs: str) -> Mesh:
         """Return the mesh reprojected to ``crs``. Requires pyproj."""
-        if same_crs(self.crs, crs):
+        if _same_crs(self.crs, crs):
             return self
         return Mesh(
             ids=self.ids,
@@ -452,7 +451,7 @@ class Zones(BaseModel):
         """
         base = self.base
         if isinstance(base, Grid):
-            if crs is None or same_crs(crs, base.crs):
+            if crs is None or _same_crs(crs, base.crs):
                 return base
             base = Mesh.from_grid(base)
         return base.to_grid(
@@ -691,7 +690,7 @@ def overlap_weights(
         base_w = overlap_weights(geometry.base, x, y, xres, yres, crs)
         w = sparse.csr_matrix(geometry.membership @ base_w)
     else:
-        if isinstance(geometry, Grid) and same_crs(geometry.crs, crs):
+        if isinstance(geometry, Grid) and _same_crs(geometry.crs, crs):
             grid = geometry
             west, east = grid.xmin, _east_edge(grid.xmin, grid.xmax)
 
@@ -707,7 +706,7 @@ def overlap_weights(
                 return _polygon_weights(mesh, xs, y, xres, yres)
 
         w = weigh(x)
-        if is_longlat(crs):
+        if _is_longlat(crs):
             # A raster cell a whole turn from a target cell is on the same meridian.
             for turn in (-360.0, 360.0):
                 if x[0] - xres / 2 + turn < east and x[-1] + xres / 2 + turn > west:
@@ -729,7 +728,7 @@ def check_resolution(geometry: Geometry, xres: float, yres: float, crs: str) -> 
     geometry in a different CRS is skipped, since its units differ.
     """
     target = geometry.base if isinstance(geometry, Zones) else geometry
-    if isinstance(target, Grid) or not same_crs(target.crs, crs):
+    if isinstance(target, Grid) or not _same_crs(target.crs, crs):
         return
     width = target.min_cell_width
     if width < 2.0 * max(xres, yres):
