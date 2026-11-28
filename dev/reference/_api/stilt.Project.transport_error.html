@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=0bd70e96"></script>
+    <script src="../../_static/documentation_options.js?v=0bb840ae"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a32.dev24+ge701d8c63" />
+  <meta name="docsearch:version" content="0.1.0a32.dev25+gf877f4b33" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -939,7 +939,7 @@ this process may use (in a Slurm job, the job’s), at most 8.</p></li>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>The selection with six more columns, from
-<code class="xref py py-class docutils literal notranslate"><span class="pre">TransportError</span></code>: <code class="docutils literal notranslate"><span class="pre">enhancement</span></code>,
+<a class="reference internal" href="stilt.TransportError.html#stilt.TransportError" title="stilt.TransportError"><code class="xref py py-class docutils literal notranslate"><span class="pre">TransportError</span></code></a>: <code class="docutils literal notranslate"><span class="pre">enhancement</span></code>,
 <code class="docutils literal notranslate"><span class="pre">enhancement_perturbed</span></code>, <code class="docutils literal notranslate"><span class="pre">background</span></code>, <code class="docutils literal notranslate"><span class="pre">variance</span></code>,
 <code class="docutils literal notranslate"><span class="pre">noise</span></code>, and <code class="docutils literal notranslate"><span class="pre">realizations</span></code> (how many realizations of
 <em>error</em> were averaged). A release without particles in the
@@ -961,7 +961,7 @@ selected variant or in any realization of <em>error</em> gets NaN and
 <p>Each release’s particles are read whole. A table of 1.4 million
 rows takes about a second to read, so a selection of hundreds of
 releases takes minutes. The per-level tables of
-<code class="xref py py-class docutils literal notranslate"><span class="pre">TransportError</span></code> are not kept; get them for
+<a class="reference internal" href="stilt.TransportError.html#stilt.TransportError" title="stilt.TransportError"><code class="xref py py-class docutils literal notranslate"><span class="pre">TransportError</span></code></a> are not kept; get them for
 one release with <code class="docutils literal notranslate"><span class="pre">sim.transport_error</span></code>.</p>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">sims</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulations</span>
@@ -969,7 +969,7 @@ one release with <code class="docutils literal notranslate"><span class="pre">si
 <span class="gp">... </span>    <span class="p">(</span><span class="n">sims</span><span class="o">.</span><span class="n">variant</span> <span class="o">==</span> <span class="s2">"hrrr"</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">sims</span><span class="o">.</span><span class="n">site</span> <span class="o">==</span> <span class="s2">"tower_a"</span><span class="p">)</span>
 <span class="gp">... </span><span class="p">]</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">errors</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">transport_error</span><span class="p">(</span><span class="n">tower</span><span class="p">,</span> <span class="s2">"hrrr-err"</span><span class="p">,</span> <span class="n">flux</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">errors</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">errors</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">month</span><span class="p">)</span><span class="o">.</span><span class="n">variance</span><span class="o">.</span><span class="n">median</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">errors</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">errors</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">month</span><span class="p">)</span><span class="o">.</span><span class="n">variance</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
 </pre></div>
 </div>
 </dd></dl>

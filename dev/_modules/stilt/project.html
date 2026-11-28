@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=0bd70e96"></script>
+    <script src="../../_static/documentation_options.js?v=0bb840ae"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a32.dev24+ge701d8c63" />
+  <meta name="docsearch:version" content="0.1.0a32.dev25+gf877f4b33" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -764,6 +764,16 @@
 <span class="sd">        release and the variant, as the subclass that reads the footprint,</span>
 <span class="sd">        the background, and the transport error. The two compare equal.</span>
 
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        release_id : str</span>
+<span class="sd">            The release's id, as in ``project.releases``.</span>
+<span class="sd">        variant : str</span>
+<span class="sd">            The variant's name.</span>
+<span class="sd">        realization : int, optional</span>
+<span class="sd">            Which realization of an ensemble variant (``realizations: N``),</span>
+<span class="sd">            ``0`` to ``N - 1``. Leave it out for a variant that runs once.</span>
+
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
 <span class="sd">        KeyError</span>
@@ -968,17 +978,10 @@
 <span class="sd">            closed on the left (``closed="left"``): each bin holds the</span>
 <span class="sd">            footprint layers that start in it. A layer goes whole into the</span>
 <span class="sd">            bin where it starts, so the bins must be as long as the</span>
-<span class="sd">            footprints' layers (``tres``) or longer; a layer that crosses a</span>
-<span class="sd">            bin edge still goes into the bin where it starts. You build these yourself;</span>
-<span class="sd">            ``jacobian`` does not read them from an inventory's own CF time</span>
-<span class="sd">            bounds, unlike ``foot.stilt.enhancement`` with a flux that has</span>
-<span class="sd">            them. Building the bins from an inventory's own time labels</span>
-<span class="sd">            (its left edges) reads each label as the start of its step, the</span>
-<span class="sd">            same reading ``foot.stilt.enhancement`` gives a flux with no</span>
-<span class="sd">            bounds. A flux not labeled at the start of its steps must be</span>
-<span class="sd">            relabeled first, or its bins built from the relabeled starts;</span>
-<span class="sd">            one with bounds can have its bins built from them directly</span>
-<span class="sd">            instead (see :ref:`flux-step-labels`).</span>
+<span class="sd">            footprints' layers (``tres``) or longer. You build these</span>
+<span class="sd">            yourself, from the inventory's steps read as</span>
+<span class="sd">            ``foot.stilt.enhancement`` reads them (see</span>
+<span class="sd">            :ref:`flux-step-labels`).</span>
 <span class="sd">        workers : int, optional</span>
 <span class="sd">            Threads that read and sum batches. Defaults to the CPUs this</span>
 <span class="sd">            process may use (in a Slurm job, the job's), at most 8: more</span>
@@ -1068,7 +1071,7 @@
 <span class="sd">        -------</span>
 <span class="sd">        pandas.DataFrame</span>
 <span class="sd">            The selection with six more columns, from</span>
-<span class="sd">            :class:`~runtraj.particles.TransportError`: ``enhancement``,</span>
+<span class="sd">            :class:`~stilt.TransportError`: ``enhancement``,</span>
 <span class="sd">            ``enhancement_perturbed``, ``background``, ``variance``,</span>
 <span class="sd">            ``noise``, and ``realizations`` (how many realizations of</span>
 <span class="sd">            *error* were averaged). A release without particles in the</span>
@@ -1088,7 +1091,7 @@
 <span class="sd">        Each release's particles are read whole. A table of 1.4 million</span>
 <span class="sd">        rows takes about a second to read, so a selection of hundreds of</span>
 <span class="sd">        releases takes minutes. The per-level tables of</span>
-<span class="sd">        :class:`~runtraj.particles.TransportError` are not kept; get them for</span>
+<span class="sd">        :class:`~stilt.TransportError` are not kept; get them for</span>
 <span class="sd">        one release with ``sim.transport_error``.</span>
 
 <span class="sd">        Examples</span>
@@ -1098,7 +1101,7 @@
 <span class="sd">        ...     (sims.variant == "hrrr") &amp; (sims.site == "tower_a")</span>
 <span class="sd">        ... ]  # doctest: +SKIP</span>
 <span class="sd">        &gt;&gt;&gt; errors = project.transport_error(tower, "hrrr-err", flux)  # doctest: +SKIP</span>
-<span class="sd">        &gt;&gt;&gt; errors.groupby(errors.time.dt.month).variance.median()  # doctest: +SKIP</span>
+<span class="sd">        &gt;&gt;&gt; errors.groupby(errors.time.dt.month).variance.mean()  # doctest: +SKIP</span>
 <span class="sd">        """</span>
         <span class="n">frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_selected</span><span class="p">(</span><span class="n">sel</span><span class="p">)</span>
         <span class="n">name</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">_one_group</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="s2">"A transport error"</span><span class="p">)</span>

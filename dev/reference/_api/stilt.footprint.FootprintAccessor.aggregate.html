@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=0bd70e96"></script>
+    <script src="../../_static/documentation_options.js?v=0bb840ae"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a32.dev24+ge701d8c63" />
+  <meta name="docsearch:version" content="0.1.0a32.dev25+gf877f4b33" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -937,12 +937,11 @@ Use it to keep only some cells of a grid.</p></li>
 footprint grid.</p>
 </p></li>
 <li><p><strong>time_bins</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.IntervalIndex.html#pandas.IntervalIndex" title="(in pandas v3.1)"><code class="xref py py-class docutils literal notranslate"><span class="pre">IntervalIndex</span></code></a></span>) – Time intervals to sum over, such as the time steps of a flux
-inventory. They must be closed on the left
-(<code class="docutils literal notranslate"><span class="pre">closed=&quot;left&quot;</span></code>): each bin holds the footprint layers that
-start in it. A layer goes whole into the bin where it starts, so
-the bins must be as long as the footprint’s layers (<code class="docutils literal notranslate"><span class="pre">tres</span></code>) or
-longer. Layers start at the release’s time, so one that crosses
-a bin edge still goes into the bin where it starts.</p></li>
+inventory, read as <code class="docutils literal notranslate"><span class="pre">foot.stilt.enhancement</span></code> reads a flux’s
+steps (see <a class="reference internal" href="../../guides/aggregation.html#flux-step-labels"><span class="std std-ref">When the labels are not the starts</span></a>). They must be closed on the
+left (<code class="docutils literal notranslate"><span class="pre">closed=&quot;left&quot;</span></code>): each bin holds the footprint layers
+that start in it, whole, so the bins must be as long as the
+footprint’s layers (<code class="docutils literal notranslate"><span class="pre">tres</span></code>) or longer.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
