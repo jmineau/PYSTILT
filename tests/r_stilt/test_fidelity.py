@@ -34,8 +34,8 @@ import xarray as xr
 from runtraj.models.hysplit.driver import find_hycs_std, setup_seed
 
 from ..fixtures.r_stilt_reference import (
-    STILT_R_NAMES,
     ReferenceScenario,
+    as_stilt_r,
     stilt_r_bounds,
 )
 
@@ -230,7 +230,7 @@ def _r_footprint_from_traj(
     nc_path = tmp_path / "r_foot.nc"
     # The R helper reads STILT-R's column names.
     r_traj_path = tmp_path / "traj_r_names.parquet"
-    r_traj = pd.read_parquet(traj_path).rename(columns=STILT_R_NAMES)
+    r_traj = as_stilt_r(pd.read_parquet(traj_path))
     if scenario.n_hours > 0 and not as_written:
         r_traj["time"] -= 1e-6 / 60
     r_traj.to_parquet(r_traj_path)
@@ -342,7 +342,7 @@ def test_msl_hnf_foot_intentionally_differs_from_r(
         atol=1e-10,
         err_msg=f"[{s.name}] uncorrected foot should still match STILT-R.",
     )
-    first_hour = (py["age"].abs() <= 60).to_numpy()
+    first_hour = (py["age"].abs() <= 3600).to_numpy()
     assert py["foot"][first_hour].sum() > r["foot"][first_hour].sum(), (
         f"[{s.name}] PYSTILT's near-field correction of an MSL release no "
         "longer raises the first hour's foot above STILT-R's."

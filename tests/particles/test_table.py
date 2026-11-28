@@ -26,14 +26,14 @@ _NO_POINT = ColumnRelease(
 def _particles_basic() -> pd.DataFrame:
     return pd.DataFrame(
         {
-            "age": [-60, -120],
+            "age": [-3600, -7200],
             "particle": [1, 1],
             "lon": [-111.9, -112.0],
             "lat": [40.7, 40.6],
             "zagl": [10.0, 20.0],
             "foot": [1e-5, 2e-5],
             "dens": [1.2, 1.2],
-            "samt": [1.0, 1.0],
+            "samt": [60.0, 60.0],
             "sigw": [0.1, 0.1],
             "tlgr": [10.0, 10.0],
             "mlht": [500.0, 500.0],
@@ -79,7 +79,7 @@ def test_parquet_roundtrip_preserves_naive_utc_from_tz_aware_release(tmp_path):
     assert release.time == aware_release.time
     assert loaded["time"].dt.tz is None
     expected = pd.Timestamp("2023-01-01 12:00") + pd.to_timedelta(
-        traj["age"].to_numpy(), unit="min"
+        traj["age"].to_numpy(), unit="s"
     )
     np.testing.assert_array_equal(loaded["time"].to_numpy(), expected.to_numpy())
 
@@ -130,7 +130,7 @@ def test_calc_footprint_regenerates_a_footprint_on_a_new_grid(tmp_path):
     n = 20
     particles = pd.DataFrame(
         {
-            "age": [-60] * n + [-120] * n,
+            "age": [-3600] * n + [-7200] * n,
             "particle": list(range(1, n + 1)) * 2,
             "lon": rng.uniform(-113.9, -113.1, n * 2),
             "lat": rng.uniform(39.1, 39.9, n * 2),

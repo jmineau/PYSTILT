@@ -132,11 +132,11 @@ time step:
 
 The particles start at the release and spread out. The met files here cover
 only a small region around Salt Lake, and a particle that leaves the met stops
-there. This is how many hours they went (``age`` is in minutes):
+there. This is how many hours they went (``age`` is in seconds):
 
 .. ipython:: python
 
-   print(f"{particles['age'].abs().max() / 60:.1f} hours")
+   print(f"{particles['age'].abs().max() / 3600:.1f} hours")
 
 If that is short of ``n_hours``, the footprint covers only those hours.
 :doc:`../guides/checking` says when that matters.

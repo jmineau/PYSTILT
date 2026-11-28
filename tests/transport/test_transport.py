@@ -160,7 +160,7 @@ def test_run_trajectories_returns_the_particles_and_removes_its_workdir(
     assert particles["particle"].unique().tolist() == [1]
     # time is the release time plus age, as a table read from a file has.
     expected = pd.Timestamp(point_release.time) + pd.to_timedelta(
-        particles["age"], unit="min"
+        particles["age"], unit="s"
     )
     pd.testing.assert_series_equal(particles["time"], expected, check_names=False)
     assert echo.seen["config"].numpar == 50

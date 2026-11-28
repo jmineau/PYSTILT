@@ -17,7 +17,7 @@ TOO_SHORT = "layers are 1 days 00:00:00 long but a step of the flux is 0 days 01
 
 def _footprint(tres: str) -> xr.DataArray:
     """Return the footprint of 10 stationary particles over 24 hours, in layers of *tres*."""
-    ages = -np.arange(1, 24 * 60 + 1, dtype=float)
+    ages = -60.0 * np.arange(1, 24 * 60 + 1, dtype=float)
     particles = pd.concat(
         pd.DataFrame(
             {
@@ -27,7 +27,7 @@ def _footprint(tres: str) -> xr.DataArray:
                 "lat": 40.5,
                 "zagl": 10.0,
                 "foot": 0.01,
-                "time": T0 + pd.to_timedelta(ages, unit="min"),
+                "time": T0 + pd.to_timedelta(ages, unit="s"),
             }
         )
         for k in range(1, 11)

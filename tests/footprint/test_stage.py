@@ -411,7 +411,7 @@ def _particles(**columns) -> pd.DataFrame:
     return pd.DataFrame(
         {
             "particle": [1.0, 1.0],
-            "age": [-1.0, -2.0],
+            "age": [-60.0, -120.0],
             "lon": [-111.9, -112.0],
             "lat": [40.7, 40.6],
             "zagl": [5.0, 900.0],

@@ -55,6 +55,11 @@ _PYSTILT_NAMES = {
 }
 
 
+def _in_seconds(particles: pd.DataFrame) -> pd.DataFrame:
+    """STILT-R's particles with ``age`` and ``samt`` in seconds, as PYSTILT reads them."""
+    return particles.assign(age=particles["age"] * 60, samt=particles["samt"] * 60)
+
+
 def _read_dump(path: Path) -> pd.DataFrame:
     """
     Read a CSV R dumped, every digit exact.
@@ -102,8 +107,8 @@ def test_release_time_and_particles_are_what_r_reads(written):
         ]
         # CONTROL lists latitude first; coords() gives longitude first.
         assert release.coords() == [(lon, lat, alt) for lat, lon, alt in points]
-        from_r = _read_dump(dumped / f"{name}_particles.csv").rename(
-            columns=_PYSTILT_NAMES
+        from_r = _in_seconds(
+            _read_dump(dumped / f"{name}_particles.csv").rename(columns=_PYSTILT_NAMES)
         )
         mine = particles.drop(columns="time")
         assert list(mine.columns) == list(from_r.columns)
@@ -135,7 +140,7 @@ def test_error_particles_are_what_r_reads(written):
     (path,) = dumped.glob("*_error.csv")
     release, particles, foot = next(read_stilt_r(by_id, error=True))
     assert f"{release.id}_error.csv" == path.name
-    from_r = _read_dump(path).rename(columns=_PYSTILT_NAMES)
+    from_r = _in_seconds(_read_dump(path).rename(columns=_PYSTILT_NAMES))
     mine = particles.drop(columns="time")
     assert list(mine.columns) == list(from_r.columns)
     np.testing.assert_array_equal(mine.to_numpy(), from_r.to_numpy())

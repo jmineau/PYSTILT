@@ -85,7 +85,7 @@ def _run(
 def _timed(particles: pd.DataFrame, release: PointRelease) -> pd.DataFrame:
     """Return *particles* with ``time``, the release time plus ``age``."""
     return particles.assign(
-        time=pd.Timestamp(release.time) + pd.to_timedelta(particles["age"], unit="min")
+        time=pd.Timestamp(release.time) + pd.to_timedelta(particles["age"], unit="s")
     )
 
 

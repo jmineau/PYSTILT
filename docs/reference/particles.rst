@@ -24,10 +24,10 @@ Every table has five columns, :data:`PARTICLE_SCHEMA`:
        for the whole run. HYSPLIT and STILT-R call it ``indx``. Stored as
        int32 and read back as float64.
    * - ``age``
-     - minutes
+     - seconds
      - Time since release. Negative for a backward run, positive for a
-       forward one. HYSPLIT and STILT-R call it ``time``. Stored as whole
-       minutes, int32, and read back as float64.
+       forward one. HYSPLIT and STILT-R call it ``time`` and write it in
+       minutes. Stored as whole seconds, int32, and read back as float64.
    * - ``lon``
      - degrees east
      - Longitude of the particle (HYSPLIT's ``long``).
@@ -62,7 +62,7 @@ Where ``foot`` comes from:
   :func:`stilt.footprint.add_foot`), from ``zagl``, ``mlht``, the output step, and the
   pressure drop from the ground to the surface layer's top in the met files
   the run read. PYSTILT's log says so. A particle counts for the whole step
-  when it ends the step inside the layer, where HYSPLIT counts the minutes
+  when it ends the step inside the layer, where HYSPLIT counts the time
   it spent there. When the model wrote no ``mlht``, the met's
   boundary-layer height (``PBLH``) is used, unless ``pbl_height`` says
   otherwise. :doc:`/development/validation` says how far this moves a
@@ -188,7 +188,7 @@ Some that PYSTILT reads:
      - kg m⁻³
      - Air density.
    * - ``samt``
-     - minutes
+     - seconds
      - Time the particle spent in the surface layer during the step.
    * - ``sigw``
      - m s⁻¹

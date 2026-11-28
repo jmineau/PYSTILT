@@ -252,7 +252,7 @@ are. Rename ``run_time`` to ``time``. In the particle table, STILT-R's
 ``long``, ``lati``, ``indx``, ``time``, and ``xhgt`` are ``lon``, ``lat``,
 ``particle``, ``age``, and ``release_height``. PYSTILT's ``time`` column is
 the UTC time of each row, so a script that filters on STILT-R's ``time``
-in minutes must use ``age``.
+in minutes must use ``age``, which is in seconds.
 
 .. code-block:: text
 

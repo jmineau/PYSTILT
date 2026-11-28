@@ -262,8 +262,8 @@ def read_stilt_r(
     such as X-STILT's slant columns, are a :class:`~stilt.MultiPointRelease`.
 
     The particle columns get PYSTILT's names: ``indx``, ``time``, ``long``,
-    ``lati``, and ``xhgt`` become ``particle``, ``age`` (minutes since
-    release), ``lon``, ``lat``, and ``release_height``. ``time`` is then the
+    ``lati``, and ``xhgt`` become ``particle``, ``age`` (seconds since
+    release, from STILT-R's minutes), ``lon``, ``lat``, and ``release_height``. ``time`` is then the
     UTC time of each row, the release time plus ``age``. Every other column
     keeps its STILT-R name, ``foot_no_hnf_dilution`` included: the
     near-field correction STILT-R applied stays as it is.
@@ -576,8 +576,13 @@ def _particles(stored: pd.DataFrame, release: Release, path: Path) -> pd.DataFra
         raise ValueError(f"{path}: {error}") from None
     for name in ("particle", "age"):
         particles[name] = particles[name].astype("float64")
+    # STILT-R's time and samt are in minutes, as HYSPLIT writes them;
+    # PYSTILT's age and samt are in seconds.
+    for name in ("age", "samt"):
+        if name in particles.columns:
+            particles[name] = particles[name] * 60
     particles["time"] = pd.Timestamp(release.time) + pd.to_timedelta(
-        particles["age"].to_numpy(), unit="min"
+        particles["age"].to_numpy(), unit="s"
     )
     return particles
 

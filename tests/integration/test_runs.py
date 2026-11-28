@@ -217,7 +217,7 @@ def test_particles_that_leave_the_met_domain_complete_the_run(
     sim = project.simulation(*_sim_id(release))
     assert sim.is_complete
     assert sim.failure is None
-    hours = sim.particles["age"].abs().max() / 60
+    hours = sim.particles["age"].abs().max() / 3600
     assert hours < 24  # every particle left the met's domain first
 
 

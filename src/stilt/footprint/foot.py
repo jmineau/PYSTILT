@@ -93,7 +93,7 @@ def add_foot(
     The mixed-layer height comes from *pbl_height*. Unset, a ``mlht``
     column is used as it is, with ``samt``; without one, the met's
     boundary-layer height is sampled. Set, ``mlht`` is replaced with the
-    height it names, and ``samt``, which counts the minutes below the
+    height it names, and ``samt``, which counts the seconds below the
     model's own layer, is not used. Every model moved its particles with
     its own mixed layer, so a height found here can differ from the one the
     particles were moved with.
@@ -109,7 +109,7 @@ def add_foot(
     ----------
     particles : pandas.DataFrame
         Particle table with ``time``, the release time plus ``age``
-        minutes. A ``mlht`` column (m above ground) is used as it is
+        seconds. A ``mlht`` column (m above ground) is used as it is
         unless *pbl_height* is set.
     met : iterable of path-like, or xarray.Dataset
         ARL met files that cover the particles' times, such as the files
@@ -182,11 +182,11 @@ def add_foot(
     pres = sample_met(ends, met, ["pres"], z_top=None)["pres"].to_numpy()
     air = 100.0 * (pres[: len(out)] - pres[len(out) :]) / _GRAVITY  # kg m⁻²
     if own_mlht and "samt" in out.columns:
-        minutes = out["samt"].to_numpy(dtype=float)
+        seconds = out["samt"].to_numpy(dtype=float)
     else:
         below = out["zagl"].to_numpy(dtype=float) < depth
-        minutes = np.where(below, _step_minutes(out), 0.0)
-    out["foot"] = _MOLAR_MASS_DRY_AIR * minutes * 60 / air
+        seconds = np.where(below, _step_seconds(out), 0.0)
+    out["foot"] = _MOLAR_MASS_DRY_AIR * seconds / air
     return out
 
 
@@ -211,8 +211,8 @@ def _pbl_height(
     return np.full(len(particles), float(pbl_height))
 
 
-def _step_minutes(particles: pd.DataFrame) -> np.ndarray:
-    """Return each row's minutes since the particle's previous row, or since its release for its first."""
+def _step_seconds(particles: pd.DataFrame) -> np.ndarray:
+    """Return each row's seconds since the particle's previous row, or since its release for its first."""
     elapsed = np.abs(particles["age"].to_numpy(dtype=float))
     number = particles["particle"].to_numpy()
     order = np.lexsort((elapsed, number))
@@ -220,9 +220,9 @@ def _step_minutes(particles: pd.DataFrame) -> np.ndarray:
     step = np.diff(walked, prepend=0.0)
     first = np.r_[True, number[order][1:] != number[order][:-1]]
     step[first] = walked[first]
-    minutes = np.empty_like(step)
-    minutes[order] = step
-    return minutes
+    seconds = np.empty_like(step)
+    seconds[order] = step
+    return seconds
 
 
 def correct_near_field(
@@ -285,9 +285,11 @@ def correct_near_field(
     p = particles.copy()
     p["foot_no_hnf_dilution"] = p["foot"]
 
-    abs_time_s = np.abs(p["age"] * 60)
+    abs_time_s = np.abs(p["age"])
+    # STILT-R's plume growth takes samt in minutes.
     p["sigma"] = (
         p["samt"]
+        / 60
         * np.sqrt(2)
         * p["sigw"]
         * np.sqrt(
@@ -319,7 +321,7 @@ def correct_near_field(
     )
     p["foot"] = np.where(
         p["plume"] < p["pbl_mixing"],
-        _MOLAR_MASS_DRY_AIR / (p["plume"] * p["dens"]) * p["samt"] * 60,
+        _MOLAR_MASS_DRY_AIR / (p["plume"] * p["dens"]) * p["samt"],
         p["foot"],
     )
     return p.drop(columns=["sigma", "pbl_mixing", "plume", "elapsed"])

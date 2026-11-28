@@ -39,7 +39,7 @@ def _particles():
     return pd.DataFrame(
         {
             "particle": [1, 1, 2, 2, 3, 3],
-            "age": [0.0, -60.0, 0.0, -60.0, -30.0, -120.0],
+            "age": [0.0, -3600.0, 0.0, -3600.0, -1800.0, -7200.0],
             "lon": [-111.0, -112.0, -111.0, -110.0, -111.0, -111.0],
             "lat": [40.0, 40.0, 40.0, 41.0, 40.0, 41.0],
             "pres": [900.0, 1000.0, 900.0, 650.0, 900.0, 820.0],
@@ -61,7 +61,7 @@ def test_endpoints_pick_the_largest_abs_time_per_particle():
     ends = _particles().stilt.endpoints()
 
     assert ends["particle"].tolist() == [1, 2, 3]
-    assert ends["age"].tolist() == [-60.0, -60.0, -120.0]
+    assert ends["age"].tolist() == [-3600.0, -3600.0, -7200.0]
 
 
 def test_endpoints_handle_forward_runs_and_duplicate_index():
@@ -71,7 +71,7 @@ def test_endpoints_handle_forward_runs_and_duplicate_index():
 
     ends = p.stilt.endpoints()
 
-    assert ends["age"].tolist() == [60.0, 60.0, 120.0]
+    assert ends["age"].tolist() == [3600.0, 3600.0, 7200.0]
     assert p.iloc[0:0].stilt.endpoints().empty
 
 
@@ -150,7 +150,7 @@ def test_background_oxidation_scales_the_inflow_by_the_survival_over_the_whole_p
     p = _particles().assign(temz=280.0)
     oxidation = Oxidation(a=1e-4, oxidant=1.0)  # 1e-4 s⁻¹ everywhere
     result = background(p, _field_3d(), transforms=[oxidation])
-    w = np.exp(-1e-4 * 60.0 * np.array([60.0, 60.0, 120.0])) / 3.0
+    w = np.exp(-1e-4 * np.array([3600.0, 3600.0, 7200.0])) / 3.0
     assert result.weights.to_numpy() == pytest.approx(w)
     assert result.value == pytest.approx(float(np.sum(w * ENDPOINT_VALUES)))
 

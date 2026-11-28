@@ -198,7 +198,7 @@ def test_status_counts_full_simulation_completion(tmp_path):
     sim = project.simulation(release.id, "hrrr")
     particles = pd.DataFrame(
         {
-            "age": [-60.0],
+            "age": [-3600.0],
             "particle": [1.0],
             "lon": [-113.5],
             "lat": [39.5],

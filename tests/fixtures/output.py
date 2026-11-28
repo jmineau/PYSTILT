@@ -46,7 +46,7 @@ def release_at(hour: int = 12, day: int = 15) -> PointRelease:
 def fake_particles(release: PointRelease, n: int = 50) -> pd.DataFrame:
     """Return *n* particles of ten one-minute steps, random but fixed by the release's time."""
     rng = np.random.default_rng(int(release.time.timestamp()) % 1000)
-    steps = np.arange(-1, -11, -1, dtype=float)
+    steps = np.arange(-60, -660, -60, dtype=float)
     particle = np.repeat(np.arange(1, n + 1, dtype=float), len(steps))
     time = np.tile(steps, n)
     data = pd.DataFrame(
@@ -59,7 +59,7 @@ def fake_particles(release: PointRelease, n: int = 50) -> pd.DataFrame:
             "foot": rng.uniform(0, 0.1, len(time)),
         }
     )
-    data["time"] = pd.Timestamp(release.time) + pd.to_timedelta(data["age"], unit="min")
+    data["time"] = pd.Timestamp(release.time) + pd.to_timedelta(data["age"], unit="s")
     return data
 
 

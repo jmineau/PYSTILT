@@ -10,7 +10,8 @@ import xarray as xr
 from runtraj.releases import MultiPointRelease, PointRelease
 
 from stilt.exceptions import EmptyFootprint
-from stilt.footprint import calc_footprint, correct_near_field, gridding
+from stilt.footprint import calc_footprint as _calc_footprint
+from stilt.footprint import correct_near_field, gridding
 from stilt.footprint.config import FootprintConfig
 from stilt.footprint.grid import Grid
 from stilt.footprint.gridding import (
@@ -28,6 +29,22 @@ from stilt.footprint.gridding import (
 from stilt.footprint.io import read_footprint, write_footprint
 
 from ..fixtures.factories import projected_grid
+
+
+def _in_seconds(particles: pd.DataFrame) -> pd.DataFrame:
+    """
+    Return a table of this file as a particle table, ``age`` and ``samt`` in seconds.
+
+    The tables here are in minutes, STILT-R's unit and the one the private
+    helpers tested here work in.
+    """
+    times = [c for c in ("age", "samt") if c in particles.columns]
+    return particles.assign(**{c: particles[c] * 60 for c in times})
+
+
+def calc_footprint(particles: pd.DataFrame, *args, **kwargs) -> xr.DataArray:
+    """``stilt.calc_footprint`` of a table written in minutes (:func:`_in_seconds`)."""
+    return _calc_footprint(_in_seconds(particles), *args, **kwargs)
 
 
 def _particles_in_domain(n: int = 30, seed: int = 42) -> pd.DataFrame:
@@ -1944,8 +1961,8 @@ def test_calc_footprint_applies_the_near_field_correction_with_hnf_plume():
     plain = calc_footprint(
         particles, release, _NEAR_GRID, smooth_factor=0, hnf_plume=False
     )
-    expected = calc_footprint(
-        correct_near_field(particles, release, 0.5),
+    expected = _calc_footprint(
+        correct_near_field(_in_seconds(particles), release, 0.5),
         release,
         _NEAR_GRID,
         smooth_factor=0,
@@ -1979,8 +1996,8 @@ def test_calc_footprint_reads_footprint_depth_for_the_near_field_correction():
     shallow = calc_footprint(
         particles, release, _NEAR_GRID, smooth_factor=0, footprint_depth=6.0
     )
-    expected = calc_footprint(
-        correct_near_field(particles, release, 6.0),
+    expected = _calc_footprint(
+        correct_near_field(_in_seconds(particles), release, 6.0),
         release,
         _NEAR_GRID,
         smooth_factor=0,
@@ -2064,9 +2081,9 @@ def test_calc_footprint_refuses_another_releases_time(point_release):
         calc_footprint(walk, other, _WALK_GRID)
 
 
-@pytest.mark.parametrize("scale", [1 / 60, 60])
-def test_calc_footprint_refuses_an_age_that_is_not_in_minutes(point_release, scale):
-    """Age in hours gives one layer and in seconds hundreds, so it is checked against time."""
+@pytest.mark.parametrize("scale", [1 / 60, 1 / 3600])
+def test_calc_footprint_refuses_an_age_that_is_not_in_seconds(point_release, scale):
+    """Age in minutes or hours gives too few layers, so it is checked against time."""
     walk = _walk(point_release)
     with pytest.raises(ValueError, match="age does not agree with time on 360 of 360"):
         calc_footprint(walk.assign(age=walk["age"] * scale), point_release, _WALK_GRID)

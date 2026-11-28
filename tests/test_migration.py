@@ -184,15 +184,15 @@ def test_particle_columns_get_pystilt_names():
     assert {"particle", "age", "lon", "lat", "zagl", "foot"} <= set(particles.columns)
     assert "foot_no_hnf_dilution" in particles.columns
     assert sorted(particles["particle"].unique()) == list(range(1, 11))
-    # STILT-R's time is minutes since release, negative backward.
-    assert particles["age"].min() == -120 and particles["age"].max() == -1
+    # STILT-R's time is minutes since release, negative backward; age is seconds.
+    assert particles["age"].min() == -7200 and particles["age"].max() == -60
     assert particles["particle"].dtype == "float64"
     assert particles["age"].dtype == "float64"
 
 
 def test_time_is_the_release_time_plus_age():
     release, particles, _ = _read()[COLUMN]
-    expected = pd.Timestamp(release.time) + pd.to_timedelta(particles["age"], "min")
+    expected = pd.Timestamp(release.time) + pd.to_timedelta(particles["age"], "s")
     pd.testing.assert_series_equal(particles["time"], expected, check_names=False)
     assert particles["time"].max() == pd.Timestamp("2015-07-05 17:59")
 
@@ -236,7 +236,7 @@ def test_time_integrated_footprint_is_one_layer_as_long_as_the_run():
     assert foot.sizes["time"] == 1
     run = pd.Timedelta(foot.stilt.config.tres)
     assert run > pd.Timedelta(hours=1)
-    assert particles["age"].min() >= -run / pd.Timedelta(minutes=1)
+    assert particles["age"].min() >= -run / pd.Timedelta(seconds=1)
     assert foot["time"].to_numpy()[0] == np.datetime64(release.time - run)
     np.testing.assert_array_equal(
         foot.to_numpy(),
