@@ -594,6 +594,7 @@ def _filter_and_rasterize_particles(
     xres: float,
     yres: float,
     layer_minutes: int,
+    time_sign: int,
     longlat: bool = False,
 ) -> tuple[pd.DataFrame, np.ndarray]:
     """
@@ -601,8 +602,9 @@ def _filter_and_rasterize_particles(
 
     Returns ``(p, layers)``. ``p`` has columns ``loi, lai, time, rtime,
     foot, layer``, and ``layers`` holds the sorted layer indices, each
-    *layer_minutes* minutes long from the release time. Both are empty
-    when no particle is on the padded grid. On a *longlat* grid a particle a whole turn from the
+    *layer_minutes* minutes long from the release time (a row at the end of
+    a layer belongs to it: ``floor(age / layer_minutes)`` backward,
+    ``ceil(age / layer_minutes) - 1`` forward). Both are empty when no particle is on the padded grid. On a *longlat* grid a particle a whole turn from the
     padded grid is on it (``_onto_padded_axis``).
     """
     if longlat:
@@ -648,7 +650,10 @@ def _filter_and_rasterize_particles(
     )
 
     # Bin the time steps into layers of layer_minutes (tres).
-    p["layer"] = np.floor(p["age"] / layer_minutes).astype(int)
+    # A row holds the step that ends at its age, so a row on a layer's far edge
+    # belongs to that layer: the row at +60 is the last minute of layer 0.
+    steps = p["age"] / layer_minutes
+    p["layer"] = (np.floor(steps) if time_sign < 0 else np.ceil(steps) - 1).astype(int)
     layers = np.sort(np.asarray(p["layer"].unique(), dtype=int))
     return p, layers
 
@@ -868,7 +873,9 @@ def calc_footprint(
     tres : str or timedelta, default "1h"
         Length of each time layer from the release time, a duration in
         whole minutes such as ``"15min"``, ``"1h"`` or ``"1D"``. A particle
-        row at ``age`` minutes falls in layer ``floor(age / minutes)``.
+        row at ``age`` minutes falls in layer ``floor(age / minutes)`` on a
+        backward run and ``ceil(age / minutes) - 1`` on a forward one, so a
+        row on the far edge of a layer is in it.
     hnf_plume : bool, default True
         Correct ``foot`` for the thin plume near the release first
         (:func:`stilt.footprint.correct_near_field`), as STILT-R does by
@@ -1034,6 +1041,7 @@ def calc_footprint(
         xres=xres,
         yres=yres,
         layer_minutes=layer_minutes,
+        time_sign=time_sign,
         longlat=grid.is_longlat,
     )
 

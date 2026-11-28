@@ -9,6 +9,7 @@ file alone: the entries are written at release (`just changelog` drafts them).
 
 ### Fixed
 
+- A forward run's footprint no longer puts the last minute of each layer in the next one: a two-hour run in hourly layers has two layers, not three with a one-minute layer at the end, and each hour's footprint meets that hour's flux. A particle row at `age` minutes now falls in layer `ceil(age / tres) - 1` forward; backward runs keep `floor(age / tres)`. This differs from STILT-R, which has the same error, and is listed on the parity page. (#509)
 - `project.check()` no longer repeats a transform's finding (an averaging kernel missing from its table, say) after the input is fixed: a second check on the same `Project` reads the fixed table, as opening the project again does. The footprint stage kept its findings between calls. (#505)
 
 ## [0.1.0a31] - 2026-11-24
