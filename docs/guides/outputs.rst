@@ -485,6 +485,10 @@ add it to openghg's object store:
        time_resolved=True,
    )
 
+The file name, ``site`` and ``domain`` are this example's: WBB is a tower
+in Salt Lake City and ``slv`` names the Salt Lake Valley domain. Use your
+site code and a domain name of your own.
+
 openghg is not a dependency of PYSTILT, and the versions of Python, pandas
 and numpy it supports can differ from PYSTILT's. Write the files with
 PYSTILT and add them from an environment of their own

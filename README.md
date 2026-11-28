@@ -163,6 +163,11 @@ variants:
         transforms: [{kind: averaging_kernel, table: kernels}]
 ```
 
+The `hrrr-err` wind-error values (`siguverr` and the three after it) are for HRRR over the Salt
+Lake Valley. They show the syntax and are not for your met or region: the
+[transport error guide](https://jmineau.github.io/PYSTILT/stable/guides/transport_error.html)
+shows how to derive your own from wind observations.
+
 Each release under each variant is one simulation. Results go to the output directory
 (`./output` by default), in a folder named for the settings they were made with. Variants whose
 transport settings match share one HYSPLIT run and differ only in the footprint, as `hrrr-ak`

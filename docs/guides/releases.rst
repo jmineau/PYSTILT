@@ -193,7 +193,7 @@ results by it with pandas (see :doc:`outputs`):
    sims[sims.scene == "A"]
 
    releases = project.releases          # one row per release
-   releases[releases.site.isin(["WBB", "UOU"])]
+   releases[releases.site.isin(["tower_a", "tower_b"])]
 
 For a release built from several rows, the first row's labels are used.
 ``project.release(release_id)`` returns the release itself. A project

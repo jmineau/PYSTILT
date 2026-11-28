@@ -29,6 +29,10 @@ The names are the same as in STILT-R.
        horcoruverr: 14        # its horizontal correlation length, km
        stages: {footprint: null}   # particles only
 
+These values are for HRRR over the Salt Lake Valley. They show the syntax;
+`Choosing the settings`_ and :ref:`wind-error-statistics` say how to get
+values for your own met and region.
+
 Every release then has a second simulation,
 ``project.simulation(rid, "hrrr-err")``, whose particles saw the perturbed
 winds. You can add the error variant to a finished project, and only the
@@ -176,11 +180,11 @@ name of the wind-error variant, and the flux field:
 .. code-block:: python
 
    sims = project.simulations
-   wbb = sims[(sims.variant == "hrrr") & (sims.site == "WBB")]
-   errors = project.transport_error(wbb, "hrrr-err", flux)
+   tower = sims[(sims.variant == "hrrr") & (sims.site == "tower_a")]
+   errors = project.transport_error(tower, "hrrr-err", flux)
    errors.groupby(errors.time.dt.month).variance.mean()
 
-``errors`` is ``wbb`` with six more columns. ``variance`` is the
+``errors`` is ``tower`` with six more columns. ``variance`` is the
 transport-error variance of the modeled enhancement, in the enhancement's
 units squared, and ``noise`` is its standard error
 (`Is the estimate meaningful?`_).

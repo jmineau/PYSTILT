@@ -115,7 +115,9 @@ models:
 
 
 # Stages, by name: what is made from each simulation's particles. The footprint
-# stage grids them. Remove the stages block to make particles only.
+# stage grids them. Remove the stages block to make particles only. The grid
+# below is a placeholder over northern Utah: replace it with the area your
+# releases' footprints cover (stilt check reports releases outside it).
 stages:
   footprint:
     class: stilt.footprint.FootprintStage
@@ -623,10 +625,10 @@ class Project(project.Project):
         Examples
         --------
         >>> sims = project.simulations  # doctest: +SKIP
-        >>> wbb = sims[
-        ...     (sims.variant == "hrrr") & (sims.site == "WBB")
+        >>> tower = sims[
+        ...     (sims.variant == "hrrr") & (sims.site == "tower_a")
         ... ]  # doctest: +SKIP
-        >>> errors = project.transport_error(wbb, "hrrr-err", flux)  # doctest: +SKIP
+        >>> errors = project.transport_error(tower, "hrrr-err", flux)  # doctest: +SKIP
         >>> errors.groupby(errors.time.dt.month).variance.median()  # doctest: +SKIP
         """
         frame = self._selected(sel)
