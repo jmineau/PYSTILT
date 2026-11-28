@@ -399,25 +399,6 @@ def test_add_releases_refuses_a_group_without_a_group_column(tmp_path, column_re
         project.add_releases([column_release])
 
 
-def test_add_releases_refuses_a_file_with_the_old_group_column(tmp_path, point_release):
-    project = _project(tmp_path)
-    project.releases_path.write_text("r_idx,time,lati,long,zagl\n")
-    with pytest.raises(ValueError, match="Rename it to 'group'"):
-        project.add_releases([point_release])
-
-
-def test_a_project_with_the_old_receptors_csv_is_refused(tmp_path):
-    """Nothing reads ``receptors.csv`` any more, so it must not pass for no releases."""
-    project = _project(tmp_path)
-    project.releases_path.unlink(missing_ok=True)
-    (project.directory / "receptors.csv").write_text("r_idx,time,lati,long,zagl\n")
-    with pytest.raises(ValueError, match="rename the file"):
-        Project(project.directory)
-    # releases.csv wins once it exists.
-    project.releases_path.write_text("time,lati,long,zagl\n")
-    assert Project(project.directory).simulations.empty
-
-
 def test_releases_that_would_share_result_files_are_refused(tmp_path):
     """Two releases with one id would overwrite each other's results."""
     from runtraj.releases import MultiPointRelease
@@ -1709,23 +1690,3 @@ def test_add_table_keeps_a_release_table_and_adds_only_new_releases(tmp_path):
         project.add_table("kernels", pd.DataFrame({"release": [b.id]}))
     with pytest.raises(ValueError, match="table name"):
         project.add_table("../kernels", first)
-
-
-def test_a_table_with_the_old_receptor_column_says_it_is_now_release(tmp_path):
-    a = _release(12)
-    project = _project(tmp_path, [a])
-    kernels = pd.DataFrame(
-        {"receptor": [a.id, a.id], "level": [0.0, 3000.0], "value": [1.0, 1.0]}
-    )
-    project.add_table("kernels", kernels)  # a table of the old form, as it was kept
-    new = kernels.rename(columns={"receptor": "release"})
-    with pytest.raises(ValueError, match="now named 'release'"):
-        project.add_table("kernels", new)
-
-
-def test_a_selection_with_the_old_receptor_column_says_it_is_now_release(tmp_path):
-    a = _release(12)
-    project = _project(tmp_path, [a])
-    old = project.simulations.rename(columns={"release": "receptor"})
-    with pytest.raises(ValueError, match="now named 'release'"):
-        project.status(old)

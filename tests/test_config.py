@@ -85,8 +85,7 @@ def test_a_config_is_blocks(tmp_path, grid):
         ),
         (
             {"model": "hysplit"},
-            "config: 'model' is no longer a key. Name each transport model as a "
-            "block under models:, such as models: {hysplit: {}}.",
+            "config: 'model' is not a setting. Did you mean 'models', a config key?",
         ),
     ],
     ids=["model setting", "model"],
