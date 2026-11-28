@@ -68,9 +68,9 @@ met, the transport model build, and the hashes that find its results.
 them from a config.
 
 :class:`Simulation`, which ``project.simulation(release_id, variant)``
-returns, adds the footprint, the background and the transport error to
-runtraj's :class:`runtraj.Simulation`, which the workers and the stages are
-given.
+returns, adds the footprint, the enhancement, the background and the
+transport error to runtraj's :class:`runtraj.Simulation`, which the workers
+and the stages are given.
 
 .. autosummary::
    :toctree: _api
@@ -141,7 +141,8 @@ the particles end (:doc:`/guides/background`), and the transport error of
 the modeled enhancement, from a wind-error variant
 (:doc:`/guides/transport_error`). With a project they are
 ``sim.background(field)`` and ``sim.transport_error(error_sim, flux)``.
-Both weight the particles the way the footprint does.
+Both weight the particles the way the footprint does, as
+``sim.enhancement(flux)`` does for the enhancement of each particle.
 
 .. autosummary::
    :toctree: _api

@@ -401,3 +401,54 @@ def test_background_and_transport_error_weight_the_particles_like_the_footprint(
         (one.variance, one.enhancement), (error.variance, error.enhancement)
     )
     assert many.realizations == 2
+
+
+def test_enhancement_uses_the_foot_the_footprint_uses(
+    point_release, tmp_path, monkeypatch
+):
+    # With pbl_height set the footprint computes its own foot (#531): here over
+    # 100 m of a 200 m mixed layer, where HYSPLIT's spread it over 500 m.
+    import numpy as np
+
+    import stilt.footprint.foot as foot_module
+
+    def sample_met(particles, met, columns, *, z_top):  # air of 1 kg m-3
+        return particles.assign(pres=1000.0 - 9.80665 / 100 * particles["zagl"])
+
+    monkeypatch.setattr(foot_module, "sample_met", sample_met)
+    config = FOOT.model_copy(
+        update={"pbl_height": 200.0, "footprint_depth": 0.5, "hnf_plume": False}
+    )
+    sim = _sim(tmp_path, point_release, footprint=config)
+    particles = pd.DataFrame(
+        {
+            "particle": [1, 1, 1, 2, 2, 2],
+            "age": [-1, -2, -3] * 2,
+            "lon": -111.9,
+            "lat": 40.7,
+            "zagl": 50.0,
+            "mlht": 1000.0,
+            "foot": 0.02897 * 60 / 500,
+        }
+    )
+    met_file = tmp_path / "met.arl"
+    met_file.touch()
+    sim.output.write_particles(
+        sim.variant, sim.release, finished(particles, sim.release), [met_file]
+    )
+    lons, lats = GRID.axes
+    flux = xr.DataArray(
+        np.ones((lats.size, lons.size)),
+        dims=("lat", "lon"),
+        coords={"lat": lats, "lon": lons},
+    )
+
+    got = sim.enhancement(flux)
+    foot = sim.calc_footprint()
+    assert foot is not None
+    np.testing.assert_allclose(got.mean(), 0.02897 * 60 / 100 * 3)
+    np.testing.assert_allclose(got.mean(), float(foot.stilt.enhancement(flux).sum()))
+    # The table's own foot is HYSPLIT's, a fifth of it.
+    np.testing.assert_allclose(
+        sim.particles.stilt.enhancement(flux).mean(), got.mean() / 5
+    )

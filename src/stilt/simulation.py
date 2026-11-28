@@ -2,8 +2,8 @@
 :class:`stilt.Simulation`: a simulation, with the reads of what STILT makes from its particles.
 
 It is the particle part (:class:`runtraj.simulation.Simulation`) and only
-adds: the footprint, a footprint with other settings, the background, the
-transport error, and the plots that draw them. A STILT project
+adds: the footprint, a footprint with other settings, the enhancement, the
+background, the transport error, and the plots that draw them. A STILT project
 (:class:`stilt.Project`) gives you these. The workers and the stages use the
 particle part, and nothing on disk names this class.
 """
@@ -24,6 +24,7 @@ from stilt.background import Background, background
 from stilt.exceptions import EmptyFootprint
 from stilt.footprint import gridding
 from stilt.footprint.config import FootprintConfig, footprint_settings
+from stilt.footprint.foot import _near_field, _weighted
 from stilt.footprint.grid import Grid
 from stilt.footprint.io import read_footprint
 from stilt.footprint.stage import simulation_particles, variant_footprint
@@ -44,8 +45,8 @@ class Simulation(simulation.Simulation):
     It is :class:`runtraj.simulation.Simulation`, which knows where the
     particles and the file of each stage are and reads the particles, and it
     adds the reads of what STILT makes from them: :attr:`footprint`,
-    :meth:`calc_footprint`, :meth:`background`, :meth:`transport_error`,
-    and :attr:`plot`. It changes nothing it inherits.
+    :meth:`calc_footprint`, :meth:`enhancement`, :meth:`background`,
+    :meth:`transport_error`, and :attr:`plot`. It changes nothing it inherits.
 
     You rarely build one yourself. Get it from a project instead, as in
     ``project.simulation(release_id, "hrrr")``.
@@ -202,6 +203,46 @@ class Simulation(simulation.Simulation):
         return variant_footprint(self.variant)
 
     # -- what the particles give beyond the footprint ----------------------
+
+    def enhancement(self, flux: xr.DataArray) -> pd.Series:
+        """
+        Return each particle's enhancement, from the particles the footprint is made from.
+
+        The particles get the ``foot`` the footprint uses
+        (:func:`stilt.footprint.footprint_particles`), its near-field
+        correction and its transforms' weights, so the mean over particles
+        is the enhancement ``sim.footprint`` gives, without its gridding and
+        smoothing. ``sim.particles.stilt.enhancement(flux)`` uses the
+        particle table's own ``foot`` as it is, which with ``pbl_height``
+        set is not the footprint's.
+
+        Parameters
+        ----------
+        flux : xarray.DataArray
+            Surface flux field, in µmol m⁻² s⁻¹, read as
+            ``particles.stilt.enhancement`` reads it.
+
+        Returns
+        -------
+        pandas.Series
+            Enhancement indexed by ``particle``.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the particles have not been written yet, or the footprint
+            computes its ``foot`` and a met file the run read is gone.
+
+        Examples
+        --------
+        >>> sim.enhancement(flux).mean()  # doctest: +SKIP
+        """
+        config = self._footprint_config
+        particles = simulation_particles(self, config)
+        if config.hnf_plume:
+            particles = _near_field(particles, self.release, config.footprint_depth)
+        weighted = _weighted(particles, config.transforms, self.release, self.directory)
+        return weighted.stilt.enhancement(flux)
 
     def background(self, field: xr.DataArray | pd.Series) -> Background:
         """
