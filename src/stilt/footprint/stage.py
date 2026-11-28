@@ -14,7 +14,6 @@ import datetime as dt
 import functools
 import logging
 import os
-import weakref
 from collections.abc import Callable, Iterable, Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -177,9 +176,6 @@ class FootprintStage(Stage[FootprintConfig]):
         """
         Return what would stop the footprints of *releases*, found without a run.
 
-        Variants whose footprints share a grid or a transform share that
-        part of the check: each is made once for a table of releases.
-
         The releases with a release point outside the footprint grid
         (``grid``), and what each transform finds wrong with its own inputs,
         such as an averaging kernel's table. A missing ``zsfc`` is the
@@ -188,20 +184,12 @@ class FootprintStage(Stage[FootprintConfig]):
         """
         found: list[_Finding] = []
         if (grid := config.grid) is not None:
-            found += _once(
-                releases,
-                ("grid", grid.model_dump_json()),
-                lambda: _outside(releases, grid),
-            )
+            found += _outside(releases, grid)
         for transform in config.transforms:
             check = getattr(transform, "check", None)
             if check is None:
                 continue
-            found += _once(
-                releases,
-                ("transform", repr(transform), str(directory)),
-                lambda check=check: _transform_findings(check, releases, directory),
-            )
+            found += _transform_findings(check, releases, directory)
         return found
 
     def run(self, config: FootprintConfig, sim: Simulation, path: Path | UPath) -> None:
@@ -563,24 +551,6 @@ def _write(
     if foot is None:
         return write_empty_footprint(path, release, config, variant.name, stamp)
     return write_footprint(path, foot, config, stamp)
-
-
-#: The findings of each part of a check for one table of releases, so that
-#: variants whose footprints share a grid or a transform share its check.
-_CHECKED: dict[int, tuple[weakref.ref, dict[Any, list[_Finding]]]] = {}
-
-
-def _once(
-    releases: pd.DataFrame, key: Any, make: Callable[[], list[_Finding]]
-) -> list[_Finding]:
-    """Return the findings *make* gives for *releases* and *key*, made once while that table is in use."""
-    known = _CHECKED.get(id(releases))
-    if known is None or known[0]() is not releases:
-        _CHECKED.clear()  # one table at a time: a project's releases
-        known = _CHECKED[id(releases)] = (weakref.ref(releases), {})
-    if key not in known[1]:
-        known[1][key] = make()
-    return known[1][key]
 
 
 def _transform_findings(
