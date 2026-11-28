@@ -2182,3 +2182,34 @@ def test_an_empty_footprint_of_rows_with_no_foot_says_so(point_release):
         pytest.raises(EmptyFootprint, match="No particle row has a positive foot"),
     ):
         calc_footprint(walk, point_release, _WALK_GRID)
+
+
+def test_a_forward_run_keeps_the_row_at_the_end_of_a_layer_in_it():
+    """The row at +60 minutes closes the first hour: a two-hour run has two layers (#509)."""
+    release = PointRelease(
+        time="2024-01-15 18:00", longitude=-111.85, latitude=40.77, altitude=10
+    )
+    n, minutes = 50, np.arange(1, 121)
+    rng = np.random.default_rng(0)
+    particles = pd.DataFrame(
+        {
+            "particle": np.repeat(np.arange(n), minutes.size),
+            "age": np.tile(minutes, n).astype(float),
+            "lon": -111.85 + rng.normal(0, 0.05, n * minutes.size),
+            "lat": 40.77 + rng.normal(0, 0.05, n * minutes.size),
+            "zagl": 10.0,
+            "foot": 0.01,
+        }
+    )
+    grid = Grid(xmin=-113, xmax=-110.5, ymin=40, ymax=42, xres=0.05, yres=0.05)
+    kwargs = {"hnf_plume": False, "smooth_factor": 0}
+
+    forward = calc_footprint(particles, release, grid, **kwargs)
+    backward = calc_footprint(
+        particles.assign(age=-particles["age"]), release, grid, **kwargs
+    )
+
+    assert forward.time.dt.strftime("%H:%M").values.tolist() == ["18:00", "19:00"]
+    assert forward.sum(("lat", "lon")).values.round(2).tolist() == [0.6, 0.6]
+    assert backward.time.dt.strftime("%H:%M").values.tolist() == ["16:00", "17:00"]
+    assert backward.sum(("lat", "lon")).values.round(2).tolist() == [0.6, 0.6]

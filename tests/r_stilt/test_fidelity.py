@@ -212,19 +212,28 @@ def _r_footprint_from_traj(
     r_stilt_dir: Path,
     traj_path: Path,
     scenario: ReferenceScenario,
+    *,
+    as_written: bool = False,
 ) -> xr.Dataset:
     """
     Return STILT-R's calc_footprint of a PYSTILT trajectory parquet, as a Dataset.
 
     Feeds the HNF-corrected ``foot`` column directly to R so the comparison
     is: does PYSTILT's footprint calculation agree with R's given the same
-    particle positions and foot values?
+    particles and foot values? On a forward run the row at the end of a layer
+    is in the next layer for R and in its own for PYSTILT (#509), so R gets
+    the times a microsecond earlier, which moves those rows into the layer
+    and changes nothing else (``rtime`` is a difference of times). With
+    *as_written* it gets them as they are.
     """
     tmp_path.mkdir(parents=True, exist_ok=True)
     nc_path = tmp_path / "r_foot.nc"
     # The R helper reads STILT-R's column names.
     r_traj_path = tmp_path / "traj_r_names.parquet"
-    pd.read_parquet(traj_path).rename(columns=STILT_R_NAMES).to_parquet(r_traj_path)
+    r_traj = pd.read_parquet(traj_path).rename(columns=STILT_R_NAMES)
+    if scenario.n_hours > 0 and not as_written:
+        r_traj["time"] -= 1e-6 / 60
+    r_traj.to_parquet(r_traj_path)
 
     t0 = time.perf_counter()
     result = subprocess.run(
@@ -338,6 +347,35 @@ def test_msl_hnf_foot_intentionally_differs_from_r(
         f"[{s.name}] PYSTILT's near-field correction of an MSL release no "
         "longer raises the first hour's foot above STILT-R's."
     )
+
+
+def test_forward_layers_intentionally_differ_from_r(
+    scenario_outputs: dict,
+    rscript: str,
+    r_stilt_dir: Path,
+    tmp_path: Path,
+) -> None:
+    """
+    On a forward run the row at the end of each layer is in that layer for PYSTILT.
+
+    STILT-R puts it in the next one, so its six-hour run has a seventh layer
+    holding the last minute, and each hour's footprint holds a minute of the
+    next hour's. PYSTILT's has six layers (#509).
+    """
+    s: ReferenceScenario = scenario_outputs["scenario"]
+    if s.n_hours <= 0 or s.time_integrate:
+        pytest.skip("only a forward run in hourly layers differs")
+    py_ds = xr.open_dataset(scenario_outputs["foot"])
+    r_ds = _r_footprint_from_traj(
+        tmp_path / s.name,
+        rscript,
+        r_stilt_dir,
+        scenario_outputs["traj_hnf"],
+        s,
+        as_written=True,
+    )
+    assert py_ds.sizes["time"] == s.n_hours
+    assert r_ds.sizes["time"] == s.n_hours + 1
 
 
 def test_projected_smoothing_intentionally_differs_from_r(
