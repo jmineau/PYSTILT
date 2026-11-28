@@ -267,7 +267,7 @@ runtraj's `AGENTS.md` has the ones about runs, met files, HYSPLIT and the worker
   Never synthesize a zero footprint for it.
 - **A particle file records what runtraj wrote** (`runtraj:release`,
   `runtraj:hash`, `runtraj:version`); a footprint file adds PYSTILT's own
-  (`stilt:footprint`, `stilt:hours`, `stilt:empty`, `stilt:pystilt`).
+  (`stilt:footprint`, `stilt:layers`, `stilt:empty`, `stilt:pystilt`).
 - **A stage's `config_class` reads back what its `settings` wrote**: a stored
   folder is found that way (`runtraj.stages.check_stage` in the stage's tests).
 - **Two depths**: HYSPLIT's `foot` uses `veght`; the footprint stage computes

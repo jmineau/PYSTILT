@@ -108,3 +108,17 @@ def as_written_before_the_rename(path: Path) -> Path:
     }
     pq.write_table(table.rename_columns(names).replace_schema_metadata(meta), path)
     return path
+
+
+def as_written_with_hours(path: Path) -> Path:
+    """Rewrite a footprint file as PYSTILT wrote it when its layers were named ``hour``."""
+    import pyarrow.parquet as pq
+
+    table = pq.read_table(path)
+    names = ["hour" if n == "layer" else n for n in table.column_names]
+    meta = {
+        (b"stilt:hours" if k == b"stilt:layers" else k): v
+        for k, v in (table.schema.metadata or {}).items()
+    }
+    pq.write_table(table.rename_columns(names).replace_schema_metadata(meta), path)
+    return path

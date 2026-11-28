@@ -121,7 +121,7 @@ def test_jacobian_refuses_time_bins_shorter_than_the_layers():
     empty = pa.table(
         {
             "release": pa.array([], pa.string()),
-            "hour": pa.array([], pa.int32()),
+            "layer": pa.array([], pa.int32()),
             "y": pa.array([], pa.int32()),
             "x": pa.array([], pa.int32()),
             "foot": pa.array([], pa.float32()),

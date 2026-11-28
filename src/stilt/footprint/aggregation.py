@@ -25,7 +25,7 @@ from scipy import sparse
 from stilt.footprint.config import FootprintConfig
 from stilt.footprint.grid import Grid
 
-from .io import UNITS, _naive_utc, _naive_utc_ns, _threads
+from .io import UNITS, _naive_utc, _naive_utc_ns, _stored_layer, _threads
 from .targets import Geometry, Mesh, Zones, check_resolution, overlap_weights
 
 
@@ -199,19 +199,19 @@ def _release_row(
     """
     Return a release's Jacobian row from the stored cells of its footprint.
 
-    *table* holds the footprint's ``hour``, ``y``, ``x``, and ``foot``
-    columns, ``hour`` counting layers of *layer_minutes*. ``None`` when it
+    *table* holds the footprint's ``layer``, ``y``, ``x``, and ``foot``
+    columns, ``layer`` counting layers of *layer_minutes*. ``None`` when it
     has no rows: the footprint is empty.
     """
     if not table.num_rows:
         return None
-    hour = table.column("hour").to_numpy()
+    layer = _stored_layer(table).to_numpy()
     # The layers are few, so find each layer's bin once and look it up per cell.
-    first, last = int(hour.min()), int(hour.max())
+    first, last = int(layer.min()), int(layer.max())
     release = _naive_utc_ns([parse_release_id(release_id)[0]])
     step = np.int64(layer_minutes) * 60_000_000_000
     starts = release + np.arange(first, last + 1, dtype=np.int64) * step
-    bin_idx = _time_bin(starts, *edges)[hour.astype(np.intp) - first]
+    bin_idx = _time_bin(starts, *edges)[layer.astype(np.intp) - first]
     cell = (
         table.column("y").to_numpy().astype(np.int64) * nx
         + table.column("x").to_numpy()
@@ -375,7 +375,9 @@ def jacobian(
     Parameters
     ----------
     table : pyarrow.Table
-        Footprint cells, with ``release``, ``hour``, ``y``, ``x``, ``foot``.
+        Footprint cells, with ``release``, ``layer``, ``y``, ``x``, ``foot``.
+        A table read from a file written by an earlier version has ``hour``
+        for ``layer``, which is read the same.
     config : FootprintConfig
         The footprints' settings, whose grid the cells index. When it names
         the geometry the grid was derived for (``geometry_hash``), a

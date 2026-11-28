@@ -50,7 +50,7 @@ def _naive_utc_ns(values: Any) -> np.ndarray:
 
 def _footprint_array(
     values: np.ndarray,
-    hours: Any,
+    layers: Any,
     release: Release,
     config: FootprintConfig,
     name: str,
@@ -60,16 +60,16 @@ def _footprint_array(
     """
     Return a footprint: *values* in ``(time, y, x)`` order, at cell centers *x* and *y*.
 
-    Layer ``k`` starts ``hours[k]`` layers of ``config.tres`` after the
+    Layer ``k`` starts ``layers[k]`` layers of ``config.tres`` after the
     release time, and is stamped there, as in STILT-R; a backward run's
-    first layer is -1. With the default ``tres`` of ``1h``, ``hours`` are
-    hours. This is the one place a footprint array is made, for
+    first layer is -1. With the default ``tres`` of ``1h``, a layer is an
+    hour. This is the one place a footprint array is made, for
     :func:`calc_footprint` and for :func:`read_footprint` alike.
     """
     if config.grid is None:
         raise ValueError("Footprint settings need a grid.")
     step = pd.Timedelta(minutes=config.tres_minutes)
-    times = _naive_utc([release.time + int(h) * step for h in hours])
+    times = _naive_utc([release.time + int(k) * step for k in layers])
     y_dim, x_dim = config.grid.dims
     data = xr.DataArray(
         values,
@@ -133,18 +133,18 @@ def _from_sparse_table(
     if _is_empty(meta):
         return None
     release = stored_release(meta, path)
-    hours = json.loads(meta[b"stilt:hours"])
+    layers = _stored_layers(meta)
     name = meta.get(b"stilt:name", b"").decode()
     grid = config.grid
     if grid is None:
         raise ValueError("A stored footprint needs settings with a grid.")
 
     x_axis, y_axis = grid.axes
-    values = np.zeros((len(hours), len(y_axis), len(x_axis)), dtype=np.float64)
+    values = np.zeros((len(layers), len(y_axis), len(x_axis)), dtype=np.float64)
     if table.num_rows:
-        layer = {h: i for i, h in enumerate(hours)}
+        row = {k: i for i, k in enumerate(layers)}
         t = np.fromiter(
-            (layer[h] for h in table["hour"].to_numpy()),
+            (row[k] for k in _stored_layer(table).to_numpy()),
             dtype=np.intp,
             count=table.num_rows,
         )
@@ -152,7 +152,7 @@ def _from_sparse_table(
             "foot"
         ].to_numpy()
 
-    return _footprint_array(values, hours, release, config, name, x_axis, y_axis)
+    return _footprint_array(values, layers, release, config, name, x_axis, y_axis)
 
 
 def read_footprint(
@@ -223,6 +223,18 @@ def read_footprint(
     return foot
 
 
+def _stored_layers(meta: dict[bytes, bytes]) -> list[int]:
+    """Return the layers a stored footprint records; files written by earlier versions call them ``stilt:hours``."""
+    return json.loads(
+        meta[b"stilt:layers" if b"stilt:layers" in meta else b"stilt:hours"]
+    )
+
+
+def _stored_layer(table: Any) -> Any:
+    """Return the ``layer`` column of a stored footprint's cells; files written by earlier versions call it ``hour``."""
+    return table["layer" if "layer" in table.column_names else "hour"]
+
+
 def _is_empty(meta: dict[bytes, bytes]) -> bool:
     """Whether a stored footprint's metadata marks it empty: no particle reached the grid."""
     return meta.get(b"stilt:empty") == b"true"
@@ -261,19 +273,22 @@ def _footer(path: Path | UPath) -> dict[bytes, bytes]:
 
 
 def _dense_block(
-    paths: list[Path | UPath], hours: np.ndarray, ny: int, nx: int
+    paths: list[Path | UPath], layers: np.ndarray, ny: int, nx: int
 ) -> np.ndarray:
-    """Read stored footprints into one ``(release, hour, y, x)`` block of ``float32``."""
+    """Read stored footprints into one ``(release, layer, y, x)`` block of ``float32``."""
     import pyarrow.parquet as pq
 
-    block = np.zeros((len(paths), len(hours), ny, nx), dtype=np.float32)
+    block = np.zeros((len(paths), len(layers), ny, nx), dtype=np.float32)
     for i, path in enumerate(paths):
         with readable(path) as source:
-            table = pq.ParquetFile(source).read(columns=["hour", "y", "x", "foot"])
-        layer = table["hour"].to_numpy().astype(np.intp) - int(hours[0])
-        if layer.size and (layer.min() < 0 or layer.max() >= len(hours)):
-            raise ValueError(f"{path} has cells outside the hours it records.")
-        block[i, layer, table["y"].to_numpy(), table["x"].to_numpy()] = table[
+            file = pq.ParquetFile(source)
+            table = file.read(
+                columns=[n for n in file.schema_arrow.names if n != "release"]
+            )
+        k = _stored_layer(table).to_numpy().astype(np.intp) - int(layers[0])
+        if k.size and (k.min() < 0 or k.max() >= len(layers)):
+            raise ValueError(f"{path} has cells outside the layers it records.")
+        block[i, k, table["y"].to_numpy(), table["x"].to_numpy()] = table[
             "foot"
         ].to_numpy()
     return block
@@ -357,8 +372,8 @@ def open_footprints(
     ]
     is_empty = [_is_empty(meta) for meta in footers]
     kept = [i for i, empty in enumerate(is_empty) if not empty]
-    recorded = [h for i in kept for h in json.loads(footers[i][b"stilt:hours"])]
-    hours = (
+    recorded = [k for i in kept for k in _stored_layers(footers[i])]
+    layers = (
         np.arange(min(recorded), max(recorded) + 1)
         if recorded
         else np.zeros(0, dtype=int)
@@ -367,23 +382,23 @@ def open_footprints(
     x_axis, y_axis = grid.axes
     y_dim, x_dim = grid.dims
     ny, nx = len(y_axis), len(x_axis)
-    per_block = max(1, _CHUNK_BYTES // max(1, len(hours) * ny * nx * 4))
+    per_block = max(1, _CHUNK_BYTES // max(1, len(layers) * ny * nx * 4))
     blocks = []
     for _, run in itertools.groupby(kept, key=lambda i: located[i].parent):
         ids = list(run)
         for start in range(0, len(ids), per_block):
             files = [located[i] for i in ids[start : start + per_block]]
-            read = delayed(_dense_block, pure=True)(files, hours, ny, nx)
-            shape = (len(files), len(hours), ny, nx)
+            read = delayed(_dense_block, pure=True)(files, layers, ny, nx)
+            shape = (len(files), len(layers), ny, nx)
             blocks.append(da.from_delayed(read, shape=shape, dtype=np.float32))
     values = (
         da.concatenate(blocks, axis=0)
         if blocks
-        else np.zeros((0, len(hours), ny, nx), dtype=np.float32)
+        else np.zeros((0, len(layers), ny, nx), dtype=np.float32)
     )
 
     start_times = _naive_utc([releases[i].time for i in kept])
-    offsets = (hours * config.tres_minutes).astype("timedelta64[m]")
+    offsets = (layers * config.tres_minutes).astype("timedelta64[m]")
     times = start_times.to_numpy()[:, None] + offsets[None, :]
     # The layer dimension is named for tres's unit and counts in it.
     unit, unit_minutes = config.layer_unit
@@ -392,7 +407,7 @@ def open_footprints(
         dims=("release", unit, y_dim, x_dim),
         coords={
             "release": [str(releases[i].id) for i in kept],
-            unit: hours * (config.tres_minutes // unit_minutes),
+            unit: layers * (config.tres_minutes // unit_minutes),
             y_dim: y_axis,
             x_dim: x_axis,
             "time": (("release", unit), times),
@@ -420,7 +435,7 @@ def open_footprints(
 FOOTPRINT_SCHEMA = pa.schema(
     [
         ("release", pa.dictionary(pa.int32(), pa.string())),
-        ("hour", pa.int16()),
+        ("layer", pa.int16()),
         ("y", pa.int16()),
         ("x", pa.int16()),
         ("foot", pa.float32()),
@@ -455,7 +470,7 @@ def _file_metadata(
     release: Release,
     config: FootprintConfig,
     name: str,
-    hours: list[int],
+    layers: list[int],
     empty: bool,
     metadata: dict[bytes, bytes] | None,
 ) -> dict[bytes, bytes]:
@@ -464,7 +479,7 @@ def _file_metadata(
         **release_metadata(release),
         b"stilt:pystilt": _pystilt_version().encode(),
         b"stilt:name": name.encode(),
-        b"stilt:hours": json.dumps(hours).encode(),
+        b"stilt:layers": json.dumps(layers).encode(),
         b"stilt:empty": b"true" if empty else b"false",
         b"stilt:footprint": _settings_json(config).encode(),
         **(metadata or {}),
@@ -480,7 +495,7 @@ def write_footprint(
     """
     Write a footprint to a Parquet file that :func:`read_footprint` reads alone.
 
-    Only the non-zero cells are stored, as ``hour`` (the offset of the time
+    Only the non-zero cells are stored, as ``layer`` (the offset of the time
     layer from the release time, in layers of ``tres``: hours by
     default), ``y`` and ``x`` (the cell's place on the grid), and ``foot``
     in float32. Every layer is recorded in the metadata, so the dense array
@@ -510,7 +525,7 @@ def write_footprint(
         If the footprint is not on the grid, the grid has more cells along
         an axis than ``x`` and ``y`` can hold (32,767), a time layer is
         not a whole number of layers (``tres``) from the release
-        time, or more layers from the release time than ``hour`` can hold
+        time, or more layers from the release time than ``layer`` can hold
         (32,767).
     """
     settings = foot.stilt.config if config is None else config
@@ -543,14 +558,14 @@ def write_footprint(
             f"{settings.tres} from the release time, and a stored footprint "
             f"holds at most {most}. Use longer layers (tres)."
         )
-    hours = np.round(layers).astype(np.int16)
+    stored = np.round(layers).astype(np.int16)
 
     values = foot.transpose("time", y_dim, x_dim).to_numpy()
     t, y, x = np.nonzero(np.nan_to_num(values, nan=0.0))
     table = pa.table(
         {
             "release": pa.array([str(release.id)] * len(t)).dictionary_encode(),
-            "hour": pa.array(hours[t]),
+            "layer": pa.array(stored[t]),
             "y": pa.array(yi[y].astype(np.int16)),
             "x": pa.array(xi[x].astype(np.int16)),
             "foot": pa.array(values[t, y, x].astype(np.float32)),
@@ -561,7 +576,7 @@ def write_footprint(
         release,
         settings,
         foot.stilt.name,
-        hours.tolist(),
+        stored.tolist(),
         False,
         metadata,
     )
