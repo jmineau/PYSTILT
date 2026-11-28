@@ -543,9 +543,7 @@ class Project(project.Project):
         requested = list(dict.fromkeys(frame["release"]))
         found = self.output.present("footprint", variant, requested, k)
         return _jacobian(
-            lambda r: self.output.read(
-                "footprint", variant, r, k, columns=["hour", "y", "x", "foot"]
-            ),
+            lambda r: self.output.read("footprint", variant, r, k),
             [r for r in requested if r in found],
             variant.stages["footprint"],
             target,

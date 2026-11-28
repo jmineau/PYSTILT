@@ -23,6 +23,7 @@ from .fixtures.output import (
     GRID,
     VARIANT,
     as_written_before_the_rename,
+    as_written_with_hours,
     fake_footprint,
     fake_particles,
     output_variant,
@@ -434,12 +435,12 @@ def test_read_returns_one_releases_stored_columns(written_footprints):
     out, feet_by_id, empty_id = written_footprints
     one = next(iter(feet_by_id))
     table = out.read("footprint", FEET, one)
-    assert table.column_names == ["release", "hour", "y", "x", "foot"]
+    assert table.column_names == ["release", "layer", "y", "x", "foot"]
     assert set(table.column("release").to_pylist()) == {one}
     many = out.table("footprint", FEET, [one])
     assert table.num_rows == many.num_rows == np.count_nonzero(feet_by_id[one].values)
-    cells = out.read("footprint", FEET, one, columns=["hour", "foot"])
-    assert cells.column_names == ["hour", "foot"]
+    cells = out.read("footprint", FEET, one, columns=["layer", "foot"])
+    assert cells.column_names == ["layer", "foot"]
     assert out.read("footprint", FEET, empty_id).num_rows == 0
     with pytest.raises(FileNotFoundError):
         out.read("footprint", FEET, "202407150000_-111.9_40.8_5")
@@ -616,6 +617,47 @@ def test_open_footprints_stacks_releases_on_the_hour(tmp_path):
     # Hours a release has no layer for are zero, and still have a time.
     assert float(ds.foot.sel(release=early.id, hour=-2).sum()) == 0
     assert ds.time.sel(release=early.id, hour=0).values == np.datetime64(early.time)
+
+
+def test_a_footprint_stored_with_hours_reads_as_layers(tmp_path):
+    """Files from before the rename (``hour``, ``stilt:hours``) read like new ones."""
+    import pyarrow.parquet as pq
+
+    from stilt.footprint import read_footprint
+
+    out = Output(tmp_path / "output")
+    release = release_at()
+    foot = fake_footprint(release, hours=(-3, -1))
+    store_footprint(out, FEET, foot)
+    path = out.path("footprint", FEET, release.id)
+    new = pq.read_table(path)
+    assert "layer" in new.column_names and b"stilt:layers" in new.schema.metadata
+    assert "hour" not in new.column_names and b"stilt:hours" not in new.schema.metadata
+    now = read_footprint(path)
+    opened = open_footprints([path])
+    bins = _bins()
+    expected = jacobian(
+        out.read("footprint", FEET, release.id),
+        FEET.stages["footprint"],
+        GRID,
+        bins,
+        [release.id],
+    )
+
+    as_written_with_hours(path)
+    old = pq.read_table(path)
+    assert "hour" in old.column_names and b"stilt:hours" in old.schema.metadata
+
+    xr.testing.assert_identical(read_footprint(path), now)
+    xr.testing.assert_identical(open_footprints([path]), opened)
+    H = jacobian(
+        out.read("footprint", FEET, release.id),
+        FEET.stages["footprint"],
+        GRID,
+        bins,
+        [release.id],
+    )
+    np.testing.assert_array_equal(H.data.toarray(), expected.data.toarray())
 
 
 def test_open_footprints_times_fifteen_minute_layers(tmp_path):

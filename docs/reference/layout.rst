@@ -230,10 +230,11 @@ A footprint file holds only the cells that are not zero:
    * - ``release``
      - dictionary of string
      - The release id.
-   * - ``hour``
+   * - ``layer``
      - int16
-     - The layer, counted from the release time in layers of ``tres``:
-       hours, by default (below).
+     - The layer, counted from the release time in layers of ``tres``: an
+       hour each by default (below). Files written by earlier versions
+       name this column ``hour``, and PYSTILT reads it the same.
    * - ``y``
      - int16
      - The cell's row in the grid, 0 at ``ymin``.
@@ -258,10 +259,11 @@ The file's metadata:
    * - ``stilt:footprint``
      - The footprint settings as JSON, with the grid: the ``settings``
        block of the folder's ``_settings.yaml``.
-   * - ``stilt:hours``
+   * - ``stilt:layers``
      - Every layer of the footprint, a JSON list such as ``[-24, ..., -1]``.
        It includes layers with no cell left, so a dense array has
-       ``len(stilt:hours)`` layers.
+       ``len(stilt:layers)`` layers. Earlier versions called the key
+       ``stilt:hours``.
    * - ``stilt:name``
      - The variant that made the footprint.
    * - ``stilt:empty``
@@ -280,12 +282,12 @@ An empty footprint is a file with no rows and ``stilt:empty`` set to
 complete: the run worked, and nothing reached the grid. Treat it as
 missing, not as a footprint of zeros.
 
-The hour
-~~~~~~~~
+The layer
+~~~~~~~~~
 
 Layer ``k`` holds the particles' influence from ``k`` to ``k + 1`` layers
 after the release time, and is stamped at its start. A layer is
-``tres`` long, an hour by default, so the stored ``hour`` is the hour
+``tres`` long, an hour by default, so the stored ``layer`` counts hours
 unless the settings give another length; it is always the layer number.
 :meth:`stilt.Project.footprints` turns it into the unit ``tres`` is written
 in, and names its dimension for it: layer -1 of ``15min`` layers is
@@ -347,17 +349,17 @@ For example, in pyarrow:
    table = pq.ParquetFile(path).read()
    meta = table.schema.metadata
    grid = json.loads(meta[b"stilt:footprint"])["grid"]
-   hours = json.loads(meta[b"stilt:hours"])
+   layers = json.loads(meta[b"stilt:layers"])
    nx = int(np.floor((grid["xmax"] - grid["xmin"]) / grid["xres"] + 1e-9))
    ny = int(np.floor((grid["ymax"] - grid["ymin"]) / grid["yres"] + 1e-9))
-   foot = np.zeros((len(hours), ny, nx), dtype="float32")
-   layer = {h: i for i, h in enumerate(hours)}
-   t = [layer[h] for h in table["hour"].to_pylist()]
+   foot = np.zeros((len(layers), ny, nx), dtype="float32")
+   row = {k: i for i, k in enumerate(layers)}
+   t = [row[k] for k in table["layer"].to_pylist()]
    foot[t, table["y"].to_numpy(), table["x"].to_numpy()] = table["foot"].to_numpy()
 
 The small tolerance keeps the last whole cell when the bounds are decimals
-that binary floats store a little short. Layer ``h`` starts
-``h`` times ``tres`` after the release time. ``tres`` is in
+that binary floats store a little short. Layer ``k`` starts
+``k`` times ``tres`` after the release time. ``tres`` is in
 ``stilt:footprint``, written as minutes (``15min``), hours (``1h``) or days
 (``1D``); a file that does not record it has hourly layers.
 

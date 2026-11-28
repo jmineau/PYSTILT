@@ -524,7 +524,7 @@ question about thousands of simulations is one query:
    FROM read_parquet('output/particles/settings=hrrr-a3f9c2/date=2021-01-15/*.parquet', hive_partitioning = true)
    GROUP BY release, particle;
 
-A footprint file holds the cells the particles reached, as ``hour``,
+A footprint file holds the cells the particles reached, as ``layer``,
 ``y``, and ``x`` (the cell's row and column in the grid that the folder's
 ``_settings.yaml`` gives) and ``foot``. An empty footprint is a file with
 no rows, so a count of rows leaves it out. An ensemble's folders have a
