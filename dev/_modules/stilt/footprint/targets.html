@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=9c4c24f5"></script>
+    <script src="../../../_static/documentation_options.js?v=1c6e21ad"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a32.dev11+ga091c56d6" />
+  <meta name="docsearch:version" content="0.1.0a32.dev13+g5f6a32968" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -500,7 +500,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">shapely.geometry.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseGeometry</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">FileGeometrySpec</span><span class="p">,</span> <span class="n">GeometrySpec</span><span class="p">,</span> <span class="n">H3GeometrySpec</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.grid</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grid</span><span class="p">,</span> <span class="n">_east_edge</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.grid</span><span class="w"> </span><span class="kn">import</span> <span class="n">_MAX_OUTLINE_POINTS</span><span class="p">,</span> <span class="n">Grid</span><span class="p">,</span> <span class="n">_east_edge</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_transform_geometries</span><span class="p">(</span>
@@ -778,6 +778,12 @@
 <span class="sd">        The cell size is the smallest cell width divided by</span>
 <span class="sd">        ``cells_per_target``, rounded down to one significant figure.</span>
 
+<span class="sd">        A mesh in a projected CRS gets a grid in that CRS with the</span>
+<span class="sd">        longitude/latitude bounds of the box around its extent's outline.</span>
+<span class="sd">        The grid covers every cell of the mesh, on any projection: on a</span>
+<span class="sd">        wide or polar mesh it reaches past the mesh, because a</span>
+<span class="sd">        longitude/latitude box projects to a curved outline.</span>
+
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        cells_per_target : float, default 4</span>
@@ -827,17 +833,20 @@
             <span class="p">)</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="n">mesh</span><span class="o">.</span><span class="n">is_longlat</span><span class="p">:</span>
-            <span class="c1"># Bounds are always lon/lat: back-transform the snapped envelope.</span>
-            <span class="c1"># Pad by one cell first; ``axes`` re-projects the lon/lat corners</span>
-            <span class="c1"># and takes their extremes, which can shave an edge cell off a</span>
-            <span class="c1"># rotated projection otherwise.</span>
-            <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">=</span> <span class="n">xmin</span> <span class="o">-</span> <span class="n">res</span><span class="p">,</span> <span class="n">xmax</span> <span class="o">+</span> <span class="n">res</span><span class="p">,</span> <span class="n">ymin</span> <span class="o">-</span> <span class="n">res</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">+</span> <span class="n">res</span>
+            <span class="c1"># Bounds are always lon/lat: the box around the envelope's</span>
+            <span class="c1"># outline, sampled half a cell apart. ``transform_bounds`` gives a</span>
+            <span class="c1"># box across 180 degrees as xmin east of xmax, and one around a</span>
+            <span class="c1"># pole as -180 to 180. The grid then covers that box's projected</span>
+            <span class="c1"># outline (``Grid``), and so the envelope.</span>
             <span class="kn">from</span><span class="w"> </span><span class="nn">pyproj</span><span class="w"> </span><span class="kn">import</span> <span class="n">Transformer</span>
 
             <span class="n">tr</span> <span class="o">=</span> <span class="n">Transformer</span><span class="o">.</span><span class="n">from_crs</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">crs</span><span class="p">,</span> <span class="s2">"EPSG:4326"</span><span class="p">,</span> <span class="n">always_xy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-            <span class="n">xs</span><span class="p">,</span> <span class="n">ys</span> <span class="o">=</span> <span class="n">tr</span><span class="o">.</span><span class="n">transform</span><span class="p">([</span><span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">],</span> <span class="p">[</span><span class="n">ymin</span><span class="p">,</span> <span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span><span class="p">,</span> <span class="n">ymax</span><span class="p">])</span>
-            <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">xs</span><span class="p">)),</span> <span class="nb">float</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">xs</span><span class="p">))</span>
-            <span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">ys</span><span class="p">)),</span> <span class="nb">float</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">ys</span><span class="p">))</span>
+            <span class="n">points</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="n">xmax</span> <span class="o">-</span> <span class="n">xmin</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">-</span> <span class="n">ymin</span><span class="p">)</span> <span class="o">/</span> <span class="n">res</span><span class="p">)</span>
+            <span class="n">points</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mi">21</span><span class="p">,</span> <span class="n">points</span><span class="p">),</span> <span class="n">_MAX_OUTLINE_POINTS</span><span class="p">)</span>
+            <span class="n">box</span> <span class="o">=</span> <span class="n">tr</span><span class="o">.</span><span class="n">transform_bounds</span><span class="p">(</span><span class="n">xmin</span><span class="p">,</span> <span class="n">ymin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">ymax</span><span class="p">,</span> <span class="n">densify_pts</span><span class="o">=</span><span class="n">points</span><span class="p">)</span>
+            <span class="c1"># Rounding can put a box around a pole a hair past -180 or 180.</span>
+            <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span> <span class="o">=</span> <span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="o">-</span><span class="mf">180.0</span><span class="p">),</span> <span class="mf">180.0</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="p">(</span><span class="n">box</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">box</span><span class="p">[</span><span class="mi">2</span><span class="p">]))</span>
+            <span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">=</span> <span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="o">-</span><span class="mf">90.0</span><span class="p">),</span> <span class="mf">90.0</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="p">(</span><span class="n">box</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">box</span><span class="p">[</span><span class="mi">3</span><span class="p">]))</span>
 
         <span class="k">return</span> <span class="n">Grid</span><span class="p">(</span>
             <span class="n">xmin</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">xmin</span><span class="p">),</span>

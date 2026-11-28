@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=9c4c24f5"></script>
+    <script src="../_static/documentation_options.js?v=1c6e21ad"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a32.dev11+ga091c56d6" />
+  <meta name="docsearch:version" content="0.1.0a32.dev13+g5f6a32968" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -1270,9 +1270,10 @@ with <code class="docutils literal notranslate"><span class="pre">xmin</span> <s
 <li><p>Column <code class="docutils literal notranslate"><span class="pre">i</span></code> is centered on <code class="docutils literal notranslate"><span class="pre">xmin</span> <span class="pre">+</span> <span class="pre">(i</span> <span class="pre">+</span> <span class="pre">0.5)</span> <span class="pre">*</span> <span class="pre">xres</span></code>, and row <code class="docutils literal notranslate"><span class="pre">j</span></code> on
 <code class="docutils literal notranslate"><span class="pre">ymin</span> <span class="pre">+</span> <span class="pre">(j</span> <span class="pre">+</span> <span class="pre">0.5)</span> <span class="pre">*</span> <span class="pre">yres</span></code>. Row 0 is the southern edge.</p></li>
 <li><p>On a projected grid (<code class="docutils literal notranslate"><span class="pre">crs</span></code> other than <code class="docutils literal notranslate"><span class="pre">+proj=longlat</span></code>) the bounds are
-degrees and the resolution is in the projection’s units. Only the
-corners <code class="docutils literal notranslate"><span class="pre">(xmin,</span> <span class="pre">ymin)</span></code> and <code class="docutils literal notranslate"><span class="pre">(xmax,</span> <span class="pre">ymax)</span></code> are transformed to the
-projection, and the cells are laid out between them.</p></li>
+degrees and the resolution is in the projection’s units. The box’s
+outline is transformed to the projection, and the cells start at its
+smallest <code class="docutils literal notranslate"><span class="pre">x</span></code> and <code class="docutils literal notranslate"><span class="pre">y</span></code> and run east and north, in whole cells, until
+they cover its largest. There the last cell can reach past the box.</p></li>
 </ul>
 <p>For example, in pyarrow:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">json</span>

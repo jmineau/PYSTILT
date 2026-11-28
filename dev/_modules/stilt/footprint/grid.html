@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=9c4c24f5"></script>
+    <script src="../../../_static/documentation_options.js?v=1c6e21ad"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a32.dev11+ga091c56d6" />
+  <meta name="docsearch:version" content="0.1.0a32.dev13+g5f6a32968" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -551,19 +551,97 @@
 <span class="n">_MAX_GRID_CELLS</span> <span class="o">=</span> <span class="mi">10</span><span class="o">**</span><span class="mi">9</span>
 
 
-<span class="nd">@functools</span><span class="o">.</span><span class="n">lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="mi">64</span><span class="p">)</span>
-<span class="k">def</span><span class="w"> </span><span class="nf">_projected_extent</span><span class="p">(</span>
-    <span class="n">crs</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">xmin</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">xmax</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">ymin</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">ymax</span><span class="p">:</span> <span class="nb">float</span>
+<span class="c1">#: The most points sampled along each edge of a box's outline when it is</span>
+<span class="c1">#: projected (:func:`_outline_extent`).</span>
+<span class="n">_MAX_OUTLINE_POINTS</span> <span class="o">=</span> <span class="mi">100_000</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_cells_to_cover</span><span class="p">(</span><span class="n">minimum</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">maximum</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">resolution</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return the number of whole cells from ``minimum`` that reach ``maximum``.</span>
+
+<span class="sd">    The same tolerance as :func:`_grid_cell_count`, so an extent that is</span>
+<span class="sd">    already whole cells gets no extra cell from a rounding error.</span>
+<span class="sd">    """</span>
+    <span class="n">quotient</span> <span class="o">=</span> <span class="p">(</span><span class="n">maximum</span> <span class="o">-</span> <span class="n">minimum</span><span class="p">)</span> <span class="o">/</span> <span class="n">resolution</span>
+    <span class="n">scale</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">minimum</span><span class="p">),</span> <span class="nb">abs</span><span class="p">(</span><span class="n">maximum</span><span class="p">),</span> <span class="nb">abs</span><span class="p">(</span><span class="n">maximum</span> <span class="o">-</span> <span class="n">minimum</span><span class="p">))</span>
+    <span class="n">tol</span> <span class="o">=</span> <span class="mi">16</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span> <span class="o">*</span> <span class="n">scale</span> <span class="o">/</span> <span class="n">resolution</span>
+    <span class="k">return</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">quotient</span> <span class="o">-</span> <span class="n">tol</span><span class="p">)))</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_outline_extent</span><span class="p">(</span>
+    <span class="n">transform</span><span class="p">,</span> <span class="n">west</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">east</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">south</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">north</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">spacing</span><span class="p">:</span> <span class="nb">float</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Return ``(xmin, xmax, ymin, ymax)`` of a longitude/latitude box in *crs* units.</span>
+<span class="sd">    Return ``(xmin, xmax, ymin, ymax)`` of a longitude/latitude box's outline, projected by *transform*.</span>
 
-<span class="sd">    The extent is that of the box's two corners, projected.</span>
+<span class="sd">    Each edge is sampled about a quarter of *spacing* apart (at most</span>
+<span class="sd">    ``_MAX_OUTLINE_POINTS`` points), and each extreme is then found between</span>
+<span class="sd">    the samples next to it, so a curved edge's farthest point is not missed</span>
+<span class="sd">    between two samples. ``east`` may be past 180 degrees for a box across</span>
+<span class="sd">    180. Points the projection cannot place are left out.</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">scipy.optimize</span><span class="w"> </span><span class="kn">import</span> <span class="n">minimize_scalar</span>
+
+    <span class="n">edges</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="p">((</span><span class="n">west</span><span class="p">,</span> <span class="n">south</span><span class="p">),</span> <span class="p">(</span><span class="n">east</span><span class="p">,</span> <span class="n">south</span><span class="p">)),</span>
+        <span class="p">((</span><span class="n">west</span><span class="p">,</span> <span class="n">north</span><span class="p">),</span> <span class="p">(</span><span class="n">east</span><span class="p">,</span> <span class="n">north</span><span class="p">)),</span>
+        <span class="p">((</span><span class="n">west</span><span class="p">,</span> <span class="n">south</span><span class="p">),</span> <span class="p">(</span><span class="n">west</span><span class="p">,</span> <span class="n">north</span><span class="p">)),</span>
+        <span class="p">((</span><span class="n">east</span><span class="p">,</span> <span class="n">south</span><span class="p">),</span> <span class="p">(</span><span class="n">east</span><span class="p">,</span> <span class="n">north</span><span class="p">)),</span>
+    <span class="p">)</span>
+    <span class="n">low</span><span class="p">,</span> <span class="n">high</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">],</span> <span class="p">[</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">]</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">lon0</span><span class="p">,</span> <span class="n">lat0</span><span class="p">),</span> <span class="p">(</span><span class="n">lon1</span><span class="p">,</span> <span class="n">lat1</span><span class="p">)</span> <span class="ow">in</span> <span class="n">edges</span><span class="p">:</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">along</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">lon0</span><span class="o">=</span><span class="n">lon0</span><span class="p">,</span> <span class="n">lat0</span><span class="o">=</span><span class="n">lat0</span><span class="p">,</span> <span class="n">lon1</span><span class="o">=</span><span class="n">lon1</span><span class="p">,</span> <span class="n">lat1</span><span class="o">=</span><span class="n">lat1</span><span class="p">):</span>
+<span class="w">            </span><span class="sd">"""Return the projected point a fraction *t* of the way along this edge."""</span>
+            <span class="k">return</span> <span class="n">transform</span><span class="p">(</span><span class="n">lon0</span> <span class="o">+</span> <span class="n">t</span> <span class="o">*</span> <span class="p">(</span><span class="n">lon1</span> <span class="o">-</span> <span class="n">lon0</span><span class="p">),</span> <span class="n">lat0</span> <span class="o">+</span> <span class="n">t</span> <span class="o">*</span> <span class="p">(</span><span class="n">lat1</span> <span class="o">-</span> <span class="n">lat0</span><span class="p">))</span>
+
+        <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">along</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mi">65</span><span class="p">))</span>
+        <span class="n">steps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hypot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">y</span><span class="p">))</span>
+        <span class="n">length</span> <span class="o">=</span> <span class="n">steps</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">steps</span><span class="p">)]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="mi">4</span> <span class="o">*</span> <span class="n">length</span> <span class="o">/</span> <span class="n">spacing</span><span class="p">),</span> <span class="mi">64</span><span class="p">,</span> <span class="n">_MAX_OUTLINE_POINTS</span><span class="p">))</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">axis</span><span class="p">,</span> <span class="n">values</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">along</span><span class="p">(</span><span class="n">t</span><span class="p">)):</span>
+            <span class="k">for</span> <span class="n">sign</span> <span class="ow">in</span> <span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">):</span>
+                <span class="n">v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">values</span><span class="p">),</span> <span class="n">sign</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">values</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">)</span>
+                <span class="n">i</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">v</span><span class="p">))</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">v</span><span class="p">[</span><span class="n">i</span><span class="p">]):</span>
+                    <span class="k">continue</span>
+                <span class="n">best</span> <span class="o">=</span> <span class="n">minimize_scalar</span><span class="p">(</span>
+                    <span class="k">lambda</span> <span class="n">s</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">,</span> <span class="n">sign</span><span class="o">=</span><span class="n">sign</span><span class="p">:</span> <span class="n">sign</span> <span class="o">*</span> <span class="n">along</span><span class="p">(</span><span class="n">s</span><span class="p">)[</span><span class="n">axis</span><span class="p">],</span>
+                    <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="nb">max</span><span class="p">(</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)],</span> <span class="n">t</span><span class="p">[</span><span class="nb">min</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)]),</span>
+                    <span class="n">method</span><span class="o">=</span><span class="s2">"bounded"</span><span class="p">,</span>
+                    <span class="n">options</span><span class="o">=</span><span class="p">{</span><span class="s2">"xatol"</span><span class="p">:</span> <span class="mf">1e-12</span><span class="p">},</span>
+                <span class="p">)</span>
+                <span class="n">extreme</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">v</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">best</span><span class="o">.</span><span class="n">fun</span><span class="p">)</span> <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">best</span><span class="o">.</span><span class="n">fun</span><span class="p">)</span> <span class="k">else</span> <span class="n">v</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">sign</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">low</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">low</span><span class="p">[</span><span class="n">axis</span><span class="p">],</span> <span class="n">extreme</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">high</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">high</span><span class="p">[</span><span class="n">axis</span><span class="p">],</span> <span class="o">-</span><span class="n">extreme</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">low</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">high</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">low</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">high</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+
+<span class="nd">@functools</span><span class="o">.</span><span class="n">lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="mi">64</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_projected_extent</span><span class="p">(</span>
+    <span class="n">crs</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">xmin</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">xmax</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">ymin</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">ymax</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">xres</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">yres</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return ``(xmin, xmax, ymin, ymax)``, in *crs* units, of the cells that cover a longitude/latitude box.</span>
+
+<span class="sd">    The extent starts at the smallest ``x`` and ``y`` of the box's projected</span>
+<span class="sd">    outline (:func:`_outline_extent`) and runs east and north by whole cells</span>
+<span class="sd">    until it reaches the largest.</span>
 
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
 <span class="sd">    ValueError</span>
-<span class="sd">        If pyproj cannot read *crs*.</span>
+<span class="sd">        If pyproj cannot read *crs*, or cannot place any of the box in it.</span>
 <span class="sd">    """</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">pyproj</span><span class="w"> </span><span class="kn">import</span> <span class="n">CRS</span><span class="p">,</span> <span class="n">Transformer</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">pyproj.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">CRSError</span>
@@ -576,12 +654,19 @@
             <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">)."</span>
         <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
     <span class="n">tr</span> <span class="o">=</span> <span class="n">Transformer</span><span class="o">.</span><span class="n">from_crs</span><span class="p">(</span><span class="s2">"EPSG:4326"</span><span class="p">,</span> <span class="n">crs</span><span class="p">,</span> <span class="n">always_xy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="n">corners_x</span><span class="p">,</span> <span class="n">corners_y</span> <span class="o">=</span> <span class="n">tr</span><span class="o">.</span><span class="n">transform</span><span class="p">([</span><span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">],</span> <span class="p">[</span><span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span><span class="p">])</span>
+    <span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">,</span> <span class="n">bottom</span><span class="p">,</span> <span class="n">top</span> <span class="o">=</span> <span class="n">_outline_extent</span><span class="p">(</span>
+        <span class="n">tr</span><span class="o">.</span><span class="n">transform</span><span class="p">,</span> <span class="n">xmin</span><span class="p">,</span> <span class="n">_east_edge</span><span class="p">(</span><span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">),</span> <span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="n">xres</span><span class="p">,</span> <span class="n">yres</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">([</span><span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">,</span> <span class="n">bottom</span><span class="p">,</span> <span class="n">top</span><span class="p">])</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"crs=</span><span class="si">{</span><span class="n">crs</span><span class="si">!r}</span><span class="s2"> cannot place the box from xmin=</span><span class="si">{</span><span class="n">xmin</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">, ymin=</span><span class="si">{</span><span class="n">ymin</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> "</span>
+            <span class="sa">f</span><span class="s2">"to xmax=</span><span class="si">{</span><span class="n">xmax</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">, ymax=</span><span class="si">{</span><span class="n">ymax</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">."</span>
+        <span class="p">)</span>
     <span class="k">return</span> <span class="p">(</span>
-        <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">corners_x</span><span class="p">)),</span>
-        <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">corners_x</span><span class="p">)),</span>
-        <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">corners_y</span><span class="p">)),</span>
-        <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">corners_y</span><span class="p">)),</span>
+        <span class="nb">float</span><span class="p">(</span><span class="n">left</span><span class="p">),</span>
+        <span class="nb">float</span><span class="p">(</span><span class="n">left</span> <span class="o">+</span> <span class="n">_cells_to_cover</span><span class="p">(</span><span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">,</span> <span class="n">xres</span><span class="p">)</span> <span class="o">*</span> <span class="n">xres</span><span class="p">),</span>
+        <span class="nb">float</span><span class="p">(</span><span class="n">bottom</span><span class="p">),</span>
+        <span class="nb">float</span><span class="p">(</span><span class="n">bottom</span> <span class="o">+</span> <span class="n">_cells_to_cover</span><span class="p">(</span><span class="n">bottom</span><span class="p">,</span> <span class="n">top</span><span class="p">,</span> <span class="n">yres</span><span class="p">)</span> <span class="o">*</span> <span class="n">yres</span><span class="p">),</span>
     <span class="p">)</span>
 
 
@@ -599,8 +684,8 @@
 <span class="sd">    A rectilinear grid: longitude/latitude bounds, cell size, and CRS.</span>
 
 <span class="sd">    The bounds are always longitude/latitude. With a projected ``crs``,</span>
-<span class="sd">    the grid covers the bounds' extent in that projection and ``xres`` and</span>
-<span class="sd">    ``yres`` are in its units. Longitudes count modulo 360, so a grid</span>
+<span class="sd">    ``xres`` and ``yres`` are in its units, and the grid covers the whole</span>
+<span class="sd">    box in that projection. Longitudes count modulo 360, so a grid</span>
 <span class="sd">    across 180 degrees is written ``xmin=170, xmax=190`` or ``xmin=170,</span>
 <span class="sd">    xmax=-170``. Either has longitudes 170 to 190. A grid</span>
 <span class="sd">    spans at most 360 degrees of longitude.</span>
@@ -617,6 +702,16 @@
 <span class="sd">    most likely swapped, and the grid is refused rather than read as one</span>
 <span class="sd">    357.5 degrees wide. To have a grid that wide, write its east edge past</span>
 <span class="sd">    its west edge: ``xmin=-110.5, xmax=247``.</span>
+
+<span class="sd">    A projected grid starts at the smallest ``x`` and ``y`` of the box's</span>
+<span class="sd">    outline in the projection and has as many whole cells east and north</span>
+<span class="sd">    as reach its largest. A longitude/latitude box projects to a curved</span>
+<span class="sd">    outline, so on a wide or polar box the grid is more than the rectangle</span>
+<span class="sd">    between the projected corners ``(xmin, ymin)`` and ``(xmax, ymax)``</span>
+<span class="sd">    (STILT-R's grid): for the contiguous US (-125 to -66, 24 to 50) on a</span>
+<span class="sd">    Lambert conformal grid that rectangle misses 18 % of the box, and for</span>
+<span class="sd">    the cap north of 60 degrees on a polar stereographic grid it is one</span>
+<span class="sd">    quadrant.</span>
 
 <span class="sd">    A grid is refused when pyproj cannot read its ``crs``, when no whole</span>
 <span class="sd">    cell fits in it, or when it has more than a billion cells (8 GB for</span>
@@ -694,7 +789,13 @@
             <span class="n">extent</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xmin</span><span class="p">,</span> <span class="n">_east_edge</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xmin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmax</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymax</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">extent</span> <span class="o">=</span> <span class="n">_projected_extent</span><span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">crs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmax</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymax</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">crs</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">xmin</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">xmax</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">ymin</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">ymax</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">xres</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">yres</span><span class="p">,</span>
             <span class="p">)</span>
         <span class="c1"># The grid's own message, with the axis it is about.</span>
         <span class="n">cells</span> <span class="o">=</span> <span class="mi">1</span>
@@ -747,7 +848,9 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_longlat</span><span class="p">:</span>
             <span class="n">xmax</span> <span class="o">=</span> <span class="n">_east_edge</span><span class="p">(</span><span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">=</span> <span class="n">_projected_extent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">crs</span><span class="p">,</span> <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span><span class="p">)</span>
+            <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">=</span> <span class="n">_projected_extent</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">crs</span><span class="p">,</span> <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xres</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">yres</span>
+            <span class="p">)</span>
 
         <span class="n">x_centers</span> <span class="o">=</span> <span class="n">_grid_cell_starts</span><span class="p">(</span><span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xres</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">xres</span> <span class="o">/</span> <span class="mi">2</span>
         <span class="n">y_centers</span> <span class="o">=</span> <span class="n">_grid_cell_starts</span><span class="p">(</span><span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">yres</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">yres</span> <span class="o">/</span> <span class="mi">2</span>
