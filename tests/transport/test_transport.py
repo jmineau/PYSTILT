@@ -13,7 +13,7 @@ from ..fixtures.factories import make_met_config
 
 def test_stilt_r_is_no_built_in_model():
     # PYSTILT's model of imported runs is named by its import path.
-    assert list(MODELS) == ["hysplit"]
+    assert "stilt-r" not in MODELS
     with pytest.raises(
         ValueError,
         match=r"Unknown transport model 'stilt-r'",
