@@ -11,10 +11,13 @@ from stilt import TransportError
 from stilt import transport_error as _transport_error
 from stilt.footprint import correct_near_field
 
+POINT = PointRelease(time="2023-01-01", longitude=-111.0, latitude=41.0, altitude=5.0)
+
 
 def transport_error(*args, **kwargs):
     """The estimate without the near-field correction, which these synthetic tables have no columns for."""
     kwargs.setdefault("hnf_plume", False)
+    kwargs.setdefault("release", POINT)
     return _transport_error(*args, **kwargs)
 
 
@@ -439,17 +442,15 @@ def test_realizations_must_not_be_empty():
         transport_error(p, [], FLUX)
 
 
-def test_the_near_field_correction_needs_the_release():
+def test_the_release_is_required():
     p = _column(n_levels=1, per_level=10)
-    with pytest.raises(ValueError, match="needs the release"):
-        _transport_error(p, p.copy(), FLUX)
+    with pytest.raises(TypeError, match="release"):
+        _transport_error(p, p.copy(), FLUX)  # type: ignore[missing-argument]
 
 
 def test_the_near_field_correction_is_applied_to_both_tables():
     """With hnf_plume, the error is of the enhancement the footprint gives."""
-    release = PointRelease(
-        time="2023-01-01", longitude=-111.0, latitude=41.0, altitude=5.0
-    )
+    release = POINT
     rng = np.random.default_rng(0)
     near = {"dens": 1.2, "samt": 1.0, "sigw": 0.1, "tlgr": 10.0, "mlht": 500.0}
     main = _particles(np.full(40, 5.0), rng.uniform(0, 1e-3, 40)).assign(
@@ -459,12 +460,12 @@ def test_the_near_field_correction_is_applied_to_both_tables():
         age=-1.0, **near
     )
 
-    corrected = _transport_error(main, err, FLUX, release=release)
+    corrected = _transport_error(main, err, FLUX, release)
     by_hand = _transport_error(
         correct_near_field(main, release, 0.5),
         correct_near_field(err, release, 0.5),
         FLUX,
-        release=release,
+        release,
         hnf_plume=False,
     )
 
