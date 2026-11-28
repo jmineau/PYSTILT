@@ -409,8 +409,10 @@ def test_a_class_that_is_not_installed_exits_2_naming_its_package(
     settings = yaml.safe_load(config.read_text())
     settings.update(block)
     config.write_text(yaml.safe_dump(settings))
+    # submit needs a scheduler named.
+    backend = ["--backend", "slurm"] if command == "submit" else []
 
-    result = runner.invoke(app, [command, str(tmp_path)])
+    result = runner.invoke(app, [command, str(tmp_path), *backend])
 
     assert result.exit_code == 2, result.output
     assert message in result.output
@@ -531,7 +533,7 @@ def _point_met_at(tmp_path, directory):
     config.write_text(text.replace(str(tmp_path / "met"), str(directory)))
 
 
-@pytest.mark.parametrize("command", [["run"], ["submit"]])
+@pytest.mark.parametrize("command", [["run"], ["submit", "--backend", "slurm"]])
 def test_a_met_directory_that_does_not_exist_exits_2_in_one_line(
     tmp_path, calls, command
 ):
@@ -620,7 +622,7 @@ def test_status_with_an_unreadable_met_and_a_folder_that_may_hold_results_exits_
     assert result.output == f"Error: Met 'hrrr': {missing} does not exist.\n"
 
 
-@pytest.mark.parametrize("command", [["run"], ["submit"]])
+@pytest.mark.parametrize("command", [["run"], ["submit", "--backend", "slurm"]])
 def test_without_hycs_std_run_and_submit_exit_2_in_one_line(
     tmp_path, calls, monkeypatch, command
 ):
@@ -983,7 +985,8 @@ def test_the_other_commands_exit_4_on_an_unexpected_error(
         raise RuntimeError("a bug somewhere")
 
     monkeypatch.setattr(f"runtraj.cli.Project.{method}", broken)
-    result = runner.invoke(app, [command, str(tmp_path)])
+    backend = ["--backend", "slurm"] if command == "submit" else []
+    result = runner.invoke(app, [command, str(tmp_path), *backend])
 
     assert result.exit_code == 4, result.output
 
@@ -1136,7 +1139,9 @@ def test_run_reports_releases_not_in_the_project(tmp_path, monkeypatch):
 def test_submit_submits_to_slurm_and_returns(tmp_path, calls):
     _write_minimal_config(tmp_path)  # its backend is local
 
-    result = runner.invoke(app, ["submit", str(tmp_path), "--n-workers", "2"])
+    result = runner.invoke(
+        app, ["submit", str(tmp_path), "--backend", "slurm", "--n-workers", "2"]
+    )
 
     assert result.exit_code == 0, result.output
     assert [verb for verb, _ in calls] == ["submit"]
@@ -1152,7 +1157,7 @@ def test_submit_without_a_time_limit_says_so(tmp_path, calls):
     del config["execution"]
     (tmp_path / "config.yaml").write_text(yaml.safe_dump(config))
 
-    result = runner.invoke(app, ["submit", str(tmp_path)])
+    result = runner.invoke(app, ["submit", str(tmp_path), "--backend", "slurm"])
 
     assert result.exit_code == 2
     assert "execution.slurm.time is required with backend: slurm" in result.output
@@ -1165,7 +1170,10 @@ def test_submit_releases_reads_ids_from_a_file(tmp_path, calls):
     listed = tmp_path / "ids.txt"
     listed.write_text("r1\nr2\n")
 
-    result = runner.invoke(app, ["submit", str(tmp_path), "--releases", str(listed)])
+    result = runner.invoke(
+        app,
+        ["submit", str(tmp_path), "--backend", "slurm", "--releases", str(listed)],
+    )
 
     assert result.exit_code == 0, result.output
     assert calls[0][1]["releases"] == ["r1", "r2"]
