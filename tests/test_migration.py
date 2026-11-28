@@ -440,9 +440,10 @@ def _by_id(tmp_path: Path, *names: str, rslurm: bool = True) -> Path:
 
 
 def _import(by_id: Path, output: Path, capsys, **kwargs) -> tuple[list, dict]:
-    """Import *by_id* into *output*; return the releases and the config it printed."""
-    releases = import_stilt_r(by_id, output, VERSION, **kwargs)
-    return releases, yaml.safe_load(capsys.readouterr().out)
+    """Import *by_id* into *output*; return the releases and the config it returned."""
+    releases, config = import_stilt_r(by_id, output, VERSION, **kwargs)
+    assert yaml.safe_load(capsys.readouterr().out) == config  # it also prints it
+    return releases, config
 
 
 def _project(tmp_path: Path, by_id: Path, capsys, **kwargs) -> Project:
@@ -493,7 +494,7 @@ def test_imported_runs_are_the_results_of_the_printed_variants(tmp_path, capsys)
     )
 
 
-def test_the_import_prints_the_config_in_blocks(tmp_path, capsys):
+def test_the_import_returns_the_config_and_prints_it_in_blocks(tmp_path, capsys):
     """The model's block, the footprint stage, and each variant's footprint under its stages."""
     _, config = _import(_by_id(tmp_path, POINT), tmp_path / "output", capsys)
     assert list(config) == ["mets", "models", "stages", "variants"]

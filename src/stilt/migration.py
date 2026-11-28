@@ -707,7 +707,7 @@ def import_stilt_r(
     name: str = "stilt-r",
     smooth_factor: float | None = None,
     met_path: str | None = None,
-) -> list[Release]:
+) -> tuple[list[Release], dict[str, Any]]:
     """
     Write the runs of a STILT-R or X-STILT ``by-id`` folder into a PYSTILT output directory.
 
@@ -717,8 +717,10 @@ def import_stilt_r(
     (:class:`~stilt.migration.StiltRModel`). A project whose
     ``config.yaml`` has that variant reads them as its own results:
     ``project.status``, ``project.particles``, ``project.footprints``, and
-    ``project.jacobian``. The import prints the variant and its met, to paste
-    into ``config.yaml``, and returns the releases, for ``releases.csv``.
+    ``project.jacobian``. The import returns the releases, and the variant
+    and its met as the blocks of a config (``mets``, ``models``, ``stages``,
+    ``variants``), for :meth:`stilt.Project.init` or ``config.yaml``; it
+    prints them as YAML too, to paste.
 
     Every folder of an output directory is named by the hash of its
     settings, and an imported run's settings are only what STILT-R's files
@@ -772,9 +774,13 @@ def import_stilt_r(
 
     Returns
     -------
-    list of Release
+    releases : list of Release
         The releases of the runs, in folder order, for
         :meth:`stilt.Project.add_releases`.
+    config : dict
+        The blocks that name the imported folders, as the YAML printed:
+        ``Project.init(path, releases, output=output_dir, **config)`` makes a
+        project that reads them.
 
     Raises
     ------
@@ -795,7 +801,7 @@ def import_stilt_r(
 
     Examples
     --------
-    >>> releases = stilt.migration.import_stilt_r(  # doctest: +SKIP
+    >>> releases, config = stilt.migration.import_stilt_r(  # doctest: +SKIP
     ...     "my_project/out/by-id", "output", version="1d936c1"
     ... )
     mets:
@@ -811,7 +817,9 @@ def import_stilt_r(
         version: 1d936c1
         capemin: -1
         ...
-    >>> project = stilt.Project.init("my_project_py", releases, output="output", ...)  # doctest: +SKIP
+    >>> project = stilt.Project.init(  # doctest: +SKIP
+    ...     "my_project_py", releases, output="output", **config
+    ... )
     """
     if not VARIANT_NAME_RE.fullmatch(name):
         raise ValueError(
@@ -914,7 +922,7 @@ def import_stilt_r(
         config["stages"] = {"footprint": {"class": FOOTPRINT_STAGE}}
     config["variants"] = {v.name: _variant_entry(v, footprints) for v in printed}
     print(yaml.safe_dump(config, sort_keys=False, default_flow_style=None), end="")
-    return releases
+    return releases, config
 
 
 def _uncorrected(particles: pd.DataFrame) -> pd.DataFrame:

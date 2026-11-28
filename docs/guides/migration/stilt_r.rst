@@ -364,9 +364,12 @@ STILT-R project folder:
    import stilt
    from stilt.migration import import_stilt_r
 
-   releases = import_stilt_r("my_project/out/by-id", "output", version="1d936c1")
+   releases, config = import_stilt_r(
+       "my_project/out/by-id", "output", version="1d936c1"
+   )
 
-It prints the blocks that name the imported folders, for ``config.yaml``:
+It returns the releases and ``config``, the blocks that name the imported
+folders, and prints the blocks as YAML for ``config.yaml``:
 the met, the ``stilt-r`` model (PYSTILT's model of imported runs, named by
 its import path, :class:`stilt.migration.StiltRModel`), the footprint stage,
 and the variant.
@@ -400,17 +403,25 @@ and the variant.
            hnf_plume: true
            transforms: []
 
-and returns the releases, for ``releases.csv``. Paste the printed lines into
-the ``config.yaml`` of a project whose ``output`` is that directory. In a
-project that already has blocks of those names, add the printed entries to
-them; with a ``hysplit`` block beside ``stilt-r``, each variant then names
-its ``model``. Then add the releases:
+``Project.init`` takes the blocks as keywords, so a new project whose
+``output`` is that directory is made from what the import returned:
+
+.. code-block:: python
+
+   project = stilt.Project.init(
+       "my_project_py", releases, output="output", **config
+   )
+   project.status()
+
+To use a project that already exists, paste the printed lines into its
+``config.yaml``. If it already has blocks of those names, add the printed
+entries to them; with a ``hysplit`` block beside ``stilt-r``, each variant
+then names its ``model``. Then add the releases:
 
 .. code-block:: python
 
    project = stilt.Project("my_project_py")
    project.add_releases(releases)
-   project.status()
 
 A ``stilt-r`` variant reads what the import wrote and runs nothing: a run of
 one fails (``NOT_RUNNABLE``), so its releases that STILT-R did not run stay

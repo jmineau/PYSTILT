@@ -298,8 +298,8 @@ for release, particles, foot in read_stilt_r("my_project/out/by-id"):
     print(release.id, len(particles), foot is not None)
 ```
 
-`stilt.migration.import_stilt_r` writes them into a project's output directory instead, and prints
-the `stilt-r` variant that reads them, so `project.status()` and `project.jacobian()` work on runs
+`stilt.migration.import_stilt_r` writes them into a project's output directory instead, and returns and prints
+the `stilt-r` variant that reads them (`Project.init(path, releases, **config)` takes it), so `project.status()` and `project.jacobian()` work on runs
 STILT-R made.
 
 ## STILT-R parity
