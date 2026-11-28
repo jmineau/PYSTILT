@@ -13,7 +13,15 @@ def test_the_top_level_is_what_a_user_calls():
     """Every name in stilt.__all__ imports, and the plumbing stays in its module (#150)."""
     for name in stilt.__all__:
         assert hasattr(stilt, name), name
-    for name in ("Output", "Met", "Variant", "SimID", "Geometry", "write_particles"):
+    for name in (
+        "Output",
+        "Met",
+        "Variant",
+        "SimID",
+        "Geometry",
+        "write_particles",
+        "task_share",  # runtraj.execution.task_share, for a job array script
+    ):
         assert not hasattr(stilt, name), name
 
 
