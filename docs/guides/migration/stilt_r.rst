@@ -303,8 +303,10 @@ folder at a time:
 
 Each run's release comes from two files in its folder. The release points are
 the ones in ``CONTROL``, the numbers HYSPLIT read, so a point release's id is
-the folder's name. The time is the one in ``<id>_traj.rds``, which keeps the
-seconds that ``CONTROL`` drops. A folder without ``CONTROL`` stops the read
+the folder's name. The time is the one in ``<id>_traj.rds``, floored to the
+minute: a release time is to the minute, and ``CONTROL``, which HYSPLIT ran
+from, has only the minute too. ``import_stilt_r`` prints how many runs had
+seconds, in a comment above its YAML. A folder without ``CONTROL`` stops the read
 with an error that names it.
 
 A footprint's ``smooth_factor`` is not in ``<id>_foot.nc``. When STILT-R ran

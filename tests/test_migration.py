@@ -165,10 +165,11 @@ def test_an_rds_without_particles_raises(copy):
         _read(copy)
 
 
-def test_column_release_spans_the_heights_and_keeps_seconds():
+def test_column_release_spans_the_heights_floored_to_the_minute():
+    # STILT-R saved 18:00:30; CONTROL, which HYSPLIT ran from, says 18:00.
     release, _, _ = _read()[COLUMN]
     assert release == ColumnRelease(
-        time=dt.datetime(2015, 7, 5, 18, 0, 30),
+        time=dt.datetime(2015, 7, 5, 18, 0),
         longitude=-111.9,
         latitude=40.7,
         bottom=0,
@@ -193,7 +194,7 @@ def test_time_is_the_release_time_plus_age():
     release, particles, _ = _read()[COLUMN]
     expected = pd.Timestamp(release.time) + pd.to_timedelta(particles["age"], "min")
     pd.testing.assert_series_equal(particles["time"], expected, check_names=False)
-    assert particles["time"].max() == pd.Timestamp("2015-07-05 17:59:30")
+    assert particles["time"].max() == pd.Timestamp("2015-07-05 17:59")
 
 
 def test_column_release_height_is_stilt_r_xhgt():
@@ -748,6 +749,17 @@ def test_runs_without_transport_error_give_one_variant(tmp_path, capsys):
     project = _project(tmp_path, _by_id(tmp_path, COLUMN), capsys)
     assert list(project.variants) == ["stilt-r"]
     assert list(project.status().state) == ["complete"]
+
+
+def test_the_import_says_how_many_release_times_it_floored(tmp_path, capsys):
+    # The sample's column run was released at 18:00:30.
+    releases, _ = import_stilt_r(_by_id(tmp_path, COLUMN), tmp_path / "out", VERSION)
+    first = capsys.readouterr().out.splitlines()[0]
+    assert first == (
+        "# 1 of 1 runs were released at a time with seconds, floored to the "
+        f"minute (the first: {releases[0].id})."
+    )
+    assert releases[0].time == dt.datetime(2015, 7, 5, 18, 0)
 
 
 def test_error_settings_need_every_setting_stilt_r_saves(tmp_path):

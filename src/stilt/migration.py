@@ -254,8 +254,9 @@ def read_stilt_r(
 
     The release's release points are the ones in the folder's ``CONTROL``
     file, the numbers HYSPLIT read, so a point release's id is the folder's
-    name. Its time is the ``.rds`` file's, which keeps the seconds that
-    ``CONTROL`` drops. A release with one release point is a
+    name. Its time is the ``.rds`` file's, floored to the minute: a release
+    time is to the minute, and ``CONTROL``, the time HYSPLIT ran from,
+    gives only the minute as well. A release with one release point is a
     :class:`~stilt.PointRelease`, two heights at one place are a
     :class:`~stilt.ColumnRelease`, and release points at different places,
     such as X-STILT's slant columns, are a :class:`~stilt.MultiPointRelease`.
@@ -269,7 +270,8 @@ def read_stilt_r(
 
     The footprint is ``<id>_foot.nc``, on the grid its file gives, with
     layers stamped at the release time plus whole hours, as STILT-R stamps
-    them. Its settings hold that grid, ``tres``, and ``smooth_factor``.
+    them (floored to the minute with the release time). Its settings hold
+    that grid, ``tres``, and ``smooth_factor``.
     ``tres`` is ``1h``, except for a backward run whose footprint STILT-R
     summed over time (``time_integrate = T``, one layer at the release
     time): that is one layer as long as the run, ``tres`` the run's
@@ -547,17 +549,22 @@ def _control(path: Path) -> ControlFile:
 
 def _release(stored: Any, control: ControlFile, path: Path) -> Release:
     """
-    Return the release of a run: its release points from ``CONTROL``, its time from the ``.rds``.
+    Return the release of a run: its release points from ``CONTROL``, its time from the ``.rds``, floored to the minute.
 
-    STILT-R writes ``CONTROL``'s time to the minute; the ``.rds`` keeps the
-    seconds. Every point is released at the first ``run_time``
-    (``write_control``).
+    STILT-R writes ``CONTROL``'s time to the minute, so HYSPLIT ran from the
+    minute; the ``.rds`` keeps the seconds (:func:`_run_time`). Every point
+    is released at the first ``run_time`` (``write_control``).
     """
+    time = _run_time(stored, path).floor("min")
+    return Release.from_points(time, control.locations)
+
+
+def _run_time(stored: Any, path: Path) -> pd.Timestamp:
+    """Return the release time the ``.rds`` saved, with its seconds."""
     stored = {str(k): v for k, v in (stored or {}).items()}
     if "run_time" not in stored:
         raise ValueError(f"{path}: the release has no run_time.")
-    time = pd.DatetimeIndex(stored["run_time"])[0]
-    return Release.from_points(time, control.locations)
+    return pd.DatetimeIndex(stored["run_time"])[0]
 
 
 def _particles(stored: pd.DataFrame, release: Release, path: Path) -> pd.DataFrame:
@@ -628,7 +635,7 @@ def _footprint(
         raise ValueError(f"{path}: the footprint's cells are not evenly spaced.")
 
     # Seconds since 1970 in UTC; the units say so with a trailing "Z".
-    times = _posixct(foot["time"].to_numpy(), {})
+    times = _posixct(foot["time"].to_numpy(), {}).floor("min")
     offsets = (times - pd.Timestamp(release.time)) / pd.Timedelta(hours=1)
     hours = np.round(offsets.to_numpy(dtype=float))
     if not np.allclose(offsets, hours, rtol=0, atol=1e-6):
@@ -720,7 +727,9 @@ def import_stilt_r(
     ``project.jacobian``. The import returns the releases, and the variant
     and its met as the blocks of a config (``mets``, ``models``, ``stages``,
     ``variants``), for :meth:`stilt.Project.init` or ``config.yaml``; it
-    prints them as YAML too, to paste.
+    prints them as YAML too, to paste. A run released at a time with
+    seconds is released at the minute (:func:`read_stilt_r`), and a
+    comment above the YAML says how many were.
 
     Every folder of an output directory is named by the hash of its
     settings, and an imported run's settings are only what STILT-R's files
@@ -844,6 +853,7 @@ def import_stilt_r(
     # The first footprint's settings, and its folder.
     first_foot: tuple[FootprintConfig, Path] | None = None
     empty: list[Release] = []
+    floored: list[Release] = []
     releases = []
     for folder in runs:
         hysplit, winderrtf = recorded[folder]
@@ -852,6 +862,8 @@ def import_stilt_r(
         stored = _read_rds(traj, rdata)
         release = _release(stored.get("receptor"), control, traj)
         releases.append(release)
+        if _run_time(stored.get("receptor"), traj) != release.time:
+            floored.append(release)
         log = folder / _LOG
 
         particles = _particles(stored["particle"], release, traj)
@@ -921,6 +933,11 @@ def import_stilt_r(
     if footprints:
         config["stages"] = {"footprint": {"class": FOOTPRINT_STAGE}}
     config["variants"] = {v.name: _variant_entry(v, footprints) for v in printed}
+    if floored:
+        print(
+            f"# {len(floored)} of {len(releases)} runs were released at a time with "
+            f"seconds, floored to the minute (the first: {floored[0].id})."
+        )
     print(yaml.safe_dump(config, sort_keys=False, default_flow_style=None), end="")
     return releases, config
 

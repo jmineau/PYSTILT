@@ -94,7 +94,8 @@ def test_release_time_and_particles_are_what_r_reads(written):
     assert len(sims) == len(names) == 2
     for name, (release, particles, _) in zip(names, sims, strict=True):
         seconds = float((dumped / f"{name}_time.txt").read_text())
-        assert pd.Timestamp(release.time) == pd.Timestamp(seconds, unit="s")
+        # Floored to the minute, as CONTROL gives it.
+        assert release.time == pd.Timestamp(seconds, unit="s").floor("min")
         lines = (by_id / name / "CONTROL").read_text().splitlines()
         points = [
             tuple(map(float, line.split())) for line in lines[2 : 2 + int(lines[1])]
@@ -116,7 +117,8 @@ def test_footprint_is_the_file_written(written):
         path = by_id / name / f"{name}_foot.nc"
         with xr.open_dataset(path, decode_times=False) as ds:
             raw = ds["foot"].load().transpose("time", "lat", "lon")
-        stamps = pd.to_datetime(raw["time"].to_numpy(), unit="s")
+        # Floored to the minute with the release time.
+        stamps = pd.to_datetime(raw["time"].to_numpy(), unit="s").floor("min")
         if foot.stilt.config.tres != "1h":
             # STILT-R summed it over time and stamped it at the release
             # time; it is one layer as long as the run, stamped at its start.
