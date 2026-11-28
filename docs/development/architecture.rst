@@ -26,8 +26,8 @@ it hashes to a new folder. :doc:`../reference/layout` describes the files.
 
 Whether a simulation is complete is decided by the files in the output
 directory, by ``runtraj.output.completed``: the particles exist, and the
-footprint when the variant has a grid. ``Output.complete``,
-``Simulation.is_complete``, and ``Project.status`` all apply it.
+footprint when the variant has a grid. ``Simulation.is_complete`` and
+``Project.status`` both apply it.
 :ref:`finished-work` explains the consequences.
 
 ``Project`` reads, and the workers write results. ``Project(path)`` opens a
