@@ -497,12 +497,15 @@ def test_a_release_above_sea_level_needs_zsfc_for_the_near_field_correction(tmp_
 
 def test_the_message_gives_the_varsiwant_line_that_adds_zsfc(tmp_path):
     project = _project(
-        tmp_path, [_multipoint("msl")], varsiwant=["pres", "zagl"], hnf_plume=False
+        tmp_path,
+        [_multipoint("msl")],
+        varsiwant=["time", "indx", "long", "lati", "zagl", "pres"],
+        hnf_plume=False,
     )
 
     message = _found(project.check(), "zsfc")["message"].iloc[0]
 
-    assert "varsiwant: [pres, zagl, zsfc]" in message
+    assert "varsiwant: [time, indx, long, lati, zagl, pres, zsfc]" in message
 
 
 def test_the_default_varsiwant_line_keeps_the_defaults(tmp_path):
