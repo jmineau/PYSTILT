@@ -55,18 +55,18 @@ def test_stilt_r_settings_have_no_defaults():
         StiltRConfig.model_validate(settings)
 
 
-def test_stilt_r_settings_are_particles_mode_only():
-    """STILT-R ran HYSPLIT's particles mode only, so a stilt-r block refuses the others."""
+def test_stilt_r_settings_are_particle_mode_only():
+    """STILT-R ran HYSPLIT's particle mode only, so a stilt-r block refuses the others."""
     from stilt.migration import StiltRConfig
 
     settings = {**HysplitConfig(n_hours=-24).settings(), "version": "1d936c1"}
-    StiltRConfig.model_validate({**settings, "mode": "particles"})
+    StiltRConfig.model_validate({**settings, "mode": "particle"})
     for mode in ("concentration", "trajectory"):
         with pytest.raises(ValueError, match=f"mode: {mode} is not read by a stilt-r"):
             StiltRConfig.model_validate({**settings, "mode": mode})
-    # ichem is HYSPLIT's own check: a particles run takes 8 or none.
+    # ichem is HYSPLIT's own check: a particle run takes 8 or none.
     StiltRConfig.model_validate({**settings, "ichem": 8})
-    with pytest.raises(ValueError, match="ichem=2 is not a setting of mode: particles"):
+    with pytest.raises(ValueError, match="ichem=2 is not a setting of mode: particle"):
         StiltRConfig.model_validate({**settings, "ichem": 2})
 
 

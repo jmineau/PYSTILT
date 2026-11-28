@@ -114,15 +114,15 @@ class StiltRConfig(HysplitConfig):
     and a default would stand in for a value no file gave. The
     ``config.yaml`` variant the import prints gives them all, except the
     settings of HYSPLIT's concentration and trajectory modes, which a
-    particles-mode run does not record. ``mode`` may be left out or be
-    ``particles``: STILT-R ran no other, so any other is refused.
+    particle-mode run does not record. ``mode`` may be left out or be
+    ``particle``: STILT-R ran no other, so any other is refused.
     """
 
     #: Fields left out of a run's recorded settings. ``version`` is recorded:
     #: it is what tells imported runs of two STILT-R versions apart.
     UNRECORDED: ClassVar[frozenset[str]] = frozenset({"directory"})
 
-    #: Settings of HYSPLIT's other modes. STILT-R ran the particles mode, whose
+    #: Settings of HYSPLIT's other modes. STILT-R ran the particle mode, whose
     #: record has none of them (:meth:`HysplitConfig.settings`), so no file gives them.
     OTHER_MODES: ClassVar[frozenset[str]] = frozenset(
         {"mode", "ichem", *CONCENTRATION_ONLY_SETTINGS, *TRAJECTORY_ONLY_SETTINGS}
@@ -141,10 +141,10 @@ class StiltRConfig(HysplitConfig):
     @classmethod
     def _particles_only(cls, mode: str) -> str:
         """Refuse a mode STILT-R never ran: imported runs are all particle runs."""
-        if mode != "particles":
+        if mode != "particle":
             raise ValueError(
                 f"mode: {mode} is not read by a stilt-r block, which reads "
-                "STILT-R's particle runs only (mode: particles, the default). "
+                "STILT-R's particle runs only (mode: particle, the default). "
                 "Put a variant that runs HYSPLIT in this mode on the hysplit "
                 "model."
             )
