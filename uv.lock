@@ -4253,7 +4253,7 @@ requires-dist = [
     { name = "pandas", specifier = ">=2.1" },
     { name = "pyarrow", specifier = ">=14.0" },
     { name = "pydantic", specifier = ">=2.5.3" },
-    { name = "pyproj", specifier = ">=3.5" },
+    { name = "pyproj", specifier = ">=3.6" },
     { name = "pystilt", extras = ["download"], marker = "extra == 'complete'" },
     { name = "pystilt", extras = ["geometry"], marker = "extra == 'complete'" },
     { name = "pystilt", extras = ["sparse"], marker = "extra == 'complete'" },

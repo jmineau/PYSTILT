@@ -1,9 +1,10 @@
-"""Tests for runtraj.spatial: the footprint grid and the CRS helpers."""
+"""Tests for the footprint grid and its CRS helpers."""
 
 import numpy as np
 import pytest
 
 from stilt import Grid
+from stilt.footprint.grid import _is_longlat, _same_crs
 
 # ---------------------------------------------------------------------------
 # Grid as a geometry
@@ -12,8 +13,6 @@ from stilt import Grid
 
 def test_one_longlat_test_for_grids_and_meshes():
     """EPSG:4326 is longitude/latitude for a grid as it is for a mesh."""
-    from runtraj.spatial import is_longlat
-
     from stilt.footprint.grid import Grid
     from stilt.footprint.targets import Mesh
 
@@ -26,8 +25,8 @@ def test_one_longlat_test_for_grids_and_meshes():
         yres=0.5,
         crs="EPSG:4326",
     )
-    assert is_longlat("EPSG:4326") and is_longlat("+proj=longlat")
-    assert not is_longlat("EPSG:32612")
+    assert _is_longlat("EPSG:4326") and _is_longlat("+proj=longlat")
+    assert not _is_longlat("EPSG:32612")
     assert grid.is_longlat
     assert list(grid.index.names) == ["lon", "lat"]
     assert Mesh.from_grid(grid).is_longlat
@@ -159,3 +158,42 @@ def test_a_grid_refuses_a_crs_pyproj_cannot_read():
     """A misspelled crs fails when the grid is made, not when a footprint is (#439)."""
     with pytest.raises(ValueError, match="not a coordinate reference system"):
         Grid(xmin=4e5, xmax=5e5, ymin=4.4e6, ymax=4.5e6, xres=1e3, yres=1e3, crs="nope")
+
+
+# ---------------------------------------------------------------------------
+# _is_longlat and _same_crs: the spellings of a geographic CRS
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "crs",
+    [
+        "+proj=longlat +datum=WGS84",
+        "+proj=latlong +datum=WGS84",
+        "+proj=lonlat +datum=WGS84",
+        "EPSG:4326",
+        "WGS84",
+    ],
+)
+def test_is_longlat_holds_each_spelling_of_a_geographic_crs(crs):
+    assert _is_longlat(crs)
+
+
+@pytest.mark.parametrize(
+    "crs",
+    ["EPSG:32612", "+proj=utm +zone=12 +datum=WGS84", "+proj=lcc +lat_1=33 +lat_2=45"],
+)
+def test_is_longlat_refuses_a_projected_crs(crs):
+    assert not _is_longlat(crs)
+
+
+def test_is_longlat_refuses_a_string_pyproj_cannot_read():
+    assert not _is_longlat("+proj=bogus")
+
+
+def test_same_crs_matches_geographic_spellings_and_refuses_others():
+    assert _same_crs("+proj=latlong +datum=WGS84", "+proj=lonlat +datum=WGS84")
+    assert _same_crs("+proj=longlat +datum=WGS84", "EPSG:4326")
+    assert _same_crs("EPSG:32612", "EPSG:32612")
+    assert not _same_crs("EPSG:32612", "EPSG:32613")
+    assert not _same_crs("EPSG:32612", "+proj=latlong +datum=WGS84")
