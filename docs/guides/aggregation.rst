@@ -166,6 +166,13 @@ the release's total. The flux is an :class:`xarray.DataArray` in
 whether the numbers are right: which flux step each footprint hour takes,
 and how the two grids line up.
 
+``sim.enhancement(flux)`` gives the same enhancement per particle, with
+the flux taken at each particle position instead of on the grid: it uses
+the ``foot``, near-field correction and transforms the footprint uses.
+``sim.particles.stilt.enhancement(flux)`` uses the particle table's
+``foot`` as it is, the transport model's. With ``pbl_height`` set the
+footprint computes its own ``foot`` and the two differ.
+
 Time steps
 ~~~~~~~~~~
 

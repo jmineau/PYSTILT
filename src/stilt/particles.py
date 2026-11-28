@@ -32,11 +32,8 @@ def _need_foot(particles: pd.DataFrame) -> None:
     raise ValueError(
         "The particle table has no 'foot' column: the transport model wrote "
         "none, and the footprint stage stores the foot it computes nowhere. "
-        "stilt.footprint.footprint_particles(particles, config, met_files) adds "
-        "the one the footprint uses, from the met files the run read "
-        "(runtraj.particles.particles_metadata(path).met_files), with the "
-        "variant's footprint settings (sim.variant.stages['footprint']) and "
-        "variant=sim.variant, which says how its transport model opens the met."
+        "stilt.footprint.footprint_particles adds the one the footprint uses, "
+        "and sim.enhancement(flux) gives the enhancement from it."
     )
 
 
@@ -101,10 +98,9 @@ class ParticlesAccessor(accessor.ParticlesAccessor):
         model's ``foot`` (HYSPLIT's, made with ``veght``), or none from a
         model that writes only positions. With ``pbl_height`` set the footprint
         stage computes its own ``foot``, so this enhancement differs from
-        ``sim.footprint``'s. For the same one, pass the particles through
-        :func:`stilt.footprint.footprint_particles` first, with the met files
-        the run read and the variant that made the particles; the files must
-        still be where the run read them.
+        ``sim.footprint``'s. :meth:`stilt.Simulation.enhancement` gives the
+        footprint's: it uses the ``foot``, near-field correction and
+        transforms the footprint does.
         """
         p = self._particles
         _need_foot(p)
