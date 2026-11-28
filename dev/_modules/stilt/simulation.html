@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=1c6e21ad"></script>
+    <script src="../../_static/documentation_options.js?v=c99c8a55"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a32.dev13+g5f6a32968" />
+  <meta name="docsearch:version" content="0.1.0a32.dev14+g52311fd4b" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -457,8 +457,8 @@
 <span class="sd">:class:`stilt.Simulation`: a simulation, with the reads of what STILT makes from its particles.</span>
 
 <span class="sd">It is the particle part (:class:`runtraj.simulation.Simulation`) and only</span>
-<span class="sd">adds: the footprint, a footprint with other settings, the background, the</span>
-<span class="sd">transport error, and the plots that draw them. A STILT project</span>
+<span class="sd">adds: the footprint, a footprint with other settings, the enhancement, the</span>
+<span class="sd">background, the transport error, and the plots that draw them. A STILT project</span>
 <span class="sd">(:class:`stilt.Project`) gives you these. The workers and the stages use the</span>
 <span class="sd">particle part, and nothing on disk names this class.</span>
 <span class="sd">"""</span>
@@ -479,6 +479,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">EmptyFootprint</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint</span><span class="w"> </span><span class="kn">import</span> <span class="n">gridding</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">FootprintConfig</span><span class="p">,</span> <span class="n">footprint_settings</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.foot</span><span class="w"> </span><span class="kn">import</span> <span class="n">_near_field</span><span class="p">,</span> <span class="n">_weighted</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.grid</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grid</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">read_footprint</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.stage</span><span class="w"> </span><span class="kn">import</span> <span class="n">simulation_particles</span><span class="p">,</span> <span class="n">variant_footprint</span>
@@ -501,8 +502,8 @@
 <span class="sd">    It is :class:`runtraj.simulation.Simulation`, which knows where the</span>
 <span class="sd">    particles and the file of each stage are and reads the particles, and it</span>
 <span class="sd">    adds the reads of what STILT makes from them: :attr:`footprint`,</span>
-<span class="sd">    :meth:`calc_footprint`, :meth:`background`, :meth:`transport_error`,</span>
-<span class="sd">    and :attr:`plot`. It changes nothing it inherits.</span>
+<span class="sd">    :meth:`calc_footprint`, :meth:`enhancement`, :meth:`background`,</span>
+<span class="sd">    :meth:`transport_error`, and :attr:`plot`. It changes nothing it inherits.</span>
 
 <span class="sd">    You rarely build one yourself. Get it from a project instead, as in</span>
 <span class="sd">    ``project.simulation(release_id, "hrrr")``.</span>
@@ -668,6 +669,49 @@
         <span class="k">return</span> <span class="n">variant_footprint</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variant</span><span class="p">)</span>
 
     <span class="c1"># -- what the particles give beyond the footprint ----------------------</span>
+
+<div class="viewcode-block" id="Simulation.enhancement">
+<a class="viewcode-back" href="../../reference/_api/stilt.Simulation.enhancement.html#stilt.Simulation.enhancement">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">enhancement</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flux</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Return each particle's enhancement, from the particles the footprint is made from.</span>
+
+<span class="sd">        The particles get the ``foot`` the footprint uses</span>
+<span class="sd">        (:func:`stilt.footprint.footprint_particles`), its near-field</span>
+<span class="sd">        correction and its transforms' weights, so the mean over particles</span>
+<span class="sd">        is the enhancement ``sim.footprint`` gives, without its gridding and</span>
+<span class="sd">        smoothing. ``sim.particles.stilt.enhancement(flux)`` uses the</span>
+<span class="sd">        particle table's own ``foot`` as it is, which with ``pbl_height``</span>
+<span class="sd">        set is not the footprint's.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        flux : xarray.DataArray</span>
+<span class="sd">            Surface flux field, in µmol m⁻² s⁻¹, read as</span>
+<span class="sd">            ``particles.stilt.enhancement`` reads it.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        pandas.Series</span>
+<span class="sd">            Enhancement indexed by ``particle``.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        FileNotFoundError</span>
+<span class="sd">            If the particles have not been written yet, or the footprint</span>
+<span class="sd">            computes its ``foot`` and a met file the run read is gone.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; sim.enhancement(flux).mean()  # doctest: +SKIP</span>
+<span class="sd">        """</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_footprint_config</span>
+        <span class="n">particles</span> <span class="o">=</span> <span class="n">simulation_particles</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">hnf_plume</span><span class="p">:</span>
+            <span class="n">particles</span> <span class="o">=</span> <span class="n">_near_field</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">release</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">footprint_depth</span><span class="p">)</span>
+        <span class="n">weighted</span> <span class="o">=</span> <span class="n">_weighted</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">transforms</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">release</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">weighted</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">enhancement</span><span class="p">(</span><span class="n">flux</span><span class="p">)</span></div>
+
 
 <div class="viewcode-block" id="Simulation.background">
 <a class="viewcode-back" href="../../reference/_api/stilt.Simulation.background.html#stilt.Simulation.background">[docs]</a>

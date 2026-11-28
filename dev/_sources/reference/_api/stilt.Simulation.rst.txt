@@ -37,6 +37,7 @@ Methods
 
    ~Simulation.background
    ~Simulation.calc_footprint
+   ~Simulation.enhancement
    ~Simulation.transport_error
 
 

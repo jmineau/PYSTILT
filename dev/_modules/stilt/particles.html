@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=1c6e21ad"></script>
+    <script src="../../_static/documentation_options.js?v=c99c8a55"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a32.dev13+g5f6a32968" />
+  <meta name="docsearch:version" content="0.1.0a32.dev14+g52311fd4b" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -487,11 +487,8 @@
     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
         <span class="s2">"The particle table has no 'foot' column: the transport model wrote "</span>
         <span class="s2">"none, and the footprint stage stores the foot it computes nowhere. "</span>
-        <span class="s2">"stilt.footprint.footprint_particles(particles, config, met_files) adds "</span>
-        <span class="s2">"the one the footprint uses, from the met files the run read "</span>
-        <span class="s2">"(runtraj.particles.particles_metadata(path).met_files), with the "</span>
-        <span class="s2">"variant's footprint settings (sim.variant.stages['footprint']) and "</span>
-        <span class="s2">"variant=sim.variant, which says how its transport model opens the met."</span>
+        <span class="s2">"stilt.footprint.footprint_particles adds the one the footprint uses, "</span>
+        <span class="s2">"and sim.enhancement(flux) gives the enhancement from it."</span>
     <span class="p">)</span>
 
 
@@ -560,10 +557,9 @@
 <span class="sd">        model's ``foot`` (HYSPLIT's, made with ``veght``), or none from a</span>
 <span class="sd">        model that writes only positions. With ``pbl_height`` set the footprint</span>
 <span class="sd">        stage computes its own ``foot``, so this enhancement differs from</span>
-<span class="sd">        ``sim.footprint``'s. For the same one, pass the particles through</span>
-<span class="sd">        :func:`stilt.footprint.footprint_particles` first, with the met files</span>
-<span class="sd">        the run read and the variant that made the particles; the files must</span>
-<span class="sd">        still be where the run read them.</span>
+<span class="sd">        ``sim.footprint``'s. :meth:`stilt.Simulation.enhancement` gives the</span>
+<span class="sd">        footprint's: it uses the ``foot``, near-field correction and</span>
+<span class="sd">        transforms the footprint does.</span>
 <span class="sd">        """</span>
         <span class="n">p</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_particles</span>
         <span class="n">_need_foot</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>

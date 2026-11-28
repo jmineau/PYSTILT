@@ -1,0 +1,5 @@
+stilt.Simulation.enhancement
+============================
+
+.. currentmodule:: stilt
+.. automethod:: Simulation.enhancement

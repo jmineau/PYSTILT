@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=1c6e21ad"></script>
+    <script src="../_static/documentation_options.js?v=c99c8a55"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a32.dev13+g5f6a32968" />
+  <meta name="docsearch:version" content="0.1.0a32.dev14+g52311fd4b" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -660,6 +660,12 @@ the release’s total. The flux is an <a class="reference external" href="https:
 <a class="reference internal" href="../tutorials/flux_inversion.html"><span class="doc">Tutorial: From Footprints To Concentrations</span></a> uses it step by step. Two things decide
 whether the numbers are right: which flux step each footprint hour takes,
 and how the two grids line up.</p>
+<p><code class="docutils literal notranslate"><span class="pre">sim.enhancement(flux)</span></code> gives the same enhancement per particle, with
+the flux taken at each particle position instead of on the grid: it uses
+the <code class="docutils literal notranslate"><span class="pre">foot</span></code>, near-field correction and transforms the footprint uses.
+<code class="docutils literal notranslate"><span class="pre">sim.particles.stilt.enhancement(flux)</span></code> uses the particle table’s
+<code class="docutils literal notranslate"><span class="pre">foot</span></code> as it is, the transport model’s. With <code class="docutils literal notranslate"><span class="pre">pbl_height</span></code> set the
+footprint computes its own <code class="docutils literal notranslate"><span class="pre">foot</span></code> and the two differ.</p>
 <section id="time-steps">
 <h3>Time steps<a class="headerlink" href="#time-steps" title="Link to this heading">#</a></h3>
 <p>PYSTILT reads a flux’s <code class="docutils literal notranslate"><span class="pre">time</span></code> labels as the start of each step, as CF
