@@ -168,7 +168,9 @@ Footprint maps
 To show each footprint on a web map, add a block for the map stage after
 the footprint's (:class:`~stilt.footprint.MapStage`, which needs the
 ``visualization`` extra). Its keys are the color scale, the same for every
-image so that two hours compare by eye:
+image so that two hours compare by eye. The defaults, 1e-5 to 1e-1, suit a
+tower's footprint. A column release's footprint is mostly below 1e-5 and
+draws nearly blank, so lower ``vmin`` and ``vmax`` for a column:
 
 .. code-block:: yaml
 

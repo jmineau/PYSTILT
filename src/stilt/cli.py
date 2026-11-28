@@ -54,8 +54,11 @@ def init(project: Path = _NEW_PROJECT_ARG) -> None:
         raise typer.Exit(code=cli.EXIT_USAGE) from None
 
     typer.echo(f"Initialized STILT project at '{project}'")
-    typer.echo("  config.yaml    edit the met directory and footprint settings")
-    typer.echo("  releases.csv  add release times and locations, one per line:")
+    typer.echo(
+        "  config.yaml    edit the met directory and the footprint grid (a placeholder over Utah)"
+    )
+    typer.echo("  releases.csv  add release times and locations, one per line,")
+    typer.echo("                as in this one, which is in Salt Lake City:")
     typer.echo("                  2023-01-01 12:00:00,-111.85,40.77,5")
 
 
