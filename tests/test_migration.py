@@ -588,7 +588,7 @@ def test_runs_of_another_length_land_in_another_folder(tmp_path, capsys):
     _set_n_hours(longer / POINT / "CONTROL", -3)
     (longer / POINT / f"{POINT}_foot.nc").unlink()
     _import(longer, output, capsys, name="b")
-    folders = sorted(p.name for p in (output / "particles").iterdir())
+    folders = sorted(p.name for p in (output / "particles").glob("settings=*"))
     assert [f.rsplit("-", 1)[0] for f in folders] == [
         "settings=a",
         "settings=a-err",
