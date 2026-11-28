@@ -82,6 +82,12 @@ def _grid_boxes(x_centers: np.ndarray, y_centers: np.ndarray, xres: float, yres:
 # ---------------------------------------------------------------------------
 
 
+def _label(value: float) -> str:
+    """Return *value* as ``:g`` writes it, or in full when ``:g`` drops digits."""
+    short = f"{value:g}"
+    return short if float(short) == value else repr(float(value))
+
+
 class Mesh(BaseModel):
     """
     Polygon cells with ids, the most general geometry.
@@ -178,12 +184,19 @@ class Mesh(BaseModel):
 
     @classmethod
     def from_grid(cls, grid: Grid) -> Mesh:
-        """Return every cell of a grid as a polygon, in ``grid.index`` order."""
+        """
+        Return every cell of a grid as a polygon, in ``grid.index`` order.
+
+        Each cell is labeled ``"x,y"`` by its center, written in full when
+        six digits would round it.
+        """
         x, y = grid.cells
         boxes = shapely.box(
             x - grid.xres / 2, y - grid.yres / 2, x + grid.xres / 2, y + grid.yres / 2
         )
-        labels = tuple(f"{xi:g},{yi:g}" for xi, yi in zip(x, y, strict=True))
+        labels = tuple(
+            f"{_label(xi)},{_label(yi)}" for xi, yi in zip(x, y, strict=True)
+        )
         return cls(ids=labels, geometries=tuple(boxes.tolist()), crs=grid.crs)
 
     @classmethod

@@ -122,6 +122,36 @@ def test_mesh_from_grid_matches_grid_index_order():
     np.testing.assert_allclose(shapely.get_y(centroids), cy)
 
 
+def test_mesh_from_grid_labels_ordinary_grid_by_center():
+    grid = Grid(xmin=-112.0, xmax=-111.8, ymin=40.0, ymax=40.2, xres=0.1, yres=0.1)
+    assert Mesh.from_grid(grid).ids[:2] == ("-111.95,40.05", "-111.95,40.15")
+
+
+@pytest.mark.parametrize(
+    "grid",
+    [
+        Grid(
+            xmin=-111.9, xmax=-111.89, ymin=40.7, ymax=40.71, xres=0.0002, yres=0.0002
+        ),
+        Grid(
+            xmin=-112,
+            xmax=-111.99,
+            ymin=40.7,
+            ymax=40.705,
+            xres=5,
+            yres=5,
+            crs="EPSG:32612",
+        ),  # fmt: skip
+    ],
+    ids=["0.0002 degrees", "5 m in UTM"],
+)
+def test_mesh_from_grid_labels_a_fine_grid(grid):
+    pytest.importorskip("pyproj")
+    mesh = Mesh.from_grid(grid)
+    assert len(mesh) == len(grid.cells[0]) > 1
+    assert len(set(mesh.ids)) == len(mesh)
+
+
 def test_mesh_to_crs_roundtrip():
     pytest.importorskip("pyproj")
     mesh = Mesh.from_windows([(-111.9, 40.7)], 0.01)
