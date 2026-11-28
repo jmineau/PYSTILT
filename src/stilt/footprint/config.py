@@ -32,8 +32,9 @@ recorded with the footprints.
 
 from __future__ import annotations
 
+import difflib
 import warnings
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from datetime import timedelta
 from typing import Annotated, Any, Literal
 
@@ -53,10 +54,29 @@ from runtraj.transforms import dump_transform, load_transform, transform_kind
 from stilt.footprint.grid import Grid
 
 
+def _refuse_unknown(keys: Iterable[Any], settings: Iterable[str], what: str) -> None:
+    """Raise for the first of *keys* that is no setting of *what*, naming the nearest one."""
+    settings = list(settings)
+    for key in keys:
+        if key not in settings:
+            close = difflib.get_close_matches(str(key), settings, n=1)
+            hint = f" Did you mean {close[0]!r}?" if close else ""
+            raise ValueError(f"{key!r} is not a setting of {what}.{hint}")
+
+
 class _GeometrySpec(BaseModel):
     """Base of the geometry specs: a frozen description of the polygons."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _no_unknown_keys(cls, data: Any) -> Any:
+        """Refuse a key that is no setting, naming the nearest one, so a misspelled ``ids`` is not dropped."""
+        if isinstance(data, dict):
+            kind = cls.model_fields["kind"].default
+            _refuse_unknown(data, cls.model_fields, f"a {kind} geometry")
+        return data
 
 
 class FileGeometrySpec(_GeometrySpec):
@@ -266,6 +286,15 @@ class FootprintConfig(BaseModel):
             "reads the geometry, and replaces one written in ``config.yaml``."
         ),
     )
+
+    def __init__(self, **data: Any) -> None:
+        super().__init__(**data)
+        _refuse_unknown(data, type(self).model_fields, "FootprintConfig")
+
+    # Keeps pydantic from calling __init__ when it validates a mapping. A
+    # project's config is read that way, and runtraj then checks the keys itself,
+    # saying where a misplaced one belongs. Only FootprintConfig(...) is checked here.
+    __init__.__pydantic_base_init__ = True  # type: ignore[attr-defined]
 
     @property
     def zsfc_reasons(self) -> list[str]:
