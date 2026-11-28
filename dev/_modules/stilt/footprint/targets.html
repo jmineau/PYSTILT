@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=0bb840ae"></script>
+    <script src="../../../_static/documentation_options.js?v=3a76775f"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a32.dev25+gf877f4b33" />
+  <meta name="docsearch:version" content="0.1.0a32.dev26+g861fa683c" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -495,19 +495,18 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">shapely</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">ConfigDict</span><span class="p">,</span> <span class="n">Field</span><span class="p">,</span> <span class="n">model_validator</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.spatial</span><span class="w"> </span><span class="kn">import</span> <span class="n">is_longlat</span><span class="p">,</span> <span class="n">same_crs</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">scipy</span><span class="w"> </span><span class="kn">import</span> <span class="n">sparse</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">shapely.geometry.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseGeometry</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">FileGeometrySpec</span><span class="p">,</span> <span class="n">GeometrySpec</span><span class="p">,</span> <span class="n">H3GeometrySpec</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.grid</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grid</span><span class="p">,</span> <span class="n">_east_edge</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint.grid</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grid</span><span class="p">,</span> <span class="n">_east_edge</span><span class="p">,</span> <span class="n">_is_longlat</span><span class="p">,</span> <span class="n">_same_crs</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_transform_geometries</span><span class="p">(</span>
     <span class="n">geoms</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">BaseGeometry</span><span class="p">],</span> <span class="n">src</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">dst</span><span class="p">:</span> <span class="nb">str</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">BaseGeometry</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""Return shapely geometries reprojected from ``src`` to ``dst``. Requires pyproj."""</span>
-    <span class="k">if</span> <span class="n">same_crs</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">dst</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">_same_crs</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">dst</span><span class="p">):</span>
         <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">geoms</span><span class="p">)</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">pyproj</span><span class="w"> </span><span class="kn">import</span> <span class="n">Transformer</span>
 
@@ -734,7 +733,7 @@
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">is_longlat</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Whether the polygon coordinates are longitude/latitude degrees."""</span>
-        <span class="k">return</span> <span class="n">is_longlat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">crs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_is_longlat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">crs</span><span class="p">)</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">bounds</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
@@ -766,7 +765,7 @@
 <a class="viewcode-back" href="../../../reference/_api/stilt.Mesh.to_crs.html#stilt.Mesh.to_crs">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">to_crs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">crs</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Mesh</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Return the mesh reprojected to ``crs``. Requires pyproj."""</span>
-        <span class="k">if</span> <span class="n">same_crs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">crs</span><span class="p">,</span> <span class="n">crs</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">_same_crs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">crs</span><span class="p">,</span> <span class="n">crs</span><span class="p">):</span>
             <span class="k">return</span> <span class="bp">self</span>
         <span class="k">return</span> <span class="n">Mesh</span><span class="p">(</span>
             <span class="n">ids</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ids</span><span class="p">,</span>
@@ -944,7 +943,7 @@
 <span class="sd">        """</span>
         <span class="n">base</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="n">Grid</span><span class="p">):</span>
-            <span class="k">if</span> <span class="n">crs</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">same_crs</span><span class="p">(</span><span class="n">crs</span><span class="p">,</span> <span class="n">base</span><span class="o">.</span><span class="n">crs</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">crs</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">_same_crs</span><span class="p">(</span><span class="n">crs</span><span class="p">,</span> <span class="n">base</span><span class="o">.</span><span class="n">crs</span><span class="p">):</span>
                 <span class="k">return</span> <span class="n">base</span>
             <span class="n">base</span> <span class="o">=</span> <span class="n">Mesh</span><span class="o">.</span><span class="n">from_grid</span><span class="p">(</span><span class="n">base</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">base</span><span class="o">.</span><span class="n">to_grid</span><span class="p">(</span>
@@ -1190,7 +1189,7 @@
         <span class="n">base_w</span> <span class="o">=</span> <span class="n">overlap_weights</span><span class="p">(</span><span class="n">geometry</span><span class="o">.</span><span class="n">base</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">xres</span><span class="p">,</span> <span class="n">yres</span><span class="p">,</span> <span class="n">crs</span><span class="p">)</span>
         <span class="n">w</span> <span class="o">=</span> <span class="n">sparse</span><span class="o">.</span><span class="n">csr_matrix</span><span class="p">(</span><span class="n">geometry</span><span class="o">.</span><span class="n">membership</span> <span class="o">@</span> <span class="n">base_w</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">geometry</span><span class="p">,</span> <span class="n">Grid</span><span class="p">)</span> <span class="ow">and</span> <span class="n">same_crs</span><span class="p">(</span><span class="n">geometry</span><span class="o">.</span><span class="n">crs</span><span class="p">,</span> <span class="n">crs</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">geometry</span><span class="p">,</span> <span class="n">Grid</span><span class="p">)</span> <span class="ow">and</span> <span class="n">_same_crs</span><span class="p">(</span><span class="n">geometry</span><span class="o">.</span><span class="n">crs</span><span class="p">,</span> <span class="n">crs</span><span class="p">):</span>
             <span class="n">grid</span> <span class="o">=</span> <span class="n">geometry</span>
             <span class="n">west</span><span class="p">,</span> <span class="n">east</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">xmin</span><span class="p">,</span> <span class="n">_east_edge</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">xmin</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">xmax</span><span class="p">)</span>
 
@@ -1206,7 +1205,7 @@
                 <span class="k">return</span> <span class="n">_polygon_weights</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">xs</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">xres</span><span class="p">,</span> <span class="n">yres</span><span class="p">)</span>
 
         <span class="n">w</span> <span class="o">=</span> <span class="n">weigh</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">is_longlat</span><span class="p">(</span><span class="n">crs</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">_is_longlat</span><span class="p">(</span><span class="n">crs</span><span class="p">):</span>
             <span class="c1"># A raster cell a whole turn from a target cell is on the same meridian.</span>
             <span class="k">for</span> <span class="n">turn</span> <span class="ow">in</span> <span class="p">(</span><span class="o">-</span><span class="mf">360.0</span><span class="p">,</span> <span class="mf">360.0</span><span class="p">):</span>
                 <span class="k">if</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">xres</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">turn</span> <span class="o">&lt;</span> <span class="n">east</span> <span class="ow">and</span> <span class="n">x</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">xres</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">turn</span> <span class="o">&gt;</span> <span class="n">west</span><span class="p">:</span>
@@ -1231,7 +1230,7 @@
 <span class="sd">    geometry in a different CRS is skipped, since its units differ.</span>
 <span class="sd">    """</span>
     <span class="n">target</span> <span class="o">=</span> <span class="n">geometry</span><span class="o">.</span><span class="n">base</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">geometry</span><span class="p">,</span> <span class="n">Zones</span><span class="p">)</span> <span class="k">else</span> <span class="n">geometry</span>
-    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">Grid</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">same_crs</span><span class="p">(</span><span class="n">target</span><span class="o">.</span><span class="n">crs</span><span class="p">,</span> <span class="n">crs</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">Grid</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">_same_crs</span><span class="p">(</span><span class="n">target</span><span class="o">.</span><span class="n">crs</span><span class="p">,</span> <span class="n">crs</span><span class="p">):</span>
         <span class="k">return</span>
     <span class="n">width</span> <span class="o">=</span> <span class="n">target</span><span class="o">.</span><span class="n">min_cell_width</span>
     <span class="k">if</span> <span class="n">width</span> <span class="o">&lt;</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="n">xres</span><span class="p">,</span> <span class="n">yres</span><span class="p">):</span>

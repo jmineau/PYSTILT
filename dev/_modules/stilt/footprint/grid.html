@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=0bb840ae"></script>
+    <script src="../../../_static/documentation_options.js?v=3a76775f"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a32.dev25+gf877f4b33" />
+  <meta name="docsearch:version" content="0.1.0a32.dev26+g861fa683c" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -463,15 +463,81 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">difflib</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">functools</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Self</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">AliasChoices</span><span class="p">,</span> <span class="n">ConfigDict</span><span class="p">,</span> <span class="n">Field</span><span class="p">,</span> <span class="n">model_validator</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.spatial</span><span class="w"> </span><span class="kn">import</span> <span class="n">Bounds</span><span class="p">,</span> <span class="n">cf_axis_attrs</span><span class="p">,</span> <span class="n">is_longlat</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">runtraj.spatial</span><span class="w"> </span><span class="kn">import</span> <span class="n">Bounds</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+
+
+<span class="nd">@functools</span><span class="o">.</span><span class="n">lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="mi">64</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_is_longlat</span><span class="p">(</span><span class="n">crs</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return whether ``crs`` is geographic (longitude/latitude degrees).</span>
+
+<span class="sd">    This is the one test for grids, meshes, and plots alike.</span>
+<span class="sd">    ``+proj=longlat`` and the common names are read by eye; every other form,</span>
+<span class="sd">    such as ``+proj=latlong`` or ``EPSG:4326``, is left to pyproj.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="s2">"+proj=longlat"</span> <span class="ow">in</span> <span class="n">crs</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">if</span> <span class="n">crs</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">"EPSG:4326"</span><span class="p">,</span> <span class="s2">"WGS84"</span><span class="p">,</span> <span class="s2">"OGC:CRS84"</span><span class="p">}:</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">pyproj</span><span class="w"> </span><span class="kn">import</span> <span class="n">CRS</span>
+
+        <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">CRS</span><span class="o">.</span><span class="n">from_user_input</span><span class="p">(</span><span class="n">crs</span><span class="p">)</span><span class="o">.</span><span class="n">is_geographic</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># not a CRS pyproj can read</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_same_crs</span><span class="p">(</span><span class="n">a</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return whether two CRS strings describe the same CRS, however they are spelled."""</span>
+    <span class="k">if</span> <span class="n">a</span> <span class="o">==</span> <span class="n">b</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">if</span> <span class="n">_is_longlat</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="ow">and</span> <span class="n">_is_longlat</span><span class="p">(</span><span class="n">b</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">pyproj</span><span class="w"> </span><span class="kn">import</span> <span class="n">CRS</span>
+
+        <span class="k">return</span> <span class="n">CRS</span><span class="o">.</span><span class="n">from_user_input</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="o">==</span> <span class="n">CRS</span><span class="o">.</span><span class="n">from_user_input</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># not a CRS pyproj can read</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_cf_axis_attrs</span><span class="p">(</span><span class="n">dim</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Return the CF attributes for one coordinate axis: ``lon``, ``lat``, ``x`` or ``y``."""</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">"lon"</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">"standard_name"</span><span class="p">:</span> <span class="s2">"longitude"</span><span class="p">,</span>
+            <span class="s2">"long_name"</span><span class="p">:</span> <span class="s2">"longitude"</span><span class="p">,</span>
+            <span class="s2">"units"</span><span class="p">:</span> <span class="s2">"degrees_east"</span><span class="p">,</span>
+            <span class="s2">"axis"</span><span class="p">:</span> <span class="s2">"X"</span><span class="p">,</span>
+        <span class="p">},</span>
+        <span class="s2">"lat"</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">"standard_name"</span><span class="p">:</span> <span class="s2">"latitude"</span><span class="p">,</span>
+            <span class="s2">"long_name"</span><span class="p">:</span> <span class="s2">"latitude"</span><span class="p">,</span>
+            <span class="s2">"units"</span><span class="p">:</span> <span class="s2">"degrees_north"</span><span class="p">,</span>
+            <span class="s2">"axis"</span><span class="p">:</span> <span class="s2">"Y"</span><span class="p">,</span>
+        <span class="p">},</span>
+        <span class="s2">"x"</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">"standard_name"</span><span class="p">:</span> <span class="s2">"projection_x_coordinate"</span><span class="p">,</span>
+            <span class="s2">"long_name"</span><span class="p">:</span> <span class="s2">"x coordinate of projection"</span><span class="p">,</span>
+            <span class="s2">"units"</span><span class="p">:</span> <span class="s2">"m"</span><span class="p">,</span>
+            <span class="s2">"axis"</span><span class="p">:</span> <span class="s2">"X"</span><span class="p">,</span>
+        <span class="p">},</span>
+        <span class="s2">"y"</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">"standard_name"</span><span class="p">:</span> <span class="s2">"projection_y_coordinate"</span><span class="p">,</span>
+            <span class="s2">"long_name"</span><span class="p">:</span> <span class="s2">"y coordinate of projection"</span><span class="p">,</span>
+            <span class="s2">"units"</span><span class="p">:</span> <span class="s2">"m"</span><span class="p">,</span>
+            <span class="s2">"axis"</span><span class="p">:</span> <span class="s2">"Y"</span><span class="p">,</span>
+        <span class="p">},</span>
+    <span class="p">}[</span><span class="n">dim</span><span class="p">]</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_grid_cell_count</span><span class="p">(</span><span class="n">minimum</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">maximum</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">resolution</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
@@ -535,7 +601,7 @@
     <span class="n">ds</span><span class="p">[</span><span class="s2">"crs"</span><span class="p">]</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="n">_cf_grid_mapping_attrs</span><span class="p">(</span><span class="n">crs</span><span class="p">))</span>
     <span class="k">for</span> <span class="n">dim</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"lon"</span><span class="p">,</span> <span class="s2">"lat"</span><span class="p">,</span> <span class="s2">"x"</span><span class="p">,</span> <span class="s2">"y"</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">dim</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">coords</span><span class="p">:</span>
-            <span class="n">ds</span><span class="p">[</span><span class="n">dim</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">cf_axis_attrs</span><span class="p">(</span><span class="n">dim</span><span class="p">))</span>
+            <span class="n">ds</span><span class="p">[</span><span class="n">dim</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_cf_axis_attrs</span><span class="p">(</span><span class="n">dim</span><span class="p">))</span>
     <span class="k">return</span> <span class="n">ds</span>
 
 
@@ -758,7 +824,7 @@
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">is_longlat</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Whether the grid is in longitude/latitude degrees."""</span>
-        <span class="k">return</span> <span class="n">is_longlat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">crs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_is_longlat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">crs</span><span class="p">)</span>
 
 <div class="viewcode-block" id="Grid.contains">
 <a class="viewcode-back" href="../../../reference/_api/stilt.Grid.contains.html#stilt.Grid.contains">[docs]</a>
