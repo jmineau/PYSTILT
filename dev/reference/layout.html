@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=d5872c65"></script>
+    <script src="../_static/documentation_options.js?v=bf4ed07c"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a32.dev17+ge252112c4" />
+  <meta name="docsearch:version" content="0.1.0a32.dev19+gd9aef07ff" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -1228,8 +1228,10 @@ unless the settings give another length; it is always the layer number.
 <a class="reference internal" href="_api/stilt.Project.footprints.html#stilt.Project.footprints" title="stilt.Project.footprints"><code class="xref py py-meth docutils literal notranslate"><span class="pre">stilt.Project.footprints()</span></code></a> turns it into the unit <code class="docutils literal notranslate"><span class="pre">tres</span></code> is written
 in, and names its dimension for it: layer -1 of <code class="docutils literal notranslate"><span class="pre">15min</span></code> layers is
 <code class="docutils literal notranslate"><span class="pre">minute</span></code> -15 there. A particle row at <code class="docutils literal notranslate"><span class="pre">age</span></code> minutes
-falls in layer <code class="docutils literal notranslate"><span class="pre">floor(age</span> <span class="pre">/</span> <span class="pre">m)</span></code>, where <code class="docutils literal notranslate"><span class="pre">m</span></code> is <code class="docutils literal notranslate"><span class="pre">tres</span></code> in minutes. For a release at
-18:30 on a backward run with hourly layers:</p>
+falls in layer <code class="docutils literal notranslate"><span class="pre">floor(age</span> <span class="pre">/</span> <span class="pre">m)</span></code> on a backward run and <code class="docutils literal notranslate"><span class="pre">ceil(age</span> <span class="pre">/</span> <span class="pre">m)</span> <span class="pre">-</span> <span class="pre">1</span></code>
+on a forward one, where <code class="docutils literal notranslate"><span class="pre">m</span></code> is <code class="docutils literal notranslate"><span class="pre">tres</span></code> in minutes: a row on a layer’s far
+edge is in that layer. For a release at 18:30 on a backward run with hourly
+layers:</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <colgroup>
 <col style="width: 30.0%" />
@@ -1259,6 +1261,8 @@ starting at half past. With <code class="docutils literal notranslate"><span cla
 to 18:30 and layer -2 covers 18:00 to 18:15. With <code class="docutils literal notranslate"><span class="pre">tres</span></code> as long as the
 run (<code class="docutils literal notranslate"><span class="pre">1D</span></code> for a 24-hour run) there is one layer, -1, stamped at the
 start of the run, which holds the whole run.</p>
+<p>On a forward run the rows at +1 to +60 minutes are layer 0 (18:30 to 19:30,
+stamped 18:30), +61 to +120 layer 1, and a two-hour run has layers 0 and 1.</p>
 </section>
 <section id="the-grid">
 <h3>The grid<a class="headerlink" href="#the-grid" title="Link to this heading">#</a></h3>

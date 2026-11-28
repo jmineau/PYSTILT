@@ -131,6 +131,18 @@ What does not match
   tests on a projected grid give STILT-R the corners of PYSTILT's cells,
   and the two lay out the same cells. Longitude/latitude grids are not
   affected.
+- **The layer of a forward run's last row.** A particle row at ``age``
+  minutes holds the step that ends there. STILT-R puts it in layer
+  ``floor(age / tres)``, which is right backward (the row at -60 closes the
+  first hour back) and one layer late forward: the row at +60 closes the
+  first hour but lands in the second. A forward footprint then has a layer
+  past the end of the run (three layers for a two-hour run in hourly layers,
+  the last holding one minute), and 1/60 of each hour's footprint meets the
+  next hour's flux. PYSTILT uses ``ceil(age / tres) - 1`` for a forward run,
+  so a two-hour run has two layers. Backward runs are not affected.
+  The ``forward`` scenario gives STILT-R its times a
+  microsecond earlier so the two agree, and
+  ``test_forward_layers_intentionally_differ_from_r`` guards the difference.
 - **Smoothing on a projected grid.** The kernel width,
   ``0.06 * (var(x) + var(y))**0.25 * sqrt(|rtime| / 1440)``, is made for
   coordinates in degrees. STILT-R applies it to the projected coordinates,

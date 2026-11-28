@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=d5872c65"></script>
+    <script src="../_static/documentation_options.js?v=bf4ed07c"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a32.dev17+ge252112c4" />
+  <meta name="docsearch:version" content="0.1.0a32.dev19+gd9aef07ff" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -1562,8 +1562,11 @@ time as a PNG data URL (<code class="docutils literal notranslate"><span class="
 UTC, the color scale and the footprint’s units. The image’s rows are spaced
 as on a web map, so Leaflet places it with
 <code class="docutils literal notranslate"><span class="pre">L.imageOverlay(entry.image,</span> <span class="pre">entry.bounds)</span></code>. An empty footprint gets a
-file with <code class="docutils literal notranslate"><span class="pre">image</span></code> and <code class="docutils literal notranslate"><span class="pre">bounds</span></code> null. A footprint grid across 180°
-cannot be drawn, and its map fails.</p>
+file with <code class="docutils literal notranslate"><span class="pre">image</span></code> and <code class="docutils literal notranslate"><span class="pre">bounds</span></code> null. A footprint grid across 180° is
+drawn as any other: its <code class="docutils literal notranslate"><span class="pre">bounds</span></code> run east past 180 (<code class="docutils literal notranslate"><span class="pre">[[-5,</span> <span class="pre">170],</span> <span class="pre">[5,</span> <span class="pre">190]]</span></code>
+for a grid from 170 to -170), which Leaflet draws in the right place. The map
+stage draws longitude/latitude footprints only: on a projected grid (<code class="docutils literal notranslate"><span class="pre">crs</span></code>
+in the footprint’s <code class="docutils literal notranslate"><span class="pre">grid</span></code>) its map fails with an error saying so.</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <colgroup>
 <col style="width: 22.0%" />

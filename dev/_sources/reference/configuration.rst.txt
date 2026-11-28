@@ -188,8 +188,11 @@ time as a PNG data URL (``image``), the image's corners as
 UTC, the color scale and the footprint's units. The image's rows are spaced
 as on a web map, so Leaflet places it with
 ``L.imageOverlay(entry.image, entry.bounds)``. An empty footprint gets a
-file with ``image`` and ``bounds`` null. A footprint grid across 180°
-cannot be drawn, and its map fails.
+file with ``image`` and ``bounds`` null. A footprint grid across 180° is
+drawn as any other: its ``bounds`` run east past 180 (``[[-5, 170], [5, 190]]``
+for a grid from 170 to -170), which Leaflet draws in the right place. The map
+stage draws longitude/latitude footprints only: on a projected grid (``crs``
+in the footprint's ``grid``) its map fails with an error saying so.
 
 .. config-model:: stilt.footprint.maps.MapConfig
 
