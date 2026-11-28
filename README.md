@@ -213,15 +213,18 @@ project.add_table("kernels", kernels)
 project.run()
 ```
 
-Then name the table in `config.yaml`:
+Then name the table under `stages: footprint:` in `config.yaml`:
 
 ```yaml
-grid: {xmin: -114.0, xmax: -111.0, ymin: 39.0, ymax: 42.0, xres: 0.01, yres: 0.01}
-transforms:
-  - kind: averaging_kernel
-    table: kernels
-    coordinate: pres
-  - kind: pressure_weighting
+stages:
+  footprint:
+    class: stilt.footprint.FootprintStage
+    grid: {xmin: -114.0, xmax: -111.0, ymin: 39.0, ymax: 42.0, xres: 0.01, yres: 0.01}
+    transforms:
+      - kind: averaging_kernel
+        table: kernels
+        coordinate: pres
+      - kind: pressure_weighting
 ```
 
 `"column"` makes vertical columns in place of slant lines of sight. The
@@ -231,18 +234,22 @@ an orbit to modeled and observed enhancements.
 ## Particle transforms
 
 A transform changes how much each particle counts before the footprint is calculated. List them
-in `config.yaml`, as a default or for one variant:
+under `stages: footprint:` in `config.yaml`, as a default or for one variant:
 
 ```yaml
-transforms:
-  - kind: averaging_kernel
-    levels: [0.0, 1000.0, 2000.0]
-    values: [1.0, 0.8, 0.5]
-  - kind: pressure_weighting
-  - kind: first_order_lifetime
-    lifetime_hours: 4.0
-  - kind: mypkg.transforms.BoundaryLayerOnly   # your own pydantic class with an apply() method
-    max_height: 1200
+stages:
+  footprint:
+    class: stilt.footprint.FootprintStage
+    grid: {xmin: -114.0, xmax: -111.0, ymin: 39.0, ymax: 42.0, xres: 0.01, yres: 0.01}
+    transforms:
+      - kind: averaging_kernel
+        levels: [0.0, 1000.0, 2000.0]
+        values: [1.0, 0.8, 0.5]
+      - kind: pressure_weighting
+      - kind: first_order_lifetime
+        lifetime_hours: 4.0
+      - kind: mypkg.transforms.BoundaryLayerOnly   # your own pydantic class with an apply() method
+        max_height: 1200
 ```
 
 A transform is any object with an `apply(particles, release=None, directory=None)` method. The

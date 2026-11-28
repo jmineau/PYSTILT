@@ -80,8 +80,9 @@ Transport model
 ----------------
 
 The worker runs a simulation through the transport model its settings name.
-HYSPLIT is the one built in that runs, and CONTRIBUTING describes how to add
-another, named by its import path. PYSTILT's ``stilt-r`` model
+HYSPLIT is the one built in that runs, and runtraj's CONTRIBUTING.md
+("Adding a transport model") describes how to add another, named by its
+import path. PYSTILT's ``stilt-r`` model
 (``class: stilt.migration.StiltRModel``) is one of those, and runs nothing: its
 variants read the runs :func:`stilt.migration.import_stilt_r` imported from
 STILT-R, with the settings STILT-R's files record.
@@ -111,8 +112,8 @@ A stage makes one file per release from a simulation's results, after the
 transport model runs. The footprint is one
 (:class:`stilt.footprint.FootprintStage`). A ``stages`` block of
 ``config.yaml`` names its stage's class by import path, so a stage in a
-package of your own needs no registration, and CONTRIBUTING describes how to
-write one. Use :func:`~runtraj.stages.check_stage` in its tests.
+package of your own needs no registration, and runtraj's CONTRIBUTING.md
+("Adding a stage") describes how to write one. Use :func:`~runtraj.stages.check_stage` in its tests.
 
 .. autosummary::
    :toctree: _api

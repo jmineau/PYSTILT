@@ -105,8 +105,8 @@ turns soundings into releases, then a run goes as usual. Keep it out of
 The import contract in `pyproject.toml` (`just imports`) is an exhaustive
 `layers` contract: a new top-level module fails until placed.
 
-**runtraj comes from PyPI** up to its next minor (`runtraj>=0.1.0a4,<0.2`),
-which may break a stage; a change needing an unreleased runtraj takes it from
+**runtraj comes from PyPI**, one alpha at a time while it is in pre-release
+(`runtraj>=0.1.0a5,<0.1.0a6`), which may break a stage; a change needing an unreleased runtraj takes it from
 its commit (`[tool.uv.sources]`) until the release. STILT-R parity runs on
 every pull request and on each change of the runtraj requirement.
 
@@ -207,8 +207,8 @@ format's quirks. Never commit met files.
   (`runtraj.exceptions`); PYSTILT's own is `EmptyFootprint`, in
   `stilt/exceptions.py`, exported as `stilt.EmptyFootprint`. Plain input
   checks raise builtins such as `ValueError`.
-- Extras: `geometry`, `visualization`, `download`, `sparse`, `stilt-r`, and
-  `complete`, which the `dev` group installs.
+- Extras: `geometry`, `visualization`, `download`, `sparse`, `stilt-r`, `s3`,
+  `gcs`, and `complete`, which the `dev` group installs.
 
 ### Documentation
 

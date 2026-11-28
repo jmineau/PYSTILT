@@ -101,8 +101,10 @@ The workflow side by side
      - same names, under ``models: hysplit:``. The footprint reads
        ``veght`` for the near-field correction, as STILT-R does.
    * - ``ichem``, ``idsp``
-     - no setting: every run writes STILT-R's ``ICHEM=8`` and ``IDSP=2``,
-       the only values with which HYSPLIT writes particles
+     - no setting for ``idsp``, and ``ichem`` may only be 8: a run that makes
+       particles writes STILT-R's ``ICHEM=8`` and ``IDSP=2``, the only values
+       with which HYSPLIT writes particles. A concentration run
+       (``mode: concentration``) sets ``ichem``
    * - wind and mixing-depth error settings (``siguverr``, ``tluverr``,
        ``sigzierr``, …)
      - same names, usually on a variant of their own

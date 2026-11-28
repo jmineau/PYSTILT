@@ -297,8 +297,8 @@ Cloud Storage. Write it as a URL:
    output: s3://my-bucket/slv-2023
 
 PYSTILT reads and writes it through `fsspec
-<https://filesystem-spec.readthedocs.io>`_, so install the package for your
-store: ``pip install s3fs`` for ``s3://``, ``gcsfs`` for ``gs://``.
+<https://filesystem-spec.readthedocs.io>`_, so install the extra for your
+store: ``pip install "pystilt[s3]"`` for ``s3://``, ``"pystilt[gcs]"`` for ``gs://``.
 Credentials come from where those packages look for them, such as
 ``~/.aws/credentials`` or ``AWS_ACCESS_KEY_ID``. For another store that
 speaks the S3 protocol, set ``AWS_ENDPOINT_URL``.
