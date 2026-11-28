@@ -23,7 +23,6 @@ from runtraj import (
     read_particles,
     read_releases,
     run_trajectories,
-    task_share,
 )
 
 from .background import Background, background
@@ -71,7 +70,6 @@ __all__ = [
     "Zones",
     # One release, without a project
     "run_trajectories",
-    "task_share",
     "calc_footprint",
     # What the particles give beyond the footprint
     "background",

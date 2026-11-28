@@ -289,9 +289,9 @@ def transport_error(
     particles: pd.DataFrame,
     error_particles: pd.DataFrame | Sequence[pd.DataFrame],
     flux: xr.DataArray,
+    release: Release,
     *,
     transforms: Sequence[Any] = (),
-    release: Release | None = None,
     directory: str | Path | None = None,
     hnf_plume: bool = True,
     footprint_depth: float = 0.5,
@@ -314,12 +314,12 @@ def transport_error(
         one realization.
     flux : xarray.DataArray
         Surface flux field (see ``particles.stilt.enhancement``).
+    release : Release
+        The release (``sim.release``), for the near-field correction and
+        the transforms.
     transforms : sequence, optional
         The footprint's particle transforms (``sim.variant.stages["footprint"].transforms``),
         applied to both tables so the error is weighted like the footprint.
-    release : Release, optional
-        The release (``sim.release``), for the near-field correction and
-        the transforms. Needed when *hnf_plume* is set.
     directory : str or Path, optional
         Where a kernel table's relative path starts (``project.directory``).
     hnf_plume : bool, default True
@@ -422,7 +422,7 @@ def transport_error(
     ... )  # doctest: +SKIP
     >>> error_particles = [rows for _, rows in by_realization]  # doctest: +SKIP
     >>> result = transport_error(
-    ...     sim.particles, error_particles, flux, release=sim.release
+    ...     sim.particles, error_particles, flux, sim.release
     ... )  # doctest: +SKIP
     >>> result.realizations  # doctest: +SKIP
     4
@@ -432,11 +432,6 @@ def transport_error(
     ``directory``, and the variant's ``hnf_plume`` and
     ``footprint_depth``, which this call leaves at their defaults.
     """
-    if hnf_plume and release is None:
-        raise ValueError(
-            "The near-field correction (hnf_plume) needs the release: give "
-            "release=sim.release, or hnf_plume=False."
-        )
     if not 0 < percentile <= 1:
         raise ValueError("percentile must be in (0, 1].")
     if length_scale is not None and length_scale <= 0:
@@ -455,7 +450,6 @@ def transport_error(
     ) -> tuple[pd.Series, pd.Series, float]:
         """Return the modeled value and release height per particle, and the background."""
         if hnf_plume:
-            assert release is not None  # checked above
             table = _near_field(table, release, footprint_depth)
         weighted = _weighted(table, transforms, release, directory)
         x = weighted.stilt.enhancement(flux)
